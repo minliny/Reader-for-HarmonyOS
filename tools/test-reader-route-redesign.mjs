@@ -770,7 +770,8 @@ async function settingsScrollRoundtrip() {
 
 async function wideSettingsRailSelectionSdk() {
   const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
-  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { createReaderBuilderProbe, productionReaderMotionSdk } = await import('./lib/reader-control-builder-probe.mjs');
+  const { productionReaderPressFeedback } = await import('./lib/reader-press-feedback-probe.mjs');
   const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}.ets`, import.meta.url), 'utf8');
   const indexSource = read('pages/Index');
   const railSource = read('features/settings/ui/ReaderWideSettingsShell');
@@ -780,6 +781,10 @@ async function wideSettingsRailSelectionSdk() {
   }
   const { Component: Rail } = createReaderBuilderProbe(railSource, boundedMembers(railSource), {
     ...sdk.deps, ReaderBottomNavigation: BottomNavigationPort, settingsNavigationItems,
+    ...productionReaderMotionSdk(), globalThis: { get Context() { return globalThis.Context; } },
+    ReaderPressFeedback: productionReaderPressFeedback({ ColorMetrics: {
+      resourceColor: base => ({ blendColor: () => ({ color: `pressed:${base}` }) }),
+    } }),
     readerPageAreaLength: Number, readerInteractiveSafeLeft: () => 0, readerInteractiveSafeRight: () => 0,
     publishReaderMainViewport() {},
   }, { ...sdk.hooks, childSources: { ReaderBottomNavigation: read('app/navigation/ReaderBottomNavigation') } });
@@ -812,6 +817,24 @@ async function wideSettingsRailSelectionSdk() {
     const initialFill = buttons.find(button => button.accessibilityText === '通用设置').backgroundColor;
     const inactiveFill = buttons.find(button => button.accessibilityText === '关于 Reader').backgroundColor;
     assert.notDeepEqual(initialFill, inactiveFill, 'the selected row has its own fill');
+    const railScroll = [...rail.nodes.values()].find(node => node.type === 'Scroll' && node.width === 164);
+    assert.equal(railScroll.animation.duration, 180);
+    rail.collapsed = true;
+    sdk.properties.flush();
+    assert.equal(railScroll.width, 56);
+    assert.equal(railScroll.animation.duration, 180);
+    rail.reduceMotion = true;
+    rail.collapsed = false;
+    sdk.properties.flush();
+    assert.equal(railScroll.width, 164);
+    assert.equal(railScroll.animation.duration, 0);
+    const target = buttons.find(button => button.accessibilityText === '通用设置');
+    const targetId = [...rail.nodes.entries()].find(([, node]) => node === target)[0];
+    const press = rail.attributeCalls.find(call => call.id === targetId && call.property === 'attributeModifier').args[0];
+    const paint = {};
+    const port = new Proxy({}, { get: (_target, key) => value => { paint[key] = value; return port; } });
+    press.applyPressedAttribute(port);
+    assert.equal(paint.backgroundColor, `pressed:${initialFill}`);
     const assertSelection = label => {
       sdk.properties.flush();
       assert.equal([...owner.children.values()].find(child => child instanceof Rail), rail, 'selection keeps the mounted rail');

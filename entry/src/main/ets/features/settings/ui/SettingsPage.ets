@@ -719,8 +719,10 @@ export struct SettingsPage {
   }
 
   private showFeedbackToast(message: string): void {
-    if (!this.mounted || message.length === 0) return;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: READER_FEEDBACK_EXTENDED_MS }, (): boolean => this.mounted); } catch (_) {}
+    const identity = this.temporaryBackIdentity;
+    const current = (): boolean => this.activeSection === 'general' && this.settingsInputIsCurrent(identity);
+    if (message.length === 0 || !current()) return;
+    try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: READER_FEEDBACK_EXTENDED_MS }, current); } catch (_) {}
   }
 
   @Builder

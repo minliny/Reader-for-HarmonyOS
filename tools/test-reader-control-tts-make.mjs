@@ -90,6 +90,7 @@ assert.ok(crossed && clippedSpeed, 'test covers both real crossing and invisible
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets', import.meta.url), 'utf8');
 const methods = ['p', 'fullInput', 'sharedInput', 'effectiveRate', 'timerSummary', 'timerCaption', 'twoDigits',
+  'displayTimerMode', 'displayTimerMinutes', 'displayTimerSeconds', 'displayTimerDigits',
   'timerPresetSelected', 'timerPresetLabel', 'timerPresetIsSelected', 'chooseTimerPreset', 'timerPreset',
   'cycleQuickTimer', 'timerStepper', 'timerStepButton', 'stepTimer',
   'ratePresets', 'ratePresetWidth', 'chooseRatePreset', 'ratePreset'];
@@ -97,14 +98,24 @@ const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
 const {readerAppColor}=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
 const accessibility=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets',import.meta.url),'utf8'),'ReaderActionAccessibility.ets',{AccessibilityRoleType:{BUTTON:'button'}},['ReaderActionAccessibility']);
-const presetActors=pureModuleProbe(source.slice(0,source.indexOf('@Component')),'ReaderTtsPresetActors.ets',{...accessibility,readerAppColor,FrameCallback:class{},Color:{Transparent:'transparent'}},['ReaderTtsPresetModifier','readerTtsPresetLabelColor']);
-const { owner } = createReaderBuilderProbe(source, methods, { ...geometry, ...actors, ...tts, ...readerTypographyRoles,readerAppColor,...accessibility,...presetActors });
+const presetActors=pureModuleProbe(source.slice(0,source.indexOf('@Component')),'ReaderTtsPresetActors.ets',{
+  ...accessibility,readerAppColor,FrameCallback:class{},Color:{Transparent:'transparent'},
+  ReaderWindowCoordinator:{metrics:()=>({densityPixels:2})},
+},['ReaderTtsPresetModifier','readerTtsPresetLabelColor']);
+const timerLabels=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets',import.meta.url),'utf8'),
+  'ReaderControlTtsMinimum.ets',{},['readerControlTtsTwoDigits','readerControlTtsTimerSummary','readerControlTtsTimerCaption']);
+const { owner } = createReaderBuilderProbe(source, methods, { ...geometry, ...actors, ...tts, ...readerTypographyRoles,
+  readerAppColor,...accessibility,...presetActors,...timerLabels });
 Object.assign(owner, { motionProgress: 1, interactionEnabled: true, state: { rate: 1 }, ratePreview: -1,
   timerMode: 'duration', timerMinutes: 25, timerSeconds: 0,
   appScheme: 'day', configField: '', textMinimum: () => undefined,
+  displayedFacts: () => undefined,
   currentInputEnabled: () => owner.interactionEnabled,
   frame: () => ({ speedPresets: { width: 280 } }) });
 for (const minutes of [0, 15, 30, 45, 60, 'chapterEnd']) owner.timerPreset(minutes);
+const presetShadow = [...owner.nodes.values()].find(node=>node.type==='Stack'&&node.shadow!==undefined).shadow;
+assert.equal(presetShadow.radius,14);
+assert.equal(presetShadow.offsetY,4);
 owner.timerStepper(true); owner.timerStepper(false);
 owner.ratePresets().forEach(rate => owner.ratePreset(rate));
 const mountedCount = owner.observers.length, commands = [];

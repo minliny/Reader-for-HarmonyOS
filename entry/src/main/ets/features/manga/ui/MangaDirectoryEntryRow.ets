@@ -3,6 +3,7 @@ import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironm
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from './MangaDirectoryVisual';
 import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
 import type { MangaDirectoryRowPresentation } from '../presentation/MangaDirectoryPresentation';
 import { mangaDirectoryDisplay } from './MangaDirectoryDisplay';
@@ -145,7 +146,7 @@ export struct MangaDirectoryEntryRow {
           .width(grid ? 12 : 15).height(grid ? 12 : 15).accessibilityLevel('no');
       }.width(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 44).height(grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 :
         Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))
-        .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+        .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.scheme, 0, 0, this.interactionEnabled))
         .accessibilityText(`管理${this.title(entry)}下载`)
         .enabled(this.interactionEnabled)
         .onClick((): void => {

@@ -7,7 +7,7 @@ Object.assign(definitions, {
   'book-row-density': { description: '批准demo常态24/18/28/80与实际SDK行/More/状态绘制响应、状态/管理/摘要、自然增长和当前行入口', resources: [] },
   'list-layout': { description: '实际新宿主 SDK 常态单List/管理footer/短高预算与RaiseShape身份；含旧fixed header结构负例', resources: [] },
   'list-restore': { description: '实际普通List一次性epoch恢复，touch/filter/geometry/opening/font/retire取消并保留阅读返回焦点；反例移除epoch会重复恢复', resources: [] },
-  'chapter-locate-restore': { description: '实际章节定位取消旧idle并计入三个prefix，保留当前detail身份及独立章节恢复', resources: [] },
+  'chapter-locate-restore': { description: '实际章节定位按宽窄列表前置行计算索引，取消旧idle并保留章节恢复', resources: [] },
   'private-tool-budget': { description: '实际筛选/排序native carrier及父预算320/366/720 x1/1.3/1.6/2/3.2；24vp旧排序carrier负例', resources: [] },
   'touch-targets': { description: '实际tabs/search-clear/management完成44vp原生carrier及陈旧管理epoch拒绝', resources: [] },
   'filter-reset': { description: '实际筛选空PageState清条件/保排序，current opening准入与retired callback拒绝', resources: [] },
@@ -582,19 +582,23 @@ if (selectedCase === 'list-restore') {
 }
 if (selectedCase === 'chapter-locate-restore') {
     const catalog = { ...book, shelfBook: { ...book.shelfBook, readingPosition: { chapterIndex: 0 } }, chapters: [completeChapter] };
-    const moves = [], indices = [];
-    scheduledFrames.length = 0;
-    const f = owner('day', { books: [catalog], fontsReady: true, detailKey: catalog.key, chapterLayoutReady: true, chapterScrollRestorePending: true,
-        chapterScroller: { scrollTo: v => moves.push(v), scrollToIndex: (...v) => indices.push(v) } });
-    f.chapterOffset = 77;
-    f.restoreChapterOffset();
-    const pending = scheduledFrames.at(-1);
-    assert.ok(pending);
-    f.locateCurrent();
-    pending.onIdle();
-    assert.deepEqual(moves, []);
-    assert.deepEqual(indices[0], [3, true, 'ScrollAlign.CENTER']);
-    const badSource = source.replace('    this.cancelChapterScrollRestore();\n    this.cancelManagingScroll();\n    this.chapterScroller.scrollToIndex', '    this.cancelManagingScroll();\n    this.chapterScroller.scrollToIndex');
+    for (const embeddedWide of [false, true]) {
+        const moves = [], indices = [];
+        scheduledFrames.length = 0;
+        const f = owner('day', { embeddedWide, books: [catalog], fontsReady: true, detailKey: catalog.key,
+            chapterLayoutReady: true, chapterScrollRestorePending: true,
+            chapterScroller: { scrollTo: v => moves.push(v), scrollToIndex: (...v) => indices.push(v) } });
+        f.chapterOffset = 77;
+        f.restoreChapterOffset();
+        const pending = scheduledFrames.at(-1);
+        assert.ok(pending);
+        f.locateCurrent();
+        pending.onIdle();
+        assert.deepEqual(moves, []);
+        assert.deepEqual(indices[0], [embeddedWide ? 2 : 3, true, 'ScrollAlign.CENTER']);
+    }
+    const scopedCancellation = '    this.cancelChapterScrollRestore();\n    this.cancelManagingScroll();\n    // The embedded page';
+    const badSource = source.replace(scopedCancellation, '    this.cancelManagingScroll();\n    // The embedded page');
     assert.notEqual(badSource, source);
     const badProbe = createReaderBuilderProbe(badSource, methods, probeDependencies, probeHooks), badMoves = [];
     const bad = owner('day', { books: [catalog], fontsReady: true, detailKey: catalog.key, chapterLayoutReady: true, chapterScrollRestorePending: true,

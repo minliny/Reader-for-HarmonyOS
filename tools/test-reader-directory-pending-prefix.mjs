@@ -21,7 +21,8 @@ const state = await import('../entry/src/main/ets/features/reading/ui/ReaderCont
 const host = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
 const model = await import('../entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts');
 const hierarchy = await import('../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts');
-const { sameReaderDirectoryData } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
+const { sameReaderDirectoryData, snapshotReaderDirectoryData } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
+const directoryListDependencies = { FrameCallback: class {}, sameReaderDirectoryData, snapshotReaderDirectoryData };
 const marker = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryMarkerState.ts');
 const bookmarkGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts');
 const { EMPTY_READING_DIRECTORY_RECOVERY } = await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
@@ -40,7 +41,7 @@ function listFixture(source = contentSource, short = false, tab = 'directory', p
   sdk.deps.ReaderBookmarkRow = createReaderBuilderProbe(ui('ReaderBookmarkRow'), boundedMembers(ui('ReaderBookmarkRow')),
     { ...sdk.deps, ...bookmarkGeometry, BOOKMARK_PENDING_LABEL: '待确认', BOOKMARK_ROW_HEIGHT: 74 }, sdk.hooks).Component;
   const prelude = source.slice(source.indexOf('class ControlDirectoryDataSource'), source.indexOf('/** Control-only'));
-  const classes = pureModuleProbe(prelude, 'DirectoryListPrelude.ets', { FrameCallback: class {} }, ['ControlDirectoryDataSource', 'ControlDirectoryFrame']);
+  const classes = pureModuleProbe(prelude, 'DirectoryListPrelude.ets', directoryListDependencies, ['ControlDirectoryDataSource', 'ControlDirectoryFrame']);
   const calls = [], frames = [], firstRows = [];
   const dataSource = new classes.ControlDirectoryDataSource();
   // An explicit one-row virtual range. This does not estimate native layout or
@@ -52,7 +53,7 @@ function listFixture(source = contentSource, short = false, tab = 'directory', p
       materializing = true; try { args[0](itemId++, true); } finally { materializing = false; }
     }
   }; } });
-  const owner = sdk.consumer(source, ['flatList', 'headerCount', 'prefixHeight', 'onPrefixArea', 'currentContent',
+  const owner = sdk.consumer(source, ['flatList', 'flatResultRow', 'headerCount', 'prefixHeight', 'onPrefixArea', 'currentContent',
     'currentInputEnabled', 'flatBookmarkIsCurrent', 'bookmarkWriteEnabled', 'queuePosition', 'displaySnapshot', 'displayedFacts'], {
     ...classes, readerPageAreaLength: Number, LazyForEach, ListItem, ReaderBookmarkRow: sdk.deps.ReaderBookmarkRow, ScrollAlign: { CENTER: 'center' },
     ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
@@ -252,7 +253,7 @@ function assertFlatRowUpdates(source) {
   sdk.hooks.childSources.ReaderBookmarkRow = ui('ReaderBookmarkRow');
   sdk.deps.ReaderBookmarkRow = ChildPort;
   const classes = pureModuleProbe(source.slice(source.indexOf('class ControlDirectoryDataSource'), source.indexOf('/** Control-only')),
-    'DirectoryListPrelude.ets', { FrameCallback: class {} }, ['ControlDirectoryDataSource', 'ControlDirectoryFrame']);
+    'DirectoryListPrelude.ets', directoryListDependencies, ['ControlDirectoryDataSource', 'ControlDirectoryFrame']);
   const data = new classes.ControlDirectoryDataSource();
   let nativePort;
   const LazyForEach = { create(_id, _owner, currentData, generate, key) {
@@ -265,7 +266,7 @@ function assertFlatRowUpdates(source) {
     materializing = true;
     try { args[0](itemId++, true); } finally { materializing = false; }
   }; } });
-  const owner = sdk.consumer(source, ['flatList'], { ...classes, LazyForEach, ListItem, ReaderBookmarkRow: ChildPort,
+  const owner = sdk.consumer(source, ['flatList', 'flatResultRow'], { ...classes, LazyForEach, ListItem, ReaderBookmarkRow: ChildPort,
     ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} } });
   const Chapter = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryChapterRow.ets', import.meta.url),
     'ReaderDirectoryChapterRow', ['marker', 'bookmarkActionEnabled', 'downloadActionEnabled'], marker);
@@ -286,6 +287,7 @@ function assertFlatRowUpdates(source) {
   assert.equal(nativePort.data, data, 'SDK LazyForEach receives the actual current data source');
   const firstKey = nativePort.key(data.getData(0));
   const otherKey = nativePort.key(data.getData(1));
+  assert.match(firstKey, /:chapter:0:\d+$/, 'native key contains only the opening, row identity and revision');
   nativePort.generate(data.getData(0), 0);
   currentActor.marker();
   assert.deepEqual(actions, [['delete', [7]]]);
@@ -309,12 +311,16 @@ function assertFlatRowUpdates(source) {
   const unchanged = changes.length;
   data.replace(rows());
   assert.equal(changes.length, unchanged, 'equal value projection sends no native update');
+  entries[0].title = 'Updated chapter';
+  const beforeTitle = nativePort.key(data.getData(0));
+  data.replace(rows());
+  assert.notEqual(nativePort.key(data.getData(0)), beforeTitle, 'the retained chapter snapshot detects in-place edits');
 }
 
 for (const id of selected) {
   if (id === 'flat-row-updates') {
     assertFlatRowUpdates(contentSource);
-    const stale = contentSource.replace('`${row.key}:${JSON.stringify(row)}`', 'row.key');
+    const stale = contentSource.replace('this.dataSource.rowKey(row)', "row.key + ':0'");
     assert.notEqual(stale, contentSource);
     assert.throws(() => assertFlatRowUpdates(stale), /actual SDK key must replace/);
     console.log('PASS flat-row-updates: actual SDK keys, real delete/create actors, download admission and unchanged-row retention; no native execution');

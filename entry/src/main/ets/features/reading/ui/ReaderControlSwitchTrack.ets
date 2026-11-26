@@ -21,7 +21,8 @@ export struct ReaderControlSwitchTrack {
     Stack({ alignContent: Alignment.TopStart }) {
       Row()
         .width(this.thumbSize).height(this.thumbSize)
-        .backgroundColor((this.thumbColor === '' ? readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme) : this.thumbColor)).borderRadius(this.thumbSize / 2)
+        .backgroundColor(this.thumbColor === '' ? readerAppColor('app.toggle.thumb', this.appThemeScheme) : this.thumbColor)
+        .borderRadius(this.thumbSize / 2)
         .position({ x: this.value ? this.trackWidth - this.thumbInset - this.thumbSize : this.thumbInset,
           y: (this.trackHeight - this.thumbSize) / 2 });
     }

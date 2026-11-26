@@ -1,15 +1,17 @@
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
-import { ReaderChoiceRow } from '../../../ui/controls/ReaderChoiceRow';
+import { ReaderChoiceRow, readerSettingsTabletOptionHeight } from '../../../ui/controls/ReaderChoiceRow';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import {
   TYPE_SETTINGS_SELECT_PHONE_CANCEL,
   TYPE_SETTINGS_SELECT_TITLE,
 } from '../../../ui/foundation/ReaderTypography';
-import { PopupSurfaceSpec, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { PopupSurfaceSpec, readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 
@@ -37,6 +39,7 @@ const PHONE_RADIUS = 12;
 @Component
 export struct SettingsSelectOverlay {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   @Prop expandedLayout: boolean = false;
@@ -50,7 +53,7 @@ export struct SettingsSelectOverlay {
   onDismiss: (identity?: string) => void = (_identity?: string): void => {};
 
   @State private hostWidth: number = 0;
-  @State private hostHeight: number = 0;
+  @State private hostHeight: number = -1;
   @State private hostX: number = 0;
   @State private hostY: number = 0;
   private mounted: boolean = false;
@@ -79,6 +82,15 @@ export struct SettingsSelectOverlay {
     this.onSelect(option, identity);
   }
 
+  private panelTransition(bottomSheet: boolean): TransitionEffect {
+    if (this.reduceMotion) return TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam());
+    return TransitionEffect.asymmetric(
+      (bottomSheet ? TransitionEffect.move(TransitionEdge.BOTTOM) : TransitionEffect.OPACITY)
+        .animation(readerMotionAnimateParam('app.sheet.open', false)),
+      (bottomSheet ? TransitionEffect.move(TransitionEdge.BOTTOM) : TransitionEffect.OPACITY)
+        .animation(readerMotionAnimateParam('app.sheet.close', false)));
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       ForEach([this.selectionId], (identity: string) => {
@@ -87,6 +99,8 @@ export struct SettingsSelectOverlay {
           .height('100%')
           .backgroundColor(this.expandedLayout ? Color.Transparent : readerAppColor('app.scrim.select', this.appThemeScheme))
           .hitTestBehavior(HitTestMode.Default)
+          .accessibilityLevel('no')
+          .transition(TransitionEffect.OPACITY.animation(readerMotionAnimateParam('app.sheet.scrim', this.reduceMotion)))
           .onClick((): void => this.dismiss(identity));
       }, (identity: string): string => identity);
 
@@ -95,7 +109,8 @@ export struct SettingsSelectOverlay {
       } else {
         Stack({ alignContent: Alignment.Bottom }) {
           Scroll() { this.phoneSheet(); }
-            .width('100%').constraintSize({ maxHeight: this.safeHeight() }).scrollBar(BarState.Auto).clip(true);
+            .width('100%').constraintSize({ maxHeight: this.safeHeight() }).scrollBar(BarState.Auto).clip(true)
+            .transition(this.panelTransition(true));
         }
         .position({ x: this.safeLeft(), y: this.safeTop() })
         .width(this.safeWidth())
@@ -156,19 +171,21 @@ export struct SettingsSelectOverlay {
       Blank().width('100%').height(PHONE_CANCEL_GAP);
 
       ForEach([this.selectionId], (identity: string) => {
-        Stack({ alignContent: Alignment.Center }) {
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
           Text('取消')
             .fontFamily(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontFamily)
             .fontWeight(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontWeight)
             .fontSize(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontSizeFp)
             .lineHeight(TYPE_SETTINGS_SELECT_PHONE_CANCEL.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme));
+            .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme)).accessibilityLevel('no');
         }
         .width('100%')
         .height(readerScaledControlHeight(PHONE_OPTION_HEIGHT, TYPE_SETTINGS_SELECT_PHONE_CANCEL.lineHeightFp as number, this.fontScale()))
-        .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+        .padding(0)
         .border({ width: 1, color: readerAppColor('app.border.control', this.appThemeScheme) })
-        .borderRadius(PHONE_RADIUS)
+        .attributeModifier(new ReaderPressFeedback(readerAppColor('app.surface.menuSolid', this.appThemeScheme),
+          this.appThemeScheme, PHONE_RADIUS, PHONE_RADIUS, this.ownsOpening(identity)))
+        .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText('取消')
         .onClick((): void => this.dismiss(identity));
       }, (identity: string): string => identity);
     }
@@ -182,8 +199,8 @@ export struct SettingsSelectOverlay {
       angle: 180,
       colors: [[readerAppColor('app.surface.selectWarm', this.appThemeScheme), 0], [readerAppColor('app.surface.selectGradientEnd', this.appThemeScheme), 1]],
     })
-    .borderRadius({ topLeft: 18, topRight: 18 })
-    .shadow({ radius: 40, color: readerAppColor('app.shadow.selectPanel', this.appThemeScheme), offsetX: 0, offsetY: -8 });
+    .borderRadius({ topLeft: 24, topRight: 24 })
+    .shadow(readerSurfaceElevation('sheet', this.appThemeScheme));
   }
 
   @Builder
@@ -212,11 +229,11 @@ export struct SettingsSelectOverlay {
     .border({ width: this.tabletSpec().borderWidth, color: readerAppColor(this.tabletSpec().surfaceBorderRole, this.appThemeScheme) })
     .borderRadius(this.tabletSpec().borderRadius)
     .clip(true)
-    .shadow({ radius: this.tabletSpec().shadowRadius, color: readerAppColor(this.tabletSpec().surfaceShadowRole, this.appThemeScheme), offsetX: 0, offsetY: this.tabletSpec().shadowOffsetY })
+    .shadow(readerSurfaceElevation('popover', this.appThemeScheme))
     .position({
       x: Math.max(this.safeLeft(), Math.min(this.anchorRight - this.tabletWidth(), this.safeLeft() + this.safeWidth() - this.tabletWidth())),
       y: this.tabletTop(),
-    });
+    }).transition(this.panelTransition(false));
   }
 
   @Builder
@@ -246,7 +263,7 @@ export struct SettingsSelectOverlay {
   }
   private tabletWidth(): number { return Math.min(this.tabletSpec().width, this.safeWidth()); }
   private tabletTop(): number {
-    const natural = this.options.length * readerScaledControlHeight(52, 20, this.fontScale());
+    const natural = this.options.length * readerSettingsTabletOptionHeight(this.fontScale());
     const height = Math.min(this.safeHeight(), natural);
     return Math.max(this.safeTop(), Math.min(this.anchorBottom + this.tabletSpec().anchorOverlap,
       this.safeTop() + this.safeHeight() - height));

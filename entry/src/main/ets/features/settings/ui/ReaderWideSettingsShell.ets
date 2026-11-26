@@ -2,6 +2,8 @@ import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderBottomNavigation } from '../../../app/navigation/ReaderBottomNavigation';
 import { publishReaderMainViewport } from '../../shell/MainNavigationSpec';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { settingsNavigationItems, type SettingsNavigationItem, type SettingsPane } from '../presentation/SettingsNavigationItems';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
@@ -12,6 +14,7 @@ import { TOK_BORDER_W, TOK_SPACE_SM } from '../../../ui/foundation/ReaderTokens'
 @Component
 export struct ReaderWideSettingsShell {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop pane: SettingsPane = 'general';
   @Prop collapsed: boolean = false;
@@ -71,7 +74,9 @@ export struct ReaderWideSettingsShell {
           this.railItem(item.id, item.label, item.icon);
         }, (item: SettingsNavigationItem): string => item.id);
       }.width('100%');
-    }.width(this.collapsed ? 56 : 164).constraintSize({ maxHeight: '100%' }).scrollBar(BarState.Auto).borderRadius(14)
+    }.width(this.collapsed ? 56 : 164)
+      .animation(this.reduceMotion ? { duration: 0 } : readerMotionAnimateParam('app.navigation.tab', false))
+      .constraintSize({ maxHeight: '100%' }).scrollBar(BarState.Auto).borderRadius(14)
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.scheme))
       .border({ width: 1, color: readerAppColor('TOK_LINE', this.scheme) })
       .shadow(readerSurfaceElevation('raised', this.scheme)).clip(true);
@@ -79,7 +84,7 @@ export struct ReaderWideSettingsShell {
 
   @Builder
   private railItem(pane: SettingsPane, label: string, media: string) {
-    Button({ type: ButtonType.Normal }) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
       Row({ space: this.collapsed ? 0 : TOK_SPACE_SM }) {
         Stack() {
           Image($r(`app.media.${media}${this.scheme === 'night' ? '_theme_night' : ''}`))
@@ -94,8 +99,10 @@ export struct ReaderWideSettingsShell {
         }
       }.width('100%').justifyContent(this.collapsed ? FlexAlign.Center : FlexAlign.Start)
         .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM });
-    }.width('100%').constraintSize({ minHeight: 58 }).borderRadius(0).padding(0)
-      .backgroundColor(readerAppColor(this.pane === pane ? 'TOK_PRIMARY_SOFT' : 'app.surface.transparent', this.scheme))
+    }.width('100%').constraintSize({ minHeight: 58 }).padding(0)
+      .attributeModifier(new ReaderPressFeedback(
+        readerAppColor(this.pane === pane ? 'TOK_PRIMARY_SOFT' : 'app.surface.transparent', this.scheme),
+        this.scheme, 0, 0, this.interactive))
       .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.scheme) })
       .accessibilityText(label).accessibilitySelected(this.pane === pane)
       .enabled(this.interactive).onClick((): void => { if (this.interactive) this.onPane(pane); });

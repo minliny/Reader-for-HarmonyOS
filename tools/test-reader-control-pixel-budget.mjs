@@ -25,8 +25,8 @@ function homeComposition(source, geometry, control) {
   const finish = source.indexOf(';', source.indexOf('.enableScrollInteraction', start)) + 1;
   const statement = source.slice(start, finish);
   const names = ['regressionHome', 'measureHomeForm', 'homeContent', 'chapterProgress', 'chapterRow', 'progressRow',
-    'quickActionPanel', 'quickAction', 'shortWindowActions', 'homeChapterCardHeight', 'homeContentMinimumHeight',
-    'chapterBookmarkRow', 'chapterTitleLaneHeight', 'bookmarkLaneHeight', 'progressLaneHeight',
+    'quickActionPanel', 'quickAction', 'shortWindowActions', 'sourceActionLabel', 'homeChapterCardHeight', 'homeContentMinimumHeight',
+    'chapterBookmarkRow', 'chapterTitleLaneHeight', 'bookmarkLaneHeight', 'bookmarkPillHeight', 'bookmarkPillWidth', 'progressLaneHeight',
     'homeMetric', 'homeProfileMetric', 'presentedHomeChapterTitle', 'presentedHomeTotalChapters'];
   function render(text, scale, viewport, topBarVisible) {
     const candidate = text.replace('  @Builder\n  private controlContent() {',
@@ -43,7 +43,7 @@ function homeComposition(source, geometry, control) {
       },
     }).owner;
     Object.assign(owner, { chapterTitle: 'Chapter One', totalChapters: 273, readableChapterPosition: 99,
-      minimumIdentity: '', appScheme: 'day',
+      minimumIdentity: '', appScheme: 'day', sessionFontScale: scale,
       currentLayout: () => ({ topBarVisible, quickPanelHeight: viewport + 140 }),
       frame: () => ({ progress: 0, content: { width: 264, height: viewport } }),
       selectedMinimumProfile: () => undefined, progressInputEnabled: () => true, canStepChapter: () => true,
@@ -80,8 +80,11 @@ function homeComposition(source, geometry, control) {
     assert.ok(chapter.height >= profile.chapterTitleHeight,
       'chapter row pays its actual top padding and declared title height');
     assert.ok(progress.height >= slider.height);
-    assert.equal(pill.width, 86);
-    assert.equal(pill.height, 44);
+    assert.equal(pill.width, 42 + Math.ceil(44 * scale));
+    assert.equal(pill.height, Math.max(44, owner.bookmarkPillHeight()));
+    assert.ok(bookmark.height >= pill.height, 'bookmark touch never intrudes into the neighboring slider lane');
+    assert.ok(!nodes.some(node => node.type === 'Text' && node.create === '共 273 章'), 'chapter count appears once');
+    assert.equal(actions.padding.left, actions.padding.right);
     const bookmarkLaneWeights = nodes.slice(nodes.indexOf(bookmark), nodes.indexOf(progress))
       .filter(node => node.layoutWeight === 1);
     assert.deepEqual(bookmarkLaneWeights.map(node => node.create), ['第 100 / 共 273 章'],
@@ -108,10 +111,10 @@ function homeComposition(source, geometry, control) {
     for (const viewport of [120, 657 / 3.5, 190, 270, 666]) samples.push(render(source, scale, viewport, topBar));
   }
   const normal = render(source, 1, 190, true);
-  assert.equal(normal.cardHeight, 106);
-  assert.equal(normal.natural, 188, '76vp action and 106vp chapter cards leave six between surfaces');
+  assert.equal(normal.cardHeight, 118);
+  assert.equal(normal.natural, 200, 'the 44vp bookmark target, slider and title occupy separate lanes');
   const current = render(source, 1, 657 / 3.5, true);
-  assert.equal(current.scrollEnabled, true, '187.71vp requires scrolling for the 188vp artboard');
+  assert.equal(current.scrollEnabled, true, '187.71vp requires scrolling for the 200vp content');
   console.log(JSON.stringify({ kind: 'home-composition', samples: samples.length, defaultViewport190: normal.natural,
     currentMinimum: current.required, currentCardHeight: current.cardHeight, currentPaidContent: current.viewport,
     cardBorder: current.cardBorder, shortLane: 50,
@@ -148,7 +151,7 @@ for (const id of selectContractCases(definitions)) {
   const near = (actual, expected, text) => assert.ok(Math.abs(actual - expected) < 1e-9, `${text}: ${actual}/${expected}`);
   const density = 3.5;
 
-  const home = createReaderBuilderProbe(panelSource, ['measureHomeForm'], {
+  const home = createReaderBuilderProbe(panelSource, ['measureHomeForm', 'bookmarkPillHeight'], {
     ...control, ...readerFoundationTokens, ...readerTypographyRoles,
     measureReaderControlText(_context, text, style) {
       return { heightVp: style === readerTypographyRoles.TYPE_READER_CONTROL_CHAPTER_TITLE ? 34 :
@@ -156,9 +159,9 @@ for (const id of selectContractCases(definitions)) {
       singleLineWidthVp: Math.min(80, Math.max(1, [...text].length * 6)), fitsWidth: true };
     },
   }).owner;
-  Object.assign(home, { chapterTitle: 'Chapter One', totalChapters: 1 });
+  Object.assign(home, { chapterTitle: 'Chapter One', totalChapters: 1, sessionFontScale: 1 });
   const homeProfile = home.measureHomeForm(264);
-  near(homeProfile.minimumHeight, 188, 'actual Home producer minimum includes the card native borders');
+  near(homeProfile.minimumHeight, 200, 'actual Home producer minimum includes the whole bookmark lane and the card borders');
 
   // Keep the exact shipping Scroll statement. The fixture supplies only its
   // business content slot and already-committed frame/profile metric ports.
@@ -187,7 +190,7 @@ for (const id of selectContractCases(definitions)) {
 
   const quickRequired = homeProfile.minimumHeight + 140;
   const paidQuick = height.controlHeightWithin(quickRequired, quickRequired, 700, density);
-  near(paidQuick, 1148 / density, 'physical height rounds measured requirement outward');
+  near(paidQuick, 1190 / density, 'physical height rounds measured requirement outward');
   assert.equal(nativeScroll(paidQuick - 140, homeProfile.minimumHeight).enableScrollInteraction, false);
   const oldQuick = paidQuick - 1 / density;
   const oldStatement = scrollStatement.replace('!readerControlExtentFits(this.homeContentMinimumHeight(), this.frame().content.height)',

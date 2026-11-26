@@ -1,4 +1,4 @@
-import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
+import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
@@ -23,6 +23,7 @@ import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../application/B
 @Component
 export struct BookshelfSettingsPage {
   @Prop embeddedWide: boolean = false;
+  @StorageLink('readerAppForeground') private appForeground: boolean = true;
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
 
@@ -127,23 +128,34 @@ export struct BookshelfSettingsPage {
   }
   private lastSettingsFeedback: string = '';
   private onOperationChanged(): void {
-    if (!this.mounted || this.settingsPending()) return;
+    if (!this.appForeground || !this.userInputIsCurrent() || this.settingsPending()) return;
     const view = readerRecoveryView(this.operation.receipt, this.operation.readFacts);
     if (!view.visible || !view.canRetry) { this.lastSettingsFeedback = ''; return; }
     if (view.message === this.lastSettingsFeedback) return;
     this.lastSettingsFeedback = view.message;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: 2000 }, (): boolean => this.mounted); } catch (_) {}
+    try {
+      this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: READER_FEEDBACK_BRIEF_MS },
+        this.currentFeedbackGuard());
+    } catch (_) {}
   }
   private lastModeFeedback: string = '';
   @State private modeLoadBusy: boolean = false;
   @State private modeReconcileBusy: boolean = false;
   private modeFeedback(): void {
-    if (!this.mounted) return;
+    if (!this.appForeground || !this.userInputIsCurrent()) return;
     const view = this.viewModeRecovery();
     if (!view.visible || this.modePending()) { this.lastModeFeedback = ''; return; }
     if (this.viewModeSnapshot.canonical === undefined || view.message === this.lastModeFeedback) return;
     this.lastModeFeedback = view.message;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: 2000 }, (): boolean => this.mounted); } catch (_) {}
+    try {
+      this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: READER_FEEDBACK_BRIEF_MS },
+        this.currentFeedbackGuard());
+    } catch (_) {}
+  }
+
+  private currentFeedbackGuard(): () => boolean {
+    const identity = this.preferenceControlIdentity();
+    return (): boolean => this.appForeground && this.userInputIsCurrent() && identity === this.preferenceControlIdentity();
   }
 
   build() {

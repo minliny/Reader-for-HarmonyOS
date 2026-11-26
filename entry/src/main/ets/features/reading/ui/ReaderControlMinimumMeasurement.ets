@@ -31,7 +31,6 @@ export interface ReaderControlHomeFormProfile {
   chapterRowHeight: number;
   progressHeight: number;
   percentWidth: number;
-  countWidth: number;
   actionLabelHeight: number;
   actionHeight: number;
   minimumHeight: number;

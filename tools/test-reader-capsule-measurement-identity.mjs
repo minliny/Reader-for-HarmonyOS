@@ -31,21 +31,41 @@ for (const id of selected) {
   const frames = pureModuleProbe(capsuleSource.slice(frameStart, frameEnd), 'CapsuleFrame.ets', {
     readerAppColor: color => color, READER_SESSION_CAPSULE_RADIUS: 12,
     READER_SESSION_CAPSULE_SHADOW: { radius: 8, offsetX: 0, offsetY: 3 },
+    ReaderPressFeedback: sdk.deps.ReaderPressFeedback,
   }, ['ReaderSessionCapsuleFrame']);
+  let measurements = 0;
+  const measureReaderSessionCapsule = () => {
+    measurements += 1;
+    return { width: 96, paintHeight: 24, targetHeight: 44, labelWidth: 42, labelHeight: 16, countdownSize: 16 };
+  };
+  const cacheSource = capsuleSource.slice(capsuleSource.indexOf('export class ReaderSessionCapsuleMetricsCache'),
+    capsuleSource.indexOf('/** The static capsule'));
+  const cache = pureModuleProbe(cacheSource, 'CapsuleMetricsCache.ets', { measureReaderSessionCapsule },
+    ['ReaderSessionCapsuleMetricsCache']);
   class Child { constructor(owner, params, _storage, id) { Object.assign(this,{owner,params,id}); } }
   sdk.hooks.childSources.ReaderSessionCapsuleLeading = capsuleSource;
   sdk.hooks.childSources.ReaderSessionCapsulePause = capsuleSource;
   const capsule = sdk.consumer(capsuleSource, ['build','measurementHandler','numericLength','finalWidth','metrics','type','measurementIdentity',
-    'effectiveTextColor','effectivePrimaryColor','effectiveOnPrimaryColor'], {
-    ...frames, ReaderSessionCapsuleLeading: Child, ReaderSessionCapsulePause: Child,
-    measureReaderSessionCapsule: () => ({ width: 96, paintHeight: 24, targetHeight: 44,
-      labelWidth: 42, labelHeight: 16, countdownSize: 16 }),
+    'metricsRevision','metricsCache','pressPointer','effectiveTextColor','effectivePrimaryColor','effectiveOnPrimaryColor'], {
+    ...frames, ...cache, ReaderSessionCapsuleLeading: Child, ReaderSessionCapsulePause: Child,
+    readerWindowMetrics: () => ({ densityPixels: 3 }),
     readerSessionCapsuleAccessibility: () => 'capsule',
   }, { type: 'autoPage', measurementIdentity: host.sessionCapsuleMeasurementIdentity('autoPage') }, 'ReaderSessionCapsule');
   Object.assign(capsule, { themeScheme:'day',surfaceColor:'',surfaceBorderColor:'',textColor:'',primaryColor:'',onPrimaryColor:'',
-    shadowColor:'#00000000',capsuleWidth:0,fontScale:1,interactionEnabled:true });
+    shadowColor:'',capsuleWidth:0,fontScale:1,interactionEnabled:true });
   capsule.onMeasured = (width,height,identity,type) => host.onSessionCapsuleMeasured(identity,type,width,height);
   capsule.initialRender(); sdk.properties.flush();
+  assert.equal(measurements, 1, 'all initial paint attributes share one text measurement');
+  capsule.metrics(); capsule.metrics();
+  assert.equal(measurements, 1);
+  capsule.fontScale = 1.5;
+  capsule.metrics(); capsule.metrics();
+  assert.equal(measurements, 2, 'font scaling invalidates the current cached receipt once');
+  capsule.metricsRevision += 1;
+  capsule.metrics(); capsule.metrics();
+  assert.equal(measurements, 3, 'new window metrics invalidate even when the font scale is unchanged');
+  const capsuleFrame = [...capsule.nodes.values()].find(node => node.shadow?.radius > 0);
+  assert.deepEqual(capsuleFrame.shadow, { radius: 24, offsetX: 0, offsetY: 9, color: 'app.shadow.menu' });
   const target = [...capsule.nodes.values()].find(node => node.type === 'Button' && node.onAreaChange);
   const present = type => {
     capsule.updateStateVars({type, measurementIdentity: host.sessionCapsuleMeasurementIdentity(type)});
@@ -56,6 +76,7 @@ for (const id of selected) {
   first({}, {width:140,height:44}); assert.equal(host.activeSessionCapsuleWidth(),140);
   snapshot = {type:'tts'};
   const tts = present('tts'); first({}, {width:900,height:90}); assert.equal(host.sessionCapsuleMeasuredWidth,140);
+  assert.equal(measurements, 4, 'switching playback type invalidates the current measurement');
   tts({}, {width:120,height:44}); assert.equal(host.activeSessionCapsuleWidth(),120);
   snapshot = {type:'autoPage'}; automatic.generation++;
   const secondAuto = present('autoPage'); first({}, {width:900,height:90}); assert.equal(host.activeSessionCapsuleWidth(),96,'A-B-A cannot borrow the retired A receipt');

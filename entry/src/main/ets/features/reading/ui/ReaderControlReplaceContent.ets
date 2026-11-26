@@ -8,6 +8,7 @@ import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironm
 import { TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE, TYPE_READER_REPLACE_RULE_NAME, TYPE_READER_REPLACE_RETAINED_EDITOR_FIELDS_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_TITLE, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE, TYPE_READER_REPLACE_RETAINED_RULE_ROW_META, TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN, TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE, TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL, TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL } from '../../../ui/foundation/ReaderTypography';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderControlQuickBack } from './ReaderControlQuickBack';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
@@ -611,11 +612,12 @@ export struct ReaderControlReplaceContent {
       .width('100%').height('100%').justifyContent(FlexAlign.Center);
     }.width(this.toolbarButtonWidth(index)).height(this.frame().toolbarCellHeight).padding(0)
       .position({ x: this.toolbarButtonX(index), y: this.frame().toolbarColumns === 1 ? index * (this.frame().toolbarCellHeight + 8) : 0 })
-      .backgroundColor(add ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: add ? Color.Transparent : readerAppColor('TOK_LINE', this.appThemeScheme) })
       .borderRadius(8)
       .id(`${this.state.sessionKey}:replace-editor:${focusRole}`)
-      .attributeModifier(new ReaderActionAccessibility(label, this.layer === '' && this.fullInput() && this.readyInput(), false, true, undefined, 'nativeButton'))
+      .attributeModifier(new ReaderActionAccessibility(label, this.layer === '' && this.fullInput() && this.readyInput(), false, true,
+        new ReaderPressFeedback(readerAppColor(add ? 'TOK_READ_PRIMARY' : 'TOK_READ_ELEVATED', this.appThemeScheme),
+          this.appThemeScheme, 8, 8, this.layer === '' && this.fullInput() && this.readyInput()), 'nativeButton'))
       .onClick((): void => { if (this.layer === '' && this.fullInput() && this.readyInput()) action(); });
   }
   private toolbarButtonWidth(index: number): number {
@@ -648,9 +650,10 @@ export struct ReaderControlReplaceContent {
       Row() {
         ReaderControlSwitchTrack({ value: rule().isEnabled, trackWidth: this.frame().toggleWidth,
           trackHeight: this.frame().toggleHeight, thumbSize: this.frame().thumbSize,
-          thumbColor: readerAppColor('app.text.onAccent', this.appThemeScheme), inactiveColor: readerAppColor('app.replace.inactiveRule', this.appThemeScheme) });
+          thumbColor: readerAppColor('app.toggle.thumb', this.appThemeScheme), inactiveColor: readerAppColor('app.replace.inactiveRule', this.appThemeScheme) });
       }.width(this.frame().toggleWidth).height(this.frame().rowInnerHeight).alignItems(VerticalAlign.Center);
-      }.width(this.frame().toggleWidth).height(this.frame().rowInnerHeight).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+      }.width(this.frame().toggleWidth).height(this.frame().rowInnerHeight).padding(0)
+        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 6))
         .position({ x: this.frame().rowPadding, y: 0 })
         .enabled(this.layer === '' && this.readyInput() && index() >= 0 && (this.fullInput() || index() < 3))
         .accessibilityText(`${rule().name}，${rule().isEnabled ? '已开启' : '已关闭'}`)
@@ -696,10 +699,12 @@ export struct ReaderControlReplaceContent {
   }
   @Builder
   private ruleIcon(icon: () => Resource, label: () => string, action: () => void, enabled: () => boolean, focusRole: () => string) {
-    Button({ type: ButtonType.Normal, stateEffect: false }) { Image(icon()).width(20).height(20); }
-      .width(44).height(44).padding(0).backgroundColor(Color.Transparent).borderRadius(6)
+    Button({ type: ButtonType.Normal, stateEffect: false }) { Image(icon()).width(20).height(20).accessibilityLevel('no'); }
+      .width(44).height(44).padding(0)
       .id(`${this.state.sessionKey}:replace-editor:${focusRole()}`)
-      .attributeModifier(new ReaderActionAccessibility(label(), this.layer === '' && this.fullInput() && this.readyInput() && enabled(), false, true, undefined, 'nativeButton'))
+      .attributeModifier(new ReaderActionAccessibility(label(), this.layer === '' && this.fullInput() && this.readyInput() && enabled(), false, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 6, 6,
+          this.layer === '' && this.fullInput() && this.readyInput() && enabled()), 'nativeButton'))
       .onClick((): void => { if (this.layer === '' && this.fullInput() && this.readyInput() && enabled()) action(); });
   }
   @Builder
@@ -738,7 +743,9 @@ export struct ReaderControlReplaceContent {
     // Read the supplied state predicate here and again at click dispatch.
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Text(label()).fontFamily(TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme)).textAlign(TextAlign.Center);
-    }.layoutWeight(1).height(this.frame().actionHeight).padding(0).padding({ left: 6, right: 6 }).backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme)).borderRadius(6)
+    }.layoutWeight(1).height(this.frame().actionHeight).padding({ left: 6, right: 6 })
+      .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme),
+        this.appThemeScheme, 6, 6, enabled() && (this.fullInput() || this.quickInput())))
       .enabled(enabled() && (this.fullInput() || this.quickInput()))
       .id(id)
       .onClick((): void => { if (enabled() && (this.fullInput() || this.quickInput())) action(); });
@@ -779,10 +786,12 @@ export struct ReaderControlReplaceContent {
       Text('返回').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontFamily as string)
         .fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .width(this.frame().editorBackWidth).height(this.frame().editorBackHeight).textAlign(TextAlign.Center);
-      }.width(this.frame().editorBackWidth).height(this.frame().editorBackHeight).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+      }.width(this.frame().editorBackWidth).height(this.frame().editorBackHeight).padding(0)
         .id(`${this.state.sessionKey}:replace-editor:back`)
         .attributeModifier(new ReaderActionAccessibility('返回',
-          this.temporaryInputCurrent(opening) && !this.localPending && !this.state.mutationPending, false, true, undefined, 'nativeButton'))
+          this.temporaryInputCurrent(opening) && !this.localPending && !this.state.mutationPending, false, true,
+          new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 6, 6,
+            this.temporaryInputCurrent(opening) && !this.localPending && !this.state.mutationPending), 'nativeButton'))
         .onClick((): void => { if (this.temporaryInputCurrent(opening)) this.cancelTemporaryLayer(); });
     }
   }
@@ -892,9 +901,11 @@ export struct ReaderControlReplaceContent {
       Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);
       ReaderControlSwitchTrack({ value: value() });
     }.width('100%').height(this.frame().editorFlagHeight);
-    }.width('100%').height(this.frame().editorFlagHeight).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+    }.width('100%').height(this.frame().editorFlagHeight).padding(0)
       .attributeModifier(new ReaderActionAccessibility(`${label}，${value() ? '开启' : '关闭'}`,
-        this.temporaryInputCurrent(opening) && this.readyInput(), false, true, undefined, 'nativeButton'))
+        this.temporaryInputCurrent(opening) && this.readyInput(), false, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 6, 6,
+          this.temporaryInputCurrent(opening) && this.readyInput()), 'nativeButton'))
       .onClick((): void => this.changeEditorFlag(value, change, opening));
   }
   @Builder

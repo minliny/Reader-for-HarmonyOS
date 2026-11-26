@@ -5,10 +5,6 @@ import {
   TYPE_READER_IMMERSIVE_PROGRESS,
 } from '../../../ui/foundation/ReaderTypography';
 import {
-  TOK_READ_IMMERSIVE_META,
-  TOK_READ_IMMERSIVE_META_NIGHT,
-} from '../../../ui/foundation/ReaderTokens';
-import {
   createDefaultReaderAppearanceSnapshot,
   type ReaderAppearanceSnapshot,
 } from '../application/ReaderAppearanceState';

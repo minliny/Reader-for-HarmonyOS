@@ -11,6 +11,7 @@ import hilog from '@ohos.hilog';
 import { DEBUG } from '../../../../../../build/default/generated/profile/default/BuildProfile';
 import { type ReaderDirectoryNavigationPortFactory, readerDirectoryScopeKey } from '../application/ReaderDirectoryNavigation';
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { TYPE_READER_BOOKMARK_CHAPTER, TYPE_READER_BOOKMARK_EXCERPT, TYPE_READER_DIRECTORY_CURRENT_TITLE,
   TYPE_READER_DIRECTORY_POSITION, TYPE_READER_DIRECTORY_TAB_COMPACT } from '../../../ui/foundation/ReaderTypography';
 
@@ -20,7 +21,7 @@ import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { sampleReaderControlMotionPresentation, type ReaderControlMotionPresentation } from './ReaderControlMotionPresentation';
 import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
 import type { ReaderBookIdentity, ReaderBookmarkRowModel } from '../presentation/ReaderBookmarkProjection';
-import { ReaderDirectoryDataPublication, sameReaderDirectoryData } from '../presentation/ReaderDirectoryDataSnapshot';
+import { ReaderDirectoryDataPublication, sameReaderDirectoryData, snapshotReaderDirectoryData } from '../presentation/ReaderDirectoryDataSnapshot';
 import { readerControlDirectorySnapshot, ReaderControlDirectoryPosition,
   type ReaderControlDirectoryRow, type ReaderControlDirectorySnapshot } from './ReaderControlDirectoryModel';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
@@ -53,12 +54,22 @@ interface ReaderControlDirectoryScrollFacts {
   presentation: number;
 }
 
+interface ControlDirectoryRowAdmission {
+  revision: number;
+  chapter: LocalReadingTocEntry | undefined;
+  bookmark: string;
+}
+
 class ControlDirectoryDataSource implements IDataSource {
   private rows: ReaderControlDirectoryRow[] = [];
-  private signatures: string[] = [];
+  private admitted: Map<string, ControlDirectoryRowAdmission> = new Map<string, ControlDirectoryRowAdmission>();
+  private revision: number = 0;
   private listeners: DataChangeListener[] = [];
   totalCount(): number { return this.rows.length; }
   getData(index: number): ReaderControlDirectoryRow { return this.rows[index]; }
+  rowKey(row: ReaderControlDirectoryRow): string {
+    return `${row.key}:${this.admitted.get(row.key)?.revision ?? 0}`;
+  }
   registerDataChangeListener(listener: DataChangeListener): void { this.listeners.push(listener); }
   unregisterDataChangeListener(listener: DataChangeListener): void {
     this.listeners = this.listeners.filter((value: DataChangeListener): boolean => value !== listener);
@@ -66,20 +77,41 @@ class ControlDirectoryDataSource implements IDataSource {
   replace(rows: ReaderControlDirectoryRow[]): void {
     // Values can change while row identity remains stable. Notify changed
     // rows individually; use a reload only for a structural key change.
-    const signatures = rows.map((row: ReaderControlDirectoryRow): string => JSON.stringify(row));
     const structural = rows.length !== this.rows.length ||
       rows.some((row: ReaderControlDirectoryRow, index: number): boolean => row.key !== this.rows[index].key);
-    const previous = this.signatures;
-    this.rows = rows; this.signatures = signatures;
+    const admitted = new Map<string, ControlDirectoryRowAdmission>();
+    const changed: number[] = [];
+    rows.forEach((row: ReaderControlDirectoryRow, index: number): void => {
+      const previous = this.admitted.get(row.key);
+      const bookmark = controlDirectoryBookmarkSignature(row.bookmark);
+      const sameChapter = previous?.chapter === undefined || row.chapter === undefined ? previous?.chapter === row.chapter :
+        sameReaderDirectoryData([previous.chapter], [row.chapter]);
+      if (previous !== undefined && sameChapter && previous.bookmark === bookmark) {
+        admitted.set(row.key, previous);
+      } else {
+        admitted.set(row.key, { revision: ++this.revision,
+          chapter: row.chapter === undefined ? undefined : snapshotReaderDirectoryData([row.chapter])[0], bookmark });
+        changed.push(index);
+      }
+    });
+    this.rows = rows;
+    this.admitted = admitted;
     if (structural) {
       for (const listener of this.listeners) listener.onDataReloaded();
     } else {
-      for (let index = 0; index < rows.length; index += 1) {
-        if (signatures[index] === previous[index]) continue;
+      for (const index of changed) {
         for (const listener of this.listeners) listener.onDataChange(index);
       }
     }
   }
+}
+
+function controlDirectoryBookmarkSignature(bookmark: ReaderBookmarkRowModel | undefined): string {
+  if (bookmark === undefined) return '';
+  const scope = bookmark.positionScope;
+  return JSON.stringify([bookmark.bookmarkId, bookmark.identityStatus, bookmark.positionStatus,
+    bookmark.chapterIndex, bookmark.chapterOffset, bookmark.chapterTitle, bookmark.excerpt, bookmark.positionLabel,
+    bookmark.timeLabel, scope?.sourceId, scope?.bookId, scope?.chapterIndex, scope?.bodyVersion, scope?.processingVersion]);
 }
 
 class ControlDirectoryFrame extends FrameCallback {
@@ -802,7 +834,8 @@ export struct ReaderControlDirectoryContent {
       .id('reader-control-directory-tab-' + tab)
       .accessibilityText(title)
       .responseRegion({ x: 0, y: 0, width: this.tabWidth(), height: this.tabHeight() })
-      .attributeModifier(new ReaderActionAccessibility(title, this.tabsInteractive(), this.tab === tab, true, undefined, 'nativeButton'))
+      .attributeModifier(new ReaderActionAccessibility(title, this.tabsInteractive(), this.tab === tab, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 8, 8, this.tabsInteractive()), 'nativeButton'))
       .onClick((): void => {
         if (!this.currentContent(presentation()) || !this.tabsInteractive()) return;
         if (DEBUG) hilog.info(0xD004, 'ReaderControlDiagnostic',
@@ -904,7 +937,8 @@ export struct ReaderControlDirectoryContent {
       }.width(32).height(32).borderRadius(8).backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
         .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }.width(44).height(44).padding(0).margin({ right: 5, bottom: 5 }).borderRadius(8).backgroundColor(Color.Transparent)
-      .attributeModifier(new ReaderActionAccessibility(title, this.toolbarInteractive(), false, true, undefined, 'nativeButton'))
+      .attributeModifier(new ReaderActionAccessibility(title, this.toolbarInteractive(), false, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 8, 8, this.toolbarInteractive()), 'nativeButton'))
       .onClick((): void => {
         if (!this.currentContent(presentation) || !this.toolbarInteractive()) return;
         if (kind === 'search') this.search();
@@ -960,7 +994,7 @@ export struct ReaderControlDirectoryContent {
         }.width('100%').height(this.rowHeight());
       // Keep row identity through geometry-only layout changes and retire it
       // for a new opening or changed row data.
-      }, (row: ReaderControlDirectoryRow): string => `${this.layoutPresentation}:${row.key}:${JSON.stringify(row)}`);
+      }, (row: ReaderControlDirectoryRow): string => `${this.layoutPresentation}:${this.dataSource.rowKey(row)}`);
       }
     }.width('100%').height('100%').padding({ left: this.rowPadding(), right: this.rowPadding() })
       .scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring).cachedCount(4)

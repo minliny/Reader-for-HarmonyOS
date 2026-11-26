@@ -14,7 +14,8 @@ import {
 import { ReaderControlMotionFrameCache } from '../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts';
 import { readerControlIslandHeight } from '../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts';
 import { readerControlMotionMs } from '../entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts';
-import { READER_REDUCED_FADE_MS } from '../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
+import { READER_CONTROL_LAYER_SWITCH_MS, READER_CONTROL_MODULE_SWITCH_MS,
+  READER_REDUCED_FADE_MS } from '../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
 
 const timing = { showDurationMs: 420, dismissDurationMs: 360,
   morphDurationMs: 1150, navigateDurationMs: 0 };
@@ -98,7 +99,7 @@ assert.deepEqual(sampleReaderControlSession(state), midFrame,
   'second Back changes content level without snapping the unfinished shape to Quick');
 assert.equal(state.transition.durationMs, 1150);
 
-const redesigned = { ...timing, layerDurationMs: 220, navigateDurationMs: 240,
+const redesigned = { ...timing, layerDurationMs: READER_CONTROL_LAYER_SWITCH_MS, navigateDurationMs: READER_CONTROL_MODULE_SWITCH_MS,
   directSheetDurationMs: 260, directSheetCloseDurationMs: 210 };
 for (const [page, module] of [['moduleDirectory', 'directory'], ['fullSearch', 'search'], ['quickReplace', 'replace']]) {
   const opening = setReaderControlHostPage(home(), page, redesigned);
@@ -125,7 +126,7 @@ const ttsOpening = setReaderControlHostPage(finish(autoOpening), 'moduleTts', re
 assert.equal(ttsOpening.transition.durationMs, 240);
 assert.equal(setReaderControlHostPage(finish(ttsOpening), 'home', redesigned).transition.durationMs, 220);
 
-const fixed = { ...redesigned, fixedIsland: true, navigateDurationMs: 220 };
+const fixed = { ...redesigned, fixedIsland: true };
 const fixedFrames = new ReaderControlMotionFrameCache();
 for (const panelWidth of [364, 356]) {
   const panelHeight = readerControlIslandHeight(736);
@@ -135,7 +136,7 @@ for (const panelWidth of [364, 356]) {
     const next = setReaderControlHostPage(current, full, fixed);
     assert.equal(readerControlTargetLocation(next).form, 'quick');
     assert.equal(next.transition.kind, 'navigate');
-    assert.equal(next.transition.durationMs, 220);
+    assert.equal(next.transition.durationMs, current.location.level === 'home' ? 220 : 240);
     const module = fixedFrames.sample(1, .5, panelWidth, panelHeight, 16, panelHeight, 0, undefined, 'module');
     assert.equal(module.shell.height, 330);
     assert.deepEqual(module.navigation, islandHome.navigation);

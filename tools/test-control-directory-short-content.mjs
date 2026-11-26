@@ -29,7 +29,7 @@ if(selected.length){
  const {sampleReaderControlMotionPresentation}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
  const {sampleReaderControlBookmark}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts');
  const {EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
- const {ReaderDirectoryDataPublication}=await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
+ const {ReaderDirectoryDataPublication,sameReaderDirectoryData,snapshotReaderDirectoryData}=await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
  const {readerPageAreaLength}=await import('../entry/src/main/ets/ui/layout/ReaderPageShell.ts');
  const read=n=>readFileSync(new URL('../entry/src/main/ets/features/'+n,import.meta.url),'utf8');
  const content=read('reading/ui/ReaderControlDirectoryContent.ets'),field=read('../ui/controls/ReaderSearchField.ets'),toolbar=read('reading/ui/ReaderDirectoryToolbar.ets');
@@ -41,7 +41,8 @@ if(selected.length){
  const require=createRequire(import.meta.url),map=require(resolveEtsLoaderRoot()+'/lib/component_map.js');
  const compile=f=>{const ids=map.ID_ATTRS,saved=new Map(ids);ids.clear();try{return f();}finally{ids.clear();for(const[k,v]of saved)ids.set(k,v);}};
  const frameDeps={FrameCallback:class{}};
- const classes=pureModuleProbe(content.slice(0,content.indexOf('@Component')),'ReaderControlDirectoryContent.ets',frameDeps,['ControlDirectoryDataSource','ControlDirectoryFrame']);
+ const classes=pureModuleProbe(content.slice(0,content.indexOf('@Component')),'ReaderControlDirectoryContent.ets',
+  {...frameDeps,sameReaderDirectoryData,snapshotReaderDirectoryData},['ControlDirectoryDataSource','ControlDirectoryFrame']);
  const fieldClasses=pureModuleProbe(field.slice(0,field.indexOf('@Component')),'ReaderSearchField.ets',{...frameDeps,...accessibility},['ReaderSearchInputTarget','ReaderSearchFocusFrame']);
  let minimumMeasure;
  const entries=()=>Array.from({length:60},(_,i)=>({index:i,title:'第'+i+'章 长章节标题',navigable:true,bookmarks:[{time:i+1,chapterIndex:i,chapterOffset:0,chapterTitle:'第'+i+'章',content:'完整书签正文与长内容',bookText:'正文'}]}));

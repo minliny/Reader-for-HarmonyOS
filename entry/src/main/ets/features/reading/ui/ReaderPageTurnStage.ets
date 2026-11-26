@@ -1,4 +1,5 @@
 import { readerThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { FrameCallback } from '@kit.ArkUI';
 import {
   createDefaultReaderAppearanceSnapshot,
@@ -252,9 +253,9 @@ struct ReaderPageTurnSurface {
     // the existing content coordinates inside that clip.
     .translate({ x: this.translateX, y: -(this.bookmarkPaperTop ?? 0) })
     .shadow({
-      radius: COVER_OCCLUSION_RADIUS_VP * this.shadowStrength,
+      radius: COVER_OCCLUSION_RADIUS_VP * this.shadowStrength * readerWindowMetrics().densityPixels,
       color: this.shadowColor(),
-      offsetX: COVER_OCCLUSION_OFFSET_X_VP * this.shadowStrength,
+      offsetX: COVER_OCCLUSION_OFFSET_X_VP * this.shadowStrength * readerWindowMetrics().densityPixels,
       offsetY: 0,
     });
   }

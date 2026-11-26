@@ -1,5 +1,8 @@
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { READER_MANGA_DOWNLOAD_POPUP, ReaderMangaDownloadPopupRecipe } from './ReaderMangaDownloadPopupSpec';
 import { MangaDownloadOperationsPanel } from './MangaDownloadOperationsPanel';
 import type { MangaDownloadAction, MangaDownloadActionId } from '../application/MangaDownloadActionsGateway';
@@ -26,33 +29,57 @@ export struct ReaderMangaDownloadPopup {
   onClosed: (generation: number) => void = (_generation: number): void => {};
   onAction: (action: MangaDownloadActionId, generation: number) => void = (_action: MangaDownloadActionId, _generation: number): void => {};
   onRetry: (generation: number) => void = (_generation: number): void => {};
+  private mounted: boolean = false;
+
+  aboutToAppear(): void { this.mounted = true; }
+  aboutToDisappear(): void { this.mounted = false; }
+
+  private isCurrent(generation: number): boolean {
+    return this.mounted && generation === this.generation;
+  }
 
   build() {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Image(this.appThemeScheme === 'night' ? $r('app.media.reader_directory_more_theme_night') : $r('app.media.reader_directory_more'))
         .width(this.spec().iconSize).height(this.spec().iconSize).accessibilityLevel('no');
     }.id(this.focusId).width(this.spec().anchorSize).height(this.spec().anchorSize).padding(0)
-      .backgroundColor(Color.Transparent).borderRadius(0).accessibilityText('漫画下载管理')
-      .onClick((): void => this.onOpen())
-      .bindPopup(this.visible, this.popupOptions(this.generation));
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, this.spec().anchorSize / 2))
+      .accessibilityText('漫画下载管理')
+      .onClick((): void => { if (this.mounted) this.onOpen(); })
+      .bindPopup(this.mounted && this.visible, this.popupOptions(this.generation));
   }
   private popupOptions(generation: number): CustomPopupOptions {
+    const spec = this.spec();
+    const border = readerAppColor('app.border.menu', this.appThemeScheme);
     return { builder: (): void => { this.popupContent(generation); },
       placement: Placement.BottomLeft, enableArrow: false,
       popupColor: readerAppColor('TOK_CARD_BG', this.appThemeScheme),
-      transition: this.reduceMotion ? TransitionEffect.IDENTITY.animation({ duration: 0 }) : undefined,
-      onStateChange: (event: PopupStateChangeParam): void => { if (!event.isVisible) this.onClosed(generation); } };
+      backgroundBlurStyle: BlurStyle.NONE,
+      radius: spec.radius, borderWidth: spec.borderWidth,
+      borderLinearGradient: { colors: [[border, 0], [border, 1]] },
+      shadow: readerSurfaceElevation('popover', this.appThemeScheme),
+      mask: true, autoCancel: true, focusable: true, followTransformOfTarget: true,
+      transition: this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : undefined,
+      onStateChange: (event: PopupStateChangeParam): void => {
+        if (!event.isVisible && this.isCurrent(generation)) this.onClosed(generation);
+      } };
   }
   @Builder
   private popupContent(generation: number) {
     Scroll() {
       MangaDownloadOperationsPanel({ reduceMotion: this.reduceMotion,
         actions: this.actions, loading: this.loading, failureMessage: this.failureMessage,
-        directoryRecovery: this.directoryRecovery, recoveryActive: this.visible && this.recoveryActive,
-        onReconcileOffline: (expected: number, presentation: string): void => this.onReconcileOffline(expected, presentation, generation),
-        onContinueOffline: (expected: number, presentation: string): void => this.onContinueOffline(expected, presentation, generation),
-        onAction: (action: MangaDownloadActionId): void => this.onAction(action, generation),
-        onRetry: (): void => this.onRetry(generation) });
+        directoryRecovery: this.directoryRecovery, recoveryActive: this.isCurrent(generation) && this.visible && this.recoveryActive,
+        onReconcileOffline: (expected: number, presentation: string): void => {
+          if (this.isCurrent(generation) && this.visible) this.onReconcileOffline(expected, presentation, generation);
+        },
+        onContinueOffline: (expected: number, presentation: string): void => {
+          if (this.isCurrent(generation) && this.visible) this.onContinueOffline(expected, presentation, generation);
+        },
+        onAction: (action: MangaDownloadActionId): void => {
+          if (this.isCurrent(generation) && this.visible) this.onAction(action, generation);
+        },
+        onRetry: (): void => { if (this.isCurrent(generation) && this.visible) this.onRetry(generation); } });
     }.width(Math.min(this.spec().maxWidth, this.availableWidth))
       .constraintSize({ maxHeight: this.spec().maxHeight }).padding(this.spec().padding).scrollBar(BarState.Off);
   }

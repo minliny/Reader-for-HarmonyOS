@@ -35,7 +35,7 @@ import {
   TYPE_DOWNLOAD_STORAGE_META, TYPE_DOWNLOAD_STATUS_BODY,
   TYPE_DOWNLOAD_TAB, TYPE_DOWNLOAD_TAB_SELECTED,
   TYPE_DOWNLOAD_SEARCH, TYPE_DOWNLOAD_LIST_TOOLS, TYPE_DOWNLOAD_SOURCE,
-  TYPE_DOWNLOAD_CHAPTER_TITLE, TYPE_DOWNLOAD_QUICK_SELECT,
+  TYPE_DOWNLOAD_CHAPTER_TITLE,
   TYPE_DOWNLOAD_STORAGE_TOTAL, TYPE_DOWNLOAD_STORAGE_VALUE,
 } from './DownloadTypography';
 import { TYPE_APP_ROW_LABEL, TYPE_DOWNLOAD_BODY, TYPE_SELECT_DEFAULT_VALUE } from '../../../ui/foundation/ReaderTypography';
@@ -44,7 +44,6 @@ import { ReaderInsetsVp, ReaderWindowMetricsSnapshot, readerInteractiveSafeBotto
 import type { DownloadBookView, DownloadChapterView, SharedDownloadFilters, DownloadReadingTarget, DownloadStorageSummary, DownloadStoragePolicyView } from '../presentation/SharedDownloadProjection';
 import { filterDownloadBooks, describeDownloadReadingTarget, downloadChapterDetailLabel, downloadChapterBookTitle,
   downloadsProvenEmpty, formatDownloadStorageBytes, canCleanDownloadStorage, currentDownloadReadingChapterIndex } from '../presentation/SharedDownloadProjection';
-import { FrameCallback, TextModifier, SymbolGlyphModifier } from '@kit.ArkUI';
 import { readerScrimmedOpaqueColor } from '../../../ui/surfaces/ReaderScrimColor';
 import { ReaderInlineSelect } from '../../../ui/controls/ReaderInlineSelect';
 import { ReaderChoiceRow } from '../../../ui/controls/ReaderChoiceRow';
@@ -397,7 +396,7 @@ export struct SharedDownloadPage {
   @Builder
   private topBar() {
     PageBackBar({ variant: this.embeddedWide ? 'standard' : 'download', floating: this.embeddedWide,
-      centered: this.embeddedWide, elevation: this.embeddedWide ? 'floating' : 'fixed', trailingWidthVp: DOWNLOAD_HEADER_ACTION_WIDTH,
+      centered: this.embeddedWide, elevation: this.embeddedWide ? 'floating' : 'fixed', trailingWidthVp: this.manageHeaderActionWidth(),
       showBack: !this.embeddedWide || this.detailKey.length > 0 || this.managing,
       title: this.detailKey.length === 0 ? '下载管理' : '章节下载',
       backFocusId: this.focusKey('page-back'),
@@ -412,14 +411,19 @@ export struct SharedDownloadPage {
     Button({ type: ButtonType.Normal }) {
       Text(this.managing ? '完成' : '管理').fontFamily(TYPE_DOWNLOAD_CONTROL.fontFamily)
         .fontWeight(TYPE_DOWNLOAD_CONTROL.fontWeight).fontSize(TYPE_DOWNLOAD_CONTROL.fontSizeFp)
-        .lineHeight(TYPE_DOWNLOAD_CONTROL.lineHeightFp as number).halfLeading(true).fontColor(this.primaryInk());
-    }.id(this.focusKey('manage')).width(DOWNLOAD_HEADER_ACTION_WIDTH)
+        .lineHeight(`${TYPE_DOWNLOAD_CONTROL.lineHeightFp}fp`).halfLeading(true).fontColor(this.primaryInk())
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+    }.id(this.focusKey('manage')).width(this.manageHeaderActionWidth())
       .constraintSize({ minHeight: DOWNLOAD_HEADER_ACTION_HEIGHT }).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-      .responseRegion(readerActionTouchRegion(DOWNLOAD_HEADER_ACTION_WIDTH, DOWNLOAD_HEADER_ACTION_HEIGHT))
+      .responseRegion(readerActionTouchRegion(this.manageHeaderActionWidth(), DOWNLOAD_HEADER_ACTION_HEIGHT))
       .enabled(this.managing || this.canEnterManaging())
       .opacity(this.managing || this.canEnterManaging() ? 1 : DOWNLOAD_VISUAL.disabledOpacity).onClick((): void => {
         if (this.uiInputIsCurrent()) this.setManaging(!this.managing);
       });
+  }
+
+  private manageHeaderActionWidth(): number {
+    return Math.max(DOWNLOAD_HEADER_ACTION_WIDTH, Math.ceil(2 * TYPE_DOWNLOAD_CONTROL.fontSizeFp * this.fontScale() + 12));
   }
 
   @Builder
@@ -670,7 +674,7 @@ export struct SharedDownloadPage {
     }.constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget }).padding({ top: DOWNLOAD_VISUAL.tabPaddingY, bottom: DOWNLOAD_VISUAL.tabPaddingY, left: DOWNLOAD_VISUAL.tabPaddingX, right: DOWNLOAD_VISUAL.tabPaddingX }).layoutWeight(1).borderRadius(DOWNLOAD_VISUAL.tabRadius)
       .fontColor(this.tabInk(id))
       .backgroundColor(this.bookType === id ? downloadVisualColor('surface', this.appThemeScheme) : Color.Transparent)
-      .shadow({ radius: this.bookType === id ? DOWNLOAD_VISUAL.tabShadowRadius : 0, color: downloadVisualColor('shadow', this.appThemeScheme), offsetX: DOWNLOAD_VISUAL.tabShadowX, offsetY: DOWNLOAD_VISUAL.tabShadowY })
+      .shadow(readerSurfaceElevation(this.bookType === id ? 'card' : 'embedded', this.appThemeScheme))
       .accessibilityText(`${label}${this.bookType === id ? '，已选择' : ''}`)
       .onClick((): void => {
         if (!this.searchInputIsCurrent(identity)) return;
@@ -1111,6 +1115,7 @@ export struct SharedDownloadPage {
         if (this.managing) {
           ReaderButton({ scheme: this.appThemeScheme, variant: 'subtle', visualSize: 'small',
             label: this.allSelected() ? '取消全选' : '全选', focusId: this.focusKey('select-all'),
+            actionEnabled: this.detail() !== undefined || this.visibleBooks().length > 0,
             onAction: this.manageSelectAllAction(this.managementGeneration) });
           this.managementDone(this.managementGeneration);
         }
@@ -2414,9 +2419,12 @@ export struct SharedDownloadPage {
   }
   private locateCurrent(): void {
     const chapter = this.currentChapter(); const book = this.detail(); if (chapter === undefined || book === undefined) return;
+    const index = book.chapters.findIndex((item: DownloadChapterView): boolean => item.key === chapter.key);
+    if (index < 0) return;
     this.cancelChapterScrollRestore();
     this.cancelManagingScroll();
-    this.chapterScroller.scrollToIndex(3 + book.chapters.findIndex((item: DownloadChapterView): boolean => item.key === chapter.key), !this.reduceMotion, ScrollAlign.CENTER);
+    // The embedded page puts its heading outside the native list.
+    this.chapterScroller.scrollToIndex((this.embeddedWide ? 2 : 3) + index, !this.reduceMotion, ScrollAlign.CENTER);
   }
   private allSelected(): boolean {
     const book = this.detail();
@@ -2876,23 +2884,6 @@ export struct SharedDownloadPage {
   private fontScale(): number {
     const scale = this.currentMetrics().systemFontScale;
     return Number.isFinite(scale) && scale > 0 ? scale : 1;
-  }
-  private selectTextModifier(quick: boolean = false): TextModifier {
-    const modifier = new TextModifier();
-    modifier.fontFamily(quick ? TYPE_DOWNLOAD_QUICK_SELECT.fontFamily : TYPE_DOWNLOAD_BODY.fontFamily)
-      .fontWeight(quick ? TYPE_DOWNLOAD_QUICK_SELECT.fontWeight : TYPE_DOWNLOAD_BODY.fontWeight)
-      .fontSize(quick ? TYPE_DOWNLOAD_QUICK_SELECT.fontSizeFp : TYPE_DOWNLOAD_BODY.fontSizeFp)
-      .lineHeight(quick ? TYPE_DOWNLOAD_QUICK_SELECT.lineHeightFp as number : TYPE_DOWNLOAD_BODY.lineHeightFp as number)
-      .halfLeading(true).fontColor(downloadVisualColor(quick ? 'muted' : 'ink', this.appThemeScheme));
-    return modifier;
-  }
-  private selectArrowModifier(quick: boolean = false): SymbolGlyphModifier {
-    const modifier = new SymbolGlyphModifier($r('sys.symbol.chevron_down'));
-    modifier.fontSize(TYPE_DOWNLOAD_CONTROL.fontSizeFp.toString() + 'vp').fontColor([downloadVisualColor(quick ? 'muted' : 'ink', this.appThemeScheme)]);
-    return modifier;
-  }
-  private selectArrowGap(quick: boolean = false): number {
-    return (quick ? DOWNLOAD_VISUAL.chapterQuickArrowSlot : DOWNLOAD_VISUAL.selectArrowSlot) - DOWNLOAD_VISUAL.controlFontSize;
   }
   private selectClosedWidth(value: string, options: string[], maximum: number, rowLabel: string, quick: boolean = false): number {
     const context = this.getUIContext();

@@ -185,6 +185,11 @@ const CHOICES: Record<ReaderChoiceSpecId, ReaderChoiceSpec> = {
 
 function resolveReaderChoiceSpec(id: ReaderChoiceSpecId): ReaderChoiceSpec { return CHOICES[id]; }
 
+export function readerSettingsTabletOptionHeight(fontScale: number): number {
+  const spec = resolveReaderChoiceSpec('settings-tablet');
+  return readerScaledControlHeight(spec.height, spec.text.lineHeightFp ?? spec.text.fontSizeFp * 1.5, fontScale);
+}
+
 /** The finite row spec keeps AUTO attributes absent, rather than calling a
  * native setter with undefined (which has different platform semantics). */
 class ReaderChoiceLabelModifier implements AttributeModifier<TextAttribute> {

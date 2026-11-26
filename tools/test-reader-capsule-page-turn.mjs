@@ -227,6 +227,9 @@ check('first load, real failure, controls, obstruction and exit still hide the c
 if (scope === 'pointer-routing') {
 const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
 const { selectedProductionComponentCallback } = await import('./lib/selected-production-methods.mjs');
+const { productionReaderPressFeedback } = await import('./lib/reader-press-feedback-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 // The actual parent __Common__ and raw Row are siblings in LRE. A zIndex on
 // the Stage inside Panel cannot repair a lower/equal parent. This controlled
 // pointer seam verifies emitted attributes/callback dispatch, not native hit
@@ -238,10 +241,21 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
   const capsuleTree = ts.createSourceFile(virtualFilePath('ReaderSessionCapsule.ets'), capsuleText,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   const frameSource = capsuleTree.statements.map(statement => statement.getText(capsuleTree))
-    .filter(value => /^export (?:const READER_SESSION_CAPSULE_(?:RADIUS|SHADOW)\b|class ReaderSessionCapsuleFrame\b)/.test(value))
+    .filter(value => /^export (?:const READER_SESSION_CAPSULE_(?:RADIUS|SHADOW)\b|class ReaderSessionCapsule(?:Frame|MetricsCache)\b)/.test(value))
     .join('\n');
-  const capsuleFrame = new Function('readerAppColor',
-    `${stripTypeScriptTypes(frameSource.replace(/^export /gm, ''))}; return { ReaderSessionCapsuleFrame, READER_SESSION_CAPSULE_RADIUS };`)(readerAppColor);
+  const measure = (_context, type) => ({ width: type === 'tts' ? 94 : 96,
+    paintHeight: 24, targetHeight: 44, labelWidth: 42, labelHeight: 16, countdownSize: 16 });
+  const ReaderPressFeedback = productionReaderPressFeedback();
+  const capsuleFrame = new Function('readerAppColor', 'ReaderPressFeedback', 'measureReaderSessionCapsule',
+    `${stripTypeScriptTypes(frameSource.replace(/^export /gm, ''))}; return {
+      ReaderSessionCapsuleFrame, READER_SESSION_CAPSULE_RADIUS, ReaderSessionCapsuleMetricsCache,
+    };`)(readerAppColor, ReaderPressFeedback, measure);
+  const TouchType = { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' };
+  const pressSource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderPressMotion.ets', import.meta.url), 'utf8');
+  const { readerPressPointer } = pureModuleProbe(pressSource.slice(pressSource.indexOf('export function readerPressPointer')),
+    'PressPointer.ets', { TouchType }, ['readerPressPointer']);
+  const paintInputs = { ...createArkUIPropertyRuntimeProbe().sdk, ...capsuleFrame,
+    readerPressPointer, readerWindowMetrics: () => ({ densityPixels: 1 }) };
   let panelStatement, panelCall;
   function locate(node) {
     if (ts.isExpressionStatement(node) && node.getText(tree).startsWith('ReaderControlPanel({')) panelStatement = node;
@@ -258,22 +272,20 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
     { ReaderControlPanel: CapsuleChild }, { childSources: { ReaderControlPanel: panelText } }).Component;
   const Raw = createReaderBuilderProbe(rawText, ['build']).Component;
   const Stage = createReaderBuilderProbe(stageText, ['build', 'sourceSharpContent',
-    'effectiveSourceSurfaceColor', 'effectiveSourceBorderColor', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor', 'metrics'], {
-    ...capsuleFrame, READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT,
-    measureReaderSessionCapsule: (_context, type) => ({ width: type === 'tts' ? 94 : 96,
-      paintHeight: 24, targetHeight: 44, labelWidth: 42, labelHeight: 16, countdownSize: 16 }),
+    'effectiveSourceSurfaceColor', 'effectiveSourceBorderColor', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor',
+    'metrics', 'metricsCache', 'metricsRevision', 'pressPointer', 'paintDensity'], {
+    ...paintInputs, READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT,
     ReaderSessionCapsuleLeading: CapsuleChild, ReaderSessionCapsulePause: CapsuleChild,
     readerSessionCapsuleAccessibility: () => 'capsule',
   }, { childSources: { ReaderSessionCapsuleLeading: capsuleText, ReaderSessionCapsulePause: capsuleText } }).Component;
   const Static = createReaderBuilderProbe(capsuleText, ['build', 'finalWidth',
-    'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor', 'numericLength', 'metrics', 'measurementHandler'], {
-    ...capsuleFrame, measureReaderSessionCapsule: (_context, type) => ({ width: type === 'tts' ? 94 : 96,
-      paintHeight: 24, targetHeight: 44, labelWidth: 42, labelHeight: 16, countdownSize: 16 }),
+    'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor', 'numericLength', 'metrics', 'measurementHandler',
+    'metricsCache', 'metricsRevision', 'pressPointer'], {
+    ...paintInputs,
     ReaderSessionCapsuleLeading: CapsuleChild, ReaderSessionCapsulePause: CapsuleChild,
     READER_SESSION_CAPSULE_HEIGHT: 24, readerSessionCapsuleMinimumWidth: type => type === 'tts' ? 94 : 96,
     readerSessionCapsuleAccessibility: () => 'capsule',
   }, { componentName: 'ReaderSessionCapsule', childSources: { ReaderSessionCapsuleLeading: capsuleText, ReaderSessionCapsulePause: capsuleText } }).Component;
-  const TouchType = { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' };
   let pointerTime = 1000;
   const Pointer = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageInteractionLayer.ets', import.meta.url), [
     'acceptCurrentInput', 'handleTouch', 'startRawPointer', 'updateRawPointer', 'finishRawPointer', 'updateVelocity', 'eventTimeMs',
@@ -362,7 +374,9 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
         ttsCoordinator: { setDesiredPlaying: value => calls.push(['desired', value]),
           pause: async () => { calls.push(['tts.pause']); }, resume: async () => { calls.push(['tts.resume']); } },
         createTtsPlayIntent: () => ({}), isTtsPlayIntentCurrent: () => true, cancelPendingAutoPageStart() {},
+        isControlPlaybackPresentationCurrent: () => false,
         cancelPendingTtsPlay() {}, captureControlPlaybackPresentation() {}, stopAutoPage() {},
+        startAutoPageSession: resuming => calls.push([resuming ? 'auto.resume' : 'auto.start']),
         pauseAutoPage: reason => calls.push(['auto.pause', reason]),
         controlVerification: { observing: () => false },
         autoPageCoordinator: { pendingStart: () => false, beginStart: () => 1, admitStart: () => true,

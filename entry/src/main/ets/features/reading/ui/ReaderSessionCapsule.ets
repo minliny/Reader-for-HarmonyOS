@@ -1,4 +1,7 @@
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { readerPressPointer } from '../../../ui/foundation/ReaderPressMotion';
 import { TYPE_READER_SESSION_COUNTDOWN, TYPE_READER_SESSION_LABEL } from '../../../ui/foundation/ReaderTypography';
 import type { ReaderSessionCapsuleState, ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
 import type { UIContext } from '@ohos.arkui.UIContext';
@@ -9,8 +12,9 @@ const AUTO_PAGE_CAPSULE_MIN_WIDTH = 96;
 const TTS_CAPSULE_MIN_WIDTH = 94;
 export const READER_SESSION_CAPSULE_HEIGHT = 24;
 export const READER_SESSION_CAPSULE_RADIUS = 12;
-export const READER_SESSION_CAPSULE_SHADOW: ShadowOptions = {
-  radius: 8, color: '#12463423', offsetX: 0, offsetY: 3,
+interface ReaderSessionCapsuleShadow { radius: number; offsetY: number; }
+export const READER_SESSION_CAPSULE_SHADOW: ReaderSessionCapsuleShadow = {
+  radius: 8, offsetY: 3,
 };
 export function readerSessionCapsuleMinimumWidth(type: ReaderSessionCapsuleType): number {
   return type === 'autoPage' ? AUTO_PAGE_CAPSULE_MIN_WIDTH : TTS_CAPSULE_MIN_WIDTH;
@@ -41,26 +45,51 @@ export function measureReaderSessionCapsule(context: UIContext, type: ReaderSess
     paintHeight, targetHeight: Math.max(READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT, paintHeight), labelWidth, labelHeight, countdownSize };
 }
 
+export class ReaderSessionCapsuleMetricsCache {
+  private type: ReaderSessionCapsuleType | undefined = undefined;
+  private scale: number = 1;
+  private revision: number = -1;
+  private value: ReaderSessionCapsuleMetrics | undefined = undefined;
+
+  resolve(context: UIContext, type: ReaderSessionCapsuleType, scale: number, revision: number): ReaderSessionCapsuleMetrics {
+    const fontScale = Number.isFinite(scale) ? Math.max(1, scale) : 1;
+    const cached = this.value;
+    if (cached !== undefined && type === this.type && fontScale === this.scale && revision === this.revision) return cached;
+    const next = measureReaderSessionCapsule(context, type, fontScale);
+    this.type = type;
+    this.scale = fontScale;
+    this.revision = revision;
+    this.value = next;
+    return next;
+  }
+}
+
 /** The static capsule and its launch actor share paint while retaining their own nodes. */
 export class ReaderSessionCapsuleFrame implements AttributeModifier<CommonAttribute> {
   private readonly scheme: string;
   private readonly surface: string;
   private readonly border: string;
   private readonly shadow: string;
+  private readonly density: number;
+  private readonly pressed: boolean;
 
-  constructor(scheme: string, surface: string, border: string, shadow: string) {
+  constructor(scheme: string, surface: string, border: string, shadow: string, density: number = 1, pressed: boolean = false) {
     this.scheme = scheme;
     this.surface = surface;
     this.border = border;
     this.shadow = shadow;
+    this.density = density;
+    this.pressed = pressed;
   }
 
   applyNormalAttribute(instance: CommonAttribute): void {
-    instance.backgroundColor(this.surface.length > 0 ? this.surface : readerAppColor('TOK_READ_SURFACE', this.scheme))
-      .border({ width: 1, color: this.border.length > 0 ? this.border : readerAppColor('TOK_LINE', this.scheme) })
-      .borderRadius(READER_SESSION_CAPSULE_RADIUS)
-      .shadow({ radius: READER_SESSION_CAPSULE_SHADOW.radius, color: this.shadow,
-        offsetX: READER_SESSION_CAPSULE_SHADOW.offsetX, offsetY: READER_SESSION_CAPSULE_SHADOW.offsetY });
+    const fill = this.surface.length > 0 ? this.surface : readerAppColor('TOK_READ_SURFACE', this.scheme);
+    new ReaderPressFeedback(fill, this.scheme, READER_SESSION_CAPSULE_RADIUS,
+      READER_SESSION_CAPSULE_RADIUS, true, this.pressed).applyNormalAttribute(instance);
+    instance.border({ width: 1, color: this.border.length > 0 ? this.border : readerAppColor('TOK_LINE', this.scheme) })
+      .shadow({ radius: READER_SESSION_CAPSULE_SHADOW.radius * this.density,
+        color: this.shadow.length > 0 ? this.shadow : readerAppColor('app.shadow.menu', this.scheme),
+        offsetX: 0, offsetY: READER_SESSION_CAPSULE_SHADOW.offsetY * this.density });
   }
 }
 
@@ -160,6 +189,7 @@ export function readerSessionCapsuleAccessibility(
 /** Figma `Reader/SessionCapsule` (`1164:10275`), one stable static actor tree. */
 @Component
 export struct ReaderSessionCapsule {
+  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop type: ReaderSessionCapsuleType = 'autoPage';
   @Prop sessionState: ReaderSessionCapsuleState = 'playing';
   @Prop desiredPlaying: boolean = true;
@@ -170,11 +200,13 @@ export struct ReaderSessionCapsule {
   @Prop primaryColor: string = '';
   @Prop onPrimaryColor: string = '';
   @Prop themeScheme: string = 'day';
-  @Prop shadowColor: string = '#12463423';
+  @Prop shadowColor: string = '';
   @Prop interactionEnabled: boolean = true;
   @Prop capsuleWidth: number = 0;
   @Prop fontScale: number = 1;
   @Prop measurementIdentity: string = '';
+  @State private pressPointer: number = -1;
+  private readonly metricsCache: ReaderSessionCapsuleMetricsCache = new ReaderSessionCapsuleMetricsCache();
   onToggle: () => void = (): void => {};
   onMeasured: (width: number, height: number, identity: string, type: ReaderSessionCapsuleType) => void =
     (_width: number, _height: number, _identity: string, _type: ReaderSessionCapsuleType): void => {};
@@ -193,7 +225,8 @@ export struct ReaderSessionCapsule {
         .position({ x: this.finalWidth() - 20, y: (this.metrics().paintHeight - 16) / 2 });
     }
     .width(this.finalWidth()).height(this.metrics().paintHeight)
-    .attributeModifier(new ReaderSessionCapsuleFrame(this.themeScheme, this.surfaceColor, this.surfaceBorderColor, this.shadowColor))
+    .attributeModifier(new ReaderSessionCapsuleFrame(this.themeScheme, this.surfaceColor, this.surfaceBorderColor, this.shadowColor,
+      this.metricsRevision < 0 ? 1 : readerWindowMetrics().densityPixels, this.interactionEnabled && this.pressPointer >= 0))
     .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }
     .padding(0)
@@ -203,7 +236,11 @@ export struct ReaderSessionCapsule {
     .accessibilityText(readerSessionCapsuleAccessibility(this.type, this.sessionState, this.desiredPlaying))
     // Keep capsule pointers out of the raw page handler, including UP/CANCEL
     // after playback state changes. Click recognition remains independent.
-    .onTouch((event: TouchEvent): void => event.stopPropagation())
+    .onTouch((event: TouchEvent): void => {
+      event.stopPropagation();
+      const pointer = readerPressPointer(event, this.pressPointer, this.interactionEnabled);
+      if (pointer !== this.pressPointer) this.pressPointer = pointer;
+    })
     .onClick((): void => { if (this.interactionEnabled) this.onToggle(); })
     .onAreaChange(this.measurementHandler());
   }
@@ -221,7 +258,7 @@ export struct ReaderSessionCapsule {
   }
 
   private metrics(): ReaderSessionCapsuleMetrics {
-    return measureReaderSessionCapsule(this.getUIContext(), this.type, this.fontScale);
+    return this.metricsCache.resolve(this.getUIContext(), this.type, this.fontScale, this.metricsRevision);
   }
 
   private effectiveTextColor(): string {

@@ -1,6 +1,7 @@
 import { TYPE_READER_BOOKMARK_CHAPTER, TYPE_READER_BOOKMARK_EXCERPT, TYPE_READER_BOOKMARK_EXCERPT_LEGACY, TYPE_READER_BOOKMARK_META, TYPE_READER_BOOKMARK_PENDING, TYPE_READER_BOOKMARK_PENDING_LEGACY } from '../../../ui/foundation/ReaderTypography';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import type { ReaderBookmarkRowModel } from '../presentation/ReaderBookmarkProjection';
 import { sampleReaderControlBookmark, type ReaderControlBookmarkFrame,
   type ReaderControlBookmarkNaturalSize } from './ReaderControlBookmarkGeometry';
@@ -102,6 +103,7 @@ export struct ReaderBookmarkRow {
           .position({ x: this.frame().excerpt.x, y: this.frame().excerpt.y });
       }
     }.width(this.frame().card.width).height(this.frame().card.height).clip(true)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 6))
       .accessibilityText(`打开书签：${this.row.chapterTitle} ${this.row.positionLabel} ${this.row.timeLabel}` +
         (this.row.identityStatus === 'pendingConfirmation' ? ` ${BOOKMARK_PENDING_LABEL}` : '') +
         (!this.showExcerpt && this.row.excerpt.trim().length > 0 ? `，${this.row.excerpt}` : ''))
@@ -176,6 +178,7 @@ export struct ReaderBookmarkRow {
     .width('100%')
     .height(this.standaloneSize?.rowHeight ?? BOOKMARK_ROW_HEIGHT)
     .padding({ left: 10, right: 10 })
+    .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 6))
     .accessibilityText(`打开书签：${this.row.chapterTitle} ${this.row.positionLabel} ${this.row.timeLabel}`)
     .onClick((): void =>
       this.onSelectBookmark(this.row.bookmarkId, this.row.chapterIndex, this.row.chapterOffset, this.row.positionScope));

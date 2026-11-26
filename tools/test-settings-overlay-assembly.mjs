@@ -9,6 +9,7 @@ const selected = selectContractCases({
   'settings-actions': { description: 'The original settings and cleanup recovery callbacks retain current identities and immediately yield to active selection or retirement.', resources: [] },
   'reset-confirmation': { description: 'Actual settings cover tickets fence Back, stale actions and one write, then reset persists and publishes list layout.', resources: [] },
   'wide-shell': { description: 'Actual tablet Settings shell preserves one rail, measured panel and bottom tab for four current routes and collapse.', resources: [] },
+  'settings-picker': { description: 'Actual responsive selector motion, safe anchoring, and accessible cancel admission.', resources: [] },
   'preview-layers': { description: 'Runtime message preview notices use the bounded slot, while popup scenes preserve sample content and scroll and modal geometry stays locally live.', resources: [] },
 });
 
@@ -17,7 +18,7 @@ if (selected.length > 0) {
     try { return next(specifier, context); }
     catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(specifier + '.ts', context); throw error; }
   } });
-  const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { boundedSurfaceSdk, boundedMembers, readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   const { actualReaderPageLayout } = await import('./lib/reader-page-shell-runtime-probe.mjs');
   const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
@@ -183,6 +184,74 @@ if (selected.length > 0) {
 
   for (const id of selected) {
     let samples = 0;
+    if (id === 'settings-picker') {
+      const { productionReaderMotionSdk } = await import('./lib/reader-control-builder-probe.mjs');
+      const { productionReaderPressFeedback } = await import('./lib/reader-press-feedback-probe.mjs');
+      const { choiceRowProbe } = await import('./lib/reader-choice-row-probe.mjs');
+      const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+      const { readerPageAreaLength } = await import('../entry/src/main/ets/ui/layout/ReaderPageShell.ts');
+      const { readerKeyboardHostBottom } = await import('../entry/src/main/ets/ui/layout/ReaderKeyboardGeometry.ts');
+      const scaleResolvers = await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
+      const source = read('features/settings/ui/SettingsSelectOverlay.ets');
+      const choiceSource = read('ui/controls/ReaderChoiceRow.ets');
+      const choiceRegistry = choiceSource.slice(choiceSource.indexOf('type ReaderChoiceSpecId'), choiceSource.indexOf('/** The finite row spec'));
+      const choiceGeometry = pureModuleProbe(choiceRegistry, 'ReaderChoiceRowGeometry.ts',
+        { ...readerTypographyRoles, ...scaleResolvers }, ['readerSettingsTabletOptionHeight']);
+      const effect = (kind, edge) => ({ kind, edge, animation(params) { return { kind, edge, params }; } });
+      for (const expandedLayout of [false, true]) for (const reduceMotion of [false, true]) {
+        const metrics = safe.createDefaultReaderWindowMetrics();
+        metrics.windowRect = new safe.ReaderRectVp(0, 0, expandedLayout ? 700 : 390, 400);
+        metrics.systemFontScale = 2;
+        metrics.densityPixels = 2;
+        const sdk = boundedSurfaceSdk({ windowMetrics: () => metrics });
+        const choice = choiceRowProbe(undefined, choiceSource, sdk.properties, () => metrics);
+        const ReaderPressFeedback = productionReaderPressFeedback({ ColorMetrics: {
+          resourceColor: base => ({ blendColor: () => ({ color: `pressed:${base}` }) }),
+        } });
+        const dismissals = [], choices = [];
+        registerShape('ReaderChoiceRow', choiceSource);
+        const { owner } = createReaderBuilderProbe(source, boundedMembers(source), {
+          ...sdk.deps, ...readerSurfaceSpecsForProbe(metrics), ...safe, ...choiceGeometry, ...choice.dependencies, ...scaleResolvers,
+          ...productionReaderMotionSdk(), ReaderPressFeedback, readerPageAreaLength, readerKeyboardHostBottom,
+          readerWindowMetrics: () => metrics, ReaderWindowCoordinator: { metrics: () => metrics }, registerReaderFonts() {},
+          TransitionEdge: { BOTTOM: 'bottom' }, TransitionEffect: {
+            OPACITY: effect('opacity'), move: edge => effect('move', edge), asymmetric: (open, close) => ({ open, close }),
+          }, PHONE_HORIZONTAL_INSET: 14, PHONE_BOTTOM_INSET: 20, PHONE_OPTION_HEIGHT: 52, PHONE_CANCEL_GAP: 10, PHONE_RADIUS: 12,
+        }, { ...sdk.hooks, childSources: { ...sdk.childSources, ReaderChoiceRow: choiceSource } });
+        Object.assign(owner, { expandedLayout, reduceMotion, selectionId: 'picker:1', options: ['书架', '发现'], field: 'startup',
+          anchorRight: 300, anchorBottom: 398, onDismiss: identity => dismissals.push(identity),
+          onSelect: (option, identity) => choices.push([option, identity]) });
+        owner.aboutToAppear(); owner.initialRender(); sdk.properties.flush();
+        const nodes = [...owner.nodes.values()];
+        const backdrop = nodes.find(node => node.type === 'Row' && node.onClick && node.accessibilityLevel === 'no');
+        assert.equal(backdrop.transition.params.duration, reduceMotion ? 120 : 160);
+        const scroller = nodes.find(node => node.type === 'Scroll' && node.transition);
+        if (reduceMotion) {
+          assert.equal(scroller.transition.kind, 'opacity');
+          assert.equal(scroller.transition.params.duration, 120);
+        } else {
+          assert.deepEqual([scroller.transition.open.params.duration, scroller.transition.close.params.duration], [260, 210]);
+          assert.equal(scroller.transition.open.kind, expandedLayout ? 'opacity' : 'move');
+        }
+        if (expandedLayout) {
+          assert.equal(choiceGeometry.readerSettingsTabletOptionHeight(2), 64);
+          assert.equal(scroller.position.y, 272);
+          assert.equal(scroller.shadow.radius, 40);
+        } else {
+          const sheet = nodes.find(node => node.type === 'Column' && node.linearGradient);
+          assert.deepEqual(sheet.borderRadius, { topLeft: 24, topRight: 24 });
+          assert.equal(sheet.shadow.radius, 48);
+          const cancel = nodes.find(node => node.type === 'Button' && node.accessibilityText === '取消');
+          assert.equal(cancel.accessibilityRole, 'AccessibilityRoleType.BUTTON');
+          assert.equal(cancel.createWithChild.stateEffect, false);
+          cancel.onClick(); cancel.onClick(); backdrop.onClick();
+          assert.deepEqual(dismissals, ['picker:1']);
+          assert.deepEqual(choices, []);
+        }
+        owner.aboutToDisappear();
+        samples++;
+      }
+    }
     if (id === 'settings-frame' || id === 'settings-compatibility') compatibilityForwarding();
     if (id === 'settings-compatibility') samples = 2;
     if (id === 'settings-frame') {

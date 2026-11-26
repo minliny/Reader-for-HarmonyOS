@@ -1,5 +1,6 @@
 import { mangaDirectoryContextEntries, mangaDirectoryDownloadStatusWidth } from './MangaDirectoryState';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale } from './MangaDirectoryVisual';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
 import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
@@ -48,6 +49,7 @@ export struct MangaReadingDirectoryFallback {
   private listReady: boolean = false;
   private scrollGeneration: number = 0;
   private pendingScroll: 'opening' | 'current' | 'top' | undefined = undefined;
+  private locateExpectsQueryClear: boolean = false;
   @State private presentation: Map<number, MangaDirectoryRowPresentation> = new Map<number, MangaDirectoryRowPresentation>();
   /** Full tools and chapter content can share their existing native owner. */
   scroller: Scroller | undefined = undefined;
@@ -171,6 +173,7 @@ export struct MangaReadingDirectoryFallback {
   }
 
   private onIdentityChanged(): void {
+    this.locateExpectsQueryClear = false;
     if (this.admitEntries(true)) this.requestScroll('opening');
   }
 
@@ -180,12 +183,15 @@ export struct MangaReadingDirectoryFallback {
 
   private onViewInputsChanged(): void {
     if (!this.mounted) return;
+    const completesLocate = this.locateExpectsQueryClear && this.query.trim().length === 0;
+    this.locateExpectsQueryClear = false;
     this.publishProjection();
-    this.requestScroll('top');
+    this.requestScroll(completesLocate ? 'current' : 'top');
   }
 
   private onLocateCurrent(): void {
     if (!this.mounted) return;
+    this.locateExpectsQueryClear = this.query.trim().length > 0;
     const current = this.admittedEntries.find((entry: LocalReadingTocEntry): boolean => entry.index === this.currentChapterIndex);
     const ancestors = current === undefined ? [] : this.rowPresentation(current)?.ancestorGroupIndexes ?? [];
     this.collapsedGroups = this.collapsedGroups.filter((index: number): boolean => !ancestors.includes(index));
@@ -196,7 +202,8 @@ export struct MangaReadingDirectoryFallback {
   private requestScroll(intent: 'opening' | 'current' | 'top'): void {
     this.pendingScroll = intent;
     const generation = ++this.scrollGeneration;
-    setTimeout((): void => {
+    const context = this.getUIContext();
+    context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
       if (!this.mounted || generation !== this.scrollGeneration || !this.listReady) return;
       const index = intent === 'top' ? 0 :
         this.layoutRows.findIndex((row: MangaDirectoryLayoutRow): boolean =>
@@ -206,7 +213,7 @@ export struct MangaReadingDirectoryFallback {
           { extraOffset: LengthMetrics.vp(intent === 'top' ? 0 : intent === 'current' ? -12 : -this.currentOpenInset) });
         this.pendingScroll = undefined;
       }
-    }, 0);
+    }));
   }
 
   private onFirstLayout(): void {
@@ -218,6 +225,7 @@ export struct MangaReadingDirectoryFallback {
   private onUserScrollIntent(): void {
     this.scrollGeneration += 1;
     this.pendingScroll = undefined;
+    this.locateExpectsQueryClear = false;
     this.onListUserScroll();
   }
 

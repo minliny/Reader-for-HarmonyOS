@@ -470,14 +470,14 @@ export struct ReaderTtsConfigOverlay {
     this.stopPreview();
     const identity = this.selectionId;
     const generation = ++this.generation;
-    this.busy = true;
+    this.setBusy(true);
     this.errorText = '';
     void this.onChoose(id, identity).then((): void => {
       if (this.mounted && generation === this.generation) this.onClose(identity);
     }).catch((error: Error): void => {
       if (this.mounted && generation === this.generation) this.errorText = error.message;
     }).finally((): void => {
-      if (this.mounted && generation === this.generation) this.busy = false;
+      if (this.mounted && generation === this.generation) this.setBusy(false);
     });
   }
   @Builder

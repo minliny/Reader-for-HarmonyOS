@@ -1,4 +1,5 @@
-import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { TYPE_READER_AUTO_PAGE_RETAINED_QUICK_BACK_BACK, TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK,
   TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK, ReaderTextStyle } from '../../../ui/foundation/ReaderTypography';
@@ -9,7 +10,7 @@ export struct ReaderControlQuickBack {
   @Prop variant: 'search' | 'auto-page' | 'replace' = 'search';
   @Prop scheme: string = 'day';
   @Prop actionWidth: number = 51;
-  @Prop actionHeight: number = 24;
+  @Prop actionHeight: number = 44;
   @Prop actionVisible: boolean = true;
   @Prop actionEnabled: boolean = true;
   onAction: () => void = (): void => {};
@@ -27,18 +28,18 @@ export struct ReaderControlQuickBack {
         .padding({ left: this.variant === 'search' ? 8 : this.variant === 'auto-page' ? 9 : 0,
           right: this.variant === 'auto-page' ? 9 : 0, top: 4, bottom: 4 })
         .justifyContent(this.variant === 'replace' ? FlexAlign.Center : FlexAlign.Start)
-        .alignItems(VerticalAlign.Center).accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None)
-        .backgroundColor(readerAppColor(this.variant === 'auto-page' ? 'TOK_SURFACE_PANEL' : 'TOK_SURFACE_PANEL_SOFT', this.scheme))
-        .borderRadius(8);
+        .alignItems(VerticalAlign.Center).accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }.width(this.actionWidth).height(this.actionHeight)
       .id('reader-control-module-back-' + this.variant)
       .padding(0)
-      .backgroundColor(Color.Transparent)
       .borderRadius(8).opacity(1)
+      .responseRegion(readerActionTouchRegion(this.actionWidth, this.actionHeight))
       .hitTestBehavior(this.actionVisible ? HitTestMode.Default : HitTestMode.None)
       .accessibilityLevel(this.actionVisible ? 'auto' : 'no-hide-descendants')
       .attributeModifier(new ReaderActionAccessibility(this.variant === 'search' ? '返回初始控制栏' : '返回阅读控制首页',
-        this.actionVisible && this.actionEnabled, false, true, undefined, 'nativeButton'))
+        this.actionVisible && this.actionEnabled, false, true,
+        new ReaderPressFeedback(readerAppColor(this.variant === 'auto-page' ? 'TOK_SURFACE_PANEL' : 'TOK_SURFACE_PANEL_SOFT', this.scheme),
+          this.scheme, 8, 8, this.actionVisible && this.actionEnabled), 'nativeButton'))
       .onClick((): void => { if (this.actionVisible && this.actionEnabled) this.onAction(); });
   }
 

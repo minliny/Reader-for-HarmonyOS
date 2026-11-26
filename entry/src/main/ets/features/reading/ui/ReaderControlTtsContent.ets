@@ -15,6 +15,7 @@ import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { PathShape } from '@ohos.arkui.shape';
 import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observeReaderControlMorphScroll,
@@ -77,6 +78,12 @@ function readerTtsPresetLabelColor(selected: boolean, scheme: string): ResourceC
   return readerAppColor(selected ? 'TOK_TTS_PAPER' : 'app.control.paint.5B5046', scheme);
 }
 
+function readerTtsShadow(radiusVp: number, offsetYVp: number, color: ResourceColor): ShadowOptions {
+  const observedDensity = ReaderWindowCoordinator.metrics().densityPixels;
+  const density = Number.isFinite(observedDensity) && observedDensity > 0 ? observedDensity : 1;
+  return { radius: radiusVp * density, offsetY: offsetYVp * density, color };
+}
+
 /** The native preset frame and its decorative label keep separate recipes. */
 class ReaderTtsPresetModifier implements AttributeModifier<CommonAttribute> {
   private readonly selected: boolean;
@@ -91,8 +98,7 @@ class ReaderTtsPresetModifier implements AttributeModifier<CommonAttribute> {
     instance.backgroundColor(readerAppColor(this.selected ? 'TOK_TTS_TEAL' : 'TOK_TTS_FIELD', this.scheme))
       .border({ width: this.selected ? 0 : 0.5, color: readerAppColor('TOK_TTS_LINE', this.scheme) })
       .borderRadius(10)
-      .shadow({ radius: 7, color: this.selected ? readerAppColor('app.control.paint.472F6373', this.scheme) : Color.Transparent,
-        offsetY: 2 });
+      .shadow(readerTtsShadow(7, 2, this.selected ? readerAppColor('app.control.paint.472F6373', this.scheme) : Color.Transparent));
   }
 }
 
@@ -1374,7 +1380,7 @@ export struct ReaderControlTtsContent {
         Row().width('100%').height('100%').borderRadius(Math.min(this.transportPaint(kind).width, this.transportPaint(kind).height) / 2)
           .linearGradient({ angle: 155, colors: [[readerTtsPlayGradientStart(this.p(), this.appScheme), 0], [readerAppColor('TOK_TTS_PLAY_END', this.appScheme), 1]] })
           .border({ width: { top: 0.5 }, color: readerAppColor('app.control.paint.33FFFFFF', this.appScheme) })
-          .shadow({ radius: 6 + 2 * this.p(), color: readerAppColor('app.control.paint.5C2F6373', this.appScheme), offsetY: 4 });
+          .shadow(readerTtsShadow(6 + 2 * this.p(), 4, readerAppColor('app.control.paint.5C2F6373', this.appScheme)));
       }
       Row({ space: 4 * this.p() }) {
         Image($r(kind === 'toggle' ? (this.isActivelySpeaking() ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_pause_theme_night' : 'app.media.reader_tts_make_pause') : (this.appScheme === 'night' ? 'app.media.reader_tts_make_play_theme_night' : 'app.media.reader_tts_make_play')) :
@@ -1397,7 +1403,8 @@ export struct ReaderControlTtsContent {
       .width(this.transport(kind).width).height(this.transport(kind).height).padding(0).clip(false)
       .position({ x: this.transport(kind).x, y: this.transport(kind).y })
       .responseRegion(this.transportResponse(kind))
-      .backgroundColor(Color.Transparent)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appScheme,
+        Math.min(this.transport(kind).width, this.transport(kind).height) / 2))
       .enabled(this.sharedInput() && !this.serviceBusy && !(this.onlineServicePage() && !this.isHttpEngineSelected()) && (kind === 'toggle' ?
         this.state.status !== 'stopping' : this.hasActiveQueue()))
       .opacity((kind === 'toggle' || this.displayHasActiveQueue()) ? 1 : 0.42)
@@ -1458,7 +1465,7 @@ export struct ReaderControlTtsContent {
         }.width(this.frame().quickTimerSelect.width).height(this.frame().quickTimerSelect.height)
           .padding(0)
           .position({ x: this.frame().quickTimerSelect.x, y: this.frame().quickTimerSelect.y })
-          .backgroundColor(Color.Transparent)
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appScheme, this.frame().quickTimerSelect.height / 2))
           .opacity(this.frame().quickTimerSelect.opacity).enabled(this.sharedInput() && this.p() === 0)
           .accessibilityLevel(this.sharedInput() && this.p() === 0 ? 'auto' : 'no-hide-descendants')
           .accessibilityText(`定时${this.timerCaption()}，循环切换定时预设`)
@@ -1571,7 +1578,7 @@ export struct ReaderControlTtsContent {
       .backgroundColor(Color.Transparent).borderRadius(0)
       .attributeModifier(new ReaderActionAccessibility(minutes === 'chapterEnd' ? '朗读到本章结束停止' :
         (minutes === 0 ? '关闭定时停止' : `定时${minutes}分钟`), this.fullInput() && this.configField === '',
-        this.timerPresetIsSelected(minutes), true, undefined, 'nativeButton'))
+        this.timerPresetIsSelected(minutes), true, new ReaderPressFeedback(Color.Transparent, this.appScheme, 10), 'nativeButton'))
       .onClick((): void => this.chooseTimerPreset(minutes));
   }
 
@@ -1605,7 +1612,8 @@ export struct ReaderControlTtsContent {
         .border({ width: 0.5, color: readerAppColor('TOK_TTS_TEAL_LINE', this.appScheme) })
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }.width(this.textMinimum()?.timerStepButtonWidth ?? 30)
-      .height(this.textMinimum()?.timerStepButton ?? 44).padding(0).opacity(1).backgroundColor(Color.Transparent)
+      .height(this.textMinimum()?.timerStepButton ?? 44).padding(0).opacity(1)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appScheme, 15))
       .enabled(this.fullInput() && this.configField === '' && (delta > 0 ?
         (minutes ? this.timerMinutes < READER_TTS_TIMER_MAX_MINUTES : this.timerSeconds < READER_TTS_TIMER_MAX_SECONDS) :
         (minutes ? this.timerMinutes > 0 : this.timerSeconds > 0)))
@@ -1642,7 +1650,8 @@ export struct ReaderControlTtsContent {
           .height(this.frame().speedTrack.height).backgroundColor(readerAppColor('TOK_TTS_TEAL', this.appScheme)).borderRadius(Math.min(this.frame().speedThumb.x + 9 - this.frame().speedTrack.x, this.frame().speedTrack.height) / 2)
           .position({ x: this.frame().speedTrack.x, y: this.frame().speedTrack.y });
         Row().width(18).height(18).border({ width: 1.5, color: readerAppColor('TOK_TTS_TEAL', this.appScheme) }).borderRadius(9)
-          .backgroundColor(readerAppColor('TOK_TTS_PAPER', this.appScheme)).shadow({ radius: 2, color: readerAppColor('app.control.paint.382F2314', this.appScheme), offsetY: 1 })
+          .backgroundColor(readerAppColor('TOK_TTS_PAPER', this.appScheme))
+          .shadow(readerTtsShadow(2, 1, readerAppColor('app.control.paint.382F2314', this.appScheme)))
           .position({ x: this.frame().speedThumb.x, y: this.frame().speedThumb.y });
         Text(READER_TTS_RATE_MIN.toFixed(2) + 'x').fontFamily(TYPE_READER_TTS_RETAINED_SPEED_VALUE_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_RETAINED_SPEED_VALUE_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme))
           .attributeModifier(new ReaderTtsNaturalRangeFrame(this.textMinimum()?.speedRange, this.textMinimum()?.speedRangeWidth))
@@ -1688,7 +1697,7 @@ export struct ReaderControlTtsContent {
     }.width(this.ratePresetWidth()).height(this.textMinimum()?.ratePreset ?? 44).padding(0).opacity(1)
       .backgroundColor(Color.Transparent).borderRadius(0)
       .attributeModifier(new ReaderActionAccessibility(`语速${rate.toFixed(2)}倍`, this.fullInput() && this.configField === '',
-        this.effectiveRate() === rate, true, undefined, 'nativeButton'))
+        this.effectiveRate() === rate, true, new ReaderPressFeedback(Color.Transparent, this.appScheme, 10), 'nativeButton'))
       .onClick((): void => this.chooseRatePreset(rate));
   }
 
@@ -1742,11 +1751,13 @@ export struct ReaderControlTtsContent {
           .fontSize(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme)).constraintSize({ minHeight: this.textMinimum()?.serviceTabSubtitle ?? 14 }).maxLines(1);
       }.width('100%').alignItems(HorizontalAlign.Start);
       }.width('100%').constraintSize({ minHeight: this.textMinimum()?.serviceTab ?? 87 }).padding(12).alignItems(HorizontalAlign.Start)
-      .backgroundColor(this.isTtsServiceTabSelected(http) ? readerAppColor('app.control.paint.172F6373', this.appScheme) : readerAppColor('app.control.paint.99FFF8EF', this.appScheme))
       .border({ width: this.isTtsServiceTabSelected(http) ? 1.5 : 0.5,
         color: this.isTtsServiceTabSelected(http) ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('app.control.paint.66B4A697', this.appScheme) }).borderRadius(10)
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-    }.layoutWeight(1).padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
+    }.layoutWeight(1).padding(0).opacity(1)
+      .attributeModifier(new ReaderPressFeedback(readerAppColor(this.isTtsServiceTabSelected(http) ?
+        'app.control.paint.172F6373' : 'app.control.paint.99FFF8EF', this.appScheme), this.appScheme, 10, 10,
+        this.fullInput() && !this.serviceBusy))
       .enabled(this.fullInput() && !this.serviceBusy)
       .accessibilitySelected(this.isTtsServiceTabSelected(http))
       .accessibilityText(http ? this.onlineTtsAccessibilityText() : '系统 TTS，使用设备内置语音')
@@ -1810,7 +1821,8 @@ export struct ReaderControlTtsContent {
       .responseRegion({ x: 0, y: kind === 'voice' ? -(Math.min(44, this.textMinimum()?.voiceRow ?? 52) - this.fieldHeight(kind)) / 2 : 0,
         width: this.fieldWidth(kind), height: kind === 'voice' ? Math.min(44, this.textMinimum()?.voiceRow ?? 52) : this.fieldHeight(kind) })
       .padding({ left: kind === 'voice' ? 4 : 0, right: kind === 'voice' ? 8 : 0, top: 0, bottom: 0 })
-      .backgroundColor(kind === 'voice' ? readerAppColor('TOK_TTS_FIELD', this.appScheme) : Color.Transparent)
+      .attributeModifier(new ReaderPressFeedback(kind === 'voice' ? readerAppColor('TOK_TTS_FIELD', this.appScheme) : Color.Transparent,
+        this.appScheme, this.fieldHeight(kind) / 2, this.fieldHeight(kind) / 2, this.fullInput()))
       .border({ width: kind === 'voice' ? 0.5 : 0, color: readerAppColor('TOK_TTS_LINE', this.appScheme) })
       .enabled(this.fullInput())
       .id(`${this.configFocusId}:${kind}`)
@@ -1819,20 +1831,23 @@ export struct ReaderControlTtsContent {
   }
   @Builder
   private toggleRow(kind: ReaderControlTtsToggle) {
-    Row({ space: 8 }) {
-      Text(this.toggleLabel(kind))
-        .layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme))
-        .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).accessibilityLevel('no');
-      Button({ type: ButtonType.Capsule, stateEffect: false }) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Row({ space: 8 }) {
+        Text(this.toggleLabel(kind))
+          .layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme))
+          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).accessibilityLevel('no');
         ReaderControlSwitchTrack({ value: this.toggleValue(kind), trackWidth: 42,
-          activeColor: readerAppColor('TOK_TTS_TEAL', this.appScheme), inactiveColor: readerAppColor('app.control.paint.C6BFB2', this.appScheme), thumbColor: readerAppColor('TOK_TTS_PAPER', this.appScheme) })
+          activeColor: readerAppColor('TOK_TTS_TEAL', this.appScheme),
+          inactiveColor: readerAppColor('app.control.paint.C6BFB2', this.appScheme), thumbColor: readerAppColor('app.toggle.thumb', this.appScheme) })
           .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-      }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
-        .enabled(this.fullInput()).opacity(1).accessibilitySelected(this.toggleValue(kind))
-        .accessibilityText(`${this.toggleLabel(kind)}，${this.toggleValue(kind) ? '已开启' : '已关闭'}`)
-        .onClick((): void => this.changeToggle(kind));
-    }.width('100%').height(this.textMinimum()?.toggleRow ?? 48).padding({ left: 14, right: 14 }).alignItems(VerticalAlign.Center)
-      .border({ width: { top: 0.5 }, color: readerAppColor('app.control.paint.2E9B8466', this.appScheme) });
+      }.width('100%').height('100%').padding({ left: 14, right: 15 }).alignItems(VerticalAlign.Center)
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+    }.width('100%').height(Math.max(44, this.textMinimum()?.toggleRow ?? 48)).padding(0)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appScheme, 0, 0, this.fullInput()))
+      .border({ width: { top: 0.5 }, color: readerAppColor('app.control.paint.2E9B8466', this.appScheme) })
+      .enabled(this.fullInput()).accessibilityRole(AccessibilityRoleType.SWITCH).accessibilitySelected(this.toggleValue(kind))
+      .accessibilityText(`${this.toggleLabel(kind)}，${this.toggleValue(kind) ? '已开启' : '已关闭'}`)
+      .onClick((): void => this.changeToggle(kind));
   }
 
   private fieldLabel(kind: ReaderControlTtsField): string {
@@ -2030,9 +2045,10 @@ export struct ReaderControlTtsContent {
           (this.appScheme === 'night' ? $r('app.media.reader_appearance_make_chevron_theme_night') : $r('app.media.reader_appearance_make_chevron'))).width(12).height(12);
         }.width('100%').alignItems(VerticalAlign.Center).accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
       }.width(this.textMinimum()?.manageButtonWidth ?? 130).height(this.textMinimum()?.manageButton ?? 44).flexShrink(0).padding({ left: 11, right: 9, top: 0, bottom: 0 }).opacity(1)
-        .backgroundColor(this.manageConfigured() ? readerAppColor('app.control.paint.1A2F6373', this.appScheme) : readerAppColor('TOK_TTS_TEAL', this.appScheme))
+        .attributeModifier(new ReaderPressFeedback(readerAppColor(this.manageConfigured() ? 'app.control.paint.1A2F6373' :
+          'TOK_TTS_TEAL', this.appScheme), this.appScheme, 999, 999, this.fullInput() && !this.serviceBusy))
         .border({ width: this.displayedFacts()?.manageBorderWidth ?? (this.manageConfigured() ? .5 : 0), color: readerAppColor('app.control.paint.4D2F6373', this.appScheme) })
-        .shadow({ radius: 7, color: this.manageConfigured() ? Color.Transparent : readerAppColor('app.control.paint.472F6373', this.appScheme), offsetY: 2 })
+        .shadow(readerTtsShadow(7, 2, this.manageConfigured() ? Color.Transparent : readerAppColor('app.control.paint.472F6373', this.appScheme)))
         .enabled(this.fullInput() && !this.serviceBusy)
         .id(`${this.configFocusId}:manage`)
         .accessibilityText(this.manageConfigured() ? '已配置在线 TTS，编辑服务信息' : '立即配置在线 TTS')
