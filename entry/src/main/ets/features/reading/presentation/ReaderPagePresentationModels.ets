@@ -188,15 +188,7 @@ export class ReaderPageTurnPreparation {
   }
 }
 
-export class ReaderPageTurnTarget {
-  chapterIndex: number;
-  chapterOffset: number;
-
-  constructor(chapterIndex: number, chapterOffset: number) {
-    this.chapterIndex = chapterIndex;
-    this.chapterOffset = chapterOffset;
-  }
-}
+export { ReaderPageTurnTarget } from '../ui/ReaderPhysicalPaginationOwner';
 
 export class ReaderDeferredChapterSelection {
   chapterIndex: number;

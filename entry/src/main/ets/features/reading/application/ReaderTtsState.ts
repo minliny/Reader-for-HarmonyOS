@@ -84,6 +84,23 @@ export function readerTtsRateLabel(rate: number): string {
   return `${normalizeReaderTtsRate(rate).toFixed(2)}x`;
 }
 
+/** Core queue APIs still take a coarse rate. The durable percentage keeps
+ * the product's five-point rate precision across a restart. */
+export function readerTtsCoreRateForMultiplier(rate: number): number {
+  return Math.max(1, Math.min(10, Math.round(rate * 5)));
+}
+
+export function readerTtsRatePercentForMultiplier(rate: number): number {
+  return Math.max(50, Math.min(200, Math.round(rate * 20) * 5));
+}
+
+export function readerTtsMultiplierForConfig(coreRate: number, ratePercent?: number): number {
+  if (ratePercent !== undefined && Number.isSafeInteger(ratePercent) && ratePercent >= 50 && ratePercent <= 200) {
+    return ratePercent / 100;
+  }
+  return Math.max(READER_TTS_RATE_MIN, Math.min(READER_TTS_RATE_MAX, coreRate / 5));
+}
+
 export function setReaderTtsAvailability(state: ReaderTtsState, available: boolean): ReaderTtsState {
   if (!available) {
     return {

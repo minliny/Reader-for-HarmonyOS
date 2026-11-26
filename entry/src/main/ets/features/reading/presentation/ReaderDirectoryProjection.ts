@@ -1,6 +1,5 @@
 import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
 import type { ReadingEntryNavigation, ReadingEntryNavigationItem } from '../application/ReadingEntrySnapshot';
-import type { RemoteReadingTocEntry } from '../application/RemoteReadingFlowGateway';
 
 export interface ReaderDirectoryProjectionBookmark {
   time: number;
@@ -80,21 +79,6 @@ export function readerEntryNavigationItem(
   if (window === undefined) return undefined;
   return [...window.before, window.current, ...window.after]
     .find((entry: ReadingEntryNavigationItem): boolean => entry.index === chapterIndex);
-}
-
-/** Remote unread entry tries at most three readable chapters, in session order. */
-export function readerUnreadDirectoryCandidates(
-  readableEntries: LocalReadingTocEntry[],
-  remoteEntries: RemoteReadingTocEntry[],
-): number[] {
-  const navigable = new Set<number>(readableEntries.map((entry: LocalReadingTocEntry): number => entry.index));
-  const candidates: number[] = [];
-  for (const entry of remoteEntries) {
-    if (!navigable.has(entry.index) || entry.url.trim().length === 0) continue;
-    candidates.push(entry.index);
-    if (candidates.length === 3) break;
-  }
-  return candidates;
 }
 
 export interface ReaderDirectoryProgressTarget {

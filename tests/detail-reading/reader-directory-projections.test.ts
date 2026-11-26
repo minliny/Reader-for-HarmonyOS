@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import type { LocalReadingBookmark, LocalReadingTocEntry } from '../../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts';
 import type { ReaderDirectoryTargetProof } from '../../entry/src/main/ets/features/reading/application/ReaderDirectoryTargetProof.ts';
 import { readingChapterWindowOrder } from '../../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts';
+import { readerUnreadDirectoryCandidates } from '../../entry/src/main/ets/features/reading/application/ReadingInitialChapter.ts';
 import { createRequestedRemoteReadingPositionContext } from '../../entry/src/main/ets/features/reading/application/RemoteReadingPositionMigration.ts';
 import { projectReaderChapterBookmarkExcerpts } from '../../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts';
 import {
@@ -11,7 +12,6 @@ import {
   readerDirectoryEntryRanks,
   readerDirectoryProgressTarget,
   readerEntryNavigationItem,
-  readerUnreadDirectoryCandidates,
 } from '../../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts';
 
 function chapter(index: number, title: string): LocalReadingTocEntry {
