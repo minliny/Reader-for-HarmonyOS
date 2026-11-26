@@ -24,7 +24,7 @@ import { resolveSearchHeaderField, SearchHeaderFieldGeometry } from '../../../ui
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerSurfaceElevation, readerHeaderVeilMaterial, readerHeaderVeilBorder } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, readerImmersiveMaterial, ReaderModalScrimModifier,
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { motionSegment } from '../../../ui/foundation/MotionTimeline';
@@ -1153,7 +1153,7 @@ export struct ReaderLibrarySearchSurface {
           this.headerVeil() ? readerHeaderVeilBorder(this.scheme) : this.panelBorderColor() })
       .borderRadius(this.headerMaterialRadius()).hitTestBehavior(HitTestMode.Default)
       .shadow(this.headerMaterial()?.native ? undefined : this.headerStackShadow())
-      .systemMaterial(readerImmersiveMaterial(this.headerMaterial()))
+      .attributeModifier(new ReaderImmersiveMaterialModifier(this.headerMaterial()))
       .onAreaChange(this.headerSurfaceAreaChange());
   }
   private headerStackShadow(): ShadowOptions {

@@ -396,14 +396,14 @@ export class ReaderHostRegistry {
   }
 
   /** Same bounded read/hash/private staging as the picker, using the OS URI grant. */
-  async prepareSystemLocalBookInput(uri: string): Promise<LocalBookPreparation> {
+  async prepareSystemLocalBookInput(uri: string, admitFileName?: (fileName: string) => boolean): Promise<LocalBookPreparation> {
     let fileName = '未命名文件';
     try {
       if (uri.length > 8192 || !uri.startsWith('file://') || /[\u0000\r\n]/.test(uri)) {
         throw new Error('Selected document URI is invalid');
       }
       fileName = this.requireSelectedFileName(uri);
-      if (!isReaderLocalBookFileName(fileName)) {
+      if (!isReaderLocalBookFileName(fileName) || admitFileName?.(fileName) === false) {
         return { state: 'failed', fileName,
           failure: { code: 'unsupportedFormat', message: '暂不支持此文件格式，请选择其他电子书文件' } };
       }

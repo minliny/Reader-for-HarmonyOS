@@ -164,8 +164,10 @@ export function readerAppearanceParagraphIndent(
 export function createNativeReadingPaginationLayoutSignature(
   layout: ReaderReadingLayoutSnapshot,
   appearance: ReaderAppearanceSnapshot,
+  punctuationOverflow: boolean = false,
 ): string {
-  return 'native-paragraph-v3|' + createReadingPaginationLayoutSignature({
+  const shaping = punctuationOverflow ? 'native-paragraph-v3|punctuation-overflow|' : 'native-paragraph-v3|';
+  return shaping + createReadingPaginationLayoutSignature({
     deviceForm: layout.widthClass === 'expanded' ? 'tablet' : 'phone',
     viewportWidth: layout.viewportWidth,
     viewportHeight: layout.viewportHeight,

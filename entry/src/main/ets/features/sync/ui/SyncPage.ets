@@ -7,6 +7,7 @@ import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
+import { isReaderProductSurfaceEnabled } from '../../../app/ReaderProductScope';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { TYPE_APP_LOADING_BODY, TYPE_APP_ROW_DETAIL, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_LABEL,
   TYPE_CARD_SECTION_HEADING, TYPE_FORM_STATUS, TYPE_SELECT_DEFAULT_VALUE, TYPE_SECTION_HEADING,
@@ -23,6 +24,7 @@ import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
 import { LocalRecoveryPanel } from '../../bookshelf/ui/LocalRecoveryPanel';
+import { ReaderWebDavLibraryPanel } from './ReaderWebDavLibraryPanel';
 import {
   SurfaceHorizontalFrame,
 } from '../../../ui/layout/SurfaceHorizontalGeometry';
@@ -47,6 +49,7 @@ export struct SyncPage {
   @Prop expandedLayout: boolean;
   isOpeningCurrent: () => boolean = (): boolean => true;
   onBack: () => void = (): void => {};
+  onReloadConfiguration: () => void = (): void => {};
   onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string) => void =
     (_url: string, _user: string, _pass: string, _backupPass: string, _path: string): void => {};
   onTestConnection: (url: string, user: string, pass: string, path: string) => void =
@@ -69,6 +72,8 @@ export struct SyncPage {
   @State private webdavPathEdited: boolean = false;
   @State private viewportWidth: number = 0;
   @State private localRecoveryBusy: boolean = false;
+  @State private libraryBackupBusy: boolean = false;
+  @State private libraryRestoreRevision: number = 0;
   private appliedSnapshotIdentity: string = '';
   private acknowledgedSaveGeneration: number = 0;
 
@@ -89,7 +94,8 @@ export struct SyncPage {
       variant: 'sync',
       header: (): void => { this.backBar(); },
       content: (): void => { this.pageContent(); },
-      boundedOverlayVisible: !this.localRecoveryBusy && this.hasOriginalRecovery() && this.snapshot.restoreConflict === undefined,
+      boundedOverlayVisible: !this.localRecoveryBusy && !this.libraryBackupBusy &&
+        this.hasOriginalRecovery() && this.snapshot.restoreConflict === undefined,
       boundedOverlayContent: (): void => { this.pendingRecovery(); },
     })
       .onAreaChange((_oldValue: Area, newValue: Area): void => {
@@ -102,16 +108,33 @@ export struct SyncPage {
 
   @Builder
   private pageContent() {
-    LocalRecoveryPanel({ showHeading: true, editingHost: this.editingHost,
+    LocalRecoveryPanel({ showHeading: true, editingHost: this.editingHost, externalRestoreRevision: this.libraryRestoreRevision,
       isOpeningCurrent: this.isOpeningCurrent,
-      isInputAllowed: (): boolean => this.snapshot.facts?.busy !== true && this.snapshot.restoreConflict === undefined,
+      isInputAllowed: (): boolean => !this.libraryBackupBusy && this.snapshot.facts?.busy !== true &&
+        this.snapshot.restoreConflict === undefined,
       onBusyChange: (busy: boolean): void => { this.localRecoveryBusy = busy; } });
     Column({ space: readerStandardPageSpec('sync').space }) {
       this.webdavSection();
       this.manualActionsSection();
       this.autoBackupSection();
       this.historySection();
-    }.width('100%').alignItems(HorizontalAlign.Start).enabled(!this.localRecoveryBusy);
+    }.width('100%').alignItems(HorizontalAlign.Start).enabled(!this.localRecoveryBusy && !this.libraryBackupBusy);
+    if (isReaderProductSurfaceEnabled('sync')) {
+      ReaderWebDavLibraryPanel({
+        configurationId: this.snapshot.configSaveOperationId ?? '',
+        isInputAllowed: (): boolean => this.isOpeningCurrent() && !this.localRecoveryBusy &&
+          this.snapshot.facts?.busy !== true && this.snapshot.restoreConflict === undefined && this.canMutate(),
+        onBusyChange: (busy: boolean): void => {
+          if (this.isOpeningCurrent()) this.libraryBackupBusy = busy;
+        },
+        onConfigurationChanged: (): void => {
+          if (this.isOpeningCurrent()) this.onReloadConfiguration();
+        },
+        onRestoreStateChanged: (): void => {
+          if (this.isOpeningCurrent()) this.libraryRestoreRevision += 1;
+        },
+      });
+    }
   }
 
 
@@ -224,7 +247,7 @@ export struct SyncPage {
   @Builder
   private manualActionsSection() {
     Column({ space: TOK_SPACE_XS }) {
-      this.sectionHeadingMuted('WebDAV 备份与恢复');
+      this.sectionHeadingMuted('WebDAV 配置备份与恢复');
       ReaderCard({ specId: 'sync-status',
         cardWidth: this.contentFrame().width }) {
         Column({ space: TOK_SPACE_SM }) {

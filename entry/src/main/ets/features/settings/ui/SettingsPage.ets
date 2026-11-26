@@ -17,6 +17,8 @@ import { ReaderRouteStackSurface, type ReaderRouteSurfaceKey } from '../../../ap
 import type { SettingsSection } from '../../../app/navigation/ReaderNavigation';
 import { settingsNavigationGroups, type SettingsNavigationGroup, type SettingsNavigationItem, type SettingsPane } from '../presentation/SettingsNavigationItems';
 import { ReaderControlPlacementPreferences } from '../../../app/ReaderControlPlacementPreferences';
+import { setReaderSystemMigrationIncludesOriginals } from '../../../app/ReaderSystemMigrationPreferences';
+import { readerHarmonyCapabilities } from '../../../app/HarmonyCapabilityProbe';
 import { readerControlAlignment } from '../../reading/ui/ReaderControlPlacement';
 import { readerWidthClassWithHint } from '../../../ui/foundation/ReaderWidthClass';
 import { ReaderAppearanceSaveUnconfirmedError, type ReaderAppearanceSaveState } from '../../reading/application/ReaderAppearanceStore';
@@ -46,6 +48,7 @@ import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibil
 import { SettingsSelectOverlay, type SettingsSelectField } from './SettingsSelectOverlay';
 import { NavigationAppearanceSettings, readerRenderModeLabel } from './NavigationAppearanceSettings';
 import { SettingsLicensesPage } from './SettingsLicensesPage';
+import { ReaderSmartGestureSettingsRows } from './ReaderSmartGestureSettingsRows';
 import { isReaderProductSurfaceEnabled } from '../../../app/ReaderProductScope';
 import { emptyReaderAppBuildInfo, readReaderAppBuildInfo, readerAppBuildDisplay, readerAppBuildCopy, type ReaderAppBuildInfo } from '../../../platform/bundle/ReaderAppBuildInfo';
 import { copyReaderBuildIdentity } from '../../../platform/clipboard/ReaderClipboardHost';
@@ -79,6 +82,9 @@ export struct SettingsPage {
   @StorageLink('readerDeveloperToolsUnlocked') private developerToolsUnlocked: boolean = false;
   @State private navigationSaving: boolean = false;
   @State private backupBusy: boolean = false;
+  @StorageProp('readerSystemMigrationOriginals') private systemMigrationOriginals: boolean = false;
+  @StorageProp('readerSystemMigrationState') private systemMigrationState: string = 'none';
+  @State private systemMigrationSaving: boolean = false;
 
   @Prop @Watch('onActiveSectionChanged') activeSection: SettingsSection = 'home';
   @Prop @Watch('onAppearanceSaveHostChanged') navigationGeneration: number = 0;
@@ -372,12 +378,46 @@ export struct SettingsPage {
       content: (): void => {
         LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration, editingHost: this.backupEditingHost,
           isOpeningCurrent: (): boolean => this.activeSection === 'backup' && this.isOpeningCurrent(),
-          isInputAllowed: (): boolean => this.activeSection === 'backup' && this.settingsInputIsCurrent(),
+          isInputAllowed: (): boolean => this.backupInputIsCurrent(),
           onBusyChange: (busy: boolean): void => {
             if (this.activeSection === 'backup') this.backupBusy = busy;
           } });
+        this.systemMigrationCard();
       },
     });
+  }
+
+  @Builder
+  private systemMigrationCard() {
+    CategorySection({ title: '系统迁移' }) {
+      ReaderFormRow({ label: '系统备份包含本地原书',
+        secondaryText: this.systemMigrationState === 'interrupted' ? '迁移尚待完成，将在下次启动继续' :
+          '由系统发起备份或换机。默认迁移书库资料，开启后加入保留的原书',
+        actionEnabled: this.backupInputIsCurrent() && !this.systemMigrationSaving,
+        onLabelAction: (): void => { void this.setSystemMigrationOriginals(!this.systemMigrationOriginals); } }) {
+        ReaderToggle({ value: this.systemMigrationOriginals, accessibilityLabel: '系统备份包含本地原书',
+          actionEnabled: this.backupInputIsCurrent() && !this.systemMigrationSaving,
+          onToggle: (enabled: boolean): void => { void this.setSystemMigrationOriginals(enabled); } });
+      }
+    }
+  }
+
+  private async setSystemMigrationOriginals(enabled: boolean): Promise<void> {
+    if (this.systemMigrationSaving || !this.backupInputIsCurrent()) return;
+    const generation = this.navigationGeneration;
+    this.systemMigrationSaving = true;
+    try {
+      const application = ReaderRuntimeOwner.current().getUIAbilityContext().getApplicationContext();
+      await setReaderSystemMigrationIncludesOriginals(application, enabled);
+    } catch (_) {
+      this.showFeedbackToast('系统备份偏好保存失败，请重试', 'backup', generation);
+    } finally {
+      this.systemMigrationSaving = false;
+    }
+  }
+
+  private backupInputIsCurrent(): boolean {
+    return this.activeSection === 'backup' && this.settingsInputIsCurrent();
   }
 
   private aboutPageCurrent(identity: string): boolean {
@@ -878,9 +918,11 @@ export struct SettingsPage {
       `${this.cacheCleanup?.busy === true ? 1 : 0}:${this.cacheCleanup?.operation.message ?? ''}`;
   }
 
-  private showFeedbackToast(message: string): void {
+  private showFeedbackToast(message: string, section: SettingsSection = 'general',
+    generation: number = this.navigationGeneration): void {
     const identity = this.temporaryBackIdentity;
-    const current = (): boolean => this.activeSection === 'general' && this.settingsInputIsCurrent(identity);
+    const current = (): boolean => this.activeSection === section && this.navigationGeneration === generation &&
+      this.settingsInputIsCurrent(identity);
     if (message.length === 0 || !current()) return;
     try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: READER_FEEDBACK_EXTENDED_MS }, current); } catch (_) {}
   }
@@ -906,6 +948,11 @@ export struct SettingsPage {
         this.switchRow('宽屏使用侧边导航', 'wideNavigationRail');
       }
       if (this.isWideSettings()) this.controlPlacementRow();
+      if (readerHarmonyCapabilities().api26) {
+        ReaderSmartGestureSettingsRows({ generation: this.navigationGeneration,
+          inputCurrent: (): boolean => this.activeSection === 'general' && this.settingsInputIsCurrent(),
+          onFailure: (): void => this.showFeedbackToast('智慧手势偏好保存失败，请重试') });
+      }
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
         this.selectRow('语言', 'language', ['简体中文', '繁體中文', 'English', '日本語', '한국어']);
         this.selectRow('启动时打开', 'startup', ['书架', '发现', 'RSS', '设置']);

@@ -1,3 +1,5 @@
+import { ReaderAccessibilityActions, type ReaderAccessibleAction } from '../../../ui/controls/ReaderAccessibilityActions';
+import { ReaderPaperMaterial } from '../../../ui/foundation/ReaderPaperMaterial';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import { readerPressOpacity, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -37,6 +39,7 @@ export struct ReaderControlChapterProgressCard {
   @Prop progressLabelWidth: number = 26.23;
   @Prop progressLaneHeight: number = 36;
   @Prop progressInputRevision: number = 0;
+  chapterActionsCurrent: (scope: string) => boolean = (_scope: string): boolean => false;
   onPreviousChapter: () => void = (): void => {};
   onNextChapter: () => void = (): void => {};
   onBookmarkPress: (event: TouchEvent) => void = (_event: TouchEvent): void => {};
@@ -79,13 +82,14 @@ export struct ReaderControlChapterProgressCard {
         .lineHeight(TYPE_READER_CONTROL_CHAPTER_TITLE.lineHeightFp)
         .letterSpacing(TYPE_READER_CONTROL_CHAPTER_TITLE.letterSpacingFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
+        .attributeModifier(this.chapterAccessibility())
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
 
       ReaderIconButton({ specId: 'reader-chapter-step', scheme: this.appScheme,
         icon: $r(this.appScheme === 'night' ? 'app.media.rc_chevron_right_theme_night' : 'app.media.rc_chevron_right'),
-        accessibilityLabel: '下一章', actionEnabled: this.nextEnabled,
+        focusId: this.nextChapterFocusId(), accessibilityLabel: '下一章', actionEnabled: this.nextEnabled,
         actionScope: this.actionScope,
         onTap: this.onNextChapter,
       });
@@ -96,6 +100,17 @@ export struct ReaderControlChapterProgressCard {
     .padding({ left: 11, right: 11 })
     .alignItems(VerticalAlign.Center)
     .accessibilityLevel(this.menuOccludesActions ? 'no-hide-descendants' : 'auto');
+  }
+
+  private nextChapterFocusId(): string { return `reader-control-next-chapter:${this.actionScope}`; }
+
+  private chapterAccessibility(): ReaderAccessibilityActions {
+    const scope = this.actionScope;
+    const actions: ReaderAccessibleAction[] = [];
+    if (this.previousEnabled) actions.push({ label: '上一章', run: (): void => this.onPreviousChapter() });
+    if (this.nextEnabled) actions.push({ label: '下一章', run: (): void => this.onNextChapter() });
+    return new ReaderAccessibilityActions(actions, this.nextEnabled ? this.nextChapterFocusId() : '',
+      (): boolean => this.actionScope === scope && this.chapterActionsCurrent(scope));
   }
 
   @Builder
@@ -175,6 +190,7 @@ export struct ReaderControlChapterProgressCard {
       .showSteps(false)
       .showTips(false)
       .accessibilityText('阅读进度')
+      .attributeModifier(new ReaderPaperMaterial())
       .onChange(this.progressChangeHandler(this.progressInputRevision))
       .layoutWeight(1)
       .height(this.progressLaneHeight);

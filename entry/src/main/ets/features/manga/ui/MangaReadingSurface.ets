@@ -1,4 +1,15 @@
+import { ReaderPaperMaterial } from '../../../ui/foundation/ReaderPaperMaterial';
 import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
+import { common } from '@kit.AbilityKit';
+import { ReaderDocumentSaveHost, type ReaderDocumentSaveResult } from '../../../platform/share/ReaderDocumentSaveHost';
+import { readerDocumentSaveMessage } from '../../reading/ui/ReaderSharePresentation';
+import { readerHardwareKeyboardShortcut } from '../../../platform/interaction/ReaderHardwareKeyboard';
+import { HarmonySmartGestureHost, ReaderSmartGestureShortcut } from '../../../platform/interaction/HarmonySmartGestureHost';
+import { ReaderNativeAlertWindow } from '../../../ui/platform/ReaderNativeAlertWindow';
+import { DEFAULT_READER_SMART_GESTURES, READER_SMART_GESTURE_VIEWPORT_FRACTION, readerSmartGestureAction,
+  type ReaderSmartGesture, type ReaderSmartGestureAction, type ReaderSmartGestureSettings } from
+    '../../reading/application/ReaderSmartGesturePolicy';
+import { readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
 import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
@@ -96,8 +107,12 @@ class MangaStripDataSource implements IDataSource {
 @Component
 export struct MangaReadingSurface {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
+  @State private savingPageImage: boolean = false;
   @StorageLink('readerWindowMetricsRevision') @Watch('onDirectoryMetricsChanged') private windowMetricsRevision: number = 0;
   @StorageLink('readerAppForeground') @Watch('onPanelForegroundChanged') private appForeground: boolean = true;
+  @StorageLink('readerSmartGestureSettings') @Watch('syncSmartGestureMonitor')
+  private smartGestureSettings: ReaderSmartGestureSettings = DEFAULT_READER_SMART_GESTURES;
+  private readonly smartGestureHost: HarmonySmartGestureHost = new HarmonySmartGestureHost();
   @State private quickHeaderMeasured: number = 0;
   @State private quickToolsMeasured: number = 0;
   @State private directoryUtilityMeasured: number = 0;
@@ -315,6 +330,7 @@ export struct MangaReadingSurface {
     this.open(controller);
   }
   aboutToDisappear(): void {
+    this.smartGestureHost.detach();
     this.transientFeedback.reset();
     // Withdraw before resetting watched state: disposal cannot reissue reader policy.
     this.mounted = false;
@@ -1227,11 +1243,70 @@ export struct MangaReadingSurface {
     this.data.notify(true, 0, 0);
     this.restore(next, 0);
   }
-  private async openDirectory(): Promise<void> {
+
+  private onReaderKeyEvent(event: KeyEvent): boolean {
+    const action = readerHardwareKeyboardShortcut(event, {
+      bodyOwnsInput: this.readerPanelForeground() && this.opened && !this.controlsVisible &&
+        this.panel.length === 0 && this.panelPhase === 'closed' && !this.chapterEnd && !this.recovering &&
+        !this.refreshing && !this.boundaryBusy && !this.boundaryDragging && !this.restoringAnchor &&
+        this.pendingChapterTransition === undefined && !this.rollbackPainting && this.rollbackChapterController === undefined &&
+        !ReaderNativeAlertWindow.isPresented() &&
+        !this.loginRequiredForControls && this.error.length === 0 && this.zoom === 1,
+      inputFocused: readerControlKeyboardVisible(ReaderWindowCoordinator.metrics()),
+      selectionActive: false,
+    });
+    if (action === undefined) return false;
+    if (action === 'back') void this.handleBack();
+    else if (action === 'search' || action === 'directory') void this.openDirectory(action === 'search');
+    else if (this.horizontal) void this.stepPage(action === 'next' ? 1 : -1);
+    else this.scroller.scrollPage({ next: action === 'next', animation: !this.reduceMotion });
+    return true;
+  }
+
+  private syncSmartGestureMonitor(): void {
+    if (!this.mounted || !this.appForeground || !this.windowChromeActive || !this.smartGestureSettings.enabled ||
+      !this.isReaderIdentityCurrent()) {
+      this.smartGestureHost.detach();
+      return;
+    }
+    try {
+      this.smartGestureHost.attach(this.getUIContext(), {
+        decide: (gesture: ReaderSmartGesture): ReaderSmartGestureAction => this.smartGestureDecision(gesture),
+        dispatch: (action: ReaderSmartGestureAction): void => this.dispatchSmartGesture(action),
+      });
+    } catch (_) { this.smartGestureHost.detach(); }
+  }
+
+  private smartGestureDecision(gesture: ReaderSmartGesture): ReaderSmartGestureAction {
+    return readerSmartGestureAction(gesture, this.smartGestureSettings, {
+      foreground: this.readerPanelForeground(),
+      controlsOpen: this.controlsVisible || this.panelPhase !== 'closed' || this.chapterEnd,
+      directoryOpen: this.panel === 'directory',
+      sourceSwitchOpen: this.windowChromeOverlayActive,
+      settingsOpen: this.panel === 'settings' || this.panel === 'mode',
+      dialogOpen: this.panel.length > 0 || ReaderNativeAlertWindow.isPresented(),
+      selectionActive: false,
+      zoomed: this.zoom !== 1,
+      chapterLoading: !this.opened || this.recovering || this.refreshing || this.restoringAnchor ||
+        this.loginRequiredForControls || this.error.length > 0,
+      sourceSwitching: this.boundaryBusy || this.boundaryDragging || this.rollbackPainting ||
+        this.pendingChapterTransition !== undefined,
+      continuous: !this.horizontal,
+    });
+  }
+
+  private dispatchSmartGesture(action: ReaderSmartGestureAction): void {
+    if (action === 'back') void this.handleBack();
+    else if (action === 'toggleControls') this.toggleControls();
+    else if (action === 'pageNext') void this.stepPage(1);
+    else if (action === 'scrollNext') this.scroller.scrollBy(0, this.viewportHeight * READER_SMART_GESTURE_VIEWPORT_FRACTION);
+  }
+
+  private async openDirectory(focusSearch: boolean = false): Promise<void> {
     const session = this.remoteSession;
     if (session?.contentKind === 'manga' && session.identity.sourceId === this.sourceId && session.identity.bookId === this.bookId)
       this.onRemoteSessionReady(session, true);
-    await this.openPanel('directory');
+    await this.openPanel('directory', '', focusSearch);
   }
   private async openSourceSwitch(): Promise<void> {
     if (!this.readerPanelForeground()) return;
@@ -1862,7 +1937,7 @@ export struct MangaReadingSurface {
       this.onSelectDirectoryTarget(index, proof);
     });
   }
-  private async openPanel(panel: string, returnFocusTarget: string = ''): Promise<void> {
+  private async openPanel(panel: string, returnFocusTarget: string = '', focusSearch: boolean = false): Promise<void> {
     if (!this.readerPanelForeground()) return;
     this.clearPageSliderPreview();
     const sourceId = this.sourceId, bookId = this.bookId;
@@ -1917,10 +1992,11 @@ export struct MangaReadingSurface {
         this.getUIContext().animateTo(motionAnimateParam('app.sheet.scrim'),
           (): void => { this.panelScrimOpacity = 1; });
       }
-      this.settlePanel(generation, true);
+      this.settlePanel(generation, true, focusSearch);
     }));
   }
   private onPanelForegroundChanged(): void {
+    this.syncSmartGestureMonitor();
     if (!this.mounted || this.readerPanelForeground()) return;
     this.panelFocusGeneration += 1;
     this.pageTurnInputRevision += 1;
@@ -2008,12 +2084,13 @@ export struct MangaReadingSurface {
   private panelTravel(): number {
     return (this.widePanel() ? Number(this.panelWidth()) : this.panelHeight()) + 36;
   }
-  private settlePanel(generation: number, focusOnOpen: boolean = false): void {
+  private settlePanel(generation: number, focusOnOpen: boolean = false, focusSearch: boolean = false): void {
     const finish = (): void => {
       if (this.panelPhase === 'opening' && this.panelOpeningCurrent(generation)) {
         this.panelPhase = 'open';
         this.scheduleDirectoryOuterPosition(this.directoryOuterIdentity());
-        if (focusOnOpen) this.requestPanelFocus(this.panelCloseFocusId(this.actionPanelPresentationGeneration), generation, true);
+        if (focusOnOpen) this.requestPanelFocus(focusSearch ? `reader-manga-directory-query:${this.directoryOuterIdentity()}` :
+          this.panelCloseFocusId(this.actionPanelPresentationGeneration), generation, true);
       }
     };
     if (this.reduceMotion) {
@@ -2387,6 +2464,12 @@ export struct MangaReadingSurface {
             this.refreshProgress();
             this.recoveryOverlay();
           }.width('100%').height('100%')
+            .id(`reader-manga-stage:${this.sourceId}:${this.bookId}`)
+            .focusable(true)
+            .defaultFocus(true)
+            .onKeyEvent((event: KeyEvent): boolean => this.onReaderKeyEvent(event))
+            .attributeModifier(new ReaderSmartGestureShortcut(this.smartGestureSettings.enabled))
+            .onAppear((): void => this.syncSmartGestureMonitor())
             .enabled(this.phonePanelBackgroundEnabled())
             .accessibilityLevel(this.phonePanelBackgroundEnabled() ? 'auto' : 'no-hide-descendants');
           // The chapter-end actions remain operable while the covered phone
@@ -2780,6 +2863,7 @@ export struct MangaReadingSurface {
           actionEnabled: this.opened && this.pageOrdinal() > 0, onTap: (): void => { void this.stepPage(-1); } });
         Column({ space: 3 }) {
           Slider({ value: this.presentedPage(), min: 1, max: Math.max(1, this.horizontalPageCount), step: 1 })
+            .attributeModifier(new ReaderPaperMaterial())
             .height(44).selectedColor(readerAppColor('TOK_ACCENT', this.floatingChromeScheme('floatingDock')))
             .blockColor(this.greenColor(this.floatingChromeScheme('floatingDock'))).trackColor(this.lineColor(this.floatingChromeScheme('floatingDock')))
             .enabled(this.opened && this.horizontalPageCount > 1)
@@ -3468,7 +3552,8 @@ export struct MangaReadingSurface {
             }
           } });
       }.width('100%').margin({ bottom: 10 });
-      Slider({ value: this.brightnessPercent, min: 1, max: 100, step: 1 }).width('100%').height(44)
+      Slider({ value: this.brightnessPercent, min: 1, max: 100, step: 1 })
+        .attributeModifier(new ReaderPaperMaterial()).width('100%').height(44)
         .enabled(this.preferencePanelInputCurrent(opening, 'settings'))
         .selectedColor(this.greenColor(this.sheetScheme())).blockColor(this.greenColor(this.sheetScheme())).trackColor(this.lineColor(this.sheetScheme()))
         .onChange((value: number, mode: SliderChangeMode): void => this.changeBrightnessSlider(value, mode, opening))
@@ -3522,6 +3607,8 @@ export struct MangaReadingSurface {
     const refreshLabel = this.title.includes('卷') ? '重新打开本卷' : '重新打开本话';
     const refreshSecondary = this.refreshing ? '正在更新本章' : !this.opened ? '章节尚未打开' : this.offline ? '离线时不可用' : '';
     const scheme = this.sheetScheme();
+    const canSaveImage = this.opened && !this.refreshing && !this.chapterEnd && !this.savingPageImage &&
+      this.pendingChapterTransition === undefined && this.controller?.pageAt(this.pageOrdinal()) !== undefined;
     const actions: ReaderMenuActionView[] = [
       new ReaderMenuActionView('source', '更换书源', true, readerActionIcon('source', scheme), '更换书源',
         '阅读', '', '', 'default', true),
@@ -3529,6 +3616,8 @@ export struct MangaReadingSurface {
         readerActionIcon('refresh', scheme), refreshLabel, '阅读', refreshSecondary),
       new ReaderMenuActionView('detail', '漫画详情', true, readerActionIcon('info', scheme), '漫画详情',
         '阅读', '', '', 'default', true),
+      new ReaderMenuActionView('saveImage', '保存当前页图片', canSaveImage,
+        readerActionIcon('download', scheme), '保存当前页图片', '图片'),
     ];
     if (this.downloadEnabled) {
       const chapterOpened = this.opened && this.directoryCurrentChapterIndex >= 0;
@@ -3559,10 +3648,43 @@ export struct MangaReadingSurface {
       return;
     }
     if (id === 'detail') { void this.performMorePanelAction(generation, (): void => this.onDetail()); return; }
+    if (id === 'saveImage') {
+      const ordinal = this.pageOrdinal();
+      const controller = this.controller;
+      if (controller !== undefined) {
+        void this.performMorePanelAction(generation, (): Promise<void> => this.savePageImage(controller, ordinal));
+      }
+      return;
+    }
     if (id === 'downloadChapter') { void this.performMorePanelAction(generation, (): void => this.onDownloadChapter()); return; }
     if (id === 'downloadBook') { void this.performMorePanelAction(generation, (): void => this.onDownloadBook()); return; }
     if (id === 'downloadManager') { void this.performMorePanelAction(generation, (): void => this.onOpenDownloads()); return; }
     if (id === 'shelf') { void this.performMorePanelAction(generation, (): void => this.onToggleShelf()); }
+  }
+
+  private async savePageImage(controller: MangaSessionController, ordinal: number): Promise<void> {
+    const chapter = controller.chapter;
+    const page = controller.pageAt(ordinal);
+    if (!this.readerPanelForeground() || this.savingPageImage || chapter === undefined || page === undefined) return;
+    const current = (): boolean => this.mounted && !this.exiting && this.windowChromeActive &&
+      !this.windowChromeOverlayActive && this.isReaderIdentityCurrent() && this.controller === controller &&
+      controller.chapter === chapter && controller.pageAt(ordinal)?.pageId === page.pageId &&
+      this.pendingChapterTransition === undefined && this.pageOrdinal() === ordinal;
+    if (!current()) return;
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext | undefined;
+    this.savingPageImage = true;
+    let result: ReaderDocumentSaveResult = 'failed';
+    try {
+      if (context !== undefined) {
+        const bytes = await controller.readPageImageForSave(ordinal, current);
+        if (bytes !== undefined && current()) {
+          result = await new ReaderDocumentSaveHost(context).saveImage(bytes, `${this.title} 第${ordinal + 1}页`, current);
+        }
+      }
+    } catch (_) { /* The source image could not be read or saved. */ }
+    finally { this.savingPageImage = false; }
+    const message = readerDocumentSaveMessage(result, '当前页图片');
+    if (message !== undefined) this.transientFeedback.show(() => this.getUIContext(), { message }, current);
   }
 
   private performMorePanelAction(generation: number, action: () => void | Promise<void>): Promise<boolean> {

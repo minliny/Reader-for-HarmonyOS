@@ -1,4 +1,5 @@
-import { uiMaterial } from '@kit.ArkUI';
+import deviceInfo from '@ohos.deviceInfo';
+import lazy { uiMaterial } from '@kit.ArkUI';
 import { readerHarmonyCapabilities } from '../../app/HarmonyCapabilityProbe';
 import {
   READER_MODAL_BLUR_RADIUS_VP,
@@ -77,7 +78,7 @@ export function readerSurfaceMaterialDecision(
   return resolveReaderSurfaceMaterial(role, preferences, readerHarmonyCapabilities(), appScheme, systemScheme);
 }
 
-export function readerImmersiveMaterial(
+function readerImmersiveMaterial(
   decision: ReaderSurfaceMaterialDecision | undefined,
   applyShadow: boolean = true,
 ): uiMaterial.ImmersiveMaterial | undefined {
@@ -95,6 +96,32 @@ export function readerImmersiveMaterial(
     materialCache.set(key, cached);
   }
   return cached;
+}
+
+/** A fallback may clear material on API 26. Older SDKs have no dispatch entry. */
+export function applyReaderImmersiveMaterial(instance: CommonAttribute,
+  decision: ReaderSurfaceMaterialDecision | undefined): void {
+  if (deviceInfo.distributionOSApiVersion >= 260000) {
+    if (deviceInfo.apiAvailable('26.0.0')) instance.systemMaterial(readerImmersiveMaterial(decision));
+  }
+}
+
+export class ReaderImmersiveMaterialModifier implements AttributeModifier<CommonAttribute> {
+  private readonly material: ReaderSurfaceMaterialDecision | undefined;
+
+  constructor(material: ReaderSurfaceMaterialDecision | undefined) {
+    this.material = material;
+  }
+
+  applyNormalAttribute(instance: CommonAttribute): void {
+    applyReaderImmersiveMaterial(instance, this.material);
+  }
+}
+
+export function applyReaderPopupMaterial(options: CustomPopupOptions, decision: ReaderSurfaceMaterialDecision): void {
+  if (deviceInfo.distributionOSApiVersion >= 260000) {
+    if (deviceInfo.apiAvailable('26.0.0')) options.systemMaterial = readerImmersiveMaterial(decision);
+  }
 }
 
 export function readerSheetBackdropBlur(

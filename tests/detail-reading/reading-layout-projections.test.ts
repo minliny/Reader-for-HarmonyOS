@@ -76,6 +76,9 @@ test('Core rounds viewport axes while native pagination retains the original mea
     'native-paragraph-v3|reader-layout-v2|device=tablet|viewport=760.25x960.75|font=ExampleFamily|' +
     'weight=regular|size=18|scale=1.5|line=36|insets=28,11,35,12|title=28.75,18|paragraph=9,36|' +
     'letter=-0.5|align=start|writing=horizontal-tb');
+  assert.equal(createNativeReadingPaginationLayoutSignature(layout, appearance, true),
+    createNativeReadingPaginationLayoutSignature(layout, appearance).replace(
+      'native-paragraph-v3|', 'native-paragraph-v3|punctuation-overflow|'));
   assert.throws(
     () => createNativeReadingPaginationLayoutSignature(
       new ReaderReadingLayoutSnapshot('compact', 0, 843.75, 28, 11, 35, 12, 1.5), appearance,

@@ -17,7 +17,7 @@ import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwit
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision, ReaderSurfaceMaterialRole } from '../../../app/HarmonyCapabilityPolicy';
-import { defaultNavigationPreferences, readerImmersiveMaterial, ReaderModalScrimModifier,
+import { applyReaderPopupMaterial, defaultNavigationPreferences, ReaderModalScrimModifier,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderControlChapterProgressCard } from './ReaderControlChapterProgressCard';
 import { ReaderControlModuleNavigation, type ReaderControlNavigationModule } from './ReaderControlModuleNavigation';
@@ -2286,7 +2286,7 @@ export struct ReaderControlPanel {
     const surface = this.readerMoreSurfaceSpec();
     const density = readerWindowMetrics().densityPixels;
     const material = this.surfaceMaterial('popoverMenu');
-    return {
+    const options: CustomPopupOptions = {
       builder: (): void => { this.readerMoreMenu(generation); },
       placement: Placement.BottomRight,
       width: this.readerMoreMenuWidth(),
@@ -2304,7 +2304,6 @@ export struct ReaderControlPanel {
       shadow: material.native ? undefined : { radius: surface.shadowRadius * density,
         color: readerAppColor(surface.surfaceShadowRole, this.appScheme),
         offsetY: surface.shadowOffsetY * density },
-      systemMaterial: readerImmersiveMaterial(material),
       autoCancel: true, mask: true, focusable: true, followTransformOfTarget: true,
       transition: this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : undefined,
       onStateChange: (event: PopupStateChangeParam): void => {
@@ -2315,6 +2314,8 @@ export struct ReaderControlPanel {
         if (!event.isVisible) this.dismissMoreMenu(generation);
       },
     };
+    applyReaderPopupMaterial(options, material);
+    return options;
   }
 
   private readerMoreActionEnabled(action: 'info' | 'refresh' | 'download' | 'recovery'): boolean {
@@ -3250,6 +3251,8 @@ export struct ReaderControlPanel {
       previousEnabled: this.progressInputEnabled(true) && this.canStepChapter(-1),
       nextEnabled: this.progressInputEnabled(true) && this.canStepChapter(1),
       actionScope: this.controlActionScope(),
+      chapterActionsCurrent: (scope: string): boolean => this.controlActionScope() === scope &&
+        this.progressInputEnabled(true) && !this.moreMenuVisible && this.temporaryLayerKind === '',
       bookmarkLaneHeight: this.bookmarkLaneHeight(), bookmarkWidth: this.bookmarkPillWidth(), bookmarkHeight: this.bookmarkPillHeight(),
       pageBookmarkStatus: this.pageBookmarkStatus, pageBookmarkEnabled: this.pageBookmarkEnabled,
       bookmarkInputEnabled: this.pageBookmarkEnabled && this.progressInputEnabled(true),

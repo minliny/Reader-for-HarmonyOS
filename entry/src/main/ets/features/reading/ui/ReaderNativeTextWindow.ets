@@ -1,9 +1,11 @@
-import { readerCopySelectionForShare, readerShareSelectionMenu } from './ReaderSharePresentation';
+import { readerQuoteSelection, readerShareSelectionMenu } from './ReaderSharePresentation';
 import { FrameNode, LengthMetrics, typeNode } from '@ohos.arkui.node';
 import { UIContext } from '@ohos.arkui.UIContext';
+import { RectShape } from '@ohos.arkui.shape';
 import { text as graphicsText } from '@kit.ArkGraphics2D';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { ReaderNativeTextStyle, readerNativeTextGeometryKey, readerNativeTextNodeGeometry, readerNativeTextNodeContent } from './ReaderNativeTextMeasurement';
+import { ReaderNativeTextStyle, readerNativeTextGeometryKey, readerNativeTextNodeGeometry, readerNativeTextNodeContent,
+  readerNativeTextPunctuationOverhang } from './ReaderNativeTextMeasurement';
 
 export interface ReaderNativeGlyphRect { left: number; top: number; right: number; bottom: number; }
 
@@ -28,6 +30,7 @@ export class ReaderNativeTextWindow {
   private readonly node: typeNode.Text;
   private readonly controller: TextController;
   private readonly widthPx: number;
+  private readonly punctuationOverhangPx: number;
   private readonly geometryKey: string | undefined;
   private readonly originalText: string | undefined;
   private readonly density: number;
@@ -50,6 +53,7 @@ export class ReaderNativeTextWindow {
     this.node = node;
     this.controller = controller;
     this.widthPx = widthPx;
+    this.punctuationOverhangPx = readerNativeTextPunctuationOverhang(node);
     this.geometryKey = readerNativeTextNodeGeometry(node);
     this.originalText = readerNativeTextNodeContent(node);
     this.density = context.vp2px(1);
@@ -66,7 +70,7 @@ export class ReaderNativeTextWindow {
       // The production owner supplies just its admitted visible range. Keep
       // baseline/width evidence for that range without a whole-paragraph copy.
       for (let line = firstLine; line <= last; line += 1) this.base.set(line, manager.getLineMetrics(line));
-      this.root.commonAttribute.width(`${widthPx}px`).clip(true);
+      this.root.commonAttribute.width(`${widthPx}px`).clip(this.punctuationOverhangPx === 0);
       this.root.appendChild(node);
       this.attached = true;
     } catch (error) {
@@ -119,6 +123,12 @@ export class ReaderNativeTextWindow {
     this.startUtf16 = first.startIndex;
     this.endUtf16 = last.endIndex;
     this.root?.commonAttribute.height(`${this.heightPx}px`);
+    if (this.punctuationOverhangPx > 0) {
+      // Keep the original line width and vertical slice. Only the clip's
+      // right edge extends into the paper margin for one full-width glyph.
+      this.root?.commonAttribute.clipShape(new RectShape().width(`${this.widthPx + this.punctuationOverhangPx}px`)
+        .height(`${this.heightPx}px`));
+    }
     this.node.commonAttribute.translate({ y: `${-this.topPx}px` });
   }
 
@@ -188,7 +198,7 @@ export class ReaderNativeTextWindow {
       graphicsText.RectWidthStyle.TIGHT, graphicsText.RectHeightStyle.TIGHT);
     const result: ReaderNativeGlyphRect[] = [];
     for (const box of boxes) {
-      const left = Math.max(0, box.rect.left), right = Math.min(this.widthPx, box.rect.right);
+      const left = Math.max(0, box.rect.left), right = Math.min(this.widthPx + this.punctuationOverhangPx, box.rect.right);
       const top = Math.max(0, box.rect.top - this.topPx);
       const bottom = Math.min(this.heightPx, box.rect.bottom - this.topPx);
       if (![left, right, top, bottom].every((value: number): boolean => Number.isFinite(value)))
@@ -203,22 +213,26 @@ export class ReaderNativeTextWindow {
   }
 
   selection(enabled: boolean, background: ResourceColor, onCopy: (range: TextRange) => void,
-    onShare?: (range: TextRange, copyRequested: boolean) => void): void {
+    onShare?: (range: TextRange, quoteRequested: boolean) => void, onActivity?: (active: boolean) => void,
+    quoteAvailable: boolean = false): void {
     if (this.closed) return;
     const epoch = ++this.selectionEpoch;
     if (!enabled) this.controller.closeSelectionMenu();
+    this.node.attribute.onTextSelectionChange((start: number, end: number): void => {
+      if (!this.closed && epoch === this.selectionEpoch) onActivity?.(enabled && start >= 0 && end > start);
+    });
     this.node.attribute.copyOption(enabled ? CopyOptions.InApp : CopyOptions.None)
       .selectedBackgroundColor(background).editMenuOptions({
         onCreateMenu: (items: Array<TextMenuItem>): Array<TextMenuItem> =>
-          onShare === undefined ? items : readerShareSelectionMenu(items),
+          onShare === undefined ? items : readerShareSelectionMenu(items, quoteAvailable),
         onMenuItemClick: (item: TextMenuItem, range: TextRange): boolean => {
-          const copyForShare = onShare !== undefined && readerCopySelectionForShare(item.id);
-          const share = onShare !== undefined && (copyForShare || item.id.equals(TextMenuItemId.SHARE));
+          const quote = quoteAvailable && readerQuoteSelection(item.id);
+          const share = onShare !== undefined && (quote || item.id.equals(TextMenuItemId.SHARE));
           if (!share && !item.id.equals(TextMenuItemId.COPY)) return false;
           if (!this.closed && enabled && epoch === this.selectionEpoch) {
             if (share) {
               this.controller.closeSelectionMenu();
-              onShare?.(range, copyForShare);
+              onShare?.(range, quote);
             } else {
               onCopy(range);
             }

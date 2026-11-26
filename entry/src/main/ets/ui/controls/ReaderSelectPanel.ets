@@ -1,7 +1,7 @@
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 import { FrameCallback } from '@kit.ArkUI';
 import type { AnimatorResult } from '@ohos.animator';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
@@ -310,7 +310,7 @@ export struct ReaderSelectPanel {
     .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : 14))
     .opacity(this.panelOpacity)
     .shadow(this.panelMaterial().native ? undefined : this.panelShadow())
-    .systemMaterial(readerImmersiveMaterial(this.panelMaterial()))
+    .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial()))
     .clip(true).onAppear((): void => this.expandPanel());
   }
 

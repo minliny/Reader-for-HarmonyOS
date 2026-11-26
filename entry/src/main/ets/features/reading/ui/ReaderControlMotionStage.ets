@@ -26,7 +26,7 @@ import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { READER_HEAVY_GLASS_BLUR_VP } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { isReaderRealtimeBlurEnabled } from '../../../app/HarmonyCapabilityPolicy';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
-import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { ReaderControlBackdropRect } from './ReaderControlBackdropTouch';
 
 class ReaderControlStageFrameCallback extends FrameCallback {
@@ -695,7 +695,7 @@ export struct ReaderControlMotionStage {
           .borderRadius(24)
           .border(this.shellMaterial()?.native === true ? { width: 0, color: Color.Transparent } :
             { width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appScheme) })
-          .systemMaterial(readerImmersiveMaterial(this.shellMaterial()))
+          .attributeModifier(new ReaderImmersiveMaterialModifier(this.shellMaterial()))
           .opacity(this.frame().shell.opacity)
           .hitTestBehavior(this.frame().visibility > 0 ? HitTestMode.Block : HitTestMode.None);
         // Keep the independent Full-content surface mounted for the entire

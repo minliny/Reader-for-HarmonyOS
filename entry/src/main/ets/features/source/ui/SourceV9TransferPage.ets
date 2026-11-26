@@ -29,6 +29,8 @@ import { DialogActionView, readerDialogCardTransition, readerDialogScrimTransiti
 import { sourceV9DisplayUrl } from '../presentation/SourceManagementV9';
 import { SourceV9ReportSteps } from './SourceV9CheckDialog';
 import { SourceV9AddAction, SourceV9CircleCheck, SourceV9SegmentedTrack, type SourceV9SegmentChoice } from './SourceV9Chrome';
+import { ReaderClipboardDraftPaste, readerClipboardPasteMessage,
+  type ReaderClipboardPasteProblem } from '../../../platform/clipboard/ReaderClipboardHost';
 import { httpUrlHostname } from '../../../platform/network/HttpTransportPolicy';
 import type { ManagedRuleSubscription, RuleSubscriptionDraft, RuleSubscriptionType } from '../../settings/application/RulesManagementGateway';
 import type { SourceCheckOutcome, SourceGroupRecord, SourceImportGroupTarget } from '../application/SourceGateway';
@@ -41,6 +43,7 @@ import { sourceV9ChangesToApply, sourceV9SelectedImportRows, type SourceV9Change
 
 type TransferButtonTone = 'primary' | 'secondary' | 'neutral' | 'danger' | 'text';
 type TransferDialog = 'none' | 'form' | 'delete';
+type TransferPasteField = 'url' | 'paste' | 'subscriptionUrl';
 
 const TRANSFER_FOOTER_TOP = 8;
 const TRANSFER_BODY_TAIL = 12;
@@ -67,8 +70,9 @@ export struct SourceV9TransferPage {
   private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageLink('readerAppForeground') @Watch('retireClipboardPaste') private foreground: boolean = true;
   @StorageLink('readerWindowMetricsRevision') @Watch('refreshLayout') private windowRevision: number = 0;
-  @Prop @Watch('refreshLayout') pane: SourceV9TransferPane = 'import';
+  @Prop @Watch('changePane') pane: SourceV9TransferPane = 'import';
   @Prop initialUrl: string = '';
   @Prop initialJson: string = '';
   @Prop @Watch('refreshLayout') embeddedWide: boolean = false;
@@ -110,6 +114,7 @@ export struct SourceV9TransferPage {
   private footerHeight: number = 0;
   private flow: SourceV9TransferOwner | undefined = undefined;
   private mounted: boolean = false;
+  private readonly draftPaste: ReaderClipboardDraftPaste = new ReaderClipboardDraftPaste();
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
 
   aboutToAppear(): void {
@@ -132,6 +137,7 @@ export struct SourceV9TransferPage {
 
   aboutToDisappear(): void {
     this.mounted = false;
+    this.retireClipboardPaste();
     this.transientFeedback.reset();
     this.flow?.retire();
     this.flow = undefined;
@@ -142,6 +148,7 @@ export struct SourceV9TransferPage {
     if (!this.mounted) return;
     const previous = this.state;
     this.state = next;
+    if (next.busy || next.writePending || previous.importStep !== next.importStep) this.retireClipboardPaste();
     if (next.busy || next.writePending || !this.inputCurrent()) return;
     const finishing = previous.busy;
     const reportableError = this.dialog === 'none' && next.reviews.length === 0 &&
@@ -159,6 +166,47 @@ export struct SourceV9TransferPage {
     return this.inputCurrent() && !this.state.busy && !this.state.runningCheck && !this.state.writePending;
   }
 
+  private changePane(): void {
+    this.retireClipboardPaste();
+    this.refreshLayout();
+  }
+
+  private retireClipboardPaste(): void { this.draftPaste.retire(); }
+
+  private canPasteDraft(field: TransferPasteField): boolean {
+    if (!this.foreground || !this.editable() || this.visibleReport !== undefined) return false;
+    if (field === 'subscriptionUrl') return this.pane === 'subscriptions' && this.dialog === 'form';
+    return this.pane === 'import' && this.dialog === 'none' && this.state.importStep === 1 && this.origin === field;
+  }
+
+  private setPasteDraft(field: TransferPasteField, text: string): void {
+    if (!this.canPasteDraft(field)) return;
+    switch (field) {
+      case 'url':
+        if (text === this.url) return;
+        this.url = text;
+        break;
+      case 'paste':
+        if (text === this.paste) return;
+        this.paste = text;
+        break;
+      case 'subscriptionUrl':
+        if (text === this.formUrl) return;
+        this.formUrl = text;
+        break;
+    }
+    this.retireClipboardPaste();
+  }
+
+  private onPasteDraft(field: TransferPasteField, result: PasteButtonOnClickResult): void {
+    const isCurrent = (): boolean => this.canPasteDraft(field);
+    void this.draftPaste.paste(result === PasteButtonOnClickResult.SUCCESS, isCurrent,
+      (text: string): void => this.setPasteDraft(field, text), (problem: ReaderClipboardPasteProblem): void => {
+        this.transientFeedback.show((): UIContext => this.getUIContext(),
+          { message: readerClipboardPasteMessage(problem), tone: 'error' }, isCurrent);
+      });
+  }
+
   private canDismissDialog(): boolean {
     return this.inputCurrent() && !this.state.busy && this.dialog !== 'none';
   }
@@ -171,6 +219,7 @@ export struct SourceV9TransferPage {
     }
     if (this.state.busy) return true;
     if (this.canDismissDialog()) {
+      this.retireClipboardPaste();
       this.dialog = 'none';
       return true;
     }
@@ -187,6 +236,7 @@ export struct SourceV9TransferPage {
 
   private resetImport(): void {
     if (!this.editable()) return;
+    this.retireClipboardPaste();
     this.flow?.resetImport();
     this.origin = 'file';
     this.url = '';
@@ -276,6 +326,7 @@ export struct SourceV9TransferPage {
 
   private openForm(subscription?: ManagedRuleSubscription): void {
     if (!this.editable()) return;
+    this.retireClipboardPaste();
     this.edited = subscription;
     this.formName = subscription?.name ?? '';
     this.formUrl = subscription?.url ?? '';
@@ -286,10 +337,14 @@ export struct SourceV9TransferPage {
 
   private async confirmDialog(action: string): Promise<void> {
     if (action === 'cancel') {
-      if (this.canDismissDialog()) this.dialog = 'none';
+      if (this.canDismissDialog()) {
+        this.retireClipboardPaste();
+        this.dialog = 'none';
+      }
       return;
     }
     if (action !== 'confirm' || !this.editable() || this.dialog === 'none') return;
+    this.retireClipboardPaste();
     if (this.dialog === 'form') {
       const draft: RuleSubscriptionDraft = { id: this.edited?.id, name: this.formName, url: this.formUrl,
         type: this.formType, autoUpdate: this.formEnabled, customOrder: this.edited?.customOrder ?? 0,
@@ -581,8 +636,19 @@ export struct SourceV9TransferPage {
   }
 
   @Builder
+  private pasteDraftButton(field: TransferPasteField) {
+    PasteButton()
+      .enabled(this.canPasteDraft(field))
+      .onClick((_event: ClickEvent, result: PasteButtonOnClickResult): void => this.onPasteDraft(field, result));
+  }
+
+  @Builder
   private importSource() {
-    this.segments(IMPORT_ORIGINS, this.origin, (id: string): void => { this.origin = id as SourceV9ImportOrigin; },
+    this.segments(IMPORT_ORIGINS, this.origin, (id: string): void => {
+      if (id === this.origin) return;
+      this.retireClipboardPaste();
+      this.origin = id as SourceV9ImportOrigin;
+    },
       '导入来源', 'reader-source-v9-import-origin');
     if (this.origin === 'file') {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
@@ -603,8 +669,9 @@ export struct SourceV9TransferPage {
         .onClick((): void => { if (this.editable()) void this.flow?.chooseFile(); });
     } else if (this.origin === 'url') {
       Column({ space: 8 }) {
-        this.field('书源链接', this.url, 'https://…', (value: string): void => { this.url = value; });
-      }.width('100%').padding(13).backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
+        this.field('书源链接', this.url, 'https://…', (value: string): void => this.setPasteDraft('url', value));
+        this.pasteDraftButton('url');
+      }.width('100%').padding(13).alignItems(HorizontalAlign.Start).backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
         .border({ width: 1, color: this.color('TOK_LINE') });
       Column({ space: 8 }) {
         Row() {
@@ -629,7 +696,8 @@ export struct SourceV9TransferPage {
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(12)
           .fontColor(this.color('TOK_INK')).placeholderColor(this.color('TOK_MUTED'))
           .backgroundColor(this.color('app.sourceUi.field')).accessibilityText('JSON 内容')
-          .enabled(this.editable()).onChange((value: string): void => { if (this.editable()) this.paste = value; });
+          .enabled(this.editable()).onChange((value: string): void => this.setPasteDraft('paste', value));
+        this.pasteDraftButton('paste');
       }.width('100%').padding(13).alignItems(HorizontalAlign.Start)
         .backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
         .border({ width: 1, color: this.color('TOK_LINE') });
@@ -1175,7 +1243,11 @@ export struct SourceV9TransferPage {
     Scroll() {
       Column({ space: 8 }) {
         this.field('订阅名称', this.formName, '', (value: string): void => { this.formName = value; });
-        this.field('订阅链接', this.formUrl, 'https://…', (value: string): void => { this.formUrl = value; });
+        this.field('订阅链接', this.formUrl, 'https://…', (value: string): void => this.setPasteDraft('subscriptionUrl', value));
+        Row() {
+          this.pasteDraftButton('subscriptionUrl');
+          Blank();
+        }.width('100%');
         this.segments(SUBSCRIPTION_TYPES, String(this.formType),
           (id: string): void => { this.formType = id === '0' ? 0 : 2; }, '订阅类型', 'reader-source-v9-subscription-type');
         Row() {

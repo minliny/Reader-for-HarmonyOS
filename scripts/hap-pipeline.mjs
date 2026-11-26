@@ -1434,18 +1434,18 @@ function syncNative(env = process.env) {
   }
 }
 
-function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCommand, buildClass, evidence, env) {
+function generateAcceptanceProvenance(runDir, hap, hvigorVersion, buildCommand, buildClass, evidence, sdk, env) {
   const stripTool = resolveHarmonyTool('objcopy');
-  const output = resolve(runDir, `${buildClass}-${basename(signedHap, '.hap')}-provenance.json`);
+  const output = resolve(runDir, `${buildClass}-${basename(hap, '.hap')}-provenance.json`);
   const { manifest } = generateBuildProvenance([
     ...nativeProvenanceArguments(env),
     ...(buildClass === 'iteration' ? ['--allow-dirty'] : []),
-    '--hap', signedHap,
+    '--hap', hap,
     '--output', output,
     '--native-strip-tool', stripTool,
     '--build-command', buildCommand,
     '--hvigor-version', hvigorVersion,
-    '--sdk-version', 'HarmonyOS 6.1.0(23)',
+    '--sdk-version', `HarmonyOS ${sdk.version} (API ${sdk.apiVersion})`,
   ], { inspectedHap: { ...evidence.inspectedHap, assertUnchanged: evidence.assertUnchanged },
     buildClass, cacheStrippedNative: buildClass === 'iteration' });
   return { path: basename(output), manifest };
@@ -1788,6 +1788,7 @@ async function buildImpl(options, inputs, buildStarted) {
         buildCommand,
         buildClass,
         evidence,
+        appIdentity.contentSnapshot.buildIdentityInputs.toolchain.sdk.ets,
         nativeEnvironment,
       ));
       nativeProvenance.push(provenance);

@@ -6,6 +6,7 @@ import { errorMessageOf } from '../../../app/ErrorMessage.ts';
 import {
   createReaderTtsState,
   readerTtsCoreRateForMultiplier,
+  isReaderTtsSupportedPlaybackRate,
   type ReaderTtsContentVersion,
   type ReaderTtsPauseReason,
   type ReaderTtsSessionIdentity,
@@ -41,6 +42,8 @@ export type ReaderTtsCoordinatorOptions = {
   startCallbackTimeoutMs?: number;
   /** Admit a native resume while the current reading session owns a resumable queue. */
   admitHostResume?: (origin: ReaderTtsHostResumeOrigin) => boolean;
+  /** Reuse the current reading owner's rate and preference transaction. */
+  onMediaRate?: (rate: number) => void;
 };
 
 type StartWaiter = { generation: number; resolve: (started: boolean) => void };
@@ -214,6 +217,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
   private readonly ownerToken: string;
   private readonly startCallbackTimeoutMs: number;
   private readonly admitHostResume: ((origin: ReaderTtsHostResumeOrigin) => boolean) | undefined;
+  private readonly onMediaRate: ((rate: number) => void) | undefined;
   private readonly startWaiters: StartWaiter[] = [];
   private startConfirmedRequestId: string | undefined = undefined;
   private startWatchdogHandle: number = -1;
@@ -236,6 +240,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     this.ownerToken = `tts-coordinator-${++READER_TTS_COORDINATOR_SEQ}`;
     this.startCallbackTimeoutMs = options?.startCallbackTimeoutMs ?? DEFAULT_START_CALLBACK_TIMEOUT_MS;
     this.admitHostResume = options?.admitHostResume;
+    this.onMediaRate = options?.onMediaRate;
     this.host.setEventListener((event: ReaderTtsHostEvent): void => {
       this.routeHostEvent(event);
     }, this.ownerToken);
@@ -270,6 +275,15 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       else if (event.action === 'stop') this.voidLogged(this.stop('user'), 'mediaControl.stop');
       else if (event.action === 'next') this.voidLogged(this.next(), 'mediaControl.next');
       else this.voidLogged(this.previous(), 'mediaControl.previous');
+      return;
+    }
+    if (event.type === 'mediaRate') {
+      const active = this.active;
+      if (active !== undefined && active.plan !== undefined && this.isSessionCurrent(active.identity) &&
+        audition === undefined && isReaderTtsSupportedPlaybackRate(event.rate)) {
+        if (this.onMediaRate !== undefined) this.onMediaRate(event.rate);
+        else this.voidLogged(this.setRate(event.rate), 'mediaControl.rate');
+      }
       return;
     }
     if (event.type === 'interruption') {
@@ -1378,7 +1392,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
   }
 
   private async handleHostEvent(event: ReaderTtsHostEvent): Promise<void> {
-    if (event.type === 'mediaControl' || event.type === 'interruption' || event.type === 'deviceChange' ||
+    if (event.type === 'mediaControl' || event.type === 'mediaRate' || event.type === 'interruption' || event.type === 'deviceChange' ||
       event.type === 'backgroundLeaseRevoked') {
       return;
     }
@@ -1837,7 +1851,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       snapshot.state === 'paused' ? 'paused' :
         snapshot.state === 'completed' ? 'completed' :
           snapshot.state === 'stopped' && errorMessage !== undefined ? 'error' : 'stopped';
-    this.host.publishPlaybackState(published);
+    this.host.publishPlaybackState(published, this.state.rate);
   }
 
   /** Core has drained this chapter, but the UI lease must remain active until

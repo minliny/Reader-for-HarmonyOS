@@ -12,7 +12,7 @@ import {
   TYPE_SETTINGS_SELECT_TITLE,
 } from '../../../ui/foundation/ReaderTypography';
 import { PopupSurfaceSpec, readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, readerImmersiveMaterial, ReaderModalScrimModifier,
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
@@ -155,7 +155,7 @@ export struct SettingsSelectOverlay {
           .border({ width: 0, color: Color.Transparent })
           .borderRadius(PHONE_SHEET_CORNERS)
           .shadow(this.panelMaterial('modalSheet').native ? undefined : readerSurfaceElevation('sheet', this.appThemeScheme))
-          .systemMaterial(readerImmersiveMaterial(this.panelMaterial('modalSheet')))
+          .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial('modalSheet')))
           .transition(this.panelTransition(true), (entering: boolean): void => this.finishMotion(entering, identity));
       }
     }
@@ -271,7 +271,7 @@ export struct SettingsSelectOverlay {
     .borderRadius(this.tabletSpec().borderRadius)
     .clip(true)
     .shadow(this.panelMaterial('popoverMenu').native ? undefined : readerSurfaceElevation('popover', this.appThemeScheme))
-    .systemMaterial(readerImmersiveMaterial(this.panelMaterial('popoverMenu')))
+    .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial('popoverMenu')))
     .position({
       x: Math.max(this.safeLeft(), Math.min(this.anchorRight - this.tabletWidth(), this.safeLeft() + this.safeWidth() - this.tabletWidth())),
       y: this.tabletTop(),

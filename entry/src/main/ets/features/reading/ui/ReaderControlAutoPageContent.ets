@@ -1,3 +1,4 @@
+import { ReaderPaperMaterial } from '../../../ui/foundation/ReaderPaperMaterial';
 import { readerControlActor, readerControlPaidResponses, readerControlUnit, readerControlLerp, type ReaderControlActorFrame } from './ReaderControlActorGeometry';
 import { readerControlAutoPageMinimumFacts, readerControlAutoPageStatusLabel, measureReaderControlAutoPageMinimum, readerControlAutoPageMinimumFonts, type ReaderControlAutoPageMinimumProfile, type ReaderControlAutoPageTextMinimum } from './ReaderControlAutoPageMinimum';
 import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
@@ -561,6 +562,7 @@ export struct ReaderControlAutoPageContent {
             }.width('100%');
             Slider({ value: this.effectiveSpeedSeconds(), min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
               max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, step: 1 })
+              .attributeModifier(new ReaderPaperMaterial())
               .width('100%').height(44)
               .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
               .trackColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme))
@@ -1083,6 +1085,7 @@ export struct ReaderControlAutoPageContent {
         Slider({ value: this.effectiveSpeedSeconds(), min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
           max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, step: 1, style: SliderStyle.OutSet,
           direction: Axis.Horizontal, reverse: false })
+          .attributeModifier(new ReaderPaperMaterial())
           .width(this.speedActor('slider').width).height(this.speedActor('slider').height)
           .trackThickness(4).blockSize({ width: 14, height: 14 })
           .trackColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme))

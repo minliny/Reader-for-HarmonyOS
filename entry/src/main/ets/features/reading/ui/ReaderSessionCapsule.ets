@@ -9,7 +9,7 @@ import type { UIContext } from '@ohos.arkui.UIContext';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
 import { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } from './ReaderPageChromeLayout';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
-import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { applyReaderImmersiveMaterial, defaultNavigationPreferences, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 
 const AUTO_PAGE_CAPSULE_MIN_WIDTH = 96;
 const TTS_CAPSULE_MIN_WIDTH = 94;
@@ -107,11 +107,12 @@ export class ReaderSessionCapsuleFrame implements AttributeModifier<CommonAttrib
     if (this.material?.native === true) {
       instance.backgroundEffect(undefined).backgroundColor(Color.Transparent)
         .border({ width: 0, color: Color.Transparent }).borderRadius(READER_SESSION_CAPSULE_RADIUS)
-        .shadow(undefined).systemMaterial(readerImmersiveMaterial(this.material));
+        .shadow(undefined);
+      applyReaderImmersiveMaterial(instance, this.material);
       return;
     }
     const fill = readerSessionCapsuleColor('surface', this.scheme, this.surface);
-    instance.systemMaterial(undefined);
+    applyReaderImmersiveMaterial(instance, undefined);
     new ReaderPressFeedback(fill, this.scheme, READER_SESSION_CAPSULE_RADIUS,
       READER_SESSION_CAPSULE_RADIUS, true, this.pressed).applyNormalAttribute(instance);
     instance.border({ width: 1, color: readerSessionCapsuleColor('border', this.scheme, this.border) })

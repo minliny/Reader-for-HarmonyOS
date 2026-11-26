@@ -1,6 +1,7 @@
 import { readerThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { FrameCallback } from '@kit.ArkUI';
+import type { ReaderQuoteCardAction } from '../application/ReaderShareActions';
 import {
   createDefaultReaderAppearanceSnapshot,
   type ReaderAppearanceSnapshot,
@@ -155,6 +156,8 @@ struct ReaderPageTurnSurface {
   @Prop bottomJustifyGap: number = 0;
   @Prop longPressSelectText: boolean = false;
   selectionInputCurrent: (() => boolean) | undefined = undefined;
+  quoteCardAction: ReaderQuoteCardAction | undefined = undefined;
+  onSelectionActivity: ((owner: string, active: boolean) => void) | undefined = undefined;
   @Prop chromeTopStartText: string = '';
   @Prop chromeTopEndText: string = '';
   @Prop chromeTopTranslateY: number = 0;
@@ -225,6 +228,8 @@ struct ReaderPageTurnSurface {
           bottomJustifyGap: this.bottomJustifyGap,
           longPressSelectText: this.longPressSelectText,
           selectionInputCurrent: (): boolean => this.selectionInputCurrent?.() !== false,
+          quoteCardAction: this.quoteCardAction,
+          onSelectionActivity: this.onSelectionActivity,
           chromeTopStartText: this.chromeTopStartText,
           chromeTopEndText: this.chromeTopEndText,
           chromeTopTranslateY: this.chromeTopTranslateY,
@@ -309,6 +314,8 @@ export struct ReaderPageTurnStage {
   @Prop autoPageHighlightEnd: number | undefined = undefined;
   @Prop longPressSelectText: boolean = false;
   selectionInputCurrent: (() => boolean) | undefined = undefined;
+  quoteCardAction: ReaderQuoteCardAction | undefined = undefined;
+  onSelectionActivity: ((owner: string, active: boolean) => void) | undefined = undefined;
   onCurrentPageContentReady: (revision: number) => void = (_revision: number): void => {};
   /** Optional scheduling acknowledgement, not a compositor/display fence. */
   onCurrentPagePresented: (revision: number) => void = (_revision: number): void => {};
@@ -382,6 +389,8 @@ export struct ReaderPageTurnStage {
       bookmarkPaperTop: this.currentPageSlot === slot && this.bookmarkEdgeFactor() > 0 ? this.bookmarkPaperTop : undefined,
       longPressSelectText: this.currentPageSlot === slot && this.longPressSelectText,
       selectionInputCurrent: (): boolean => this.currentPageSlot === slot && this.selectionInputCurrent?.() !== false,
+      quoteCardAction: this.quoteCardAction,
+      onSelectionActivity: this.onSelectionActivity,
       translateX: this.slotX(slot),
       pageVisible: this.slotVisible(slot),
       layerOrder: this.slotLayer(slot),

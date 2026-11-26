@@ -6,6 +6,7 @@ import { LengthMetrics } from '@kit.ArkUI';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderAccessibilityActions, type ReaderAccessibleAction } from '../../../ui/controls/ReaderAccessibilityActions';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
@@ -91,6 +92,24 @@ export struct ReaderDirectoryToolbar {
     return '切换排序';
   }
 
+  private directoryAccessibility(kind: ReaderDirectoryTool): ReaderAccessibilityActions {
+    const focusId = this.directoryFocusId;
+    const actions: ReaderAccessibleAction[] = [];
+    if (kind === 'sort' && this.showChapterTools) {
+      if (this.locateEnabled) actions.push({
+        label: '定位当前章节',
+        run: (): void => { if (this.locateEnabled) this.onLocateCurrent(); },
+      });
+      if (this.variant !== 'manga-catalog') {
+        actions.push({ label: '回到目录顶部', run: (): void => this.onTop() });
+        actions.push({ label: '前往目录底部', run: (): void => this.onBottom() });
+      }
+    }
+    // Let the screen reader continue into the chapter list after the last tool.
+    return new ReaderAccessibilityActions(actions, '',
+      (): boolean => this.actionEnabled && focusId === this.directoryFocusId && this.currentDirectoryInput(focusId));
+  }
+
   @Builder
   private tool(kind: ReaderDirectoryTool, action: () => void) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
@@ -131,7 +150,8 @@ export struct ReaderDirectoryToolbar {
       .padding(0)
       .attributeModifier(new ReaderActionAccessibility(this.toolLabel(kind), this.actionEnabled, false, true,
         new ReaderPressFeedback(this.variant === 'manga-catalog' ? mangaDirectoryColor('soft', this.appThemeScheme) :
-          readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme), this.appThemeScheme, 8, 8, this.actionEnabled), 'nativeButton'))
+          readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme), this.appThemeScheme, 8, 8, this.actionEnabled),
+        'nativeButton', this.directoryAccessibility(kind)))
       .responseRegion({ x: -DIRECTORY_TOOL_OUTSET, y: -DIRECTORY_TOOL_OUTSET,
         width: DIRECTORY_TOOL_TARGET, height: DIRECTORY_TOOL_TARGET })
       .onClick((): void => { if (this.actionEnabled) action(); });

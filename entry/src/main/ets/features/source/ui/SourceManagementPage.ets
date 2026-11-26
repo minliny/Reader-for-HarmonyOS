@@ -60,7 +60,7 @@ import { sourceVerificationOfflineDetectIdentity, sourceVerificationOpening, sou
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, readerImmersiveMaterial,
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
@@ -990,7 +990,7 @@ export struct SourceManagementPage {
           .border(this.moreMenuMaterial().native ? { width: 0, color: Color.Transparent } :
             { width: 1, color: readerAppColor('app.border.menu', this.appThemeScheme) })
           .shadow(this.moreMenuMaterial().native ? undefined : readerSurfaceElevation('popover', this.appThemeScheme))
-          .systemMaterial(readerImmersiveMaterial(this.moreMenuMaterial()));
+          .attributeModifier(new ReaderImmersiveMaterialModifier(this.moreMenuMaterial()));
         if (!this.moreMenuMaterial().native) {
           Row().width(12).height(12).rotate({ angle: 45 })
             .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))

@@ -9,7 +9,7 @@ import { TYPE_READER_CONTROL_BOOK_TITLE, TYPE_READER_CONTROL_CHAPTER_SOURCE,
   TYPE_READER_DIRECTORY_BOOK_TITLE, TYPE_READER_DIRECTORY_CHAPTER } from '../foundation/ReaderTypography';
 import { readerHeaderVeilBorder, readerHeaderVeilMaterial, readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
-import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 
 export type ReaderReadingTopBarVariant = 'reading' | 'directory' | 'manga';
 
@@ -144,7 +144,7 @@ export struct ReaderReadingTopBar {
       .borderRadius(this.resolvedHeight() / 2)
       .clip(false)
       .shadow(this.materialDecision().native ? undefined : readerSurfaceElevation('raised', this.scheme))
-      .systemMaterial(readerImmersiveMaterial(this.materialDecision()))
+      .attributeModifier(new ReaderImmersiveMaterialModifier(this.materialDecision()))
       .hitTestBehavior(HitTestMode.Default)
       .onTouch((): void => {});
   }

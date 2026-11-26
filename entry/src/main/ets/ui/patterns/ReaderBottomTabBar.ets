@@ -10,7 +10,7 @@ import { readerPageAreaLength } from '../layout/ReaderPageShell';
 import { readerFloatingTabBarHeight, readerMainTabItemHeight } from '../layout/ReaderFloatingBarMetrics';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../layout/ReaderRaisedShape';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
-import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 
 export interface ReaderBottomTabItem {
   key: string;
@@ -81,7 +81,7 @@ export struct ReaderBottomTabBar {
           { width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
         .borderRadius(this.materialRadius())
         .shadow(this.material().native ? undefined : readerSurfaceElevation('raised', this.scheme))
-        .systemMaterial(readerImmersiveMaterial(this.material()))
+        .attributeModifier(new ReaderImmersiveMaterialModifier(this.material()))
         .clip(false)
         .hitTestBehavior(HitTestMode.Default)
         .onTouch((): void => {})

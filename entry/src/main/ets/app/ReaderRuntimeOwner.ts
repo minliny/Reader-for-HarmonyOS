@@ -11,6 +11,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
   createReaderCoreRuntimeAsync,
   probeReaderCoreStorageAsync,
+  readLibraryBackupIdentityAsync,
   type JsonObject,
   type ReaderCoreResultEvent,
   type ReaderCoreRuntime,
@@ -1158,6 +1159,26 @@ export class ReaderRuntimeOwner {
     return admitted;
   }
 
+  async readMangaImageForSave(identity: ReadingImageCacheIdentity, sourceRuleVersion: string,
+    allowNetwork: boolean, current: () => boolean): Promise<Uint8Array | undefined> {
+    if (identity.resourceRef === undefined || identity.chapterId !== identity.baseUrl) return undefined;
+    const contentCurrent = this.captureMangaImageContentValidity(identity.sourceId, identity.bookId);
+    const cacheCurrent = this.readingImageDiskCache.captureValidity(identity.sourceId, identity.bookId,
+      (): boolean => current() && contentCurrent());
+    await this.downloadStorageGateway?.waitForActiveMutation();
+    this.assertReadingImageCurrent(cacheCurrent);
+    // Wait behind the foreground page's pending durable original. Export reads
+    // the verified resource bytes and leaves both caches and progress alone.
+    return this.runMangaImageWork(cacheCurrent, async (): Promise<Uint8Array | undefined> => {
+      const cached = await this.readingImageDiskCache.loadResource(identity, cacheCurrent);
+      this.assertReadingImageCurrent(cacheCurrent);
+      if (cached !== undefined || !allowNetwork) return cached;
+      const bytes = await this.prepareReadingImageBytes(identity, cacheCurrent, sourceRuleVersion);
+      this.assertReadingImageCurrent(cacheCurrent);
+      return bytes;
+    });
+  }
+
   /** Persist and decode-validate one image before an offline chapter completes. */
   async prefetchReadingImage(
     identity: ReadingImageCacheIdentity,
@@ -1540,6 +1561,14 @@ export class ReaderRuntimeOwner {
     return this.host.getContext();
   }
 
+  async readLibraryBackupIdentity(): Promise<{ libraryId: string; writerInstanceId: string } | undefined> {
+    const filesDir = this.host.getContext().filesDir;
+    const directory = this.publicFixture === undefined ? `${filesDir}/reader-core` :
+      buildReaderPublicFixtureDirectory(filesDir, this.publicFixture.id);
+    if (directory === undefined) throw new Error('Reader library identity directory unavailable');
+    return readLibraryBackupIdentityAsync(directory, (): boolean => ReaderRuntimeOwner.isCurrent(this) && this.state === 'ready');
+  }
+
   getAppearanceStore(): ReaderAppearanceStore {
     if (this.appearanceStore === undefined) {
       this.appearanceStore = new ReaderAppearanceStore(new ReaderAppearancePreferences(this.host.getContext()));
@@ -1561,11 +1590,11 @@ export class ReaderRuntimeOwner {
     return this.host.selectLocalBookInputs(canOpenPicker);
   }
 
-  async prepareSystemLocalBookInput(uri: string): Promise<LocalBookPreparation> {
+  async prepareSystemLocalBookInput(uri: string, admitFileName?: (fileName: string) => boolean): Promise<LocalBookPreparation> {
     if (this.state === 'closing' || this.state === 'closed') {
       throw new Error('Reader Host is no longer available after teardown');
     }
-    return this.host.prepareSystemLocalBookInput(uri);
+    return this.host.prepareSystemLocalBookInput(uri, admitFileName);
   }
 
   async selectBookSourceJson(): Promise<BookSourceJsonSelection | undefined> {

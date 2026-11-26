@@ -124,6 +124,21 @@ export class MangaSessionController {
   }
   visiblePages(): MangaVisiblePage[] { return Array.from(this.pages.values()).sort((a, b) => a.ordinal - b.ordinal); }
 
+  async readPageImageForSave(ordinal: number, current: () => boolean): Promise<Uint8Array | undefined> {
+    const chapter = this.chapterData;
+    const page = this.facts.get(ordinal);
+    if (chapter === undefined || page === undefined || this.candidatePendingPresentation) return undefined;
+    const generation = this.generation;
+    const active = (): boolean => current() && generation === this.generation && this.chapterData === chapter &&
+      this.sessionContentCurrent() && this.facts.get(ordinal)?.resourceRef === page.resourceRef;
+    if (!active()) return undefined;
+    const request = this.requests.get(page.resourceRef)?.request;
+    const bytes = await this.resources.readPageForSave(this.resourceScope(chapter),
+      { ...(request ?? { url: page.resourceRef }), resourceRef: page.resourceRef },
+      this.allowNetwork && request !== undefined, active);
+    return active() ? bytes : undefined;
+  }
+
   /** Canonical catalog supplies the next readable identity. No ordinal + 1
    * guess, automatic admission, progress write, or download queue mutation. */
   configureNextChapter(index?: number, url?: string): void {

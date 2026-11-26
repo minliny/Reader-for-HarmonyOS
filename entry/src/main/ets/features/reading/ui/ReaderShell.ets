@@ -273,6 +273,7 @@ export struct ReaderShell {
           windowChromeOverlayActive: this.visible &&
             (this.route === 'directory' || this.sourceSwitchPresented),
           bookTitle: this.bookTitle,
+          bookAuthor: this.bookAuthor,
           sourceName: this.sourceName,
           totalChapters: this.totalChapters,
           directoryEntries: this.tocEntries,

@@ -1,4 +1,6 @@
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
+import deviceInfo from '@ohos.deviceInfo';
 import {
   READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
   READER_FONT_NOTO_SANS_SC_UI_REGULAR,
@@ -73,13 +75,13 @@ export struct ShelfBookListDetails {
         .fontColor(readerAppColor(this.positionLabel() === '尚未阅读' ? 'TOK_MUTED' : 'TOK_INK', this.appThemeScheme))
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).ellipsisMode(EllipsisMode.END);
 
-      if (ShelfBookPresentation.listSecondary(this.book) !== '') {
-        Text(ShelfBookPresentation.listSecondary(this.book)).width('100%').height(this.textFrame.latestLineHeight)
+      if (this.secondaryLabel() !== '') {
+        Text(this.secondaryLabel()).width('100%').height(this.textFrame.latestLineHeight)
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(FontWeight.Regular)
           .fontSize(12).lineHeight(`${this.textFrame.latestLineHeight}vp`)
           .minFontScale(Math.min(1, this.textFrame.scale)).maxFontScale(Math.max(1, this.textFrame.scale))
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).ellipsisMode(EllipsisMode.END);
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).ellipsisMode(this.secondaryEllipsis());
       }
 
       Row({ space: 8 }) {
@@ -120,6 +122,25 @@ export struct ShelfBookListDetails {
       2 * SHELF_LIST_BADGE_INLINE_PADDING;
     return fullBadgeWidth > this.updateBadgeWidth()
       ? ShelfBookPresentation.listUpdateBadge(this.book, true) : label;
+  }
+
+  private secondarySourceName(): string {
+    return readerHarmonyApi24() ? ShelfBookPresentation.remoteSourceName(this.book) : '';
+  }
+
+  private secondaryLabel(): string {
+    const latest = ShelfBookPresentation.listSecondary(this.book);
+    const source = this.secondarySourceName();
+    return latest.length > 0 && source.length > 0 ? `${latest} · ${source}` : latest || source;
+  }
+
+  private secondaryEllipsis(): EllipsisMode {
+    if (deviceInfo.distributionOSApiVersion >= 60101) {
+      if (deviceInfo.sdkApiVersion >= 24) {
+        if (this.secondarySourceName().length > 0) return EllipsisMode.MULTILINE_CENTER;
+      }
+    }
+    return EllipsisMode.END;
   }
 
   private updateBadgeWidth(): number {

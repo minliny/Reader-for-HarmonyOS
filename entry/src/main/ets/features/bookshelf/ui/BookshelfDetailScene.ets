@@ -8,6 +8,7 @@ import { LocalBookDetail } from '../../reading/ui/LocalBookDetail';
 
 export interface BookshelfDetailScenePorts {
   captureAction: (identity: string) => (() => boolean);
+  captureDocumentSave?: (identity: string) => (() => boolean);
   retainedShareFile?: RetainedShareFile;
   openReading: (chapterIndex?: number) => void;
   openDirectory: () => void;
@@ -104,6 +105,7 @@ export struct BookshelfDetailScene {
         cancellingAdd: this.detail.admission(this.bodyBook).cancelling,
         shelfMessage: this.detail.message(this.bodyBook),
         isDetailActionCurrent: current,
+        captureDocumentSave: (): (() => boolean) => this.ports?.captureDocumentSave?.(this.identity) ?? current,
         retainedShareFile: this.ports?.retainedShareFile,
         onContinue: (): void => { if (current?.() === true) this.ports?.openReading(); },
         onSelectChapter: (chapterIndex: number): void => {

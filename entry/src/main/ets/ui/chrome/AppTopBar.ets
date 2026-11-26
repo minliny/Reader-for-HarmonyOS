@@ -17,7 +17,7 @@ import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP, APP_HEADER
 import { readerScaledBarHeight } from '../foundation/ReaderSurfaceResolvers';
 import { readerHeaderVeilBorder, readerHeaderVeilMaterial, readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
-import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 
 // AppTopBar —— 首页顶部标题栏统一组件 (Figma HomeTopBar): 58 高、左右 20 + 顶部 6
 // 内边距、29px 思源黑体 UI 粗题 + 可选尾部槽。收敛 Bookshelf/Discover/Settings 三页
@@ -111,7 +111,7 @@ export struct AppTopBar {
     .clip(false)
     .shadow(this.surfaceMaterial()?.native ? undefined :
       readerSurfaceElevation(this.floating ? 'raised' : 'fixed', this.appThemeScheme))
-    .systemMaterial(readerImmersiveMaterial(this.surfaceMaterial()))
+    .attributeModifier(new ReaderImmersiveMaterialModifier(this.surfaceMaterial()))
     .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion(this.floating || this.surface === 'solid'))
     .onTouch((): void => {});
   }

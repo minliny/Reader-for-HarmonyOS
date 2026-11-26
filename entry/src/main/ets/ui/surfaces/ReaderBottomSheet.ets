@@ -8,7 +8,7 @@ import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeTop, readerVisualSafeBottom, readerVisualSafeLeft, readerVisualSafeRight }
   from '../foundation/ReaderWindowMetrics';
 import { readerSurfaceElevation, resolveSheetSpec, type SheetSpecId, type SheetSurfaceSpec } from './ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, readerImmersiveMaterial, ReaderModalScrimModifier,
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
   readerSurfaceMaterialDecision } from './ReaderSurfaceMaterial';
 
 /** The cover owns native modal isolation and system Back. The scrim and
@@ -152,7 +152,7 @@ export struct ReaderBottomSheet {
         { width: { top: this.spec().hostBorderWidth }, color: readerAppColor(this.spec().hostBorderRole, this.scheme) })
       .borderRadius({ topLeft: this.spec().borderRadius, topRight: this.spec().borderRadius })
       .shadow(this.frameMaterial().native ? undefined : this.frameShadow())
-      .systemMaterial(readerImmersiveMaterial(this.frameMaterial())).clip(true)
+      .attributeModifier(new ReaderImmersiveMaterialModifier(this.frameMaterial())).clip(true)
       .hitTestBehavior(HitTestMode.Default).focusable(true).focusScopeId(this.nativeId, true, false)
       .onAppear((): void => { this.frameAttached = true; })
       .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) :

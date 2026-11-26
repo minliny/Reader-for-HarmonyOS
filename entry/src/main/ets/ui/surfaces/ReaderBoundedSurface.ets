@@ -5,7 +5,7 @@ import { READER_GLASS_BLUR_VP, READER_HEAVY_GLASS_BLUR_VP, readerSurfaceElevatio
   type SheetSpecId } from './ReaderSurfaceSpecs';
 import { ReaderInsetsVp } from '../foundation/ReaderWindowMetrics';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
-import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision,
+import { applyReaderImmersiveMaterial, defaultNavigationPreferences, readerSurfaceMaterialDecision,
   READER_NO_SHADOW } from './ReaderSurfaceMaterial';
 
 export type ReaderBoundedSurfaceId = 'source-switch-window' | 'source-switch-drawer' | 'reader-action-sheet' | 'tts-config-manager' | 'tts-config-picker' | SheetSpecId | 'local-import-selection' | 'local-import-progress' | 'local-import-result-content' | 'reader-replace-editor';
@@ -96,14 +96,13 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
 
   private applyMaterialFrame(instance: CommonAttribute, background: BackgroundEffectOptions,
     border: BorderOptions | undefined, shadow?: ShadowOptions): void {
-    const material = readerImmersiveMaterial(this.material);
-    const native = material !== undefined;
+    const native = this.material?.native === true;
     const solidFallback = !native && this.material?.performanceMode === true;
     instance.backgroundEffect(native || solidFallback ? undefined : background)
       .backgroundColor(solidFallback ? readerAppColor('TOK_SURFACE_SOLID', this.scheme) : Color.Transparent)
       .border(native ? { width: 0, color: Color.Transparent } : border)
-      .shadow(native ? undefined : shadow)
-      .systemMaterial(material);
+      .shadow(native ? undefined : shadow);
+    applyReaderImmersiveMaterial(instance, this.material);
   }
 }
 

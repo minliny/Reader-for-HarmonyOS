@@ -3,7 +3,7 @@ import type { HdsTabsFloatingStyle } from '@kit.UIDesignKit';
 import { MAIN_TABS, readerMainTabIconResource, type MainTabDef } from './ReaderMainTabs';
 import type { ReaderNavigationAppearance, ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../HarmonyCapabilityPolicy';
 import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
-import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../../ui/surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../../ui/surfaces/ReaderSurfaceMaterial';
 
 /** HDS renders the bounded navigation bar. The shell's routed page and its
  * scroller stay mounted as siblings of this navigation-only host. */
@@ -67,7 +67,7 @@ export struct ReaderSystemNavigationBar {
     .barBackgroundBlurStyle(this.railMaterial()?.native ? BlurStyle.NONE : BlurStyle.COMPONENT_THICK)
     .backgroundEffect(undefined).backgroundColor(Color.Transparent)
     .border({ width: 0, color: Color.Transparent }).shadow(undefined)
-    .systemMaterial(readerImmersiveMaterial(this.railMaterial()))
+    .attributeModifier(new ReaderImmersiveMaterialModifier(this.railMaterial()))
     .scrollable(false).animationDuration(0).enabled(this.inputEnabled)
     .onContentWillChange(this.selectionHandler(this.current))
     .onTabBarClick(this.currentTapHandler(this.current));

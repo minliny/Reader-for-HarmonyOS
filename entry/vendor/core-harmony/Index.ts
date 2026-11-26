@@ -2,7 +2,11 @@ import readerCoreNapi from 'libreader_core_napi.so';
 
 import {
   ReaderCoreRuntime,
+  exportReaderCoreLibraryReadOnlyWithModule,
   probeReaderCoreStorageWithModule,
+  readReaderCoreLibraryBackupIdentityWithModule,
+  type ReaderCoreLibraryBackupIdentity,
+  type ReaderCoreReadOnlyLibraryExport,
   type ReaderCoreStorageProbe,
   type JsonObject,
   type NativeReaderCoreModule,
@@ -43,6 +47,8 @@ export {
   type ReaderCoreEvent,
   type ReaderCoreHostRequestEvent,
   type ReaderCoreLastError,
+  type ReaderCoreLibraryBackupIdentity,
+  type ReaderCoreReadOnlyLibraryExport,
   type ReaderCoreStorageProbe,
   type ReaderCoreResultEvent,
   type ReaderCoreTransactionKind,
@@ -77,6 +83,16 @@ export {
 } from './sdk/smoke_report';
 
 const nativeReaderCore = readerCoreNapi as NativeReaderCoreModule;
+
+export async function exportReaderCoreLibraryReadOnlyAsync(dataDirectory: string, password: string,
+  isCurrent: () => boolean = () => true): Promise<ReaderCoreReadOnlyLibraryExport> {
+  return exportReaderCoreLibraryReadOnlyWithModule(nativeReaderCore, dataDirectory, password, isCurrent);
+}
+
+export async function readLibraryBackupIdentityAsync(dataDirectory: string,
+  isCurrent: () => boolean = () => true): Promise<ReaderCoreLibraryBackupIdentity | undefined> {
+  return readReaderCoreLibraryBackupIdentityWithModule(nativeReaderCore, dataDirectory, isCurrent);
+}
 
 export async function probeReaderCoreStorageAsync(dataDirectory: string,
   isCurrent: () => boolean = () => true): Promise<ReaderCoreStorageProbe> {

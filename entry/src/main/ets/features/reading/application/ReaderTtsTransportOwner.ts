@@ -17,6 +17,7 @@ export interface ReaderTtsTransportHost {
   commitProgress(progress: ReaderTtsProgressCommit): Promise<void>;
   publishState(state: ReaderTtsState): void;
   advanceChapter(chapter: ReaderTtsChapterRef): Promise<ReaderTtsChapterAdvanceInput | undefined>;
+  changeRate(rate: number): void;
   autoPageActive(): boolean;
   userPaused(): boolean;
   stopAutoPage(): void;
@@ -41,13 +42,18 @@ export class ReaderTtsTransportOwner {
       (state: ReaderTtsState): void => {
         if (host.current() && this.currentCoordinator === coordinator) host.publishState(state);
       }, host.advanceChapter,
-      { admitHostResume: (origin: ReaderTtsHostResumeOrigin): boolean => {
-        if (!host.current() || this.currentCoordinator !== coordinator) return false;
-        const autoPage = host.autoPageActive();
-        if (origin === 'interruptionResume') return !autoPage && !host.userPaused();
-        if (autoPage) host.stopAutoPage();
-        return true;
-      } },
+      {
+        onMediaRate: (rate: number): void => {
+          if (host.current() && this.currentCoordinator === coordinator) host.changeRate(rate);
+        },
+        admitHostResume: (origin: ReaderTtsHostResumeOrigin): boolean => {
+          if (!host.current() || this.currentCoordinator !== coordinator) return false;
+          const autoPage = host.autoPageActive();
+          if (origin === 'interruptionResume') return !autoPage && !host.userPaused();
+          if (autoPage) host.stopAutoPage();
+          return true;
+        },
+      },
     );
     this.currentGateway = gateway;
     this.currentHttpGateway = httpGateway;

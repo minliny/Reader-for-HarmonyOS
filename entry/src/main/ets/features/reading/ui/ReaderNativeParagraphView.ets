@@ -6,6 +6,7 @@ import { readerSelectedOriginalText } from './ReaderTextSelectionProjection';
 import { readerSelectionShareAnchor, readerShareMessage, readerSystemShareActions } from './ReaderSharePresentation';
 import { copyReaderSelection } from '../../../platform/clipboard/ReaderClipboardHost';
 import { readerNativeTextGeometryKey } from './ReaderNativeTextMeasurement';
+import type { ReaderQuoteCardAction } from '../application/ReaderShareActions';
 
 /** A shaped paragraph stays intact through pagination, selection and TTS. */
 @Component
@@ -18,6 +19,8 @@ export struct ReaderNativeParagraphView {
   @Prop @Watch('updateInk') inkColor: ResourceColor = '#222222';
   @Prop @Watch('updateSelection') selectionEnabled: boolean = false;
   selectionInputCurrent: (() => boolean) | undefined = undefined;
+  quoteCardAction: ReaderQuoteCardAction | undefined = undefined;
+  onSelectionActivity: ((owner: string, active: boolean) => void) | undefined = undefined;
   @Prop @Watch('updateSelection') selectionColor: ResourceColor = '#80667788';
   @Prop @Watch('updateHighlight') highlightStart: number | undefined = undefined;
   @Prop @Watch('updateHighlight') highlightEnd: number | undefined = undefined;
@@ -52,6 +55,7 @@ export struct ReaderNativeParagraphView {
   aboutToAppear(): void { this.mounted = true; this.prepare(); }
   aboutToDisappear(): void {
     this.transientFeedback.reset();
+    this.onSelectionActivity?.(this.selectionShareAnchor, false);
     this.mounted = false; this.epoch += 1; this.preparedKey = '';
     this.controller.close(); this.map = undefined; this.onHighlightGeometry([]);
     this.onPositionResolver(undefined); this.localRects = []; this.localCanvas = undefined;
@@ -63,6 +67,7 @@ export struct ReaderNativeParagraphView {
     const key = `${this.recipe.key}:${this.recipe.firstLine}:${this.recipe.lastLine}:${this.recipe.wholeParagraph}:${this.gapVp}:` +
       `${readerNativeTextGeometryKey(this.recipe.style)}:${context.vp2px(1)}:${context.fp2px(1)}`;
     if (key === this.preparedKey) return;
+    this.onSelectionActivity?.(this.selectionShareAnchor, false);
     this.epoch += 1;
     const resource = this.resourceProvider?.() ?? readerNativeParagraphResource(this.recipe.key);
     this.controller.prepare(context, this.recipe, this.gapVp, resource);
@@ -90,6 +95,7 @@ export struct ReaderNativeParagraphView {
 
   private updateSelection(): void {
     if (!this.mounted) return;
+    if (!this.selectionEnabled) this.onSelectionActivity?.(this.selectionShareAnchor, false);
     const epoch = this.epoch;
     const selectionEpoch = ++this.selectionEpoch;
     const current = (): boolean => this.mounted && this.selectionEnabled && epoch === this.epoch &&
@@ -103,16 +109,21 @@ export struct ReaderNativeParagraphView {
       if (original === undefined || original.length === 0) return;
       try { copyReaderSelection(original); }
       catch (_) { this.transientFeedback.show(() => this.getUIContext(), { message: '复制失败，请重试' }, current); }
-    }, (range: TextRange, copyRequested: boolean): void => {
+    }, (range: TextRange, quoteRequested: boolean): void => {
       const original = selected(range);
-      if (original !== undefined && original.length > 0) void this.shareSelection(original, current, copyRequested);
-    });
+      if (original !== undefined && original.length > 0) void this.shareSelection(original, current, quoteRequested);
+    }, (active: boolean): void => {
+      if (epoch === this.epoch && selectionEpoch === this.selectionEpoch) {
+        this.onSelectionActivity?.(this.selectionShareAnchor, active && current());
+      }
+    }, this.quoteCardAction !== undefined);
   }
 
-  private async shareSelection(text: string, current: () => boolean, copyRequested: boolean): Promise<void> {
-    const actions = readerSystemShareActions(() => this.getUIContext(), this.selectionShareAnchor);
-    const message = readerShareMessage(await actions.shareSelection(text, current, copyRequested),
-      copyRequested ? '已复制选文' : undefined);
+  private async shareSelection(text: string, current: () => boolean, quoteRequested: boolean): Promise<void> {
+    const result = quoteRequested && this.quoteCardAction !== undefined ?
+      await this.quoteCardAction(text, this.selectionShareAnchor, current) :
+      await readerSystemShareActions(() => this.getUIContext(), this.selectionShareAnchor).shareSelection(text, current);
+    const message = readerShareMessage(result);
     if (message !== undefined) this.transientFeedback.show(() => this.getUIContext(), { message }, current);
   }
 

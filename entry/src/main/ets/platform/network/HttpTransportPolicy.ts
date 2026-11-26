@@ -133,6 +133,19 @@ export function isPrivateNetworkTarget(hostname: string): boolean {
   return false;
 }
 
+/** Only LAN unicast ranges are eligible for a user-configured WebDAV origin. */
+export function isWebDavLanAddress(host: string): boolean {
+  if (host.includes(':')) {
+    const groups = parseIpv6Hextets(host.toLowerCase());
+    return groups !== null && (groups[0] & 0xfe00) === 0xfc00;
+  }
+  const parts = host.split('.');
+  if (parts.length !== 4 || parts.some((part: string): boolean => !/^\d+$/.test(part) || ipv4OctetValue(part) < 0)) return false;
+  const first = Number(parts[0]);
+  const second = Number(parts[1]);
+  return first === 10 || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168);
+}
+
 /**
  * Extracts the hostname of an http(s) URL without platform URL APIs, so the
  * import-time gate stays pure and node-executable. Returns undefined for

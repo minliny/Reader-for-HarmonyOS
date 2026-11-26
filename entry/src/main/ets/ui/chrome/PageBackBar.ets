@@ -22,7 +22,7 @@ import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP, APP_HEADER
   DOWNLOAD_HEADER_ACTION_WIDTH, DOWNLOAD_HEADER_ACTION_HEIGHT } from '../foundation/ReaderHeaderMetrics';
 import { readerScaledBarHeight } from '../foundation/ReaderSurfaceResolvers';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
-import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 
 const DOWNLOAD_HEADER_SLOT_WIDTH = 80;
 const DOWNLOAD_HEADER_PADDING_Y = 3;
@@ -176,7 +176,7 @@ export struct PageBackBar {
     .clip(this.variant === 'download' && this.elevation === 'fixed' && !this.veil() && this.surface === 'solid')
     .shadow(this.surfaceMaterial()?.native ? undefined :
       readerSurfaceElevation(this.raised() ? 'raised' : this.elevation === 'floating' ? 'floating' : 'fixed', this.appThemeScheme))
-    .systemMaterial(readerImmersiveMaterial(this.surfaceMaterial()))
+    .attributeModifier(new ReaderImmersiveMaterialModifier(this.surfaceMaterial()))
     .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion(this.veil() || this.surface === 'solid'))
     .onTouch((): void => {})
     .onAreaChange(this.panelAreaChangeHandler());

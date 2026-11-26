@@ -11,10 +11,12 @@ import { ReadingSurfacePageFragment } from './ReadingSurface';
 export class ReaderContinuousTextStyleContext {
   readonly measurementWidth: () => number;
   readonly uiContext: () => UIContext;
+  readonly punctuationOverflow: boolean;
 
-  constructor(measurementWidth: () => number, uiContext: () => UIContext) {
+  constructor(measurementWidth: () => number, uiContext: () => UIContext, punctuationOverflow: boolean) {
     this.measurementWidth = measurementWidth;
     this.uiContext = uiContext;
+    this.punctuationOverflow = punctuationOverflow;
   }
 }
 
@@ -31,7 +33,8 @@ export function materializeReaderContinuousText(id: string, text: string, startS
       lineHeight: readerAppearanceLineHeight(appearance), letterSpacing: appearance.letterSpacing,
       color: readerAppearanceThemeStyle(appearance.activeTheme).ink,
       alignment: readerAppearanceUsesJustify(appearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-      breakAll: false, bookBody: true, indentVp: context.uiContext().px2vp(context.uiContext().fp2px(
+      breakAll: false, bookBody: true, punctuationOverflow: context.punctuationOverflow,
+      indentVp: context.uiContext().px2vp(context.uiContext().fp2px(
         readerAppearanceParagraphIndent(appearance.fontSize, appearance.indent))) } };
   fragment.nativeParagraphFirst = true;
   return fragment;

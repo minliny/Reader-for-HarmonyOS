@@ -5,6 +5,14 @@ import { projectReaderControlDirectoryTitles, readableReaderDirectoryEntries, re
   readerEntryNavigationItem }
   from '../presentation/ReaderDirectoryProjection';
 import { readerControlStructureKey } from '../../../ui/layout/ReaderKeyboardGeometry';
+import { ReaderTextSelectionActivity } from '../application/ReaderKeyboardShortcuts';
+import { readerHardwareKeyboardShortcut } from '../../../platform/interaction/ReaderHardwareKeyboard';
+import { HarmonySmartGestureHost, ReaderSmartGestureShortcut } from '../../../platform/interaction/HarmonySmartGestureHost';
+import { ReaderNativeAlertWindow } from '../../../ui/platform/ReaderNativeAlertWindow';
+import { readerHarmonyCapabilities } from '../../../app/HarmonyCapabilityProbe';
+import { i18n } from '@kit.LocalizationKit';
+import { DEFAULT_READER_SMART_GESTURES, READER_SMART_GESTURE_VIEWPORT_FRACTION, readerSmartGestureAction,
+  type ReaderSmartGesture, type ReaderSmartGestureAction, type ReaderSmartGestureSettings } from '../application/ReaderSmartGesturePolicy';
 import { ReaderPagePreparationQueue, type ReaderPagePreparationAttempt } from './ReaderPagePreparationCoordinator';
 import { ReaderControlMinimumState,
   type ReaderControlMinimumWindow } from './ReaderControlMinimumState';
@@ -54,6 +62,9 @@ import { MeasurementParagraph, PhysicalReadingPage } from './ReadingMeasurementM
 import { collectForwardMeasuredLines, collectReverseMeasuredLines } from '../application/ReadingMeasuredLineTraversal';
 import { ReaderNativeTextWindow, readerNativeParagraphHeight } from './ReaderNativeTextWindow';
 import { ReaderNativeParagraphResources, ReaderNativeParagraphRecipe, readerNativeParagraphKey } from './ReaderNativeParagraph';
+import { exportReaderQuoteCard } from './ReaderQuoteCardExporter';
+import { readerSystemShareActions } from './ReaderSharePresentation';
+import type { ReaderQuoteCardAction, ReaderQuoteCardCopy } from '../application/ReaderShareActions';
 import { ReaderNativeTextMeasurement, READER_CHAPTER_TITLE_FONT_SIZE_FP, type ReaderNativeTextStyle } from './ReaderNativeTextMeasurement';
 import { READER_MEASUREMENT_UNICODE_PROBE, ReaderMeasurementRun,
   type ReaderTitleMeasurement, type ReaderUnicodeMeasurement } from './ReaderMeasurementRun';
@@ -227,7 +238,7 @@ import { adoptReaderControlPresentationFacts, readerControlModuleFactsMatch, rea
 import { readerControlThemeStyle } from './ReaderControlThemeStyle';
 import {
   copyReaderControlSessionState, createReaderControlSessionState, dismissReaderControlSession, openReaderControlSession,
-  readerControlContentLocation, advanceReaderControlSession, resumeReaderControlSessionTarget,
+  readerControlContentLocation, readerControlTargetLocation, advanceReaderControlSession, resumeReaderControlSessionTarget,
   type ReaderControlSessionState, type ReaderControlLocation,
 } from './ReaderControlSessionState';
 import {
@@ -574,6 +585,8 @@ export struct ReadingExperience {
   @StorageLink('readerAppScheme') @Watch('reconcileSessionLaunchLayout') private readerAppScheme: string = 'day';
   @StorageLink('readerAppearanceRevision') @Watch('onSharedAppearanceChanged') private sharedAppearanceRevision: number = 0;
   @StorageLink('readerAppForeground') @Watch('onAppForegroundChanged') appForeground: boolean = true;
+  @StorageLink('readerSmartGestureSettings') @Watch('syncSmartGestureMonitor')
+  private smartGestureSettings: ReaderSmartGestureSettings = DEFAULT_READER_SMART_GESTURES;
   @StorageLink('readerWindowMetricsRevision') @Watch('onWindowMetricsRevisionChanged')
   readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onReaderIdentityChanged') sourceId: string = LOCAL_READING_SOURCE_ID;
@@ -765,6 +778,7 @@ export struct ReadingExperience {
   @State private failureHint: string = readingFailureHint('');
   private cacheNoticeLifecycle: number = -1;
   @Prop bookTitle: string = '';
+  @Prop bookAuthor: string = '';
   @Prop sourceName: string = '';
   @Prop totalChapters: number = 0;
   @Prop @Watch('onControlDirectoryDataChanged') directoryEntries: LocalReadingTocEntry[] = [];
@@ -1240,6 +1254,7 @@ export struct ReadingExperience {
   });
   private readonly nativeParagraphResources: ReaderNativeParagraphResources = new ReaderNativeParagraphResources();
   private readonly nativeTextMeasurement: ReaderNativeTextMeasurement = new ReaderNativeTextMeasurement();
+  private readonly nativeBodyPunctuationOverflow: boolean = this.resolveNativeBodyPunctuationOverflow();
   /** Invalidates every continuation captured by a prior mounted instance. */
   private lifecycleToken: number = 0;
   private initialReadingTraceStartedAt: number = -1;
@@ -1341,6 +1356,22 @@ export struct ReadingExperience {
   private visiblePageSelectionToken: number = -1;
   @State private mounted: boolean = false;
   @State private exitRequested: boolean = false;
+  private readonly textSelectionActivity: ReaderTextSelectionActivity = new ReaderTextSelectionActivity();
+  private readonly smartGestureHost: HarmonySmartGestureHost = new HarmonySmartGestureHost();
+  private quoteShareGeneration: number = 0;
+  private readonly quoteCardAction: ReaderQuoteCardAction = (text: string, anchor: string, selectionCurrent: () => boolean) => {
+    const generation = ++this.quoteShareGeneration;
+    const selection = this.chapterSelectionToken;
+    const current = (): boolean => generation === this.quoteShareGeneration &&
+      selection === this.chapterSelectionToken && this.readerTextSelectionEnabled() && selectionCurrent();
+    const title = this.bookTitle;
+    const author = this.bookAuthor;
+    const appearance = this.visibleReadingAppearance();
+    const actions = readerSystemShareActions(() => this.getUIContext(), anchor);
+    return actions.shareQuoteCard(text, title,
+      (): Promise<ReaderQuoteCardCopy | undefined> => exportReaderQuoteCard(this.getUIContext(), text, title, author, appearance, current),
+      current);
+  };
   private exitDelivered: boolean = false;
   private exitAttemptGeneration: number = 0;
   private readonly readingRecordHost: ReaderReadingRecordHost = new ReaderReadingRecordHost(
@@ -1779,6 +1810,7 @@ export struct ReadingExperience {
   }
 
   aboutToDisappear(): void {
+    this.smartGestureHost.detach();
     this.observeReadingPrefetch?.(false, false, true);
     this.controlFontOrder.retire();
     this.controlVerification.stop();
@@ -1826,6 +1858,7 @@ export struct ReadingExperience {
     this.readingSystemEventHost?.dispose();
     this.readingSystemEventHost = undefined;
     this.mounted = false;
+    this.loadingChapterIndex = undefined;
     this.onControlInputBoundaryChanged();
     if (this.isReaderIdentityCurrent?.() !== false && this.windowChromeActive)
       ReaderWindowCoordinator.requestAppChrome();
@@ -1958,6 +1991,8 @@ export struct ReadingExperience {
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
           longPressSelectText: this.readerTextSelectionEnabled(),
           selectionInputCurrent: (): boolean => this.readerTextSelectionEnabled(),
+          quoteCardAction: this.quoteCardAction,
+          onSelectionActivity: (owner: string, active: boolean): void => this.textSelectionActivity.change(owner, active),
           interactionEnabled: this.isReaderPageInteractionEnabled(),
           onVisibleRangeChanged: this.sourceSwitchContinuousRangeObserver(this.continuousRenderRevision),
           onScrollStopped: (): void => this.onContinuousScrollStopped(),
@@ -2018,6 +2053,8 @@ export struct ReadingExperience {
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
           longPressSelectText: this.readerTextSelectionEnabled(),
           selectionInputCurrent: (): boolean => this.readerTextSelectionEnabled(),
+          quoteCardAction: this.quoteCardAction,
+          onSelectionActivity: (owner: string, active: boolean): void => this.textSelectionActivity.change(owner, active),
           translateY: this.bookmarkPullOffset(),
           bookmarkPaperTop: this.bookmarkPullOffset() > 0 ? this.bookmarkPullPaperTop(this.readingLayout()) : undefined,
           onCurrentPagePresented: (revision: number): void => {
@@ -2471,6 +2508,11 @@ export struct ReadingExperience {
     .width('100%')
     .height('100%')
     .id('reader-reading-stage')
+    .focusable(true)
+    .defaultFocus(true)
+    .onKeyEvent((event: KeyEvent): boolean => this.onReaderKeyEvent(event))
+    .attributeModifier(new ReaderSmartGestureShortcut(this.smartGestureSettings.enabled))
+    .onAppear((): void => this.syncSmartGestureMonitor())
     .clip(true)
     .onTouch((event: TouchEvent): void => this.onControlBackdropTouch(event))
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
@@ -3725,6 +3767,18 @@ export struct ReadingExperience {
     for (const paragraph of this.paragraphLayout.batch) paragraph.nativeMeasured = false;
   }
 
+  private resolveNativeBodyPunctuationOverflow(): boolean {
+    if (!readerHarmonyCapabilities().api26) return false;
+    try {
+      const preferred = i18n.System.getAppPreferredLanguage();
+      const language = preferred.length === 0 || preferred === 'default' ? i18n.System.getSystemLanguage() : preferred;
+      const locale = new Intl.Locale(language).maximize();
+      return locale.language === 'zh' && locale.script === 'Hans';
+    } catch (_) {
+      return false;
+    }
+  }
+
   /** Title capacity can be queried after a body paragraph is already shaped.
    * Add only the title node; clearing the batch here would dispose the body
    * before its ownership can transfer to the visible native window. */
@@ -3752,7 +3806,7 @@ export struct ReadingExperience {
       lineHeight: readerAppearanceLineHeight(this.appearanceSnapshot), letterSpacing: this.appearanceSnapshot.letterSpacing,
       color: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
       alignment: readerAppearanceUsesJustify(this.appearanceSnapshot.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-      breakAll: false, bookBody: true,
+      breakAll: false, bookBody: true, punctuationOverflow: this.nativeBodyPunctuationOverflow,
     };
     if (paragraphStart !== undefined) {
       style.indentVp = paragraphStart ? this.getUIContext().px2vp(this.getUIContext().fp2px(
@@ -4069,7 +4123,6 @@ export struct ReadingExperience {
     if (requested === undefined || !this.mounted) {
       return;
     }
-    this.loadingChapterIndex = requested;
     if (this.pageTurnSettlementActive) {
       this.pageTurnPendingRequestedChapterChange = true;
       return;
@@ -4084,6 +4137,7 @@ export struct ReadingExperience {
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
     this.resetForChapterSelection();
+    this.loadingChapterIndex = requested;
     // A manual directory selection is not a restore; start the chapter at its
     // natural first scalar.
     this.restoredProgress = undefined;
@@ -4195,6 +4249,7 @@ export struct ReadingExperience {
    * screen or title-only PaperLayer.
    */
   private resetForChapterSelection(preserveRapidPageTarget: boolean = false, preserveTtsFollow: boolean = false): void {
+    this.loadingChapterIndex = undefined;
     this.measurementRun.resetSelection();
     this.transientFeedback.reset();
     this.showReaderRecovery('');
@@ -5669,6 +5724,7 @@ export struct ReadingExperience {
     this.visiblePage = page;
     this.visiblePageSelectionToken = selectionToken;
     this.visibleFragments = page.fragments;
+    this.loadingChapterIndex = undefined;
     if (this.readerSettingsSnapshot.navigationMode === 'continuous') {
       this.rebuildContinuousFragments();
       this.setContinuousInitialAnchor(page.startScalar);
@@ -5777,6 +5833,7 @@ export struct ReadingExperience {
     this.visiblePage = visiblePage;
     this.visiblePageSelectionToken = selectionToken;
     this.visibleFragments = visiblePage.fragments;
+    this.loadingChapterIndex = undefined;
     if (this.readerSettingsSnapshot.navigationMode === 'continuous') {
       this.rebuildContinuousFragments();
       this.setContinuousInitialAnchor(visiblePage.startScalar);
@@ -6124,7 +6181,7 @@ export struct ReadingExperience {
 
   private paginationLayoutSignature(): string {
     const layout = this.readingLayout();
-    return createNativeReadingPaginationLayoutSignature(layout, this.appearanceSnapshot);
+    return createNativeReadingPaginationLayoutSignature(layout, this.appearanceSnapshot, this.nativeBodyPunctuationOverflow);
   }
 
   private currentPaginationKey(): ReadingPaginationKey {
@@ -6282,7 +6339,7 @@ export struct ReadingExperience {
     }
     const appearance = this.visibleReadingAppearance();
     const context = new ReaderContinuousTextStyleContext(
-      (): number => this.measurementTextWidth(), (): UIContext => this.getUIContext());
+      (): number => this.measurementTextWidth(), (): UIContext => this.getUIContext(), this.nativeBodyPunctuationOverflow);
     const fragments = this.continuousProjection.project(chapter, this.paragraphLayout.ranges, preserveExisting,
       (startScalar: number): ReadingSessionImage | undefined => this.readingImageResources.atScalar(startScalar),
       (id: string, image: ReadingSessionImage): ReadingSurfacePageFragment =>
@@ -7106,6 +7163,7 @@ export struct ReadingExperience {
       publishState: (state: ReaderTtsState): void => this.publishTtsState(state),
       advanceChapter: async (chapter: ReaderTtsChapterRef): Promise<ReaderTtsChapterAdvanceInput | undefined> =>
         this.loadNextTtsChapter(chapter, lifecycleToken),
+      changeRate: (rate: number): void => this.changeTtsRate(rate),
       autoPageActive: (): boolean => this.automaticReadingState().status !== 'stopped',
       userPaused: (): boolean => this.ttsState.pauseReason === 'user',
       stopAutoPage: (): void => this.stopAutoPage(),
@@ -7826,6 +7884,7 @@ export struct ReadingExperience {
   }
 
   private onAppForegroundChanged(): void {
+    this.syncSmartGestureMonitor();
     this.applyWindowPolicyForChromeOwner();
     if (!this.appForeground) this.cancelSourceSwitchCompletion();
     this.onControlInputBoundaryChanged();
@@ -7900,6 +7959,7 @@ export struct ReadingExperience {
   }
 
   private onWindowChromeActiveChanged(): void {
+    this.syncSmartGestureMonitor();
     if (!this.windowChromeActive) this.transientFeedback.reset();
     this.admitRetainedReadingRecency();
     this.onControlInputBoundaryChanged();
@@ -9355,6 +9415,67 @@ export struct ReadingExperience {
     return this.readerInputIsCurrent() && !this.controlVisible();
   }
 
+  private onReaderKeyEvent(event: KeyEvent): boolean {
+    const action = readerHardwareKeyboardShortcut(event, {
+      bodyOwnsInput: this.isReaderPageInteractionEnabled() && !this.windowChromeOverlayActive &&
+        !this.sourceSwitchPresentationVisible && this.sourceSwitchFailureMessage.length === 0 &&
+        !this.sourceSwitchRollbackInFlight && !this.shouldShowSourceSwitchPreparation() && !this.shouldShowChapterLoading() &&
+        this.controlTemporaryLayer.length === 0 && !ReaderNativeAlertWindow.isPresented() &&
+        this.sessionLaunch === undefined && !this.readerRecoveryRequestCurrent() && this.phase === 'ready',
+      inputFocused: readerControlKeyboardVisible(ReaderWindowCoordinator.metrics()),
+      selectionActive: this.textSelectionActivity.active(),
+    });
+    if (action === undefined) return false;
+    if (action === 'back') this.requestExit();
+    else if (action === 'next' || action === 'previous') this.requestPageTurn(action);
+    else this.openReaderControl(undefined, action);
+    return true;
+  }
+
+  private syncSmartGestureMonitor(): void {
+    if (!this.mounted || !this.appForeground || !this.windowChromeActive || !this.smartGestureSettings.enabled ||
+      this.isReaderIdentityCurrent?.() === false) {
+      this.smartGestureHost.detach();
+      return;
+    }
+    try {
+      this.smartGestureHost.attach(this.getUIContext(), {
+        decide: (gesture: ReaderSmartGesture): ReaderSmartGestureAction => this.smartGestureDecision(gesture),
+        dispatch: (action: ReaderSmartGestureAction): void => this.dispatchSmartGesture(action),
+      });
+    } catch (_) { this.smartGestureHost.detach(); }
+  }
+
+  private smartGestureDecision(gesture: ReaderSmartGesture): ReaderSmartGestureAction {
+    const control = readerControlContentLocation(this.latestControlVisualSession);
+    return readerSmartGestureAction(gesture, this.smartGestureSettings, {
+      foreground: this.readerInputIsCurrent(),
+      controlsOpen: this.controlVisible() || this.sessionLaunch !== undefined,
+      directoryOpen: control.level === 'secondary' && control.module === 'directory',
+      sourceSwitchOpen: this.sourceSwitchPresentationVisible || this.windowChromeOverlayActive,
+      settingsOpen: control.level === 'secondary' && (control.module === 'settings' || control.module === 'appearance'),
+      dialogOpen: this.controlTemporaryLayer.length > 0 || this.readerRecoveryRequestCurrent() ||
+        ReaderNativeAlertWindow.isPresented(),
+      selectionActive: this.textSelectionActivity.active(),
+      zoomed: false,
+      chapterLoading: this.phase !== 'ready' || this.shouldShowChapterLoading() ||
+        this.chapterSelection.ticket !== undefined || this.pageTurnOwnsReaderInput(),
+      sourceSwitching: this.sourceSwitchRollbackInFlight || this.sourceSwitchFailureMessage.length > 0 ||
+        this.sessionGateway?.hasPendingSourceSwitch() === true,
+      continuous: this.readerSettingsSnapshot.navigationMode === 'continuous',
+    });
+  }
+
+  private dispatchSmartGesture(action: ReaderSmartGestureAction): void {
+    if (action === 'back') this.requestExit();
+    else if (action === 'toggleControls') this.openReaderControl();
+    else if (action === 'pageNext') this.requestPageTurn('next');
+    else if (action === 'scrollNext') {
+      this.onReaderManualInteraction();
+      this.performContinuousPageTurn('next', READER_SMART_GESTURE_VIEWPORT_FRACTION);
+    }
+  }
+
   /**
    * Only a visual/Core settlement is non-interruptible. Speculative neighbour
    * measurement has its own readiness gate and must leave controls responsive.
@@ -9435,7 +9556,8 @@ export struct ReadingExperience {
       this.controlOpenRevision, this.sourceId === 'local', this.reduceMotion, this.chapter?.chapterIndex ?? -1);
   }
 
-  private openReaderControl(verificationOrigin?: ReaderControlVerificationOrigin): void {
+  private openReaderControl(verificationOrigin?: ReaderControlVerificationOrigin,
+    shortcutModule?: 'search' | 'directory'): void {
     this.retireReaderRecovery();
     if (this.sessionLaunch !== undefined) { this.cancelSessionLaunch('openControl'); return; }
     if (this.pageTurnSettlementActive && this.preparedSettlement.commitStarted && !this.preparedSettlement.commitFinished) {
@@ -9459,9 +9581,13 @@ export struct ReadingExperience {
     const playbackOrigin = origin !== undefined && origin.lifecycleToken === this.lifecycleToken &&
       origin.sourceId === this.sourceId && origin.bookId === this.bookId &&
       this.liveSessionCapsuleSnapshot()?.type === origin.location.module ? origin.location : undefined;
-    const nextControl = playbackOrigin === undefined ? openReaderControlSession(this.controlSession, duration) :
-      resumeReaderControlSessionTarget(this.controlSession, playbackOrigin, duration);
-    if (playbackOrigin !== undefined && nextControl.transition !== undefined) {
+    const opened = openReaderControlSession(this.controlSession, duration);
+    const shortcutTarget = shortcutModule === undefined ? undefined : readerControlTargetLocation(
+      setReaderControlHostPage(opened, shortcutModule === 'search' ? 'quickSearch' : 'moduleDirectory', this.controlTiming()));
+    const target = shortcutTarget ?? playbackOrigin;
+    const nextControl = target === undefined ? opened :
+      resumeReaderControlSessionTarget(this.controlSession, target, duration);
+    if (target !== undefined && nextControl.transition !== undefined) {
       nextControl.transition.kind = 'open';
       nextControl.transition.intent = 'forward';
     }
@@ -10088,7 +10214,6 @@ export struct ReadingExperience {
   }
 
   private queueChapterSelectionOnSettlement(request: ReaderDeferredChapterSelection): boolean {
-    this.loadingChapterIndex = request.chapterIndex;
     if (!this.pageTurnSettlementActive) return false;
     this.pageTurnPendingChapterSelection = request;
     return true;
@@ -10097,6 +10222,7 @@ export struct ReadingExperience {
   private loadAdmittedChapterSelection(request: ReaderDeferredChapterSelection,
     lifecycleToken: number, selectionToken: number): void {
     this.resetForChapterSelection(false, request.ttsOwner !== undefined);
+    this.loadingChapterIndex = request.chapterIndex;
     this.restoredProgress = undefined;
     this.armFirstPageReadyDeadline(lifecycleToken, selectionToken);
     if (request.closeControlOnCommit && request.controlOwnerRevision === this.controlOpenRevision &&
@@ -12310,7 +12436,7 @@ export struct ReadingExperience {
     return edge === undefined ? undefined : { kind: 'boundary', edge };
   }
 
-  private performContinuousPageTurn(direction: ReaderPageTurnDirection): ReaderPageTurnOutcome {
+  private performContinuousPageTurn(direction: ReaderPageTurnDirection, viewportFraction: number = 1): ReaderPageTurnOutcome {
     if (!this.mounted || this.exitRequested || this.controlVisible() || this.phase !== 'ready' ||
       this.chapter === undefined || this.continuousScroller === undefined ||
       this.continuousProjection.fragments.length === 0 || this.progressProducers.continuousInFlight) {
@@ -12344,7 +12470,11 @@ export struct ReadingExperience {
         return this.openPageTurnChapter(nextChapter, 0) ? { kind: 'started' } : { kind: 'busy' };
       }
       this.continuousProgrammaticScrollIntent?.();
-      this.continuousScroller.scrollPage({ next: direction === 'next', animation: !this.reduceMotion });
+      if (viewportFraction < 1) {
+        this.continuousScroller.scrollBy(0, this.viewportHeight * viewportFraction * (direction === 'next' ? 1 : -1));
+      } else {
+        this.continuousScroller.scrollPage({ next: direction === 'next', animation: !this.reduceMotion });
+      }
       return { kind: 'started' };
     } catch (_) {
       return { kind: 'busy' };
@@ -12753,6 +12883,7 @@ export struct ReadingExperience {
     // A timeout/error revokes outstanding acquisition and measurement work;
     // remaining mounted must not allow a late reply to resurrect that attempt.
     this.chapterSelectionToken += 1;
+    this.loadingChapterIndex = undefined;
     this.measurementCompleting = false;
     this.remeasurePending = false;
     this.resetPaginationDraft();

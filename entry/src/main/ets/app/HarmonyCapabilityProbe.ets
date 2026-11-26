@@ -1,5 +1,5 @@
 import deviceInfo from '@ohos.deviceInfo';
-import { uiMaterial } from '@kit.ArkUI';
+import lazy { uiMaterial } from '@kit.ArkUI';
 import lazy { hdsMaterial } from '@kit.UIDesignKit';
 import {
   harmonyDistributionSupportsApi24, probeHarmonyCapabilities, readHarmonyDistributionVersion,
@@ -25,7 +25,10 @@ export function readerHarmonyCapabilities(): ReaderHarmonyCapabilities {
   if (capabilities === undefined) {
     capabilities = probeHarmonyCapabilities({
       distributionVersion: (): number => deviceInfo.distributionOSApiVersion,
-      api26: (): boolean => deviceInfo.apiAvailable('26.0.0'),
+      api26: (): boolean => {
+        if (deviceInfo.distributionOSApiVersion >= 260000) return deviceInfo.apiAvailable('26.0.0');
+        return false;
+      },
       navigation: (): boolean => deviceInfo.deviceType !== 'tv' &&
         canIUse('SystemCapability.UIDesign.HDSComponent.Core'),
       material: nativeNavigationMaterial,

@@ -2,7 +2,7 @@ import { ReaderBottomNavigation } from '../../app/navigation/ReaderBottomNavigat
 import { readerMainTabIconResource } from '../../app/navigation/ReaderMainTabs';
 import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
 import { ReaderRaisedSurface } from '../../ui/surfaces/ReaderRaisedSurface';
-import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../../ui/surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../../ui/surfaces/ReaderSurfaceMaterial';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
 import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
 import { registerReaderShelfFonts } from '../../ui/foundation/ReaderFonts';
@@ -78,7 +78,7 @@ export struct MainTabBar {
     .border(this.material().native ? { width: 0, color: Color.Transparent } :
       { width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) })
     .borderRadius(this.railRadius())
-    .systemMaterial(readerImmersiveMaterial(this.material()))
+    .attributeModifier(new ReaderImmersiveMaterialModifier(this.material()))
     .clip(false)
     .onAreaChange((_old: Area, area: Area): void => this.recordRaisedSurface(true, area))
     .hitTestBehavior(HitTestMode.Transparent);

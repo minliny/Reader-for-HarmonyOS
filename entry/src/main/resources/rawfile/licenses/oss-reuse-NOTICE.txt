@@ -613,10 +613,10 @@ DEALINGS IN THE SOFTWARE.
 
 
 
-cssparser 0.31.2
+cssparser 0.36.0
 https://github.com/servo/rust-cssparser
 MPL-2.0
-Unmodified source for this fixed version: https://crates.io/api/v1/crates/cssparser/0.31.2/download
+Unmodified source for this fixed version: https://crates.io/api/v1/crates/cssparser/0.36.0/download
 Mozilla Public License Version 2.0
 ==================================
 
@@ -993,10 +993,10 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
 
 
-selectors 0.25.0
-https://github.com/servo/servo
+selectors 0.36.1
+https://github.com/servo/stylo
 MPL-2.0
-Unmodified source for this fixed version: https://crates.io/api/v1/crates/selectors/0.25.0/download
+Unmodified source for this fixed version: https://crates.io/api/v1/crates/selectors/0.36.1/download
 Mozilla Public License Version 2.0
 ==================================
 
