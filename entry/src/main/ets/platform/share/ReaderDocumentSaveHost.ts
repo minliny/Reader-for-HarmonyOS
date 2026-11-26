@@ -69,7 +69,6 @@ export class ReaderDocumentSaveHost {
       const options = new picker.DocumentSaveOptions();
       options.newFileNames = [name.toLowerCase().endsWith(extension) ? name : `${name}${extension}`];
       options.fileSuffixChoices = [extension];
-      options.autoCreateEmptyFile = true;
       const epoch = ReaderDocumentPickerActivity.windowEpoch();
       const activity = ReaderDocumentPickerActivity.begin(epoch);
       let uri: string | undefined;

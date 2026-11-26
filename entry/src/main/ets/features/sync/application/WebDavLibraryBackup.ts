@@ -7,6 +7,7 @@ import {
   LOCAL_RECOVERY_MAX_BYTES, recoveryDigest, recoveryOutput, recoveryReserve, recoveryText, recoveryUtf8, recoveryVisitFile,
 } from '../../../platform/backup/LocalRecoveryFile';
 import { HttpExecuteHost, type HttpBytesResponse } from '../../../platform/network/HttpExecuteHost';
+import type { LocalRecoveryArchiveProof } from '../../bookshelf/application/LocalRecoveryGateway';
 
 const PREFIX = 'reader-library-v1-';
 const FORMAT = 'reader.library.webdav';
@@ -20,7 +21,7 @@ const CONDITIONAL_PROBE = 'reader-library-conditional-v2.probe';
 export const WEB_DAV_ARCHIVE_READ_WINDOW = 30 * 60 * 1000;
 
 export type WebDavLibraryBackupFailure = 'authentication' | 'readOnly' | 'missing' | 'corrupt' |
-  'conflict' | 'unconfirmed' | 'cleanupFailed' | 'failed';
+  'conflict' | 'unconfirmed' | 'cleanupFailed' | 'failed' | 'replacementUnverified' | 'replacementMissingOriginals';
 
 export class WebDavLibraryBackupError extends Error {
   constructor(readonly reason: WebDavLibraryBackupFailure) { super(reason); }
@@ -57,6 +58,19 @@ export interface WebDavArchiveRemoval {
   replacementSha256: string;
   bytes: number;
   parts: string[];
+  replacementProof?: WebDavReplacementProof;
+}
+
+export interface WebDavReplacementProof {
+  libraryId: string;
+  createdAt: number;
+  manifestSha256: string;
+  manifestEtag: string;
+}
+
+export interface WebDavArchiveVerification {
+  path: string;
+  inspect: (path: string) => Promise<LocalRecoveryArchiveProof>;
 }
 
 interface PublishedManifest extends WebDavLibraryIdentity {
@@ -233,7 +247,7 @@ export class WebDavLibraryBackup {
         identity.libraryId === manifest.libraryId ? 'same' : 'other';
       rows.push({ sha256: manifest.sha256, manifestSha256: await recoveryDigest(archive.object.bytes),
         bytes: manifest.bytes, createdAt: archive.timestamp, latest: archive === latest,
-        canDelete: this.canRemove(archive, latest), library });
+        canDelete: archives.some((candidate: ReadableArchive): boolean => this.canRemove(archive, candidate)), library });
     }
     return rows;
   }
@@ -249,23 +263,68 @@ export class WebDavLibraryBackup {
     return 'downloaded';
   }
 
-  async planRemoval(sha256: string, exactManifestSha256: string, verifyTempPath: string): Promise<WebDavArchiveRemoval> {
+  async planRemoval(sha256: string, exactManifestSha256: string, verification: WebDavArchiveVerification,
+    originalReplacementSha256?: string): Promise<WebDavArchiveRemoval> {
     if (!SHA256.test(sha256) || !SHA256.test(exactManifestSha256)) throw new WebDavLibraryBackupError('cleanupFailed');
     const archives = await this.readableArchives();
     const target = archives.find((archive: ReadableArchive): boolean => archive.manifest.sha256 === sha256);
-    const latest = archives[0];
     const etag = target?.object.etag;
-    if (target === undefined || etag === undefined || latest === undefined || !this.canRemove(target, latest) ||
+    if (target === undefined || etag === undefined ||
       await recoveryDigest(target.object.bytes) !== exactManifestSha256) {
       throw new WebDavLibraryBackupError('cleanupFailed');
     }
-    // Confirm the replacement's complete encrypted bytes before enabling the unpublish action.
-    await this.downloadArchive(latest, verifyTempPath);
-    return { sha256, manifestSha256: exactManifestSha256, manifestEtag: etag, replacementSha256: latest.manifest.sha256,
-      bytes: target.manifest.bytes, parts: target.manifest.parts };
+    const candidates = archives.filter((candidate: ReadableArchive): boolean =>
+      (originalReplacementSha256 === undefined || candidate.manifest.sha256 === originalReplacementSha256) &&
+      this.canRemove(target, candidate));
+    if (candidates.length === 0) throw new WebDavLibraryBackupError('replacementUnverified');
+    const original = await this.authenticateArchive(target, verification);
+    const libraryId = original.libraryId;
+    const createdAt = original.createdAt;
+    if (libraryId === undefined || createdAt === undefined) {
+      throw new WebDavLibraryBackupError('replacementUnverified');
+    }
+    let failure = new WebDavLibraryBackupError('replacementUnverified');
+    for (const replacement of candidates) {
+      const replacementEtag = replacement.object.etag;
+      if (replacementEtag === undefined || await this.hasRetirementMarker(replacement.manifest.sha256)) continue;
+      try {
+        const newer = await this.authenticateArchive(replacement, verification);
+        if (newer.libraryId !== libraryId || newer.createdAt === undefined || newer.createdAt <= createdAt) continue;
+        const included = new Set<string>(newer.includedOriginals);
+        if (!original.includedOriginals.every((digest: string): boolean => included.has(digest))) {
+          failure = new WebDavLibraryBackupError('replacementMissingOriginals');
+          continue;
+        }
+        const replacementProof: WebDavReplacementProof = { libraryId, createdAt: newer.createdAt,
+          manifestSha256: await recoveryDigest(replacement.object.bytes), manifestEtag: replacementEtag };
+        return { sha256, manifestSha256: exactManifestSha256, manifestEtag: etag,
+          replacementSha256: replacement.manifest.sha256, bytes: target.manifest.bytes, parts: target.manifest.parts, replacementProof };
+      } catch (error) {
+        if (!(error instanceof WebDavLibraryBackupError) ||
+          !['replacementUnverified', 'corrupt', 'missing', 'conflict'].includes(error.reason)) throw error;
+        await this.assertCurrent();
+        if (failure.reason !== 'replacementMissingOriginals') failure = error;
+      }
+    }
+    throw failure;
   }
 
-  async unpublish(plan: WebDavArchiveRemoval): Promise<void> {
+  /** Older journals can be upgraded only while the exact selected manifest
+   * is still readable and the originally recorded replacement still qualifies. */
+  async upgradeRemovalPlan(plan: WebDavArchiveRemoval, verification: WebDavArchiveVerification): Promise<WebDavArchiveRemoval> {
+    const previous = this.retirementContent(plan);
+    if (plan.replacementProof !== undefined) return plan;
+    if (await this.getObject(`${PREFIX}${plan.sha256}.manifest`, MAX_MANIFEST_BYTES) === undefined) {
+      throw new WebDavLibraryBackupError('replacementUnverified');
+    }
+    const upgraded = await this.planRemoval(plan.sha256, plan.manifestSha256, verification, plan.replacementSha256);
+    if (this.retirementContent(upgraded) !== previous) {
+      throw new WebDavLibraryBackupError('replacementUnverified');
+    }
+    return upgraded;
+  }
+
+  async unpublish(plan: WebDavArchiveRemoval, verification: WebDavArchiveVerification): Promise<void> {
     const markerContent = this.retirementContent(plan);
     const markerName = this.retirementName(plan.sha256);
     const removedName = this.removedName(plan.sha256);
@@ -277,6 +336,7 @@ export class WebDavLibraryBackup {
     const visible = await this.getObject(name, MAX_MANIFEST_BYTES);
     if (visible === undefined) {
       if (marker === undefined) throw new WebDavLibraryBackupError('cleanupFailed');
+      await this.confirmReplacement(plan, verification);
       await this.confirmRemoved(name, removedName, markerContent);
       return;
     }
@@ -285,27 +345,22 @@ export class WebDavLibraryBackup {
     }
     const target = this.decodeManifest(name, visible.bytes);
     if (target.version !== 2 || target.pinned === true || target.bytes !== plan.bytes ||
+      target.libraryId !== plan.replacementProof?.libraryId ||
       !target.parts.every((part: string, index: number): boolean => part === plan.parts[index])) {
       throw new WebDavLibraryBackupError('cleanupFailed');
     }
-    if (marker === undefined) {
-      const archives = await this.readableArchives();
-      const current = archives.find((archive: ReadableArchive): boolean => archive.manifest.sha256 === plan.sha256);
-      const replacement = archives.find((archive: ReadableArchive): boolean => archive.manifest.sha256 === plan.replacementSha256);
-      if (current === undefined || replacement === undefined || !this.canRemove(current, replacement) ||
-        current.object.etag !== plan.manifestEtag || !sameBytes(current.object.bytes, visible.bytes)) {
-        throw new WebDavLibraryBackupError('cleanupFailed');
-      }
-    }
+    await this.confirmReplacement(plan, verification);
     await this.proveConditionalDeletion();
     if (marker === undefined) await this.publishImmutable(markerName, markerContent, MAX_MANIFEST_BYTES);
+    await this.readReplacementManifest(plan);
     await this.deleteExact(name, plan.manifestEtag, MAX_MANIFEST_BYTES);
     await this.confirmRemoved(name, removedName, markerContent);
   }
 
-  async removeRetiredParts(plan: WebDavArchiveRemoval): Promise<void> {
+  async removeRetiredParts(plan: WebDavArchiveRemoval, verification: WebDavArchiveVerification): Promise<void> {
     const expected = recoveryUtf8(this.retirementContent(plan));
     await this.ensureRetired(plan.sha256, expected);
+    await this.confirmReplacement(plan, verification);
     await this.proveConditionalDeletion();
     for (let index = 0; index < plan.parts.length; index++) {
       const size = Math.min(PART_BYTES, plan.bytes - PART_BYTES * index);
@@ -324,14 +379,63 @@ export class WebDavLibraryBackup {
       try { await this.decodePart(part.bytes, size, plan.parts[index]); }
       catch (_) { throw new WebDavLibraryBackupError('cleanupFailed'); }
       await this.ensureRetired(plan.sha256, expected);
+      await this.readReplacementManifest(plan);
       await this.deleteExact(name, part.etag, limit);
     }
+  }
+
+  private async authenticateArchive(archive: ReadableArchive,
+    verification: WebDavArchiveVerification): Promise<LocalRecoveryArchiveProof> {
+    await this.downloadArchive(archive, verification.path);
+    let proof: LocalRecoveryArchiveProof;
+    try { proof = await verification.inspect(verification.path); }
+    catch (_) {
+      await this.assertCurrent();
+      throw new WebDavLibraryBackupError('replacementUnverified');
+    }
+    await this.assertCurrent();
+    if (proof.libraryId === undefined || proof.libraryId !== archive.manifest.libraryId) {
+      throw new WebDavLibraryBackupError('replacementUnverified');
+    }
+    return proof;
+  }
+
+  private async confirmReplacement(plan: WebDavArchiveRemoval, verification: WebDavArchiveVerification): Promise<void> {
+    const replacement = await this.readReplacementManifest(plan);
+    const proof = plan.replacementProof;
+    if (proof === undefined) throw new WebDavLibraryBackupError('replacementUnverified');
+    const authenticated = await this.authenticateArchive(replacement, verification);
+    if (authenticated.createdAt !== proof.createdAt) throw new WebDavLibraryBackupError('replacementUnverified');
+  }
+
+  private async readReplacementManifest(plan: WebDavArchiveRemoval): Promise<ReadableArchive> {
+    const proof = plan.replacementProof;
+    if (proof === undefined) throw new WebDavLibraryBackupError('replacementUnverified');
+    // The two marker lookups exclude replacements already being retired,
+    // including ones that are still readable while deletion is incomplete.
+    if (await this.hasRetirementMarker(plan.replacementSha256)) {
+      throw new WebDavLibraryBackupError('replacementUnverified');
+    }
+    const name = `${PREFIX}${plan.replacementSha256}.manifest`;
+    const current = await this.getObject(name, MAX_MANIFEST_BYTES);
+    if (current === undefined || current.etag !== proof.manifestEtag ||
+      await recoveryDigest(current.bytes) !== proof.manifestSha256) throw new WebDavLibraryBackupError('replacementUnverified');
+    const manifest = this.decodeManifest(name, current.bytes);
+    if (manifest.libraryId !== proof.libraryId) throw new WebDavLibraryBackupError('replacementUnverified');
+    return { name, object: current, manifest, timestamp: manifest.createdAt };
+  }
+
+  private async hasRetirementMarker(sha256: string): Promise<boolean> {
+    return await this.getObject(this.retirementName(sha256), MAX_MANIFEST_BYTES) !== undefined ||
+      await this.getObject(this.removedName(sha256), MAX_MANIFEST_BYTES) !== undefined;
   }
 
   private canRemove(target: ReadableArchive, replacement: ReadableArchive): boolean {
     // Older readers can still be reading a v1 archive when its manifest is rechecked.
     return target.manifest.version === 2 && target.manifest.sha256 !== replacement.manifest.sha256 && target.manifest.pinned !== true &&
-      target.object.etag !== undefined && target.timestamp !== undefined && replacement.timestamp !== undefined &&
+      target.object.etag !== undefined && replacement.object.etag !== undefined &&
+      target.manifest.libraryId !== undefined && target.manifest.libraryId === replacement.manifest.libraryId &&
+      target.timestamp !== undefined && replacement.timestamp !== undefined &&
       target.timestamp < replacement.timestamp;
   }
 

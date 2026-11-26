@@ -1966,6 +1966,28 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.localJournalNotice::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "localJournalNotice",
+      "family": "shared.recovery-notice",
+      "category": "WebDAV 本机备份或删除日志暂不可读",
+      "effectiveHost": "当前通用设置 WebDAV 面板及其保存配置代次。只阻塞依赖该日志的写操作。",
+      "retireRule": "仅在当前面板代次重读原日志，由网关校验，保留已有日志。远端备份读取和恢复独立。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.localCleanupNotice::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "localCleanupNotice",
+      "family": "shared.recovery-notice",
+      "category": "WebDAV 本机暂存清理失败",
+      "effectiveHost": "当前通用设置 WebDAV 面板与保存配置代次。暂存清理结果独立于配置读取。",
+      "retireRule": "重试复核面板、Runtime、保存配置和原操作代次，仅处理无日志牵涉的本机暂存。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.processing::shared.page-state",
       "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
       "owner": "ReaderWebDavLibraryPanel",

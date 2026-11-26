@@ -282,6 +282,12 @@ for (const location of ['/same-origin','https://other.example/different-origin']
  assert.equal(await requests.at(-1).interceptors[0].interceptorHandle({},response),false,'no native redirect even for same origin');
 }
 const beforeInvalid = requests.length;
+const beforeInvalidAdmission = admissions.length;
+for (const [endpoint, target] of [['https://[broken', webDavObject], [webDavOrigin, 'https://[broken']]) {
+ await assert.rejects(host.executeWebDav(endpoint,{url:target,method:'GET'},16), {code:'ERR_INVALID_URL'});
+}
+assert.equal(admissions.length,beforeInvalidAdmission,'malformed endpoints and targets never reach route admission');
+assert.equal(requests.length,beforeInvalid,'malformed endpoints and targets never reach native dispatch');
 for (const target of ['http://192.168.1.20:8443/webdav', 'https://192.168.1.21:8443/webdav',
  'https://192.168.1.20/webdav', 'https://name:password@192.168.1.20:8443/webdav', webDavObject + '?token=private']) {
  await assert.rejects(host.executeWebDav(webDavOrigin,{url:target,method:'GET'},16), /configured HTTPS origin/);

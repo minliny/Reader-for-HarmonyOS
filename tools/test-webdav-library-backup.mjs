@@ -23,15 +23,17 @@ const partName = (hash, index = '000') => `reader-library-v1-${hash}.${index}.pa
 const retiredName = hash => `reader-library-v1-${hash}.retired`;
 const removedName = hash => `reader-library-v1-${hash}.removed`;
 const probe = 'reader-library-conditional-v2.probe';
-const authored = offset => ({ createdAt: 1700000000000 + offset });
+const authored = (offset, libraryId = 'library-mine') => ({ libraryId, createdAt: 1700000000000 + offset });
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const reason = expected => error => error.name === 'Error' && error.reason === expected;
+const archiveDeletes = requests => requests.filter(request => request.method === 'DELETE' && request.name !== probe);
 
 function provider(options = {}) {
   const folder = options.directory ?? directory;
   const remoteCollection = base + folder + '/';
   const files = new Map();
   const remote = new Map();
+  const proofs = new Map();
   const requests = [];
   const calls = [];
   let clock = 1780000000000;
@@ -152,15 +154,29 @@ function provider(options = {}) {
     if (!active) throw new Error('original provider retired');
   };
   const transport = new WebDavLibraryBackup(runtime, { url: base, directory: folder }, credentials, assertCurrent, () => !active);
+  const verification = {
+    path: verifiedPath,
+    async inspect(path) {
+      assert.equal(path, verifiedPath);
+      const proof = proofs.get(digest(files.get(path)));
+      if (proof === undefined) throw new Error('Archive could not be authenticated with the supplied password');
+      return proof;
+    },
+  };
 
   return {
-    transport, requests, calls, remote, store, files, readWindow: WEB_DAV_ARCHIVE_READ_WINDOW,
-    async publish(bytes, metadata) {
+    transport, requests, calls, remote, store, files, proofs, verification, readWindow: WEB_DAV_ARCHIVE_READ_WINDOW,
+    async publish(bytes, metadata, authenticated) {
       files.set(sourcePath, bytes);
       const hash = digest(bytes);
       await transport.publish(sourcePath, hash, bytes.length, metadata);
+      if (authenticated !== null && metadata !== undefined) {
+        proofs.set(hash, { libraryId: metadata.libraryId, createdAt: metadata.createdAt, includedOriginals: [],
+          ...authenticated });
+      }
       return hash;
     },
+    advanceTime(elapsed) { uptime += elapsed; },
     async receive(sha256) { return transport.downloadLatest(restoredPath, sha256); },
   };
 }
@@ -298,11 +314,11 @@ test('lists authored times and library scope, falls back only for legacy, and pr
   const rows = await service.transport.listArchives({ libraryId: 'library-mine' });
   assert.deepEqual(rows.map(row => [row.sha256, row.createdAt, row.latest, row.canDelete, row.library]), [
     [latest, stamp + 3000, true, false, 'same'], [pinned, stamp + 2000, false, false, 'same'],
-    [foreign, stamp + 1000, false, true, 'other'], [legacy, undefined, false, false, 'unknown'],
+    [foreign, stamp + 1000, false, false, 'other'], [legacy, undefined, false, false, 'unknown'],
   ]);
   for (const sha of [latest, pinned, legacy]) {
-    await assert.rejects(service.transport.planRemoval(sha, rows.find(row => row.sha256 === sha).manifestSha256, verifiedPath),
-      reason('cleanupFailed'));
+    await assert.rejects(service.transport.planRemoval(sha, rows.find(row => row.sha256 === sha).manifestSha256,
+      service.verification), reason('replacementUnverified'));
   }
   assert.equal(service.requests.filter(request => request.method === 'DELETE').length, 0);
 });
@@ -317,7 +333,7 @@ test('dated legacy manifests remain restorable and can never be removed by the a
   assert.equal(row.latest, false);
   assert.equal(row.canDelete, false);
   assert.equal(row.createdAt, 1500000000000);
-  await assert.rejects(service.transport.planRemoval(old, row.manifestSha256, verifiedPath), reason('cleanupFailed'));
+  await assert.rejects(service.transport.planRemoval(old, row.manifestSha256, service.verification), reason('replacementUnverified'));
   assert.equal(await service.receive(old), 'downloaded');
   assert.deepEqual(service.files.get(restoredPath), bytes);
   assert.ok(service.requests.every(request => request.method !== 'DELETE'));
@@ -344,14 +360,14 @@ test('unpublishes only the selected exact commit and keeps an admitted read inta
   const latest = await service.publish(newBytes, authored(2000));
   const rows = await service.transport.listArchives({});
   const displayed = rows.find(row => row.sha256 === old);
-  const plan = await service.transport.planRemoval(old, displayed.manifestSha256, verifiedPath);
+  const plan = await service.transport.planRemoval(old, displayed.manifestSha256, service.verification);
   assert.equal(plan.replacementSha256, latest);
   assert.deepEqual(service.files.get(verifiedPath), newBytes);
   pause = true;
   const runningRead = service.receive(old);
   await waitForRead;
-  await service.transport.unpublish(plan);
-  await service.transport.unpublish(plan);
+  await service.transport.unpublish(plan, service.verification);
+  await service.transport.unpublish(plan, service.verification);
   assert.equal(service.remote.has(manifestName(old)), false);
   assert.equal(service.remote.has(retiredName(old)), true);
   assert.equal(service.remote.has(removedName(old)), true);
@@ -370,8 +386,8 @@ test('unpublishes only the selected exact commit and keeps an admitted read inta
   assert.equal(await runningRead, 'downloaded');
   assert.deepEqual(service.files.get(restoredPath), oldBytes);
   // The gateway invokes this phase after the durable monotonic read window.
-  await service.transport.removeRetiredParts(plan);
-  await service.transport.removeRetiredParts(plan);
+  await service.transport.removeRetiredParts(plan, service.verification);
+  await service.transport.removeRetiredParts(plan, service.verification);
   assert.equal(service.remote.has(partName(old)), false);
   assert.equal(service.remote.has(retiredName(old)), true);
   assert.equal(service.remote.has(partName(latest)), true);
@@ -405,12 +421,12 @@ test('deletion requires a verified replacement and tolerates a lost result only 
   const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
   const part = service.remote.get(partName(latest)).body;
   service.remote.delete(partName(latest));
-  await assert.rejects(service.transport.planRemoval(old, row.manifestSha256, verifiedPath), reason('corrupt'));
+  await assert.rejects(service.transport.planRemoval(old, row.manifestSha256, service.verification), reason('corrupt'));
   assert.equal(service.remote.has(manifestName(old)), true);
   assert.ok(service.requests.every(request => request.method !== 'DELETE'));
   service.store(partName(latest), part);
-  const plan = await service.transport.planRemoval(old, row.manifestSha256, verifiedPath);
-  await service.transport.unpublish(plan);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, service.verification);
+  await service.transport.unpublish(plan, service.verification);
   assert.equal(dropped, true);
   assert.equal(service.remote.has(manifestName(old)), false);
   assert.equal(service.remote.has(partName(old)), true);
@@ -422,11 +438,11 @@ test('a weak tag, a stale manifest, an inconsistent part, and ignored DELETE con
   const latest = await service.publish(Buffer.from('latest bytes'), authored(2000));
   const original = service.remote.get(manifestName(old));
   const row = (await service.transport.listArchives({})).find(entry => entry.sha256 === old);
-  const plan = await service.transport.planRemoval(old, row.manifestSha256, verifiedPath);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, service.verification);
   service.store(manifestName(old), Buffer.concat([original.body, Buffer.from('\n')]), { modified: original.modified });
-  await assert.rejects(service.transport.unpublish(plan), reason('cleanupFailed'));
+  await assert.rejects(service.transport.unpublish(plan, service.verification), reason('cleanupFailed'));
   service.store(manifestName(old), original.body, { modified: original.modified });
-  await assert.rejects(service.transport.unpublish(plan), reason('readOnly'));
+  await assert.rejects(service.transport.unpublish(plan, service.verification), reason('readOnly'));
   assert.equal(service.remote.has(manifestName(old)), true);
   assert.equal(service.remote.has(retiredName(old)), false);
   assert.ok(service.requests.filter(op => op.method === 'DELETE').every(op => op.name === probe));
@@ -434,15 +450,16 @@ test('a weak tag, a stale manifest, an inconsistent part, and ignored DELETE con
   const weak = provider({ weakEtag: true });
   for (const [name, item] of service.remote) weak.store(name, item.body);
   assert.ok((await weak.transport.listArchives({})).every(item => !item.canDelete));
-  await assert.rejects(weak.transport.planRemoval(old, row.manifestSha256, verifiedPath), reason('cleanupFailed'));
+  await assert.rejects(weak.transport.planRemoval(old, row.manifestSha256, weak.verification), reason('cleanupFailed'));
   assert.equal(await weak.receive(latest), 'downloaded');
   assert.ok(weak.requests.every(op => ['GET', 'PROPFIND'].includes(op.method)));
 
   const changed = provider();
   for (const [name, item] of service.remote) changed.store(name, item.body);
-  await changed.transport.unpublish(plan);
+  changed.proofs.set(latest, service.proofs.get(latest));
+  await changed.transport.unpublish(plan, changed.verification);
   changed.store(partName(old), Buffer.from('wrong size').toString('base64'));
-  await assert.rejects(changed.transport.removeRetiredParts(plan), reason('cleanupFailed'));
+  await assert.rejects(changed.transport.removeRetiredParts(plan, changed.verification), reason('cleanupFailed'));
   assert.equal(changed.remote.has(partName(old)), true);
   assert.equal(changed.remote.has(manifestName(latest)), true);
 });
@@ -457,10 +474,10 @@ test('403 on a mutation preserves the successful read-only path, while read deni
   const old = await service.publish(bytes, authored(1000));
   await service.publish(Buffer.from('newer readable backup'), authored(2000));
   const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
-  const plan = await service.transport.planRemoval(old, row.manifestSha256, verifiedPath);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, service.verification);
   status = 403;
   blocked = 'DELETE';
-  await assert.rejects(service.transport.unpublish(plan), reason('readOnly'));
+  await assert.rejects(service.transport.unpublish(plan, service.verification), reason('readOnly'));
   assert.equal(service.remote.has(retiredName(old)), false);
   blocked = 'PUT';
   await assert.rejects(service.publish(Buffer.from('forbidden new write')), reason('readOnly'));
@@ -488,22 +505,22 @@ test('a denied archive DELETE keeps the exact manifest readable until removal is
   await service.publish(Buffer.from('retained successor'), authored(2000));
   const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
   const manifest = service.remote.get(manifestName(old)).body;
-  const plan = await service.transport.planRemoval(old, row.manifestSha256, verifiedPath);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, service.verification);
   denyTarget = true;
-  await assert.rejects(service.transport.unpublish(plan), reason('readOnly'));
+  await assert.rejects(service.transport.unpublish(plan, service.verification), reason('readOnly'));
   assert.equal(service.remote.has(retiredName(old)), true);
   assert.equal(service.remote.has(removedName(old)), false);
   assert.ok((await service.transport.listArchives({})).some(item => item.sha256 === old));
   assert.equal(await service.receive(old), 'downloaded');
   assert.deepEqual(service.files.get(restoredPath), bytes);
-  await assert.rejects(service.transport.removeRetiredParts(plan), reason('cleanupFailed'));
+  await assert.rejects(service.transport.removeRetiredParts(plan, service.verification), reason('cleanupFailed'));
   denyTarget = false;
-  await service.transport.unpublish(plan);
+  await service.transport.unpublish(plan, service.verification);
   service.store(manifestName(old), manifest);
   assert.equal(service.remote.has(removedName(old)), true);
   assert.ok(!(await service.transport.listArchives({})).some(item => item.sha256 === old));
   await assert.rejects(service.receive(old), reason('missing'));
-  await assert.rejects(service.transport.removeRetiredParts(plan), reason('cleanupFailed'));
+  await assert.rejects(service.transport.removeRetiredParts(plan, service.verification), reason('cleanupFailed'));
   assert.equal(service.remote.has(partName(old)), true);
 });
 
@@ -517,13 +534,203 @@ test('a correct scratch DELETE must succeed and remove the object before any arc
     const old = await service.publish(Buffer.from('older archive'), authored(1000));
     await service.publish(Buffer.from('newer archive'), authored(2000));
     const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
-    const plan = await service.transport.planRemoval(old, row.manifestSha256, verifiedPath);
-    await assert.rejects(service.transport.unpublish(plan), reason('readOnly'));
+    const plan = await service.transport.planRemoval(old, row.manifestSha256, service.verification);
+    await assert.rejects(service.transport.unpublish(plan, service.verification), reason('readOnly'));
     assert.ok(service.remote.has(probe));
     assert.ok(service.remote.has(manifestName(old)));
     assert.ok(!service.remote.has(retiredName(old)));
     assert.deepEqual(service.requests.filter(request => request.method === 'DELETE').map(request => request.name), [probe, probe]);
   }
+});
+
+test('only a strictly newer archive for the same library can replace a selected backup', async () => {
+  const service = provider();
+  const hash = await service.publish(Buffer.from('original'), authored(1000));
+  const other = await service.publish(Buffer.from('other library'), authored(3000, 'library-other'));
+  const row = (await service.transport.listArchives({})).find(item => item.sha256 === hash);
+  assert.equal(row.canDelete, false);
+  await assert.rejects(service.transport.planRemoval(hash, row.manifestSha256, service.verification), reason('replacementUnverified'));
+  assert.deepEqual(archiveDeletes(service.requests), []);
+
+  const same = await service.publish(Buffer.from('newer same library'), authored(2000));
+  const plan = await service.transport.planRemoval(hash, row.manifestSha256, service.verification);
+  assert.equal(plan.replacementSha256, same);
+  assert.deepEqual(plan.replacementProof, {
+    libraryId: 'library-mine', createdAt: authored(2000).createdAt,
+    manifestSha256: digest(service.remote.get(manifestName(same)).body),
+    manifestEtag: service.remote.get(manifestName(same)).etag,
+  });
+  await service.transport.unpublish(plan, service.verification);
+  assert.deepEqual(archiveDeletes(service.requests).map(op => op.name), [manifestName(hash)]);
+  assert.ok(service.remote.has(manifestName(same)) && service.remote.has(manifestName(other)));
+});
+
+test('authenticated identity, chronology, passphrase and original coverage are required before any archive deletion', async () => {
+  const original = digest('one locally archived original');
+  const scenarios = [
+    { name: 'incorrect password for original', old: null, replacement: {} },
+    { name: 'incorrect password for replacement', old: {}, replacement: null },
+    { name: 'no authenticated identity', old: {}, replacement: { libraryId: undefined } },
+    { name: 'public identity contradicts authenticated identity', old: {}, replacement: { libraryId: 'library-other' } },
+    { name: 'authenticated chronology is reversed', old: {}, replacement: { createdAt: authored(900).createdAt } },
+    { name: 'authenticated chronology is missing', old: {}, replacement: { createdAt: undefined } },
+    { name: 'replacement does not cover an original', old: { includedOriginals: [original] }, replacement: {},
+      failure: 'replacementMissingOriginals' },
+  ];
+  for (const scenario of scenarios) {
+    const service = provider();
+    const old = await service.publish(Buffer.from('old archive'), authored(1000), scenario.old);
+    await service.publish(Buffer.from('new archive'), authored(2000), scenario.replacement);
+    const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
+    await assert.rejects(service.transport.planRemoval(old, row.manifestSha256, service.verification),
+      reason(scenario.failure ?? 'replacementUnverified'), scenario.name);
+    assert.deepEqual(archiveDeletes(service.requests), [], scenario.name);
+    assert.ok(service.remote.has(manifestName(old)) && service.remote.has(partName(old)), scenario.name);
+    assert.equal(service.remote.has(retiredName(old)), false, scenario.name);
+  }
+});
+
+test('an inadmissible newest same-library archive does not disqualify a valid earlier replacement', async () => {
+  const service = provider();
+  const original = digest('original retained in both admissible archives');
+  const old = await service.publish(Buffer.from('old archive'), authored(1000), { includedOriginals: [original] });
+  const usable = await service.publish(Buffer.from('valid replacement'), authored(2000), { includedOriginals: [original] });
+  await service.publish(Buffer.from('replacement missing original'), authored(3000));
+  await service.publish(Buffer.from('replacement with wrong password'), authored(4000), null);
+  const corrupt = await service.publish(Buffer.from('replacement with broken part'), authored(5000));
+  service.store(partName(corrupt), 'not base64');
+  const retiring = await service.publish(Buffer.from('replacement being retired'), authored(6000), { includedOriginals: [original] });
+  const marker = service.remote.get(manifestName(retiring));
+  const details = JSON.parse(marker.body.toString());
+  service.store(retiredName(retiring), JSON.stringify({ format: details.format, version: 1, sha256: retiring,
+    manifestSha256: digest(marker.body), manifestEtag: marker.etag, replacementSha256: digest('replacement elsewhere'),
+    bytes: details.bytes, parts: details.parts }));
+  const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, service.verification);
+  assert.equal(plan.replacementSha256, usable);
+  assert.deepEqual(archiveDeletes(service.requests), []);
+  await service.transport.unpublish(plan, service.verification);
+  assert.deepEqual(archiveDeletes(service.requests).map(op => op.name), [manifestName(old)]);
+});
+
+test('a retired marker cannot resume manifest deletion once the exact protected replacement changes or disappears', async () => {
+  let old;
+  let denyTarget = true;
+  const service = provider({ before(method, name, owner) {
+    if (denyTarget && method === 'DELETE' && name === manifestName(old)) return owner.response(403);
+  } });
+  old = await service.publish(Buffer.from('still visible old archive'), authored(1000));
+  const replacement = await service.publish(Buffer.from('exact protected successor'), authored(2000));
+  const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, service.verification);
+  await assert.rejects(service.transport.unpublish(plan, service.verification), reason('readOnly'));
+  assert.ok(service.remote.has(retiredName(old)) && service.remote.has(manifestName(old)));
+  const initial = service.remote.get(manifestName(replacement));
+  denyTarget = false;
+  for (const changed of [Buffer.concat([initial.body, Buffer.from('\n')]), undefined, initial.body]) {
+    if (changed === undefined) service.remote.delete(manifestName(replacement));
+    else service.store(manifestName(replacement), changed, { modified: initial.modified });
+    const start = service.requests.length;
+    if (changed === initial.body) service.store(retiredName(replacement), 'replacement retirement in progress');
+    await assert.rejects(service.transport.unpublish(plan, service.verification), reason('replacementUnverified'));
+    assert.deepEqual(archiveDeletes(service.requests.slice(start)), []);
+    assert.ok(service.remote.has(manifestName(old)) && service.remote.has(partName(old)));
+  }
+  assert.equal(service.remote.has(removedName(old)), false);
+});
+
+test('part cleanup after the graced phase reauthenticates the replacement instead of trusting the journal', async () => {
+  const service = provider();
+  const included = digest('shared original');
+  const old = await service.publish(Buffer.from('archive waiting for part cleanup'), authored(1000),
+    { includedOriginals: [included] });
+  const replacement = await service.publish(Buffer.from('archive retained for recovery'), authored(2000),
+    { includedOriginals: [included] });
+  const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, service.verification);
+  await service.transport.unpublish(plan, service.verification);
+  service.advanceTime(service.readWindow);
+  const saved = service.remote.get(manifestName(replacement));
+  const proof = service.proofs.get(replacement);
+  service.proofs.delete(replacement);
+  let start = service.requests.length;
+  await assert.rejects(service.transport.removeRetiredParts(plan, service.verification), reason('replacementUnverified'));
+  assert.deepEqual(archiveDeletes(service.requests.slice(start)), []);
+  assert.ok(service.remote.has(partName(old)));
+  service.proofs.set(replacement, proof);
+  service.remote.delete(manifestName(replacement));
+  start = service.requests.length;
+  await assert.rejects(service.transport.removeRetiredParts(plan, service.verification), reason('replacementUnverified'));
+  assert.deepEqual(archiveDeletes(service.requests.slice(start)), []);
+  assert.ok(service.remote.has(partName(old)));
+  service.store(manifestName(replacement), saved.body, { modified: saved.modified });
+  await service.transport.removeRetiredParts(plan, service.verification);
+  assert.equal(service.remote.has(partName(old)), false);
+  assert.ok(service.remote.has(manifestName(replacement)) && service.remote.has(partName(replacement)));
+});
+
+test('archive deletion rechecks the exact successor after probes and other intervening remote operations', async () => {
+  let old, successor;
+  let failBeforeManifest = true;
+  let failBeforePart = false;
+  const service = provider({
+    afterPut(name, owner) {
+      if (failBeforeManifest && name === retiredName(old)) owner.remote.delete(manifestName(successor));
+    },
+    before(method, name, owner) {
+      if (failBeforePart && method === 'GET' && name === partName(old)) owner.remote.delete(manifestName(successor));
+    },
+  });
+  old = await service.publish(Buffer.from('exact target'), authored(1000));
+  successor = await service.publish(Buffer.from('exact successor'), authored(2000));
+  const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, service.verification);
+  const manifest = service.remote.get(manifestName(successor));
+  await assert.rejects(service.transport.unpublish(plan, service.verification), reason('replacementUnverified'));
+  assert.deepEqual(archiveDeletes(service.requests), []);
+  assert.ok(service.remote.has(retiredName(old)) && service.remote.has(manifestName(old)));
+  failBeforeManifest = false;
+  service.store(manifestName(successor), manifest.body, { modified: manifest.modified });
+  await service.transport.unpublish(plan, service.verification);
+  service.advanceTime(service.readWindow);
+  failBeforePart = true;
+  const start = service.requests.length;
+  await assert.rejects(service.transport.removeRetiredParts(plan, service.verification), reason('replacementUnverified'));
+  assert.deepEqual(archiveDeletes(service.requests.slice(start)), []);
+  assert.ok(service.remote.has(partName(old)));
+});
+
+test('a legacy retirement plan can only be upgraded with its exact original manifest and successor still available', async () => {
+  let old;
+  let denyTarget = true;
+  const service = provider({ before(method, name, owner) {
+    if (denyTarget && method === 'DELETE' && name === manifestName(old)) return owner.response(403);
+  } });
+  old = await service.publish(Buffer.from('legacy journal target'), authored(1000));
+  const replacement = await service.publish(Buffer.from('legacy journal successor'), authored(2000));
+  const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, service.verification);
+  const { replacementProof, ...legacy } = plan;
+  await assert.rejects(service.transport.unpublish(plan, service.verification), reason('readOnly'));
+  assert.ok(service.remote.has(retiredName(old)));
+  await service.publish(Buffer.from('an even newer archive'), authored(3000));
+  const recorded = service.remote.get(manifestName(replacement));
+  const pending = service.requests.length;
+  service.remote.delete(manifestName(replacement));
+  await assert.rejects(service.transport.upgradeRemovalPlan(legacy, service.verification), reason('replacementUnverified'));
+  assert.deepEqual(archiveDeletes(service.requests.slice(pending)), []);
+  service.store(manifestName(replacement), recorded.body, { modified: recorded.modified });
+  const upgraded = await service.transport.upgradeRemovalPlan(legacy, service.verification);
+  assert.equal(upgraded.replacementSha256, replacement);
+  assert.deepEqual(upgraded.replacementProof, replacementProof);
+  denyTarget = false;
+  await service.transport.unpublish(upgraded, service.verification);
+  assert.ok(service.remote.has(partName(old)));
+  const start = service.requests.length;
+  await assert.rejects(service.transport.upgradeRemovalPlan(legacy, service.verification), reason('replacementUnverified'));
+  await assert.rejects(service.transport.removeRetiredParts(legacy, service.verification), reason('replacementUnverified'));
+  assert.deepEqual(archiveDeletes(service.requests.slice(start)), []);
+  assert.ok(service.remote.has(partName(old)));
 });
 
 test('uses the installed declarations and ArkTS 1.1 checks for the production transport', () => {
@@ -565,6 +772,10 @@ test('uses the installed declarations and ArkTS 1.1 checks for the production tr
       export declare class HttpExecuteHost {
         static readonly instance:HttpExecuteHost;
         executeWebDav(endpoint:string, params:JsonObject, maxBytes:number, cancelled?:()=>boolean):Promise<HttpBytesResponse>;
+      }`,
+    '../../bookshelf/application/LocalRecoveryGateway': `
+      export interface LocalRecoveryArchiveProof {
+        libraryId?:string; createdAt?:number; includedOriginals:string[];
       }`,
   };
   const paths = new Map(Object.keys(declared).map((name, index) => [name, virtualFilePath(`webdav-library-transport-port-${index}.d.ts`)]));

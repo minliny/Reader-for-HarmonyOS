@@ -541,7 +541,7 @@ test('Save As keeps the original and emits the exact encoded image despite short
   const options = book.events.find(event => event[0] === 'picker')[1];
   assert.deepEqual(options.newFileNames, ['.._卷_二.epub']);
   assert.deepEqual(options.fileSuffixChoices, ['.epub']);
-  assert.equal(options.autoCreateEmptyFile, true);
+  assert.equal(Object.hasOwn(options, 'autoCreateEmptyFile'), false, 'use the picker default on phones');
   const manga = setupSave();
   assert.equal(await manga.host.saveImage(imageBytes, '漫画 第2页', current), 'saved');
   assert.deepEqual(manga.destination, [...imageBytes]);

@@ -92,7 +92,13 @@ async function openRuntime(name, receiverEvents = []) {
     enqueuePendingLocalImportFinalize: async () => assert.fail('fresh donor should finalize'),
     async request(method, params) {
       const id = requestId++;
-      native.sendCommand(handle, { protocolVersion: 1, requestId: id, method, params });
+      const fixtureIdentity = method === 'library.package.inspect' && params.includeSourceLibraryId === true;
+      const wireParams = { ...params };
+      // This desktop fixture uses an archived schema-44 Core for real package
+      // validation. Supply its simulated library identity only after that
+      // Core authenticates the package. The new projection has its own Rust case.
+      if (fixtureIdentity) delete wireParams.includeSourceLibraryId;
+      native.sendCommand(handle, { protocolVersion: 1, requestId: id, method, params: wireParams });
       const end = Date.now() + 120_000;
       while (Date.now() < end) {
         const raw = native.readEvent(handle, 0);
@@ -108,6 +114,9 @@ async function openRuntime(name, receiverEvents = []) {
           if (runtime.loseApplyAck && method === 'library.package.restore.apply') {
             runtime.loseApplyAck = false;
             throw Error('controlled loss of actual Core apply terminal');
+          }
+          if (fixtureIdentity) {
+            event.data.sourceLibraryId = (await runtime.readLibraryBackupIdentity()).libraryId;
           }
           return event;
         }
@@ -219,7 +228,7 @@ function simulatedWebDav() {
     ['WebDavLibraryBackup', 'WebDavLibraryBackupError', 'WEB_DAV_ARCHIVE_READ_WINDOW']);
   const { SyncGateway } = actualModule('features/sync/application/SyncGateway.ts', {
     ...transport, ...support, fileIo: io, replaceReaderAtomicSnapshot, readerHostFilesDirectory, HttpExecuteHost,
-    url, util: transportUtil, systemDateTime, ReaderRuntimeOwner, SyncHostConfigurationGateway: class {},
+    url, util: transportUtil, systemDateTime, ReaderRuntimeOwner, LocalRecoveryGateway, SyncHostConfigurationGateway: class {},
   }, ['SyncGateway']);
   const credentials = { async requireConfigSettled() {}, async reconcileConfigIntent() {}, loadSerializedState: async () => saved };
   return {
@@ -447,6 +456,14 @@ try {
   currentRuntime = webDavDonor;
   sync = provider.gateway(webDavDonor);
   assert.equal((await sync.libraryBackupConfiguration()).removal.phase, 'parts');
+  const replacementManifest = `reader-library-v1-${latest.sha256}.manifest`;
+  const retainedManifest = provider.remote.get(replacementManifest);
+  provider.remote.delete(replacementManifest);
+  const beforeMissingReplacement = provider.requests.length;
+  assert.deepEqual(await sync.resumeLibraryRetirement(pendingRetirement.receipt, current), { state: 'replacementUnverified' });
+  assert.equal(provider.remote.has(oldPart), true);
+  assert.equal(provider.requests.slice(beforeMissingReplacement).some(([method]) => method === 'DELETE'), false);
+  provider.remote.set(replacementManifest, retainedManifest);
   provider.failNextPartDeletion();
   const requestStart = provider.requests.length;
   assert.deepEqual(await sync.resumeLibraryRetirement(pendingRetirement.receipt, current), { state: 'cleanupFailed' });
@@ -454,10 +471,10 @@ try {
   assert.deepEqual(await sync.resumeLibraryRetirement(pendingRetirement.receipt, current), { state: 'retirementCompleted' });
   assert.equal((await sync.libraryBackupConfiguration()).removal, undefined);
   assert.equal(provider.remote.has(oldPart), false);
-  assert.equal(provider.remote.has(`reader-library-v1-${latest.sha256}.manifest`), true);
+  assert.equal(provider.remote.has(replacementManifest), true);
   assert.equal(provider.requests.slice(requestStart).some(([method, name]) => method === 'PUT' && name.endsWith('.manifest')), false);
   webDavDonor.close();
-  console.log('PASS user-selected remote retirement removes the exact manifest first and resumes only its parts after monotonic grace');
+  console.log('PASS archive retirement uses an authenticated replacement, retains exact parts when it disappears, and resumes after monotonic grace');
 
   assert.equal(handles.size, 0);
   assert.equal(hash(await readFile(gatewayPath)), hash(gatewaySource), 'Gateway source stayed stable during the native probe');

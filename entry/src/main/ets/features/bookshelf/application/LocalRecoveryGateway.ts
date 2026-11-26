@@ -22,6 +22,13 @@ export interface LocalRecoveryOutcome {
 export type LocalRecoveryArchiveReceiver = (destination: string) => Promise<boolean>;
 export type LocalRecoveryArchiveConsumer = (path: string, sha256: string, size: number) => Promise<boolean>;
 
+export interface LocalRecoveryArchiveProof {
+  libraryId?: string;
+  createdAt?: number;
+  /** Digests of original bytes present and verified in this archive. */
+  includedOriginals: string[];
+}
+
 /** The system extension can build an archive from its isolated read-only source. */
 export interface LocalRecoveryExportPort {
   readonly filesDir: string;
@@ -51,6 +58,14 @@ interface Archive {
   packageSha256: string;
   content: string;
   rows: Row[];
+  libraryId?: string;
+  createdAt?: number;
+}
+
+interface CoreArchiveInspection {
+  rows: Row[];
+  libraryId?: string;
+  createdAt?: number;
 }
 
 interface Journal {
@@ -74,6 +89,7 @@ const MAX_HEADER_BYTES = 28 * 1024 * 1024;
 const MAX_ORIGINAL_BYTES = 64 * 1024 * 1024;
 const MAX_ORIGINALS = 10000;
 const HASH = /^[a-f0-9]{64}$/;
+const LIBRARY_ID = /^[a-f0-9]{32}$/;
 const TIMEOUT = 120000;
 const LOG_DOMAIN = 0x5244;
 
@@ -261,6 +277,32 @@ export class LocalRecoveryGateway {
     });
   }
 
+  /** Verify downloadable ciphertext without changing any pending restore or preview. */
+  async verifyBackupArchive(path: string, passphrase: string, current: () => boolean): Promise<LocalRecoveryArchiveProof> {
+    this.requireRuntime();
+    let proof: LocalRecoveryArchiveProof | undefined;
+    const outcome = await this.perform(passphrase, async (work): Promise<LocalRecoveryOutcome> => {
+      this.checkCurrent(current);
+      const stat = await fileIo.lstat(path);
+      if (!stat.isFile() || !Number.isSafeInteger(stat.size) || stat.size <= 0) return this.reject();
+      if (stat.size > LOCAL_RECOVERY_MAX_BYTES) return { state: 'tooLarge' };
+      // Reserve space for the quarantine plaintext and its extracted originals.
+      await recoveryReserve(this.directory, 2 * stat.size);
+      const archive = await this.open(path, work, passphrase, current, true);
+      await this.checkOriginalsReadable(work, archive, current);
+      this.checkCurrent(current);
+      const included = new Set<string>();
+      for (const row of archive.rows) {
+        if (row.included && row.original !== null) included.add(row.original.sha256);
+      }
+      proof = { libraryId: archive.libraryId, createdAt: archive.createdAt, includedOriginals: Array.from(included).sort() };
+      return { state: 'preview' };
+    });
+    this.checkCurrent(current);
+    if (outcome.state !== 'preview' || proof === undefined) throw new Error('Backup archive verification failed');
+    return proof;
+  }
+
   applyPackage(passphrase: string, admit?: () => Promise<void>): Promise<LocalRecoveryOutcome> {
     this.requireRuntime();
     const preview = this.preview;
@@ -324,7 +366,7 @@ export class LocalRecoveryGateway {
     const target = this.rollbackPath();
     if (await recoveryHashFile(target) !== journal.rollbackSha256) this.reject();
     const content = await fileIo.readText(target);
-    const rows = await this.inspectCore(content, journal.rollbackSha256, passphrase);
+    const { rows } = await this.inspectCore(content, journal.rollbackSha256, passphrase);
     return { content, packageSha256: journal.rollbackSha256, rows };
   }
 
@@ -437,15 +479,23 @@ export class LocalRecoveryGateway {
       rollbackKind: 'portable', rollbackSha256 };
   }
 
-  private async checkOriginalsReadable(work: string, archive: Archive): Promise<void> {
+  private async checkOriginalsReadable(work: string, archive: Archive,
+    verificationCurrent?: () => boolean): Promise<void> {
     for (let index = 0; index < archive.rows.length; index++) {
       const row = archive.rows[index];
       if (!row.included || row.original === null) continue;
-      const path = this.originalPath(work, index, row.original);
-      const parsed = await this.request('import.parse', { kind: 'localBook', input: {
-        bookId: row.bookId, fileName: `book.${row.original.sourceFormat}`, filePath: path,
-      } });
-      const summary = this.object(this.object(parsed['preview'])['summary']);
+      const input: JsonObject = { bookId: row.bookId, fileName: `book.${row.original.sourceFormat}`,
+        filePath: this.originalPath(work, index, row.original) };
+      let summary: JsonObject;
+      if (verificationCurrent === undefined) {
+        const parsed = await this.request('import.parse', { kind: 'localBook', input });
+        summary = this.object(this.object(parsed['preview'])['summary']);
+      } else {
+        // Use the pure parser so verification preserves Core's prepared import preview.
+        this.checkCurrent(verificationCurrent);
+        summary = await this.request('local_book.parse', input);
+        this.checkCurrent(verificationCurrent);
+      }
       const readability = this.object(summary['integrity'])['readability'];
       if (readability !== 'complete' && readability !== 'recoverable') this.reject();
     }
@@ -513,7 +563,8 @@ export class LocalRecoveryGateway {
     return this.open(path, work, passphrase, () => true);
   }
 
-  private async open(path: string, work: string, passphrase: string, current: () => boolean): Promise<Archive> {
+  private async open(path: string, work: string, passphrase: string, current: () => boolean,
+    includeLibraryId: boolean = false): Promise<Archive> {
     const plaintext = `${work}/quarantine`;
     let completed = false;
     try {
@@ -529,7 +580,8 @@ export class LocalRecoveryGateway {
         const packageSha256 = decoded['packageSha256'];
         if (typeof content !== 'string' || typeof packageSha256 !== 'string') this.reject();
         const rows = this.decodeRows(decoded['rows'], false);
-        const expected = await this.inspectCore(content, packageSha256, passphrase);
+        const inspection = await this.inspectCore(content, packageSha256, passphrase, includeLibraryId);
+        const expected = inspection.rows;
         if (expected.length !== rows.length) this.reject();
         for (let index = 0; index < rows.length; index++) {
           this.checkCurrent(current);
@@ -542,7 +594,7 @@ export class LocalRecoveryGateway {
           });
         }
         if ((await fileIo.read(file.fd, new ArrayBuffer(1))) !== 0) this.reject();
-        return { packageSha256, content, rows };
+        return { packageSha256, content, rows, libraryId: inspection.libraryId, createdAt: inspection.createdAt };
       });
       completed = true;
       return archive;
@@ -556,14 +608,29 @@ export class LocalRecoveryGateway {
     }
   }
 
-  private async inspectCore(content: string, packageSha256: string, passphrase: string): Promise<Row[]> {
+  private async inspectCore(content: string, packageSha256: string, passphrase: string,
+    includeLibraryId: boolean = false): Promise<CoreArchiveInspection> {
     if (!HASH.test(packageSha256)) this.reject();
     let preview: JsonObject;
     try {
-      preview = await this.request('library.package.inspect', { content, password: passphrase, includeLocalOriginals: true });
+      const params: JsonObject = { content, password: passphrase, includeLocalOriginals: true };
+      if (includeLibraryId) params['includeSourceLibraryId'] = true;
+      preview = await this.request('library.package.inspect', params);
     } catch (_) { return this.reject(); }
     if (preview['packageSha256'] !== packageSha256 || preview['scope'] !== 'coreLibraryMetadata') this.reject();
-    return this.decodeRows(preview['localOriginals'], true);
+    let libraryId: string | undefined;
+    let createdAt: number | undefined;
+    const returnedId = preview['sourceLibraryId'];
+    const returnedTime = preview['createdAtUnixMillis'];
+    if (includeLibraryId && returnedId !== undefined) {
+      if (typeof returnedId !== 'string' || !LIBRARY_ID.test(returnedId)) return this.reject();
+      libraryId = returnedId;
+    }
+    if (includeLibraryId && returnedTime !== undefined) {
+      if (typeof returnedTime !== 'number' || !Number.isSafeInteger(returnedTime) || returnedTime <= 0) return this.reject();
+      createdAt = returnedTime;
+    }
+    return { rows: this.decodeRows(preview['localOriginals'], true), libraryId, createdAt };
   }
 
   private async captureForExport(passphrase: string): Promise<Archive> {
@@ -576,7 +643,7 @@ export class LocalRecoveryGateway {
     const exported = await this.request('library.package.export', { password: passphrase });
     const content = exported['content'], packageSha256 = exported['packageSha256'];
     if (typeof content !== 'string' || typeof packageSha256 !== 'string') return this.reject();
-    const rows = await this.inspectCore(content, packageSha256, passphrase);
+    const { rows } = await this.inspectCore(content, packageSha256, passphrase);
     return { content, packageSha256, rows };
   }
 
