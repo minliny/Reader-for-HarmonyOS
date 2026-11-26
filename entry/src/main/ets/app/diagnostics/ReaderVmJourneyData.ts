@@ -75,7 +75,7 @@ export function readerVmJourneyResponse(params: JsonObject): JsonObject | undefi
       body = `<ol class="toc"><li><a href="/book/${title}/chapter/1">第一章 启程</a></li>` +
         `<li><a href="/book/${title}/chapter/2">第二章 校验</a></li></ol>`;
     } else if (source.manga) {
-      body = `<img src="${MANGA_IMAGE_DATA_URI}"><img src="${MANGA_IMAGE_DATA_URI}">`;
+      body = '<img src="/fixture-image/1.png"><img src="/fixture-image/2.png">';
     } else {
       body = '<div class="content">Reader 公开验证章节。<br>' +
         Array.from({ length: 32 }, (_, index: number): string =>
@@ -84,6 +84,14 @@ export function readerVmJourneyResponse(params: JsonObject): JsonObject | undefi
   }
   return { status: 200, body, headers: { 'content-type': 'text/html; charset=utf-8' },
     charsetHint: 'utf-8', finalUrl: url, redirects: [], cookies: [] };
+}
+
+export function readerVmJourneyImageDataUri(params: JsonObject): string | undefined {
+  const url = params['url'];
+  if (typeof url !== 'string' || params['method'] !== 'GET' || params['usePlatformCookieJar'] === true) return undefined;
+  const admitted = SOURCES.some((source: JourneySource): boolean => source.manga &&
+    (url === `${source.id}/fixture-image/1.png` || url === `${source.id}/fixture-image/2.png`));
+  return admitted ? MANGA_IMAGE_DATA_URI : undefined;
 }
 
 // Generated 128 × 224 RGB fixture PNG.
