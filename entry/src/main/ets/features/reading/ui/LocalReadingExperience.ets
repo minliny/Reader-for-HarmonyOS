@@ -32,7 +32,7 @@ import { MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
 import vibrator from '@ohos.vibrator';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from '../../../app/BookRequestScheduler';
-import { ReaderReadingImageResources, sameReaderReadingImageResource } from '../application/ReaderReadingImageResources';
+import { ReaderReadingImageResources, sameReaderReadingImageResource, sameReadingImageChapter } from '../application/ReaderReadingImageResources';
 import { ReaderProgressProducerHost, type ReaderProgressProducerIntent, type ReaderContinuousProgressDependencies } from '../application/ReaderProgressProducerHost';
 import { TYPE_READER_IMMERSIVE_PROGRESS } from '../../../ui/foundation/ReaderTypography';
 import { SourceSwitchProgress } from '../../source/ui/SourceSwitchProgress';
@@ -459,13 +459,6 @@ interface ReaderControlReplaceCommit {
   deletedId?: number;
   changed: boolean;
   needsReload: boolean;
-}
-
-interface DeferredReadingImagePixels {
-  chapter: ReadingSessionChapter;
-  requested: ReadingSessionImage;
-  resolved?: ReadingSessionImage;
-  isCurrent: () => boolean;
 }
 
 interface ReaderTtsPreferenceSave {
@@ -1114,7 +1107,6 @@ export struct ReadingExperience {
     new ReaderPhysicalPaginationOwner<ReadingSurfacePageFragment>();
   private readonly chapterWindow: ReadingChapterWindow = new ReadingChapterWindow();
   private readonly interactiveChapterPreparation: ReadingInteractiveChapterPreparation = new ReadingInteractiveChapterPreparation();
-  private readonly geometryImageRequests: Map<string, DeferredReadingImagePixels> = new Map();
   /** Unique Host-created display resources owned by this reader session. */
   private readonly readingImageResources: ReaderReadingImageResources =
     new ReaderReadingImageResources(ReaderRuntimeOwner.current(), (error: Error): void => {
@@ -1129,10 +1121,6 @@ export struct ReadingExperience {
   private pageTurnTransactionSerial: number = 0;
   private continuousAnchorSampler: (() => void) | undefined = undefined;
   private continuousUserInteractionActive: boolean = false;
-  private readonly continuousImageResolutions: Set<number> = new Set<number>();
-  private readonly chapterImageByStartScalar: Map<number, ReadingSessionImage> =
-    new Map<number, ReadingSessionImage>();
-  private readonly chapterImagePositionByKey: Map<string, number> = new Map<string, number>();
   private readonly continuousFragmentIndexByStartScalar: Map<number, number> = new Map<number, number>();
   private preparedPreviousPage: PreparedReaderPageTurn | undefined = undefined;
   private preparedNextPage: PreparedReaderPageTurn | undefined = undefined;
@@ -1469,9 +1457,7 @@ export struct ReadingExperience {
     this.commitInFlight = false;
     this.progressProducers.retireContinuous();
     this.continuousUserInteractionActive = false;
-    this.continuousImageResolutions.clear();
-    this.chapterImageByStartScalar.clear();
-    this.chapterImagePositionByKey.clear();
+    this.readingImageResources.resetChapter();
     this.measurementCompleting = false;
     this.remeasurePending = false;
     this.cancelPendingAutoPageStart();
@@ -1623,7 +1609,7 @@ export struct ReadingExperience {
       this.setCurrentReadingChapter(chapter);
       this.retainCurrentChapterWindow();
       this.chapter = chapter;
-      this.rebuildChapterImageIndexes(chapter);
+      this.readingImageResources.indexChapter(chapter);
       this.materializedChapterSelectionToken = selectionToken;
       this.appearanceLoaded = true;
       this.configureRestoredAnchor(chapter, chapterMap, true,
@@ -1697,7 +1683,7 @@ export struct ReadingExperience {
     this.physicalPagination.requestedAnchor = observation.requestScalar;
     this.materializedChapterSelectionToken = selectionToken;
     this.setCurrentReadingChapter(snapshot.context.chapter);
-    this.rebuildChapterImageIndexes(snapshot.context.chapter);
+    this.readingImageResources.indexChapter(snapshot.context.chapter);
     this.publishMeasuredFirstPage(snapshot.page, snapshot.context.chapter, selectionToken);
     this.desiredChapterOffset = snapshot.page.startScalar;
     this.desiredChapterProgress = snapshot.progress.chapterProgress;
@@ -1929,7 +1915,7 @@ export struct ReadingExperience {
     this.pendingControlSelectionCandidate = undefined;
     this.pendingControlSelectionRetry = undefined;
     this.controlSelectionReconciliationInFlight = false;
-    this.releaseAllReadingImages();
+    this.readingImageResources.close();
     this.nativeParagraphResources.close();
     this.chapterWindow.clear();
     this.remoteSessionObserverDispose?.();
@@ -3921,43 +3907,23 @@ export struct ReadingExperience {
   }
 
   private resolveContinuousImage(startScalar: number): void {
-    const chapter = this.chapter;
-    if (chapter === undefined || this.continuousImageResolutions.has(startScalar)) {
-      return;
-    }
-    const image = this.chapterImageByStartScalar.get(startScalar);
-    if (image === undefined || image.state !== 'pending') {
-      return;
-    }
-    if (hasKnownReadingImageGeometry(image)) {
-      this.resolveGeometryImagePixels(chapter, image);
-      return;
-    }
-    const lifecycleToken = this.lifecycleToken;
-    const selectionToken = this.chapterSelectionToken;
-    const isCurrent = (): boolean => this.isSelectionActive(lifecycleToken, selectionToken) &&
-      this.chapter === chapter && this.readerSettingsSnapshot.navigationMode === 'continuous';
-    this.continuousImageResolutions.add(startScalar);
-    void this.activeGateway().resolveReadingImage(chapter, image, isCurrent)
-      .then((resolved: ReadingSessionImage): void => {
-        if (!isCurrent()) {
-          this.releaseUnadmittedReadingImage(resolved);
-          return;
-        }
-        this.adoptReadingImage(resolved);
-        this.replaceResolvedReadingImage(image, resolved);
-        if (!this.refreshContinuousImageFragment(resolved)) {
-          this.rebuildContinuousFragments();
-        }
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) {
-          hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience continuous image failed: ${this.errorMessage(error)}`);
-        }
-      })
-      .finally((): void => {
-        this.continuousImageResolutions.delete(startScalar);
-      });
+    this.readingImageResources.resolveContinuous(this.chapter, startScalar, {
+      captureCurrent: (chapter: ReadingSessionChapter): (() => boolean) => {
+        const lifecycle = this.lifecycleToken, selection = this.chapterSelectionToken;
+        return (): boolean => this.isSelectionActive(lifecycle, selection) && this.chapter === chapter &&
+          this.readerSettingsSnapshot.navigationMode === 'continuous';
+      },
+      resolveGeometry: (chapter: ReadingSessionChapter, image: ReadingSessionImage): void =>
+        this.resolveGeometryImagePixels(chapter, image),
+      load: (chapter: ReadingSessionChapter, image: ReadingSessionImage, current: () => boolean): Promise<ReadingSessionImage> =>
+        this.activeGateway().resolveReadingImage(chapter, image, current),
+      admit: (requested: ReadingSessionImage, resolved: ReadingSessionImage): void => {
+        this.replaceResolvedReadingImage(requested, resolved);
+        if (!this.refreshContinuousImageFragment(resolved)) this.rebuildContinuousFragments();
+      },
+      fail: (error: Error): void =>
+        hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience continuous image failed: ${this.errorMessage(error)}`),
+    });
   }
 
   private admitPageTurnPresentationWidth(width: number): void {
@@ -4359,7 +4325,7 @@ export struct ReadingExperience {
           this.chapterLayoutMap = readingChapterLayoutMap(expanded);
           this.materializedContentVersion = expanded.contentVersion;
           this.setCurrentReadingChapter(expanded);
-          this.rebuildChapterImageIndexes(expanded);
+          this.readingImageResources.indexChapter(expanded);
           this.paragraphLayout.ranges = ranges;
           this.retainCurrentChapterWindow();
           if (this.readerSettingsSnapshot.navigationMode === 'continuous') this.rebuildContinuousFragments(true);
@@ -4707,9 +4673,7 @@ export struct ReadingExperience {
     this.continuousVisibleScalar = 0;
     this.continuousProgressRevision += 1;
     this.continuousUserInteractionActive = false;
-    this.continuousImageResolutions.clear();
-    this.chapterImageByStartScalar.clear();
-    this.chapterImagePositionByKey.clear();
+    this.readingImageResources.resetChapter();
     this.resetPendingPage();
     this.paragraphLayout.nextRangeIndex = 0;
     this.paragraphLayout.firstRangeStartScalar = 0;
@@ -4835,7 +4799,7 @@ export struct ReadingExperience {
           this.setCurrentReadingChapter(chapter);
           this.retainCurrentChapterWindow();
           this.chapter = chapter;
-          this.rebuildChapterImageIndexes(chapter);
+          this.readingImageResources.indexChapter(chapter);
           this.materializedChapterSelectionToken = selectionToken;
           this.configureRestoredAnchor(chapter, chapterMap, isInitial, requestedOffset, requestedProgress);
           this.paragraphLayout.ranges = measurementProjection.ranges;
@@ -5766,7 +5730,7 @@ export struct ReadingExperience {
     lane: ReaderMaterializedChapterContext | undefined): void {
     if (lane === undefined) {
       this.chapter = chapter; this.chapterLayoutMap = projection.map; this.paragraphLayout.ranges = projection.ranges;
-      this.setCurrentReadingChapter(chapter); this.rebuildChapterImageIndexes(chapter);
+      this.setCurrentReadingChapter(chapter); this.readingImageResources.indexChapter(chapter);
     } else {
       lane.chapter = chapter; lane.layoutMap = projection.map; lane.paragraphRanges = projection.ranges;
     }
@@ -5847,31 +5811,21 @@ export struct ReadingExperience {
     throw new Error('READING_IMAGE_BLOCK_MISSING');
   }
 
-  private resolvePendingReadingImage(
-    image: ReadingSessionImage,
-    generation: number,
-    selectionToken: number,
-    lifecycleToken: number,
-  ): void {
+  private resolvePendingReadingImage(image: ReadingSessionImage, generation: number,
+    selectionToken: number, lifecycleToken: number): void {
     this.cancelMeasurementDeadline();
-    const isCurrent = (): boolean =>
-      this.isMeasurementCurrent(generation, selectionToken, lifecycleToken);
-    void this.activeGateway().resolveReadingImage(this.requireMeasurementChapter(), image, isCurrent)
-      .then((resolved: ReadingSessionImage): void => {
-        if (!isCurrent()) {
-          this.releaseUnadmittedReadingImage(resolved);
-          return;
-        }
-        this.adoptReadingImage(resolved);
-        this.replaceResolvedReadingImage(image, resolved);
+    const current = (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken);
+    const gateway = this.activeGateway();
+    void this.readingImageResources.resolvePending(this.requireMeasurementChapter(), image, current, {
+      load: (chapter: ReadingSessionChapter, requested: ReadingSessionImage, isCurrent: () => boolean): Promise<ReadingSessionImage> =>
+        gateway.resolveReadingImage(chapter, requested, isCurrent),
+      admit: (requested: ReadingSessionImage, resolved: ReadingSessionImage): void => {
+        this.replaceResolvedReadingImage(requested, resolved);
         this.armMeasurementDeadline(generation, selectionToken, lifecycleToken);
         this.consumeMeasuredBatch(generation, selectionToken, lifecycleToken);
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) {
-          this.fail(error, lifecycleToken);
-        }
-      });
+      },
+      fail: (error: Error): void => this.fail(error, lifecycleToken),
+    });
   }
 
   /** Pixel availability cannot own pagination once Core has supplied geometry. */
@@ -5884,49 +5838,26 @@ export struct ReadingExperience {
     }
   }
 
-  private matchingImageChapter(candidate: ReadingSessionChapter | undefined, chapter: ReadingSessionChapter): boolean {
-    return candidate !== undefined && candidate.sourceId === chapter.sourceId && candidate.bookId === chapter.bookId &&
-      candidate.chapterIndex === chapter.chapterIndex && candidate.contentVersion === chapter.contentVersion;
-  }
-
-  private geometryImageOwners(chapter: ReadingSessionChapter): ReadingSessionChapter[] {
-    const candidates = [this.chapter, this.adjacentMeasurementContext?.chapter,
+  private imageOwnerCandidates(chapter: ReadingSessionChapter): (ReadingSessionChapter | undefined)[] {
+    return [this.chapter, this.adjacentMeasurementContext?.chapter,
       this.preparedPreviousPage?.context.chapter, this.preparedNextPage?.context.chapter,
       this.pendingControlSelectionOrigin?.context.chapter, this.pendingControlSelectionCandidate?.context.chapter,
       this.chapterWindow.get(chapter.chapterIndex)];
-    const owners: ReadingSessionChapter[] = [];
-    for (const candidate of candidates) {
-      if (candidate !== undefined && this.matchingImageChapter(candidate, chapter) && owners.indexOf(candidate) < 0)
-        owners.push(candidate);
-    }
-    return owners;
   }
 
   private resolveGeometryImagePixels(chapter: ReadingSessionChapter, image: ReadingSessionImage): void {
-    const key = JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterIndex, chapter.contentVersion,
-      this.readingImageKey(image)]);
-    if (this.geometryImageRequests.has(key) || image.state !== 'pending' || !hasKnownReadingImageGeometry(image)) return;
-    const lifecycle = this.lifecycleToken;
-    const contentCurrent = ReaderRuntimeOwner.current().captureReadingContentValidity(chapter.sourceId, chapter.bookId);
-    const current = (): boolean => this.isSessionActive(lifecycle) && contentCurrent() &&
-      chapter.sourceId === this.sourceId && chapter.bookId === this.bookId && this.geometryImageOwners(chapter).some(
-        (owner: ReadingSessionChapter): boolean => owner.images.some((candidate: ReadingSessionImage): boolean =>
-          this.readingImageKey(candidate) === this.readingImageKey(image) &&
-          candidate.intrinsicWidth === image.intrinsicWidth && candidate.intrinsicHeight === image.intrinsicHeight));
-    const pending: DeferredReadingImagePixels = { chapter, requested: image, isCurrent: current };
-    this.geometryImageRequests.set(key, pending);
-    void this.activeGateway().resolveReadingImage(chapter, image, current).then((resolved: ReadingSessionImage): void => {
-      if (this.geometryImageRequests.get(key) !== pending || !current()) {
-        this.releaseUnadmittedReadingImage(resolved);
-        if (this.geometryImageRequests.get(key) === pending) this.geometryImageRequests.delete(key);
-        return;
-      }
-      // This queue owns the acquired Host lease until idle publication or teardown.
-      pending.resolved = resolved;
-      this.flushDeferredReadingImagePixels();
-    }).catch((error: Error): void => {
-      if (this.geometryImageRequests.get(key) === pending) this.geometryImageRequests.delete(key);
-      if (current()) hilog.error(0x5244, 'Reader', 'Reading image pixels failed: %{private}s', this.errorMessage(error));
+    this.readingImageResources.resolveGeometry(chapter, image, {
+      captureCurrent: (): (() => boolean) => {
+        const lifecycle = this.lifecycleToken;
+        const contentCurrent = ReaderRuntimeOwner.current().captureReadingContentValidity(chapter.sourceId, chapter.bookId);
+        return (): boolean => this.isSessionActive(lifecycle) && contentCurrent() &&
+          chapter.sourceId === this.sourceId && chapter.bookId === this.bookId;
+      },
+      ownerCandidates: (owner: ReadingSessionChapter): (ReadingSessionChapter | undefined)[] => this.imageOwnerCandidates(owner),
+      load: (owner: ReadingSessionChapter, requested: ReadingSessionImage, current: () => boolean): Promise<ReadingSessionImage> =>
+        this.activeGateway().resolveReadingImage(owner, requested, current),
+      ready: (): void => this.flushDeferredReadingImagePixels(),
+      fail: (error: Error): void => hilog.error(0x5244, 'Reader', 'Reading image pixels failed: %{private}s', this.errorMessage(error)),
     });
   }
 
@@ -5951,22 +5882,11 @@ export struct ReadingExperience {
     return changed;
   }
 
-  private publishGeometryImagePixels(pending: DeferredReadingImagePixels): boolean {
-    const image = pending.resolved;
-    if (image === undefined) return false;
-    const owners = this.geometryImageOwners(pending.chapter);
-    const key = this.readingImageKey(pending.requested);
-    let adopted = false;
-    for (const owner of owners) {
-      const index = owner.images.findIndex((candidate: ReadingSessionImage): boolean =>
-        this.readingImageKey(candidate) === key && candidate.state === 'pending');
-      if (index >= 0) { owner.images[index] = image; adopted = true; }
-    }
-    if (!adopted) { this.releaseUnadmittedReadingImage(image); return false; }
-    this.adoptReadingImage(image);
-    const current = this.matchingImageChapter(this.chapter, pending.chapter);
+  private publishGeometryImagePixels(chapter: ReadingSessionChapter,
+    owners: ReadingSessionChapter[], image: ReadingSessionImage): boolean {
+    const current = sameReadingImageChapter(this.chapter, chapter);
     if (current && this.chapter !== undefined) {
-      this.rebuildChapterImageIndexes(this.chapter);
+      this.readingImageResources.indexChapter(this.chapter);
       this.setCurrentReadingChapter(this.chapter);
     } else if (owners.length > 0) this.chapterWindow.admitNeighbour(owners[0]);
     let changed = false;
@@ -5992,12 +5912,12 @@ export struct ReadingExperience {
     }
     for (const prepared of [this.preparedPreviousPage, this.preparedNextPage,
       this.pendingControlSelectionOrigin, this.pendingControlSelectionCandidate]) {
-      if (prepared !== undefined && this.matchingImageChapter(prepared.context.chapter, pending.chapter) &&
+      if (prepared !== undefined && sameReadingImageChapter(prepared.context.chapter, chapter) &&
         this.replaceFragmentPixels(prepared.page.fragments, image)) {
         prepared.page.fragments = prepared.page.fragments.slice(); changed = true;
       }
     }
-    if (this.matchingImageChapter(this.adjacentMeasurementContext?.chapter ?? this.chapter, pending.chapter))
+    if (sameReadingImageChapter(this.adjacentMeasurementContext?.chapter ?? this.chapter, chapter))
       this.replaceFragmentPixels(this.physicalPagination.fragments, image);
     this.retainCurrentChapterWindow();
     return changed;
@@ -6005,13 +5925,10 @@ export struct ReadingExperience {
 
   private flushDeferredReadingImagePixels(): void {
     if (this.pageTurnInputPhase() !== 'idle' || this.pageChromeStateFrozen()) return;
-    let changed = false;
-    this.geometryImageRequests.forEach((pending: DeferredReadingImagePixels, key: string): void => {
-      if (pending.resolved === undefined) return;
-      this.geometryImageRequests.delete(key);
-      if (!pending.isCurrent()) this.releaseUnadmittedReadingImage(pending.resolved);
-      else changed = this.publishGeometryImagePixels(pending) || changed;
-    });
+    const changed = this.readingImageResources.flushGeometry(
+      (chapter: ReadingSessionChapter): (ReadingSessionChapter | undefined)[] => this.imageOwnerCandidates(chapter),
+      (chapter: ReadingSessionChapter, owners: ReadingSessionChapter[], resolved: ReadingSessionImage): boolean =>
+        this.publishGeometryImagePixels(chapter, owners, resolved));
     if (changed) {
       this.pageTurnRenderRevision += 1;
       this.bookTurnTextureCaptureGeneration += 1;
@@ -6021,40 +5938,13 @@ export struct ReadingExperience {
     }
   }
 
-  private replaceResolvedReadingImage(
-    requested: ReadingSessionImage,
-    resolved: ReadingSessionImage,
-  ): void {
+  private replaceResolvedReadingImage(requested: ReadingSessionImage, resolved: ReadingSessionImage): void {
     const chapter = this.requireMeasurementChapter();
-    const key = this.readingImageKey(requested);
     const visibleOwner = chapter === this.chapter;
-    const index = visibleOwner ? this.chapterImagePositionByKey.get(key) :
-      chapter.images.findIndex((image: ReadingSessionImage): boolean => this.readingImageKey(image) === key);
-    if (index === undefined || index < 0 || chapter.images[index].state !== 'pending') return;
-    chapter.images[index] = resolved;
-    if (visibleOwner) {
-      this.chapterImageByStartScalar.set(resolved.startScalar, resolved);
-      this.chapterImagePositionByKey.delete(key);
-      this.chapterImagePositionByKey.set(this.readingImageKey(resolved), index);
-      this.setCurrentReadingChapter(chapter);
-    } else {
-      this.chapterWindow.admitNeighbour(chapter);
-    }
+    if (!this.readingImageResources.replacePending(chapter, visibleOwner, requested, resolved)) return;
+    if (visibleOwner) this.setCurrentReadingChapter(chapter);
+    else this.chapterWindow.admitNeighbour(chapter);
     this.retainCurrentChapterWindow();
-  }
-
-  private rebuildChapterImageIndexes(chapter: ReadingSessionChapter): void {
-    this.chapterImageByStartScalar.clear();
-    this.chapterImagePositionByKey.clear();
-    for (let index = 0; index < chapter.images.length; index += 1) {
-      const image = chapter.images[index];
-      this.chapterImageByStartScalar.set(image.startScalar, image);
-      this.chapterImagePositionByKey.set(this.readingImageKey(image), index);
-    }
-  }
-
-  private readingImageKey(image: ReadingSessionImage): string {
-    return `${image.source}\u0000${image.baseUrl ?? ''}\u0000${image.startScalar}\u0000${image.endScalar}`;
   }
 
   private measurementNodeText(paragraph: MeasurementParagraph): string {
@@ -6960,14 +6850,6 @@ export struct ReadingExperience {
     this.releaseUnretainedReadingImages();
   }
 
-  private adoptReadingImage(image: ReadingSessionImage): void {
-    this.readingImageResources.adopt(image);
-  }
-
-  private releaseUnadmittedReadingImage(image: ReadingSessionImage): void {
-    this.readingImageResources.releaseUnadmitted(image);
-  }
-
   private releaseUnretainedReadingImages(): void {
     // Retention depends on the current presented/prepared transactions. The
     // lease owner delegates disposal to the original allocator.
@@ -6985,7 +6867,7 @@ export struct ReadingExperience {
     const originImages = this.pendingControlSelectionOrigin?.context.chapter.images ?? [];
     const candidateImages = this.pendingControlSelectionCandidate?.context.chapter.images ?? [];
     for (const image of chapterImages.concat(this.chapterWindow.retainedImages(), originImages, candidateImages)) {
-      if (this.sameReadingImageResource(resource, image)) {
+      if (sameReaderReadingImageResource(resource, image)) {
         return true;
       }
     }
@@ -6998,18 +6880,6 @@ export struct ReadingExperience {
       }
     }
     return false;
-  }
-
-  private releaseAllReadingImages(): void {
-    for (const pending of this.geometryImageRequests.values()) {
-      if (pending.resolved !== undefined) this.releaseUnadmittedReadingImage(pending.resolved);
-    }
-    this.geometryImageRequests.clear();
-    this.readingImageResources.close();
-  }
-
-  private sameReadingImageResource(left: ReadingSessionImage, right: ReadingSessionImage): boolean {
-    return sameReaderReadingImageResource(left, right);
   }
 
   /**
@@ -7208,7 +7078,7 @@ export struct ReadingExperience {
       chapter.content.substring(range.startUtf16, range.endUtf16) !== '\uFFFC') {
       return undefined;
     }
-    const image = this.chapterImageByStartScalar.get(range.startScalar);
+    const image = this.readingImageResources.atScalar(range.startScalar);
     return image?.endScalar === range.endScalar ? image : undefined;
   }
 
@@ -12780,7 +12650,7 @@ export struct ReadingExperience {
     admitWindowCurrent: boolean,
   ): void {
     this.chapter = context.chapter;
-    this.rebuildChapterImageIndexes(context.chapter);
+    this.readingImageResources.indexChapter(context.chapter);
     this.chapterLayoutMap = context.layoutMap;
     this.materializedContentVersion = context.contentVersion;
     this.paragraphLayout.ranges.splice(0, this.paragraphLayout.ranges.length, ...this.copyParagraphRanges(context.paragraphRanges));
