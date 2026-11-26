@@ -196,7 +196,8 @@ export default class EntryAbility extends UIAbility {
           const pending = await readerSystemMigrationNeedsRecovery(appContext.filesDir);
           if (pending && current()) AppStorage.setOrCreate('readerSystemMigrationState', 'interrupted');
         }
-        throw error;
+        const failure = error instanceof Error ? error : new Error(errorMessageOf(error));
+        throw failure;
       }
       if (this.publicFixture !== undefined || !current()) return;
       const state = await resumeReaderSystemMigration(appContext.filesDir, owner, current);

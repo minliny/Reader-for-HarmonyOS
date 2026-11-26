@@ -285,7 +285,7 @@ export class HttpExecuteHost {
     if (this.headerValue(headers, 'host') !== null) throw new Error('http.execute: WebDAV does not accept a Host override');
     const sink: BinaryResponseSink = { maxBytes, exactBytes: true };
     await this.executeRequest({ ...params, headers, httpsOnly: true, sameOriginRedirectsOnly: true, followRedirects: false },
-      undefined, isCancelled, sink, undefined, undefined, true);
+      undefined, isCancelled, false, sink, undefined, undefined, true);
     if (sink.response === undefined) throw new Error('http.execute: missing WebDAV response');
     return sink.response;
   }
