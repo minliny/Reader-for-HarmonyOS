@@ -27,6 +27,7 @@ function readArguments() {
       files: { type: 'string', multiple: true },
       'max-cases': { type: 'string', default: '20' },
       'summary-file': { type: 'string' },
+      'output-file': { type: 'string' },
       help: { type: 'boolean' },
     },
   });
@@ -193,13 +194,16 @@ function affectedGates(paths, baseTree) {
     .sort((left, right) => left.id.localeCompare(right.id, 'en'));
 }
 
-function printResult(summaryFile, status, paths, results, reason = '') {
+function printResult(options, status, paths, results, started, reason = '') {
   const title = `${status} — Host incremental checks${reason ? ` (${reason})` : ''}`;
-  const detail = `Non-document paths: ${paths.length}`;
+  const detail = `Non-document paths: ${paths.length}\nNode gates selected: ${results.length}, executed: ${started}`;
   const rows = results.map(({ id, status, reason }) => `- ${id}: ${status}${reason ? ` (${reason})` : ''}`).join('\n');
   const report = `${title}\n\n${detail}${rows ? `\n\n${rows}` : ''}`;
   console.log(report);
-  if (summaryFile !== undefined) appendFileSync(summaryFile, `\n## ${report}\n`);
+  if (options['summary-file'] !== undefined) appendFileSync(options['summary-file'], `\n## ${report}\n`);
+  if (options['output-file'] !== undefined) {
+    appendFileSync(options['output-file'], `non_document=${paths.length > 0}\nselected=${results.length}\nexecuted=${started}\n`);
+  }
 }
 
 function hasDefinitionDrift(reason, inputs) {
@@ -210,7 +214,7 @@ function hasDefinitionDrift(reason, inputs) {
 function main() {
   const options = readArguments();
   if (options.help) {
-    console.log('Usage: node scripts/ci/run-impact-checks.mjs (--base <commit> [--head <commit>] | --files <path>...) [--max-cases <count>] [--summary-file <path>]');
+    console.log('Usage: node scripts/ci/run-impact-checks.mjs (--base <commit> [--head <commit>] | --files <path>...) [--max-cases <count>] [--summary-file <path>] [--output-file <path>]');
     return;
   }
   const cap = Number(options['max-cases']);
@@ -249,7 +253,7 @@ function main() {
   const failed = results.some(result => result.status === 'FAIL');
   const status = failed ? 'FAIL' : started ? 'PASS' : 'NOT_RUN';
   const reason = candidates.length ? '' : paths.length ? 'no eligible impacted gate' : 'no non-document changes';
-  printResult(options['summary-file'], status, paths, results, reason);
+  printResult(options, status, paths, results, started, reason);
   if (failed) process.exitCode = 1;
 }
 
