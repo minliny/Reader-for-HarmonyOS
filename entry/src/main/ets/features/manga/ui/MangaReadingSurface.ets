@@ -1,3 +1,4 @@
+import { ReaderPaperMaterial } from '../../../ui/foundation/ReaderPaperMaterial';
 import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { common } from '@kit.AbilityKit';
 import { ReaderDocumentSaveHost, type ReaderDocumentSaveResult } from '../../../platform/share/ReaderDocumentSaveHost';
@@ -2790,6 +2791,7 @@ export struct MangaReadingSurface {
           actionEnabled: this.opened && this.pageOrdinal() > 0, onTap: (): void => { void this.stepPage(-1); } });
         Column({ space: 3 }) {
           Slider({ value: this.presentedPage(), min: 1, max: Math.max(1, this.horizontalPageCount), step: 1 })
+            .attributeModifier(new ReaderPaperMaterial())
             .height(44).selectedColor(readerAppColor('TOK_ACCENT', this.chromeScheme()))
             .blockColor(this.greenColor()).trackColor(this.lineColor())
             .enabled(this.opened && this.horizontalPageCount > 1)
@@ -3459,7 +3461,8 @@ export struct MangaReadingSurface {
             }
           } });
       }.width('100%').margin({ bottom: 10 });
-      Slider({ value: this.brightnessPercent, min: 1, max: 100, step: 1 }).width('100%').height(44)
+      Slider({ value: this.brightnessPercent, min: 1, max: 100, step: 1 })
+        .attributeModifier(new ReaderPaperMaterial()).width('100%').height(44)
         .enabled(this.preferencePanelInputCurrent(opening, 'settings'))
         .selectedColor(this.greenColor()).blockColor(this.greenColor()).trackColor(this.lineColor())
         .onChange((value: number, mode: SliderChangeMode): void => this.changeBrightnessSlider(value, mode, opening))

@@ -25,7 +25,9 @@ const fixture = action => {
     json(dir, 'AppScope/app.json5', { app: { bundleName: 'io.reader.minliny', versionName: '0.2.0', versionCode: 1000000 } });
     json(dir, 'entry/src/main/module.json5', { module: { name: 'entry', metadata: [{ name: 'unrelated', value: 'keep' }] } });
     json(dir, 'entry/build-profile.json5', { buildOption: { externalNativeOptions: { abiFilters: ['arm64-v8a'], cppFlags: '-std=c++17' } } });
-    json(dir, 'build-profile.json5', { app: { products: [{ name: 'default', compatibleSdkVersion: '6.1.0(23)' }] } });
+    json(dir, 'build-profile.json5', { app: { products: [{
+      name: 'default', compatibleSdkVersion: '6.1.0(23)', targetSdkVersion: '26.0.0',
+    }] } });
     put(dir, 'entry/src/main/ets/z.ets', 'export const value = 1;\n');
     put(dir, 'entry/libs/arm64-v8a/libreader_core_napi.so', Buffer.from([0, 13, 10, 255]));
     put(dir, 'entry/libs/x86_64/libreader_core_napi.so', Buffer.from([0, 13, 10, 254]));
@@ -63,6 +65,11 @@ const cases = {
     profile.app.products[0].signingConfig = 'private';
     json(dir, 'build-profile.json5', profile);
     assert.equal(make(snapshot(dir)).appContentHash, identity.appContentHash);
+    profile.app.products[0].targetSdkVersion = '6.1.0(23)';
+    json(dir, 'build-profile.json5', profile);
+    assert.notEqual(make(snapshot(dir)).appContentHash, identity.appContentHash);
+    profile.app.products[0].targetSdkVersion = '26.0.0';
+    json(dir, 'build-profile.json5', profile);
     put(dir, 'entry/libs/arm64-v8a/libreader_core_napi.so', 'not-selected');
     assert.equal(make(snapshot(dir)).appContentHash, identity.appContentHash);
     put(dir, 'entry/libs/x86_64/libreader_core_napi.so', 'selected-changed');

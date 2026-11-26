@@ -1139,20 +1139,20 @@ function syncNative(env = process.env) {
   }
 }
 
-function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCommand, buildClass, env = process.env) {
+function generateAcceptanceProvenance(runDir, hap, hvigorVersion, buildCommand, buildClass, sdk, env = process.env) {
   const generator = resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs');
   const stripTool = resolveHarmonyTool('objcopy');
-  const output = resolve(runDir, `${buildClass}-${basename(signedHap, '.hap')}-provenance.json`);
+  const output = resolve(runDir, `${buildClass}-${basename(hap, '.hap')}-provenance.json`);
   run(process.execPath, [
     generator,
     ...nativeProvenanceArguments(env),
     ...(buildClass === 'iteration' ? ['--allow-dirty'] : []),
-    '--hap', signedHap,
+    '--hap', hap,
     '--output', output,
     '--native-strip-tool', stripTool,
     '--build-command', buildCommand,
     '--hvigor-version', hvigorVersion,
-    '--sdk-version', 'HarmonyOS 6.1.0(23)',
+    '--sdk-version', `HarmonyOS ${sdk.version} (API ${sdk.apiVersion})`,
   ]);
   return basename(output);
 }
@@ -1478,6 +1478,7 @@ function buildImpl(options) {
         hvigorVersion,
         buildCommand,
         buildClass,
+        appIdentity.contentSnapshot.buildIdentityInputs.toolchain.sdk.ets,
         nativeEnvironment,
       );
       nativeProvenance.push(provenance);

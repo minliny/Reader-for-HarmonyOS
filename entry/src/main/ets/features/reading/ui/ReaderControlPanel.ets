@@ -1,3 +1,4 @@
+import { ReaderPaperMaterial } from '../../../ui/foundation/ReaderPaperMaterial';
 import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import type { ReaderControlTemporaryInputKind } from './ReaderControlSessionState';
 import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
@@ -3343,6 +3344,7 @@ export struct ReaderControlPanel {
         direction: Axis.Horizontal,
         reverse: false,
       })
+      .attributeModifier(new ReaderPaperMaterial())
       .trackThickness(5)
       .blockSize({ width: 18, height: 18 })
       .blockColor(readerAppColor('TOK_SURFACE_SOLID_OPAQUE', this.appScheme))

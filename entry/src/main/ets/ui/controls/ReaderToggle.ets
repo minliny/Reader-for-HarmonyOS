@@ -1,3 +1,4 @@
+import { ReaderPaperMaterial } from '../foundation/ReaderPaperMaterial';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 
@@ -87,6 +88,7 @@ export struct ReaderToggle {
       Stack({ alignContent: Alignment.Center }) {
         ForEach([this.nativeRevision], (revision: number): void => {
           Toggle({ type: ToggleType.Switch, isOn: this.value })
+            .attributeModifier(new ReaderPaperMaterial())
             .width(44).height(26)
             .selectedColor(this.checkedColor ?? readerAppColor(resolveReaderToggleSpec(this.specId).checkedColor, this.appThemeScheme))
             .switchStyle({ pointRadius: 10, trackBorderRadius: 13,
