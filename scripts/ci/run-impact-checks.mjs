@@ -82,13 +82,16 @@ function hostPath(path) {
   return normalized;
 }
 
-function nonDocumentPaths(paths) {
+function nonDocumentPaths({ paths, baseTree }) {
   const unique = new Set();
   for (const path of paths) {
     const normalized = hostPath(path);
     if (!normalized) throw new Error(`Expected a Host-relative path, got ${JSON.stringify(path)}.`);
-    if (!normalized.startsWith('docs/') && !normalized.startsWith('.reader-artifacts/') && !normalized.endsWith('.md')) {
-      unique.add(normalized);
+    // Git paths already use forward slash separators. A literal backslash in a
+    // Git filename must not turn a non-document change into a docs/ path.
+    const relativePath = baseTree ? path : normalized;
+    if (!relativePath.startsWith('docs/') && !relativePath.startsWith('.reader-artifacts/') && !relativePath.endsWith('.md')) {
+      unique.add(relativePath);
     }
   }
   return [...unique].sort();
@@ -222,9 +225,10 @@ function main() {
     throw new Error('--max-cases must be a positive integer.');
   }
   const changes = changedPaths(options);
-  const paths = nonDocumentPaths(changes.paths);
+  const paths = nonDocumentPaths(changes);
   const results = [];
-  const candidates = paths.length ? affectedGates(paths, changes.baseTree) : [];
+  const impactPaths = [...new Set(paths.map(hostPath))];
+  const candidates = impactPaths.length ? affectedGates(impactPaths, changes.baseTree) : [];
   let started = 0;
   for (const { id, definitionInputs } of candidates) {
     if (started === cap) {
