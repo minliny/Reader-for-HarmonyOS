@@ -52,16 +52,18 @@ test('retiring one native text surface does not release a different active selec
 });
 
 const ui = new URL('../entry/src/main/ets/features/', import.meta.url);
-function routeMethods(path, struct) {
+function routeMethods(path, struct, alertPresented = () => false) {
   return selectedProductionMethods(new URL(path, ui), struct, ['onReaderKeyEvent'], {
     readerHardwareKeyboardShortcut: readerKeyboardShortcut,
     readerControlKeyboardVisible: metrics => metrics.visible,
     ReaderWindowCoordinator: { metrics: () => ({ visible: false }) },
+    ReaderNativeAlertWindow: { isPresented: alertPresented },
   });
 }
 
 test('novel shortcuts use the existing page, Back and control owners', () => {
-  const Experience = routeMethods('reading/ui/LocalReadingExperience.ets', 'ReadingExperience');
+  let alert = false;
+  const Experience = routeMethods('reading/ui/LocalReadingExperience.ets', 'ReadingExperience', () => alert);
   const actions = [];
   const selection = new ReaderTextSelectionActivity();
   const owner = Object.assign(new Experience(), {
@@ -78,6 +80,11 @@ test('novel shortcuts use the existing page, Back and control owners', () => {
   assert.equal(owner.onReaderKeyEvent({ ...key, key: 'PageDown' }), true);
   assert.equal(owner.onReaderKeyEvent({ ...key, key: 'D', ctrl: true }), true);
   assert.equal(owner.onReaderKeyEvent({ ...key, key: 'F', meta: true }), true);
+  alert = true;
+  for (const event of [key, { ...key, key: 'Escape' }, { ...key, key: 'D', ctrl: true }]) {
+    assert.equal(owner.onReaderKeyEvent(event), false);
+  }
+  alert = false;
   selection.change('paragraph', true);
   assert.equal(owner.onReaderKeyEvent(key), false);
   selection.change('paragraph', false);
@@ -87,7 +94,8 @@ test('novel shortcuts use the existing page, Back and control owners', () => {
 });
 
 test('manga shortcuts page horizontally, scroll vertically and defer to a visible panel', () => {
-  const Manga = routeMethods('manga/ui/MangaReadingSurface.ets', 'MangaReadingSurface');
+  let alert = false;
+  const Manga = routeMethods('manga/ui/MangaReadingSurface.ets', 'MangaReadingSurface', () => alert);
   const actions = [];
   const owner = Object.assign(new Manga(), {
     readerPanelForeground: () => true, opened: true, panel: '', panelPhase: 'closed', error: '', zoom: 1,
@@ -103,6 +111,18 @@ test('manga shortcuts page horizontally, scroll vertically and defer to a visibl
   assert.equal(owner.onReaderKeyEvent({ ...key, key: 'Escape' }), true);
   assert.equal(owner.onReaderKeyEvent({ ...key, key: 'F', ctrl: true }), true);
   assert.equal(owner.onReaderKeyEvent({ ...key, key: 'D', ctrl: true }), true);
+  const blockedKeys = [key, { ...key, key: 'Escape' }, { ...key, key: 'F', ctrl: true }];
+  alert = true;
+  for (const event of blockedKeys) assert.equal(owner.onReaderKeyEvent(event), false);
+  alert = false;
+  for (const [state, active] of Object.entries({
+    pendingChapterTransition: {}, rollbackPainting: true, rollbackChapterController: {}, boundaryDragging: true,
+  })) {
+    owner[state] = active;
+    for (const event of blockedKeys) assert.equal(owner.onReaderKeyEvent(event), false, state);
+    delete owner[state];
+  }
+  assert.equal(owner.onReaderKeyEvent({ ...key, down: false }), false);
   owner.controlsVisible = true;
   assert.equal(owner.onReaderKeyEvent({ ...key, key: 'Escape' }), false);
   assert.deepEqual(actions, [-1, { next: true, animation: true }, 'back', 'search', 'directory']);

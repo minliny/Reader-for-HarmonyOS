@@ -50,7 +50,7 @@ import { ReaderNativeTextWindow, readerNativeParagraphHeight } from './ReaderNat
 import { ReaderNativeParagraphResources, ReaderNativeParagraphRecipe, readerNativeParagraphKey } from './ReaderNativeParagraph';
 import { exportReaderQuoteCard } from './ReaderQuoteCardExporter';
 import { readerSystemShareActions } from './ReaderSharePresentation';
-import type { ReaderQuoteCardAction } from '../application/ReaderShareActions';
+import type { ReaderQuoteCardAction, ReaderQuoteCardCopy } from '../application/ReaderShareActions';
 import { ReaderNativeTextMeasurement, READER_CHAPTER_TITLE_FONT_SIZE_FP, type ReaderNativeTextStyle } from './ReaderNativeTextMeasurement';
 import { readPreparedReadingEntrySnapshot, type ReadingEntryNavigation, type ReadingEntryNavigationItem, type ReadingEntrySnapshot as CoreReadingEntrySnapshot } from '../application/ReadingEntrySnapshot';
 import { ReaderTtsPageFollow, readerTtsFollowActive, type ReaderTtsFollowScope,
@@ -1352,7 +1352,8 @@ export struct ReadingExperience {
     const appearance = this.visibleReadingAppearance();
     const actions = readerSystemShareActions(() => this.getUIContext(), anchor);
     return actions.shareQuoteCard(text, title,
-      (): Promise<string | undefined> => exportReaderQuoteCard(this.getUIContext(), text, title, author, appearance, current), current);
+      (): Promise<ReaderQuoteCardCopy | undefined> => exportReaderQuoteCard(this.getUIContext(), text, title, author, appearance, current),
+      current);
   };
   private exitDelivered: boolean = false;
   private exitAttemptGeneration: number = 0;
@@ -11816,7 +11817,7 @@ export struct ReadingExperience {
   private onReaderKeyEvent(event: KeyEvent): boolean {
     const action = readerHardwareKeyboardShortcut(event, {
       bodyOwnsInput: this.isReaderPageInteractionEnabled() && !this.windowChromeOverlayActive &&
-        !this.sourceSwitchPresentationVisible && this.controlTemporaryLayer.length === 0 &&
+        !this.sourceSwitchPresentationVisible && this.controlTemporaryLayer.length === 0 && !ReaderNativeAlertWindow.isPresented() &&
         this.sessionLaunch === undefined && !this.readerRecoveryRequestCurrent() && this.phase === 'ready',
       inputFocused: readerControlKeyboardVisible(ReaderWindowCoordinator.metrics()),
       selectionActive: this.textSelectionActivity.active(),

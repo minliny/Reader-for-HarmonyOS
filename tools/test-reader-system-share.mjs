@@ -73,25 +73,42 @@ test('unavailable or rejected platform sharing copies once while dismissal has n
 test('quote cards share an exported PNG and fall back to the complete original selection', async () => {
   const text = '  选文📚\n下一行';
   const path = '/sandbox/app-cache/reader-share/quote-abcdef/quote.png';
+  const released = [];
+  const render = async () => ({ path, release: async () => released.push(path) });
   const shown = setup();
-  assert.equal(await shown.actions.shareQuoteCard(text, '书名', async () => path, current), 'shown');
+  assert.equal(await shown.actions.shareQuoteCard(text, '书名', render, current), 'shown');
   assert.deepEqual(shown.shown, [{ kind: 'image', path, title: '书名' }]);
+  assert.deepEqual(released, []);
+  for (const result of ['unavailable', 'unsafe', 'dismissed', 'throw']) {
+    const platform = setup({ show: () => { if (result === 'throw') throw Error('platform'); return result; } });
+    assert.equal(await platform.actions.shareQuoteCard(text, '书名', render, current),
+      result === 'dismissed' ? 'dismissed' : 'quoteCopied');
+    assert.deepEqual(platform.copied, result === 'dismissed' ? [] : [text]);
+    assert.deepEqual(released.splice(0), [path]);
+  }
   const unavailable = setup({ show: () => 'unavailable' });
-  assert.equal(await unavailable.actions.shareQuoteCard(text, '书名', async () => path, current), 'quoteCopied');
-  assert.deepEqual(unavailable.copied, [text]);
   assert.equal(await unavailable.actions.shareQuoteCard(text, '书名', async () => { throw Error('snapshot'); }, current), 'quoteCopied');
-  assert.deepEqual(unavailable.copied, [text, text]);
+  assert.deepEqual(unavailable.copied, [text]);
 });
 
 test('a quote built for a retired selection never launches the sheet or replaces clipboard contents', async () => {
   const { actions, shown, copied } = setup();
   let active = true;
+  let released = 0;
   assert.equal(await actions.shareQuoteCard('旧内容', '书名', async () => {
     active = false;
-    return 'late';
+    return { path: 'late', release: async () => { released++; } };
   }, () => active), 'retired');
+  assert.equal(released, 1);
   assert.deepEqual(shown, []);
   assert.deepEqual(copied, []);
+  active = true;
+  const handedOff = setup({ show: () => { active = false; return 'shown'; } });
+  assert.equal(await handedOff.actions.shareQuoteCard('旧内容', '书名', async () => ({
+    path: 'already-handed-off', release: async () => { released++; },
+  }), () => active), 'retired');
+  assert.equal(released, 1);
+  assert.deepEqual(handedOff.copied, []);
 });
 
 test('a retired entity cannot open a late panel or overwrite the clipboard', async () => {
@@ -118,8 +135,8 @@ const fileUtd = 'general.file';
 const epubUtd = 'general.epub';
 const pngUtd = 'general.png';
 
-function platformSetup({ available = true, hasContext = true, symlink, rejectShow = false, extensionUtd = epubUtd,
-  copyFile = () => {}, cacheEntries = [], quoteSize = 42 } = {}) {
+function platformSetup({ available = true, hasContext = true, symlink, rejectShow = false, rejectController = false,
+  extensionUtd = epubUtd, copyFile = () => {}, getUri = () => {}, cacheEntries = [], quoteSize = 42 } = {}) {
   const lstatPaths = [], copies = [], removed = [], uriPaths = [], utdRequests = [], panelLaunches = [];
   const listeners = new Map();
   const context = { filesDir, getApplicationContext: () => ({ cacheDir }) };
@@ -127,7 +144,10 @@ function platformSetup({ available = true, hasContext = true, symlink, rejectSho
     constructor(record) { this.record = record; }
   }
   class ShareController {
-    constructor(data) { this.data = data; }
+    constructor(data) {
+      if (rejectController) throw new Error('Share Kit could not create a controller');
+      this.data = data;
+    }
     on(event, listener) { listeners.set(event, listener); }
     off(event, listener) {
       if (listeners.get(event) === listener) listeners.delete(event);
@@ -174,6 +194,7 @@ function platformSetup({ available = true, hasContext = true, symlink, rejectSho
     fileUri: {
       getUriFromPath(path) {
         uriPaths.push(path);
+        getUri();
         return `file://io.reader.minliny${path}`;
       },
     },
@@ -184,7 +205,6 @@ function platformSetup({ available = true, hasContext = true, symlink, rejectSho
     const callback = listeners.get(event);
     assert.ok(callback, `ShareController has a ${event} listener`);
     callback(result);
-    assert.equal(listeners.size, 0, 'terminal event removes both listeners');
   }
   return { host, lstatPaths, copies, removed, uriPaths, utdRequests, panelLaunches, listeners, emit };
 }
@@ -304,11 +324,15 @@ test('quote export bounds Unicode and pixels and retains only a request-current 
     const result = await exportReaderQuoteCard(ui, '📚'.repeat(400), ' 书名 ', ' 作者 ', { activeTheme: 'paper' }, () => active);
     assert.equal(model.text, `${'📚'.repeat(260)}…`);
     assert.deepEqual([model.title, model.author, model.style.ink, model.font], ['书名', '作者', '#292718', 'Reader Serif']);
-    assert.equal(result, retirement === 'none' ? `${quoteDirectory}/quote.png` : undefined);
+    assert.equal(result?.path, retirement === 'none' ? `${quoteDirectory}/quote.png` : undefined);
     assert.deepEqual(events, [
       ...(retirement === 'none' ? ['fsync', 'close'] : ['close', ['remove', quoteDirectory]]),
       'release-packer', 'release-pixel', 'dispose',
     ]);
+    if (result !== undefined) {
+      await result.release();
+      assert.deepEqual(events.at(-1), ['remove', quoteDirectory]);
+    }
   }
 });
 
@@ -334,6 +358,8 @@ test('SDK-emitted adapter converts only a checked retained original to a file UR
     assert.deepEqual(platform.utdRequests.map(([requested]) => requested), [extension]);
     platform.emit('shareCompleted', { targetAbilityInfo: { name: 'recipient' } });
     assert.equal(await sharing, 'shown');
+    assert.equal(platform.listeners.size, 0);
+    assert.deepEqual(platform.removed, []);
   }
 });
 
@@ -378,6 +404,39 @@ test('SDK-emitted adapter removes failed or retired staged copies without sharin
     assert.deepEqual(platform.panelLaunches, []);
     assert.deepEqual(copied, outcome === 'failed' ? ['长篇小说\n作者'] : []);
   }
+});
+
+test('SDK-emitted adapter removes only its own book copy after rejection, dismissal or retirement before launch', async () => {
+  for (const outcome of ['rejectShow', 'rejectController', 'dismissed', 'retired']) {
+    let active = true;
+    const platform = platformSetup({
+      rejectShow: outcome === 'rejectShow', rejectController: outcome === 'rejectController',
+      getUri: () => { if (outcome === 'retired') active = false; },
+    });
+    const copied = [];
+    const actions = new ReaderShareActions(platform.host, text => copied.push(text));
+    const sharing = actions.shareFile(local, async () => original.path, () => active);
+    if (outcome === 'dismissed') {
+      await new Promise(resolve => setImmediate(resolve));
+      assert.deepEqual(platform.removed, []);
+      platform.emit('dismiss');
+    }
+    assert.equal(await sharing, outcome.startsWith('reject') ? 'fileCopied' : outcome);
+    assert.deepEqual(platform.copies, [[original.path, `${shareDirectory}/${local.title}.epub`]]);
+    assert.deepEqual(platform.removed, [shareDirectory]);
+    assert.equal(platform.listeners.size, 0);
+  }
+});
+
+test('a sharing completion reported immediately after dismissal keeps the handed-off book copy', async () => {
+  const platform = platformSetup();
+  const sharing = platform.host.show(original, current);
+  await new Promise(resolve => setImmediate(resolve));
+  platform.emit('dismiss');
+  platform.emit('shareCompleted', { targetAbilityInfo: { name: 'recipient' } });
+  assert.equal(await sharing, 'shown');
+  assert.deepEqual(platform.removed, []);
+  assert.equal(platform.listeners.size, 0);
 });
 
 test('SDK-emitted adapter falls back on explicit launch rejection and keeps dismissal neutral', async () => {

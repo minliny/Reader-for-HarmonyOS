@@ -13,6 +13,7 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import * as facts from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import * as capabilityPolicy from '../entry/src/main/ets/app/HarmonyCapabilityPolicy.ts';
 import * as placement from '../entry/src/main/ets/features/reading/ui/ReaderControlPlacement.ts';
+import * as smartGesturePolicy from '../entry/src/main/ets/features/reading/application/ReaderSmartGesturePolicy.ts';
 import * as bookshelfMode from '../entry/src/main/ets/features/bookshelf/application/BookshelfViewMode.ts';
 import { readerHostPreferencesName } from '../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts';
 import { READER_FEEDBACK_EXTENDED_MS } from '../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts';
@@ -84,12 +85,17 @@ async function fixture(){
   ...platform,'./diagnostics/ReaderPublicFixtureScope':{readerHostPreferencesName},'./HarmonyCapabilityPolicy':capabilityPolicy});
  const controlPlacement=compile('app/ReaderControlPlacementPreferences.ts',{
   ...platform,'./diagnostics/ReaderPublicFixtureScope':{readerHostPreferencesName},'../features/reading/ui/ReaderControlPlacement':placement});
+ const smartGestures=compile('app/ReaderSmartGesturePreferences.ts',{
+  ...platform,'./diagnostics/ReaderPublicFixtureScope':{readerHostPreferencesName},
+  '../features/reading/application/ReaderSmartGesturePolicy':smartGesturePolicy});
  const {ReaderNavigationAppearancePreferences:Appearance}=navigationAppearance;
  const {ReaderControlPlacementPreferences:Placement}=controlPlacement;
  Appearance.attach(context);
  await Appearance.save({override:'systemNative',reduceTransparency:true});
  await Placement.install(context,()=>Runtime.ReaderRuntimeOwner.isCurrent(owner));
  await Placement.select('right',()=>true);
+ smartGestures.ReaderSmartGesturePreferences.attach(context);
+ await smartGestures.ReaderSmartGesturePreferences.select({enabled:true,tapAction:'toggleControls'},()=>true);
  await bookshelf.BookshelfViewModeHost.instance.load(()=>true);
  app.set('readerBookshelfSelectedGroup','saved-group');
  app.set('readerBookshelfReadingFilter','reading');
@@ -98,7 +104,8 @@ async function fixture(){
  const modules={...platform,'../../../app/ReaderWriteEvidence':evidenceModule,'./SettingsGateway':settingModule,
  '../../reading/application/ReaderSettingsGateway':readingModule,'../../reading/application/ReaderSettingsState':settings,'../../reading/application/ReaderTtsPreferencesGateway':ttsModule,'../../reading/application/ReaderTtsPreferencesState':tts,
  '../../bookshelf/application/BookshelfViewModeHost':bookshelf,
- '../../../app/ReaderNavigationAppearancePreferences':navigationAppearance,'../../../app/ReaderControlPlacementPreferences':controlPlacement};
+ '../../../app/ReaderNavigationAppearancePreferences':navigationAppearance,'../../../app/ReaderControlPlacementPreferences':controlPlacement,
+ '../../../app/ReaderSmartGesturePreferences':smartGestures};
  let Reset=compile('features/settings/application/LocalConfigurationReset.ts',modules).LocalConfigurationReset;
  ReaderThemeHost.setRecoveryBarrier(async()=>{barrierCalls++;trace.push('sync-recovery');await Reset.recover(owner);});
  const appGateway=new settingModule.SettingsGateway(context);
@@ -124,6 +131,9 @@ async function fixture(){
  assert.equal(stores.get('reader_control_placement_v1').disk.get('alignment'),'center');
  assert.equal(app.get('readerControlAlignment'),'center');
  assert.equal(app.get('readerControlPlacementPendingGeneration'),0);
+ assert.deepEqual(JSON.parse(stores.get('reader_smart_gestures_v1').disk.get('settings')),
+  smartGesturePolicy.DEFAULT_READER_SMART_GESTURES);
+ assert.deepEqual(app.get('readerSmartGestureSettings'),smartGesturePolicy.DEFAULT_READER_SMART_GESTURES);
  assert.equal(stores.get('reader_settings_v1').disk.get('developerMode'),false,'reset durably disables developer boundaries');
  const snap=appearanceStore.current();assert.equal(snap.appThemeMode,'system');assert.equal(snap.activeTheme,'night');assert.equal(snap.dayTheme,'day');assert.equal(snap.nightTheme,'night');assert.equal(snap.fontSize,18);
  assert.equal((await new readingModule.ReaderSettingsGateway(owner).load()).pageTransition,'slide');assert.equal((await new ttsModule.ReaderTtsPreferencesGateway(owner).load()).keepScreenOn,false);},
@@ -137,7 +147,7 @@ async function fixture(){
  assert.equal(f.mode(),'list');assert.equal(f.appearance().appThemeMode,'day','later explicit theme wins after completed reset');assert.equal(f.pending(),'');
 }
 for(const failure of ['reader_configuration_reset_v1','reader_settings_v1','reader_reading_settings_v1','reader_tts_preferences_v1','mode','appearance',
- 'reader_navigation_appearance_v1','reader_control_placement_v1']){
+ 'reader_navigation_appearance_v1','reader_control_placement_v1','reader_smart_gestures_v1']){
  const f=await fixture();f.fail(failure);await assert.rejects(f.reset(),/flush|CONTROL_PLACEMENT_RESET_UNCONFIRMED/);
  if(failure==='reader_configuration_reset_v1'){assert.equal(f.mode(),'cover');assert.equal(f.appearance().fontSize,24);assert.ok(f.pending());
    assert.equal(f.stores.get('reader_configuration_reset_v1').disk.has('pending'),false);}
@@ -204,4 +214,4 @@ choose('confirm');await new Promise(r=>setImmediate(r));
 assert.equal(calls,2);assert.equal(page.resetMessage,'');assert.equal(feedback.length,1,'confirmed write with failed readback stays on the owner recovery channel');
 page.requestRestoreDefaults();page.mounted=false;page.chooseResetDialog(page.resetDialogTicket,page.temporaryBackIdentity,'confirm');
 await new Promise(r=>setImmediate(r));assert.equal(calls,2,'dismissed page cannot start reset from stale dialog');
-console.log('PASS configuration reset: eight write failure points, restart continuation, navigation and placement readback, shared bookshelf defaults and filters, and stale confirmation.');
+console.log('PASS configuration reset: nine write failure points, restart continuation, navigation, placement and gesture readback, shared bookshelf defaults and filters, and stale confirmation.');

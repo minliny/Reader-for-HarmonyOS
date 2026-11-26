@@ -29,7 +29,7 @@ const metrics=[0,1,2].map(i=>({startIndex:i*4,endIndex:i*4+4,topHeight:i*31,heig
 class Controller{rebuild(){this.rebuilds=(this.rebuilds??0)+1;}}
 class Frame{
  constructor(){this.children=[];this.props={};this.disposed=0;this.commonAttribute={};
-  for(const name of ['width','height','clip','translate'])this.commonAttribute[name]=v=>{this.props[name]=v;return this.commonAttribute;};}
+  for(const name of ['width','height','clip','clipShape','translate'])this.commonAttribute[name]=v=>{this.props[name]=v;return this.commonAttribute;};}
  appendChild(n){this.children.push(n);}
  removeChild(n){assert.ok(this.children.includes(n));this.children=this.children.filter(c=>c!==n);}
  dispose(){this.disposed++;}
@@ -37,17 +37,19 @@ class Frame{
 const dependencies={FrameNode:Frame,NodeController:Controller,
  TextController:class{getLayoutManager(){return {getLineCount:()=>count,getLineMetrics:i=>metrics[i],getRectsForRange:()=>[]};}},
  typeNode:{createNode(){const n=new Frame();n.inputs=[];n.initialize=(...args)=>n.inputs.push(args);n.attribute={};
-  for(const key of ['lineSpacing','copyOption','editMenuOptions','selectedBackgroundColor','fontWeight','width','fontFamily','fontSize','lineHeight','fontColor','letterSpacing','textIndent','textAlign','direction','onTextSelectionChange'])
+  for(const key of ['lineSpacing','copyOption','editMenuOptions','selectedBackgroundColor','fontWeight','width','fontFamily','fontSize','lineHeight','fontColor','letterSpacing','textIndent','textAlign','direction','onTextSelectionChange','punctuationOverflow'])
    n.attribute[key]=v=>{n.props[key]=v;return n.attribute;};
   n.measure=v=>{n.constraint=v;};n.layout=v=>{n.position=v;};nodes.push(n);return n;}},
  FontWeight:{Regular:400},CopyOptions:{InApp:1,None:0},WordBreak:{BREAK_ALL:1},TextAlign:{JUSTIFY:'justify',Start:'start'},Direction:{Rtl:'rtl',Ltr:'ltr'},
  hilog:{info(_d,_t,_f,v){logs.push(JSON.parse(v));}}};
 const adapterSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextMeasurement.ets',import.meta.url),'utf8');
 const adapterJs=ts.transpileModule(adapterSource.replace(/^import.*$/gm,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
-const nativeAdapter=new Function('typeNode','WordBreak','LengthMetrics',adapterJs+';return {ReaderNativeTextMeasurement,readerNativeTextGeometryKey,readerNativeTextNodeGeometry,readerNativeTextNodeContent};')(dependencies.typeNode,dependencies.WordBreak,{vp:v=>v});
+const nativeAdapter=new Function('typeNode','WordBreak','LengthMetrics','deviceInfo',adapterJs+
+ ';return {ReaderNativeTextMeasurement,readerNativeTextGeometryKey,readerNativeTextNodeGeometry,readerNativeTextNodeContent,readerNativeTextPunctuationOverhang};')
+ (dependencies.typeNode,dependencies.WordBreak,{vp:v=>v},{distributionOSApiVersion:260000,apiAvailable:()=>true});
 dependencies.ReaderNativeTextMeasurement=nativeAdapter.ReaderNativeTextMeasurement;
 const windowSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets',import.meta.url),'utf8');
-const windowJs=ts.transpileModule(windowSource.replace(/^import.*$/gm,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+const windowJs=ts.transpileModule(windowSource.replace(/^import[\s\S]*?;$/gm,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 const menuId = () => ({equals(other) { return this === other; }});
 const quoteId = menuId();
 const menuIds = {COPY:menuId(), SHARE:menuId(), of:() => quoteId};
@@ -57,10 +59,15 @@ const shareJs = ts.transpileModule(sharePresentation.replace(/^import.*$/gm,'').
 const { readerShareSelectionMenu, readerQuoteSelection } = new Function('TextMenuItemId',
  shareJs+';return {readerShareSelectionMenu, readerQuoteSelection};')(menuIds);
 dependencies.ReaderNativeTextWindow=new Function('FrameNode','LengthMetrics','graphicsText','readerNativeTextGeometryKey',
- 'readerNativeTextNodeGeometry','readerNativeTextNodeContent','CopyOptions','TextMenuItemId','readerShareSelectionMenu','readerQuoteSelection',
+ 'readerNativeTextNodeGeometry','readerNativeTextNodeContent','readerNativeTextPunctuationOverhang',
+ 'CopyOptions','TextMenuItemId','readerShareSelectionMenu','readerQuoteSelection','RectShape',
  windowJs+';return ReaderNativeTextWindow;')(Frame,{vp:v=>v},{RectWidthStyle:{TIGHT:0},RectHeightStyle:{TIGHT:0}},
  nativeAdapter.readerNativeTextGeometryKey,nativeAdapter.readerNativeTextNodeGeometry,nativeAdapter.readerNativeTextNodeContent,
- dependencies.CopyOptions,menuIds,readerShareSelectionMenu,readerQuoteSelection);
+ nativeAdapter.readerNativeTextPunctuationOverhang,dependencies.CopyOptions,menuIds,readerShareSelectionMenu,readerQuoteSelection,
+ class RectShape {
+  width(value) { this.clipWidth = value; return this; }
+  height(value) { this.clipHeight = value; return this; }
+ });
 const js=ts.transpileModule(prefix.replace(/^import[\s\S]*?;$/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 const {Probe,samples}=new Function(...Object.keys(dependencies),js+';return {Probe:TextNodeDiagnosticController,samples:TEXT_NODE_SAMPLES};')(...Object.values(dependencies));
 const probe=new Probe(),context={vp2px:v=>v*3.5,px2vp:v=>v/3.5,fp2px:v=>v*3.5};
@@ -128,6 +135,28 @@ console.log('Text node diagnostic: installed SDK, exact measured-node reuse, nat
  assert.throws(()=>invalid.configure(0,1,6),/REFLOWED/);invalid.close();assert.equal(changed.disposed,1);
 }
 console.log('PASS native paragraph window baseline compensation, unchanged shaping and exact ownership');
+
+{
+ const measurement=new nativeAdapter.ReaderNativeTextMeasurement();
+ const line={startIndex:0,endIndex:4,topHeight:0,height:31,width:100,baseline:25};
+ const controller={getLayoutManager:()=>({getLineCount:()=>1,getLineMetrics:()=>line,
+  getRectsForRange:()=>[{rect:{left:95,right:120,top:0,bottom:31}}]})};
+ const style={widthVp:context.px2vp(100),fontFamily:'ReaderFont',fontSize:20,fontWeight:400,lineHeight:31,
+  letterSpacing:0,color:'#111',alignment:'start',breakAll:false,bookBody:true,punctuationOverflow:true};
+ measurement.measure(context,'正文，',controller,style);
+ const node=measurement.take(controller);
+ const win=new dependencies.ReaderNativeTextWindow(context,node,controller,100);
+ win.configure(0,0);
+ assert.equal(node.props.clip,false);
+ assert.equal(node.constraint.maxSize.width,100);
+ assert.equal(win.frame().props.width,'100px');
+ assert.equal(win.frame().props.clip,false);
+ assert.equal(win.frame().props.clipShape.clipWidth,`${100+context.fp2px(style.fontSize)}px`);
+ assert.equal(win.frame().props.clipShape.clipHeight,'31px','the clip extension must still exclude other lines');
+ assert.deepEqual(win.glyphRects(0,4),[{left:95,right:120,top:0,bottom:31}]);
+ win.close();
+}
+console.log('PASS punctuation clip opens the right edge without changing wrapping width or the vertical viewport');
 
 {
  let reads=0;

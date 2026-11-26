@@ -246,3 +246,47 @@ response={responseCode:200,result:documentBytes.buffer,header:{'content-type':'a
 await assert.rejects(host.executeBounded({url:'https://93.184.216.34/document'},16),/declared response exceeds 16 byte limit/);
 await assert.rejects(host.executeBounded({url:'https://93.184.216.34/document'},0),/invalid response limit/);
 console.log('PASS bounded text transport: native, declared and actual byte limits precede decoding');
+
+const webDavOrigin = 'https://192.168.1.20:8443/webdav';
+const webDavObject = webDavOrigin + '/backup.manifest';
+for (const contentType of ['text/plain; charset=iso-8859-1', 'text/cache-manifest',
+  'application/octet-stream; charset=utf-8', 'application/xml', undefined]) {
+ const headers = contentType === undefined ? {} : {'content-type':contentType};
+ response = {responseCode:200,result:payload.buffer,header:headers};
+ const observed = await host.executeWebDav(webDavOrigin,{url:webDavObject,method:'GET'},16);
+ assert.equal(observed.bytes.buffer,payload.buffer,'DAV verification sees the original bytes irrespective of response MIME metadata');
+ assert.deepEqual(observed.headers,headers);
+ assert.equal(observed.status,200);
+ assert.equal(requests.at(-1).options.expectDataType,http.HttpDataType.ARRAY_BUFFER);
+ assert.equal(requests.at(-1).options.maxLimit,16);
+}
+await assert.rejects(host.executeWebDav(webDavOrigin,{url:webDavObject,method:'GET'},3), /exceeds 3 byte limit/);
+for (const [method,status] of [['PUT',201],['MKCOL',201],['DELETE',204],['GET',401],['GET',404],['PUT',412]]) {
+ response = {responseCode:status,result:undefined,header:{'content-length':'0'}};
+ const observed = await host.executeWebDav(webDavOrigin,{url:webDavObject,method},16);
+ assert.equal(observed.status,status,'bodyless DAV status must reach the protocol owner');
+ assert.deepEqual(observed.bytes,new Uint8Array(0));
+}
+response = {responseCode:200,result:undefined,header:{}};
+await assert.rejects(host.executeWebDav(webDavOrigin,{url:webDavObject,method:'GET'},16), /requested raw response bytes/);
+response = {responseCode:207,result:'<multistatus/>',header:{'content-type':'application/xml'}};
+await assert.rejects(host.executeWebDav(webDavOrigin,{url:webDavObject,method:'PROPFIND'},16), /requested raw response bytes/);
+response = {responseCode:200,result:undefined,header:{'content-length':'2'}};
+await assert.rejects(host.executeWebDav(webDavOrigin,{url:webDavObject,method:'PUT'},16), /requested raw response bytes/);
+for (const location of ['/same-origin','https://other.example/different-origin']) {
+ response = {responseCode:307,result:undefined,header:{location}};
+ const start = requests.length;
+ const observed = await host.executeWebDav(webDavOrigin,{url:webDavObject,method:'GET',followRedirects:true},16);
+ assert.equal(observed.status,307);
+ assert.equal(requests.length,start+1);
+ assert.equal(await requests.at(-1).interceptors[0].interceptorHandle({},response),false,'no native redirect even for same origin');
+}
+const beforeInvalid = requests.length;
+for (const target of ['http://192.168.1.20:8443/webdav', 'https://192.168.1.21:8443/webdav',
+ 'https://192.168.1.20/webdav', 'https://name:password@192.168.1.20:8443/webdav', webDavObject + '?token=private']) {
+ await assert.rejects(host.executeWebDav(webDavOrigin,{url:target,method:'GET'},16), /configured HTTPS origin/);
+}
+await assert.rejects(host.executeWebDav(webDavOrigin,{url:webDavObject,method:'GET',headers:{Host:'other.example'}},16), /Host override/);
+await assert.rejects(host.executeWebDav(webDavOrigin,{url:webDavObject,method:'GET'},16,()=>true), /cancelled/);
+assert.equal(requests.length,beforeInvalid,'origin and cancellation checks precede native dispatch');
+console.log('PASS scoped WebDAV Host: exact bytes, bodyless HTTP status, bounded size, no redirects or alternate origin');

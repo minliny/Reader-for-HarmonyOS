@@ -295,19 +295,38 @@ console.log('PASS byte-decode entry, exact refreshed global page and xy/CAS, sta
 
 // Contain uses one bounded preview per logical image, never 100 visible crop leases.
 {
- const imageCalls=[],leaseReleases=[];let progressWrites=0;
+ const imageCalls=[],leaseReleases=[],exports=[];let progressWrites=0;
+ const original=Uint8Array.of(1,2,3);let finishExport;
  const rt={supportsCoreCapability:()=>true,request:async(method,params)=>{
   if(method==='manga.chapter.get')return {data:structuredClone(chapter)};
   if(method==='reading.progress.get')return {data:{token:{epoch:1,revision:0},location:null}};
   progressWrites++;return {data:{token:{epoch:1,revision:1},location:params.location}};
- },loadReadingImage:async(...args)=>{imageCalls.push(args);return {fileUri:`file://preview-${imageCalls.length}`,width:args[11]?20:1000,height:args[11]?2000:1000,intrinsicWidth:1000,intrinsicHeight:100000,revision:'pixels'};},releaseReadingImage:uri=>leaseReleases.push(uri)};
+ },loadReadingImage:async(...args)=>{imageCalls.push(args);return {fileUri:`file://preview-${imageCalls.length}`,width:args[11]?20:1000,height:args[11]?2000:1000,intrinsicWidth:1000,intrinsicHeight:100000,revision:'pixels'};},releaseReadingImage:uri=>leaseReleases.push(uri),
+ async readMangaImageForSave(identity, version, allowNetwork, current){
+  exports.push(identity.resourceRef);
+  assert.equal(identity.chapterId, '/c');
+  assert.equal(version, 'r');
+  assert.equal(allowNetwork, true);
+  assert.equal(current(), true);
+  if (finishExport !== undefined) await finishExport;
+  return original;
+ }};
  const c=new Controller(rt);await c.setPreviewMode(true);await c.open('s','b',0);
  assert.equal(c.pageGeometry(0).tileHeight,100000);assert.ok(imageCalls.length<=2);assert.equal(imageCalls[0][11],true);
+ assert.equal(await c.readPageImageForSave(0, () => true), original, 'contain can save original bytes through the resource gateway');
+ assert.equal(await c.readPageImageForSave(0, () => false), undefined);
+ assert.deepEqual(exports, [chapter.manifest.pages[0].resourceRef]);
+ assert.equal(progressWrites, 0);
  await c.setTileWindow([{ordinal:0,tileIndex:0}]);assert.ok(c.tile(0,0).image);await c.savePosition(0,0.1,0.75);assert.equal(progressWrites,1);
  const previousProgress=c.savedLocation;await c.setPreviewMode(false,0);
  assert.equal(c.pageGeometry(0).tileHeight,1000);assert.equal(imageCalls.at(-1)[11],false);assert.deepEqual(c.savedLocation,previousProgress,'fit changes preserve normalized location and CAS');
  await c.setTileWindow([{ordinal:0,tileIndex:75}]);assert.equal(imageCalls.at(-1)[9],0.75);assert.equal(imageCalls.at(-1)[11],false);
- assert.ok(leaseReleases.length>0);c.close();
+ assert.ok(leaseReleases.length>0);
+ let finish;
+ finishExport = new Promise(resolve => { finish = resolve; });
+ const stale = c.readPageImageForSave(0, () => true);
+ c.close(); finish();
+ assert.equal(await stale, undefined, 'close retires an in-flight original read');
 }
 console.log('PASS contain preview controller uses one image row, bounds neighbors, forwards preview mode, keeps original geometry/CAS and restores full-resolution region when width mode returns');
 

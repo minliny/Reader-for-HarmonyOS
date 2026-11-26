@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { selectedProductionClasses } from './lib/selected-production-methods.mjs';
+import { selectedProductionClasses, selectedProductionMethods, selectedProductionValues } from './lib/selected-production-methods.mjs';
 import {
   DEFAULT_READER_SMART_GESTURES, normalizeReaderSmartGestureSettings, readerSmartGestureAction,
 } from '../entry/src/main/ets/features/reading/application/ReaderSmartGesturePolicy.ts';
@@ -110,4 +110,76 @@ test('an overlapping reader retires its predecessor before enabling its own cont
   assert.deepEqual(fixture.calls, [true, oldMonitor, oldMonitor, false, true, newMonitor]);
   current.detach();
   assert.deepEqual(fixture.calls.slice(-2), [newMonitor, false]);
+});
+
+test('destroying a retired ability leaves the successor gesture monitor and preferences alone', async () => {
+  const fixture = nativeMonitor(), operations = [];
+  new fixture.HarmonySmartGestureHost().attach(fixture.context, fixture.callbacks);
+  const monitor = fixture.calls[1];
+  const current = { release: async () => { operations.push('release'); } };
+  const Entry = selectedProductionMethods(new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url),
+    'EntryAbility', ['onDestroy'], {
+      HarmonySmartGestureHost: fixture.HarmonySmartGestureHost,
+      ReaderSmartGesturePreferences: { detach: () => operations.push('preferences') },
+      ReaderRuntimeOwner: { isCurrent: owner => owner === current },
+      ReaderThemeHost: { detach() {} }, ReaderNavigationAppearancePreferences: { detach() {} },
+      ReaderWindowCoordinator: { destroyWindow: () => operations.push('window') },
+      AppStorage: { setOrCreate() {} }, ReaderDocumentPickerActivity: { setForeground() {} },
+      ReaderSystemFileOpenHost: { detach() {} },
+    });
+  const old = Object.assign(new Entry(), { frameworkCapture: { close() {} }, runtimeOwner: { async release() {} } });
+  old.onDestroy();
+  assert.deepEqual(fixture.calls, [true, monitor]);
+  assert.deepEqual(operations, ['window']);
+  const owner = Object.assign(new Entry(), { frameworkCapture: { close() {} }, runtimeOwner: current });
+  monitor({ operateIntention: 0 });
+  owner.onDestroy();
+  await Promise.resolve();
+  assert.deepEqual(fixture.actions, [], 'queued native callbacks cannot dispatch across ability retirement');
+  assert.deepEqual(fixture.calls, [true, monitor, monitor, false]);
+  assert.deepEqual(operations, ['window', 'preferences', 'window', 'release']);
+});
+
+test('retiring gesture preferences prevents an earlier write from publishing over the next ability', async () => {
+  let finishOld;
+  let acceptOld;
+  const loaded = [];
+  const states = [];
+  let value = '';
+  const gate = new Promise(resolve => { finishOld = resolve; });
+  const oldWriteStarted = new Promise(resolve => { acceptOld = resolve; });
+  const file = new URL('../entry/src/main/ets/app/ReaderSmartGesturePreferences.ts', import.meta.url);
+  const { ReaderSmartGesturePreferences: Preferences } = selectedProductionClasses(
+    file, ['ReaderSmartGesturePreferences'], {
+      ...selectedProductionValues(file, ['STATE_KEY', 'STORE_NAME', 'PREFERENCE_KEY']),
+      preferences: { async getPreferences(context) {
+        loaded.push(context.filesDir);
+        return {
+          async get() { return value; },
+          async put(_key, next) {
+            if (context.filesDir === 'old') { acceptOld(); await gate; }
+            value = next;
+          },
+          async flush() {},
+        };
+      } },
+      readerHostPreferencesName: (_directory, name) => name,
+      AppStorage: { setOrCreate: (_key, state) => states.push(state) },
+      DEFAULT_READER_SMART_GESTURES, normalizeReaderSmartGestureSettings,
+    });
+  Preferences.attach({ filesDir: 'old' });
+  const writing = Preferences.select(enabled, () => true);
+  await oldWriteStarted;
+  Preferences.detach();
+  Preferences.attach({ filesDir: 'new' });
+  assert.deepEqual(loaded, ['old'], 'new preference reads wait for the admitted old write');
+  assert.deepEqual(states, [DEFAULT_READER_SMART_GESTURES, DEFAULT_READER_SMART_GESTURES]);
+  finishOld();
+  await writing;
+  const latestReset = Preferences.resetDefaults(() => true);
+  await latestReset;
+  assert.deepEqual(loaded, ['old', 'new']);
+  assert.deepEqual(states, [DEFAULT_READER_SMART_GESTURES, DEFAULT_READER_SMART_GESTURES,
+    enabled, DEFAULT_READER_SMART_GESTURES], 'the successor can publish only its own read and receipt');
+  await assert.rejects(Preferences.resetDefaults(() => false), /PREFERENCES_RETIRED/);
 });

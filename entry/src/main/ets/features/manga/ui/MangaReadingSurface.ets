@@ -1243,6 +1243,8 @@ export struct MangaReadingSurface {
       bodyOwnsInput: this.readerPanelForeground() && this.opened && !this.controlsVisible &&
         this.panel.length === 0 && this.panelPhase === 'closed' && !this.chapterEnd && !this.recovering &&
         !this.refreshing && !this.boundaryBusy && !this.boundaryDragging && !this.restoringAnchor &&
+        this.pendingChapterTransition === undefined && !this.rollbackPainting && this.rollbackChapterController === undefined &&
+        !ReaderNativeAlertWindow.isPresented() &&
         !this.loginRequiredForControls && this.error.length === 0 && this.zoom === 1,
       inputFocused: readerControlKeyboardVisible(ReaderWindowCoordinator.metrics()),
       selectionActive: false,

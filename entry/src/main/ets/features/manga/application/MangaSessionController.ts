@@ -123,7 +123,7 @@ export class MangaSessionController {
   async readPageImageForSave(ordinal: number, current: () => boolean): Promise<Uint8Array | undefined> {
     const chapter = this.chapterData;
     const page = this.facts.get(ordinal);
-    if (chapter === undefined || page === undefined || this.candidatePendingPresentation || this.previewMode) return undefined;
+    if (chapter === undefined || page === undefined || this.candidatePendingPresentation) return undefined;
     const generation = this.generation;
     const active = (): boolean => current() && generation === this.generation && this.chapterData === chapter &&
       this.sessionContentCurrent() && this.facts.get(ordinal)?.resourceRef === page.resourceRef;

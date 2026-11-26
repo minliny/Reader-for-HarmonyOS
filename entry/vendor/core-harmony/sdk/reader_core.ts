@@ -177,6 +177,8 @@ export type NativeReaderCoreModule = {
   readEpubEntryAsync(archivePath: string, entryPath: string, maxBytes: number): Promise<Uint8Array>;
   encodeText(text: string, charset: string, maxBytes: number): Uint8Array;
   probeStorageAsync?(dataDirectory: string): Promise<string>;
+  exportLibraryReadOnlyAsync?(dataDirectory: string, password: string): Promise<string>;
+  readLibraryBackupIdentityAsync?(dataDirectory: string): Promise<string>;
   createRuntime(config?: JsonObject | string): NativeRuntimeHandle;
   createRuntimeAsync?(config?: JsonObject | string): Promise<NativeRuntimeHandle>;
   releaseRuntime(runtime: NativeRuntimeHandle): void;
@@ -224,6 +226,55 @@ export type ReaderCoreStorageProbe = {
     observedDataFormatGeneration: number | null;
   };
 };
+
+export type ReaderCoreReadOnlyLibraryExport = {
+  content: string;
+  packageSha256: string;
+  localOriginals: JsonValue[];
+};
+
+export type ReaderCoreLibraryBackupIdentity = {
+  libraryId: string;
+  writerInstanceId: string;
+};
+
+export async function readReaderCoreLibraryBackupIdentityWithModule(native: NativeReaderCoreModule,
+  dataDirectory: string, isCurrent: () => boolean = () => true): Promise<ReaderCoreLibraryBackupIdentity | undefined> {
+  if (!isCurrent()) throw new Error('Reader Core library identity read cancelled');
+  if (native.readLibraryBackupIdentityAsync === undefined) throw new Error('Reader Core library identity read is unavailable');
+  const raw = await native.readLibraryBackupIdentityAsync(dataDirectory);
+  if (!isCurrent()) throw new Error('Reader Core library identity read cancelled');
+  if (raw.length === 0 || raw.length > 4096) throw new Error('Reader Core library identity response exceeds budget');
+  const value: unknown = JSON.parse(raw);
+  if (!isJsonObject(value) || value['schemaVersion'] !== 1) throw new Error('Reader Core library identity is invalid');
+  const libraryId = value['libraryId'], writerInstanceId = value['writerInstanceId'];
+  if (libraryId === null && writerInstanceId === null) return undefined;
+  if (typeof libraryId !== 'string' || !/^[0-9a-f]{32}$/.test(libraryId) ||
+    typeof writerInstanceId !== 'string' || !/^[0-9a-f]{64}$/.test(writerInstanceId)) {
+    throw new Error('Reader Core library identity is invalid');
+  }
+  return { libraryId, writerInstanceId };
+}
+
+/** A bounded maintenance call. No Runtime handle or callback bridge is used. */
+export async function exportReaderCoreLibraryReadOnlyWithModule(native: NativeReaderCoreModule,
+  dataDirectory: string, password: string, isCurrent: () => boolean = () => true): Promise<ReaderCoreReadOnlyLibraryExport> {
+  if (!isCurrent()) throw new Error('Reader Core library export cancelled');
+  if (native.exportLibraryReadOnlyAsync === undefined) throw new Error('Reader Core read-only library export is unavailable');
+  const raw = await native.exportLibraryReadOnlyAsync(dataDirectory, password);
+  if (!isCurrent()) throw new Error('Reader Core library export cancelled');
+  if (raw.length === 0 || raw.length > 28 * 1024 * 1024) throw new Error('Reader Core library export response exceeds budget');
+  const value: unknown = JSON.parse(raw);
+  if (!isJsonObject(value) || value['schemaVersion'] !== 1 || value['scope'] !== 'coreLibraryMetadata') {
+    throw new Error('Reader Core library export response is invalid');
+  }
+  const content = value['content'], hash = value['packageSha256'], originals = value['localOriginals'];
+  if (typeof content !== 'string' || content.length === 0 || content.length > 24 * 1024 * 1024 ||
+    typeof hash !== 'string' || !/^[0-9a-f]{64}$/.test(hash) || !Array.isArray(originals) || originals.length > 10000) {
+    throw new Error('Reader Core library export metadata is invalid');
+  }
+  return { content, packageSha256: hash, localOriginals: originals };
+}
 
 export async function probeReaderCoreStorageWithModule(native: NativeReaderCoreModule,
   dataDirectory: string, isCurrent: () => boolean = () => true): Promise<ReaderCoreStorageProbe> {

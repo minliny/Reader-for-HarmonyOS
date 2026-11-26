@@ -15,18 +15,27 @@ const directory = '/reader-library';
 const collection = base + directory + '/';
 const sourcePath = '/sandbox/staged.readerbackup';
 const restoredPath = '/sandbox/restored.readerbackup';
+const verifiedPath = '/sandbox/verified.readerbackup';
 const maximum = 512 * 1024 * 1024;
 const partBytes = 4 * 1024 * 1024;
 const manifestName = hash => `reader-library-v1-${hash}.manifest`;
+const partName = (hash, index = '000') => `reader-library-v1-${hash}.${index}.part`;
+const retiredName = hash => `reader-library-v1-${hash}.retired`;
+const removedName = hash => `reader-library-v1-${hash}.removed`;
+const probe = 'reader-library-conditional-v2.probe';
+const authored = offset => ({ createdAt: 1700000000000 + offset });
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const reason = expected => error => error.name === 'Error' && error.reason === expected;
 
 function provider(options = {}) {
+  const folder = options.directory ?? directory;
+  const remoteCollection = base + folder + '/';
   const files = new Map();
   const remote = new Map();
   const requests = [];
   const calls = [];
   let clock = 1780000000000;
+  let uptime = 100;
   let hasDirectory = options.hasDirectory ?? true;
   let active = true;
   const credentials = 'Basic fixture-secret';
@@ -45,13 +54,13 @@ function provider(options = {}) {
       calls.push(method);
       switch (method) {
         case 'sync.webdav.directory.list.plan':
-          assert.deepEqual(params, { baseUrl: base, directory }, 'credentials stay in the Host');
-          return { data: { request: { method: 'PROPFIND', url: base + directory, headers: { Depth: '1' }, body: '<propfind/>' } } };
+          assert.deepEqual(params, { baseUrl: base, directory: folder }, 'credentials stay in the Host');
+          return { data: { request: { method: 'PROPFIND', url: base + folder, headers: { Depth: '1' }, body: '<propfind/>' } } };
         case 'sync.webdav.multistatus.parse':
           assert.equal(params.response.status, 207);
           if (options.invalidListing) throw new Error('malformed provider listing');
           return { data: { resources: [
-            ...Array.from(remote, ([name, data]) => ({ href: collection + name, lastModified: data.modified })),
+            ...Array.from(remote, ([name, data]) => ({ href: remoteCollection + name, lastModified: data.modified })),
             ...(options.extraListings ?? []),
           ] } };
         default: assert.fail(`unexpected Core request ${method}`);
@@ -59,56 +68,65 @@ function provider(options = {}) {
     },
   };
 
+  const response = (status, body = '', headers = {}) => ({ status, bytes: Buffer.from(body), headers, finalUrl: remoteCollection });
   const http = {
-    async executeBounded(params, limit, _requestId, cancelled) {
-      assert.equal(params.httpsOnly, true);
-      assert.equal(params.sameOriginRedirectsOnly, true);
-      assert.equal(params.followRedirects, false);
+    async executeWebDav(endpoint, params, limit, cancelled) {
+      assert.equal(endpoint, base, 'uses WebDAV-origin-scoped raw HTTP');
       assert.equal(params.headers.Authorization, credentials);
       assert.equal(cancelled(), false);
-      assert.ok(params.url.startsWith(collection));
+      assert.ok(params.url.startsWith(params.method === 'MKCOL' ? base + '/' : remoteCollection));
       assert.ok(limit > 0 && limit < 16 * 1024 * 1024);
-      const name = params.url.slice(collection.length);
-      requests.push({ method: params.method, name, condition: params.headers['If-None-Match'] });
-      const fault = await options.before?.(params.method, name, { remote, store, retire: () => { active = false; } });
+      const name = params.method === 'MKCOL' ? params.url.slice(base.length) : params.url.slice(remoteCollection.length);
+      requests.push({ method: params.method, name, condition: params.headers['If-None-Match'], match: params.headers['If-Match'] });
+      const fault = await options.before?.(params.method, name, { remote, store, response,
+        advance: elapsed => { uptime += elapsed; }, retire: () => { active = false; } }, params);
       if (fault !== undefined) return fault;
-      if (params.method === 'PROPFIND') return { status: hasDirectory ? 207 : 404, body: '<multistatus/>' };
-      if (params.method === 'MKCOL') { hasDirectory = true; return { status: 201 }; }
+      if (params.method === 'PROPFIND') return response(hasDirectory ? 207 : 404, '<multistatus/>');
+      if (params.method === 'MKCOL') { hasDirectory = name === folder + '/'; return response(201); }
       if (params.method === 'GET') {
         const item = remote.get(name);
         if (item === undefined) {
           if (options.bodyless) throw new Error('http.execute: source returned HTTP 404 without response content');
-          return { status: 404, body: '' };
+          return response(404);
         }
         if (params.headers['If-Match'] !== undefined && params.headers['If-Match'] !== item.etag) {
-          return { status: 412 };
+          return response(412);
         }
         assert.ok(item.body.length <= limit);
-        const headers = { ETag: options.weakEtag ? `W/${item.etag}` : item.etag };
-        return options.textOnly ? { status: 200, body: item.body.toString(), headers } :
-          { status: 200, bodyBase64: item.body.toString('base64'), headers };
+        const headers = { ETag: options.weakEtag ? `W/${item.etag}` : item.etag,
+          'Content-Type': options.mime ?? 'application/octet-stream' };
+        return response(200, item.body, headers);
       }
-      assert.equal(params.method, 'PUT', 'manual publisher never deletes or overwrites through another verb');
+      if (params.method === 'DELETE') {
+        assert.ok(params.headers['If-Match'], 'every deletion uses a strong tag');
+        const item = remote.get(name);
+        if (item === undefined) return response(404);
+        if (!options.ignoreDeleteCondition && params.headers['If-Match'] !== item.etag) return response(412);
+        remote.delete(name);
+        await options.afterDelete?.(name);
+        return response(204);
+      }
+      assert.equal(params.method, 'PUT');
       assert.equal(params.headers['If-None-Match'], '*');
       assert.equal(params.headers['Content-Type'], 'application/octet-stream');
       if (remote.has(name) && !options.ignoreConditions) {
         if (options.bodyless) throw new Error('http.execute: source returned HTTP 412 without response content');
-        return { status: 412 };
+        return response(412);
       }
       store(name, params.body);
       await options.afterPut?.(name, { remote, store, retire: () => { active = false; } });
-      return { status: 201 };
+      return response(201);
     },
   };
 
-  const { WebDavLibraryBackup } = pureModuleProbe(source, 'WebDavLibraryBackup.ts', {
+  const { WebDavLibraryBackup, WEB_DAV_ARCHIVE_READ_WINDOW } = pureModuleProbe(source, 'WebDavLibraryBackup.ts', {
     LOCAL_RECOVERY_MAX_BYTES: maximum,
     recoveryDigest: async bytes => digest(bytes),
     recoveryReserve: async (path, bytes) => { assert.equal(path, '/sandbox'); assert.ok(bytes <= maximum); },
     recoveryText: bytes => new TextDecoder('utf-8', { fatal: true }).decode(bytes),
     recoveryUtf8: text => Buffer.from(text),
     recoveryOutput: async (path, consume) => {
-      assert.equal(path, restoredPath);
+      assert.ok(path === restoredPath || path === verifiedPath);
       const pieces = [];
       await consume(async bytes => { pieces.push(Buffer.from(bytes)); });
       files.set(path, Buffer.concat(pieces));
@@ -123,43 +141,47 @@ function provider(options = {}) {
       return digest(file);
     },
     HttpExecuteHost: { instance: http },
+    systemDateTime: { TimeType: { STARTUP: 0 }, getUptime: () => uptime },
     url: { URL: { parseURL: (value, baseUrl) => new URL(value, baseUrl) } },
     util: { Base64Helper: class {
       encodeToStringSync(bytes) { return Buffer.from(bytes).toString('base64'); }
       decodeSync(text) { return Buffer.from(text, 'base64'); }
     } },
-  }, ['WebDavLibraryBackup']);
+  }, ['WebDavLibraryBackup', 'WEB_DAV_ARCHIVE_READ_WINDOW']);
   const assertCurrent = async () => {
     if (!active) throw new Error('original provider retired');
   };
-  const transport = new WebDavLibraryBackup(runtime, { url: base, directory }, credentials, assertCurrent, () => !active);
+  const transport = new WebDavLibraryBackup(runtime, { url: base, directory: folder }, credentials, assertCurrent, () => !active);
 
   return {
-    transport, requests, calls, remote, store, files,
-    async publish(bytes) {
+    transport, requests, calls, remote, store, files, readWindow: WEB_DAV_ARCHIVE_READ_WINDOW,
+    async publish(bytes, metadata) {
       files.set(sourcePath, bytes);
       const hash = digest(bytes);
-      await transport.publish(sourcePath, hash, bytes.length);
+      await transport.publish(sourcePath, hash, bytes.length, metadata);
       return hash;
     },
-    async receive() { return transport.downloadLatest(restoredPath); },
+    async receive(sha256) { return transport.downloadLatest(restoredPath, sha256); },
   };
 }
 
 test('publishes verified chunks before the immutable manifest and restores the exact encrypted archive', async () => {
-  const service = provider({ hasDirectory: false, bodyless: true,
+  const service = provider({ hasDirectory: false, bodyless: true, directory: '/ReaderBackup/ReaderHarmony',
+    mime: 'text/cache-manifest; charset=utf-8',
     extraListings: [{ href: 'https://outside.example.invalid/' + manifestName('2'.repeat(64)), lastModified: 'Nov 1, 2060' }],
   });
   const bytes = Buffer.alloc(partBytes + 137, 0x65);
   const hash = await service.publish(bytes);
   const remoteNames = Array.from(service.remote.keys());
   assert.deepEqual(remoteNames, [
-    `reader-library-v1-${hash}.probe`, `reader-library-v1-${hash}.000.part`,
+    probe, `reader-library-v1-${hash}.000.part`,
     `reader-library-v1-${hash}.001.part`, manifestName(hash),
   ]);
+  assert.deepEqual(service.requests.filter(item => item.method === 'MKCOL').map(item => item.name),
+    ['/ReaderBackup/', '/ReaderBackup/ReaderHarmony/']);
   const writes = service.requests.filter(item => item.method === 'PUT');
   assert.equal(writes.at(-1).name, manifestName(hash));
-  assert.equal(service.requests.at(-1).method, 'GET');
+  assert.ok(service.requests.every(item => item.method !== 'DELETE'));
   const rawManifest = JSON.parse(service.remote.get(manifestName(hash)).body.toString());
   assert.deepEqual(rawManifest, { format: 'reader.library.webdav', version: 1, sha256: hash,
     bytes: bytes.length, parts: [digest(bytes.subarray(0, partBytes)), digest(bytes.subarray(partBytes))] });
@@ -169,10 +191,10 @@ test('publishes verified chunks before the immutable manifest and restores the e
 });
 
 test('conditional creation failure and weak or unprovable ETags keep the destination read-only', async () => {
-  for (const options of [{ ignoreConditions: true }, { weakEtag: true }, { textOnly: true }]) {
+  for (const options of [{ ignoreConditions: true }, { weakEtag: true }]) {
     const service = provider(options);
     await assert.rejects(service.publish(Buffer.from('ciphertext')), reason('readOnly'));
-    assert.deepEqual(Array.from(service.remote.keys()).map(name => name.split('.').at(-1)), ['probe']);
+    assert.ok(Array.from(service.remote.keys()).every(name => name === probe));
     assert.ok(service.requests.every(item => !item.name.endsWith('.manifest') && !item.name.endsWith('.part')));
   }
 });
@@ -219,7 +241,7 @@ test('keeps older published backups, chooses a unique latest commit and verifies
   await assert.rejects(service.receive(), reason('corrupt'));
 });
 
-test('keeps empty, absent, access denied, and ambiguous latest states distinct', async () => {
+test('keeps empty, absent and access denied distinct, and restores concrete rows even when timestamps tie', async () => {
   const empty = provider();
   assert.equal(await empty.receive(), 'empty');
   await assert.rejects(provider({ hasDirectory: false }).receive(), reason('missing'));
@@ -228,7 +250,11 @@ test('keeps empty, absent, access denied, and ambiguous latest states distinct',
   const first = await empty.publish(Buffer.from('first'));
   const second = await empty.publish(Buffer.from('second'));
   empty.remote.get(manifestName(second)).modified = empty.remote.get(manifestName(first)).modified;
-  await assert.rejects(empty.receive(), reason('conflict'));
+  const rows = await empty.transport.listArchives({});
+  assert.deepEqual(rows.map(row => row.sha256), [first, second].sort());
+  assert.ok(rows.every(row => !row.canDelete));
+  assert.equal(await empty.receive(second), 'downloaded');
+  assert.deepEqual(empty.files.get(restoredPath), Buffer.from('second'));
 });
 
 test('rejects a malformed multistatus before writing any object', async () => {
@@ -237,21 +263,267 @@ test('rejects a malformed multistatus before writing any object', async () => {
   assert.deepEqual(service.requests.map(item => item.method), ['PROPFIND']);
 });
 
-test('downloads a checked snapshot in read-only mode and detects a racing manifest update', async () => {
+test('downloads a checked snapshot in read-only mode and detects a pre-admission manifest update', async () => {
   const writer = provider();
   const bytes = Buffer.from('secure portable archive');
   const sha = await writer.publish(bytes);
-  const reader = provider({ textOnly: true, weakEtag: true });
+  const reader = provider({ mime: 'text/plain; charset=UTF-8', weakEtag: true });
   for (const [name, item] of writer.remote) reader.store(name, item.body);
   assert.equal(await reader.receive(), 'downloaded');
   assert.deepEqual(reader.files.get(restoredPath), bytes);
   assert.ok(reader.requests.every(item => item.method !== 'PUT'));
 
-  const raced = provider({ before(method, name, owner) {
-    if (method === 'GET' && name.endsWith('.part')) owner.store(manifestName(sha), 'successor manifest');
+  const raced = provider({ before(method, name, owner, params) {
+    if (method === 'GET' && name === manifestName(sha) && params.headers['If-Match'] !== undefined) {
+      owner.store(manifestName(sha), 'successor manifest');
+    }
   } });
   for (const [name, item] of writer.remote) raced.store(name, item.body);
   await assert.rejects(raced.receive(), reason('conflict'));
+});
+
+test('lists authored times and library scope, falls back only for legacy, and protects pinned and undated backups', async () => {
+  const service = provider();
+  const stamp = 1700000000000;
+  const latest = await service.publish(Buffer.from('newest authored archive'), {
+    libraryId: 'library-mine', writerInstanceId: 'writer-new', createdAt: stamp + 3000,
+  });
+  const foreign = await service.publish(Buffer.from('old other library'), { libraryId: 'library-other', createdAt: stamp + 1000 });
+  const pinned = await service.publish(Buffer.from('pinned archive'), { libraryId: 'library-mine', createdAt: stamp + 2000 });
+  const pin = JSON.parse(service.remote.get(manifestName(pinned)).body.toString());
+  assert.equal(pin.pinned, false);
+  service.store(manifestName(pinned), JSON.stringify({ ...pin, pinned: true }));
+  const legacy = await service.publish(Buffer.from('legacy undated'));
+  service.remote.get(manifestName(legacy)).modified = undefined;
+  const rows = await service.transport.listArchives({ libraryId: 'library-mine' });
+  assert.deepEqual(rows.map(row => [row.sha256, row.createdAt, row.latest, row.canDelete, row.library]), [
+    [latest, stamp + 3000, true, false, 'same'], [pinned, stamp + 2000, false, false, 'same'],
+    [foreign, stamp + 1000, false, true, 'other'], [legacy, undefined, false, false, 'unknown'],
+  ]);
+  for (const sha of [latest, pinned, legacy]) {
+    await assert.rejects(service.transport.planRemoval(sha, rows.find(row => row.sha256 === sha).manifestSha256, verifiedPath),
+      reason('cleanupFailed'));
+  }
+  assert.equal(service.requests.filter(request => request.method === 'DELETE').length, 0);
+});
+
+test('dated legacy manifests remain restorable and can never be removed by the archive list', async () => {
+  const service = provider();
+  const bytes = Buffer.from('older legacy backup');
+  const old = await service.publish(bytes);
+  service.remote.get(manifestName(old)).modified = new Date(1500000000000).toUTCString();
+  await service.publish(Buffer.from('newer authored backup'), authored(1000));
+  const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
+  assert.equal(row.latest, false);
+  assert.equal(row.canDelete, false);
+  assert.equal(row.createdAt, 1500000000000);
+  await assert.rejects(service.transport.planRemoval(old, row.manifestSha256, verifiedPath), reason('cleanupFailed'));
+  assert.equal(await service.receive(old), 'downloaded');
+  assert.deepEqual(service.files.get(restoredPath), bytes);
+  assert.ok(service.requests.every(request => request.method !== 'DELETE'));
+});
+
+test('unpublishes only the selected exact commit and keeps an admitted read intact, then removes verified retired parts', async () => {
+  let notifyPart;
+  let releasePart;
+  let old;
+  const waitForRead = new Promise(resolve => { notifyPart = resolve; });
+  const holdRead = new Promise(resolve => { releasePart = resolve; });
+  let pause = false;
+  const service = provider({
+    async before(method, name) {
+      if (pause && method === 'GET' && name === partName(old)) {
+        notifyPart();
+        await holdRead;
+      }
+    },
+  });
+  const oldBytes = Buffer.from('old selected archive');
+  old = await service.publish(oldBytes, authored(1000));
+  const newBytes = Buffer.from('new verified archive');
+  const latest = await service.publish(newBytes, authored(2000));
+  const rows = await service.transport.listArchives({});
+  const displayed = rows.find(row => row.sha256 === old);
+  const plan = await service.transport.planRemoval(old, displayed.manifestSha256, verifiedPath);
+  assert.equal(plan.replacementSha256, latest);
+  assert.deepEqual(service.files.get(verifiedPath), newBytes);
+  pause = true;
+  const runningRead = service.receive(old);
+  await waitForRead;
+  await service.transport.unpublish(plan);
+  await service.transport.unpublish(plan);
+  assert.equal(service.remote.has(manifestName(old)), false);
+  assert.equal(service.remote.has(retiredName(old)), true);
+  assert.equal(service.remote.has(removedName(old)), true);
+  assert.equal(service.remote.has(partName(old)), true);
+  const operations = service.requests.filter(op => op.method === 'PUT' || op.method === 'DELETE');
+  assert.ok(operations.findIndex(op => op.method === 'PUT' && op.name === retiredName(old)) <
+    operations.findIndex(op => op.method === 'DELETE' && op.name === manifestName(old)));
+  assert.ok(operations.findIndex(op => op.method === 'DELETE' && op.name === manifestName(old)) <
+    operations.findIndex(op => op.method === 'PUT' && op.name === removedName(old)));
+  const remaining = await service.transport.listArchives({});
+  assert.deepEqual(remaining.map(row => row.sha256), [latest]);
+  await assert.rejects(service.receive(old), reason('missing'));
+  await assert.rejects(service.publish(oldBytes, authored(1000)), reason('conflict'));
+  pause = false;
+  releasePart();
+  assert.equal(await runningRead, 'downloaded');
+  assert.deepEqual(service.files.get(restoredPath), oldBytes);
+  // The gateway invokes this phase after the durable monotonic read window.
+  await service.transport.removeRetiredParts(plan);
+  await service.transport.removeRetiredParts(plan);
+  assert.equal(service.remote.has(partName(old)), false);
+  assert.equal(service.remote.has(retiredName(old)), true);
+  assert.equal(service.remote.has(partName(latest)), true);
+  assert.equal(service.remote.has(manifestName(latest)), true);
+  assert.equal(await service.receive(), 'downloaded');
+  assert.deepEqual(service.files.get(restoredPath), newBytes);
+});
+
+test('the download read window is monotonic and a late part is never accepted', async () => {
+  let expire = false;
+  const service = provider({ before(method, name, owner) {
+    if (expire && method === 'GET' && name.endsWith('.part')) owner.advance(service.readWindow);
+  } });
+  const hash = await service.publish(Buffer.from('encrypted archive expired in transit'));
+  expire = true;
+  await assert.rejects(service.receive(hash), reason('conflict'));
+  assert.equal(service.files.has(restoredPath), false);
+});
+
+test('deletion requires a verified replacement and tolerates a lost result only when the exact object is absent', async () => {
+  let old;
+  let dropped = false;
+  const service = provider({ afterDelete(name) {
+    if (name === manifestName(old)) {
+      dropped = true;
+      throw Error('provider acknowledged the removal after losing its connection');
+    }
+  } });
+  old = await service.publish(Buffer.from('old complete backup'), authored(1000));
+  const latest = await service.publish(Buffer.from('new complete backup'), authored(2000));
+  const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
+  const part = service.remote.get(partName(latest)).body;
+  service.remote.delete(partName(latest));
+  await assert.rejects(service.transport.planRemoval(old, row.manifestSha256, verifiedPath), reason('corrupt'));
+  assert.equal(service.remote.has(manifestName(old)), true);
+  assert.ok(service.requests.every(request => request.method !== 'DELETE'));
+  service.store(partName(latest), part);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, verifiedPath);
+  await service.transport.unpublish(plan);
+  assert.equal(dropped, true);
+  assert.equal(service.remote.has(manifestName(old)), false);
+  assert.equal(service.remote.has(partName(old)), true);
+});
+
+test('a weak tag, a stale manifest, an inconsistent part, and ignored DELETE conditions fail closed', async () => {
+  const service = provider({ ignoreDeleteCondition: true });
+  const old = await service.publish(Buffer.from('older bytes'), authored(1000));
+  const latest = await service.publish(Buffer.from('latest bytes'), authored(2000));
+  const original = service.remote.get(manifestName(old));
+  const row = (await service.transport.listArchives({})).find(entry => entry.sha256 === old);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, verifiedPath);
+  service.store(manifestName(old), Buffer.concat([original.body, Buffer.from('\n')]), { modified: original.modified });
+  await assert.rejects(service.transport.unpublish(plan), reason('cleanupFailed'));
+  service.store(manifestName(old), original.body, { modified: original.modified });
+  await assert.rejects(service.transport.unpublish(plan), reason('readOnly'));
+  assert.equal(service.remote.has(manifestName(old)), true);
+  assert.equal(service.remote.has(retiredName(old)), false);
+  assert.ok(service.requests.filter(op => op.method === 'DELETE').every(op => op.name === probe));
+
+  const weak = provider({ weakEtag: true });
+  for (const [name, item] of service.remote) weak.store(name, item.body);
+  assert.ok((await weak.transport.listArchives({})).every(item => !item.canDelete));
+  await assert.rejects(weak.transport.planRemoval(old, row.manifestSha256, verifiedPath), reason('cleanupFailed'));
+  assert.equal(await weak.receive(latest), 'downloaded');
+  assert.ok(weak.requests.every(op => ['GET', 'PROPFIND'].includes(op.method)));
+
+  const changed = provider();
+  for (const [name, item] of service.remote) changed.store(name, item.body);
+  await changed.transport.unpublish(plan);
+  changed.store(partName(old), Buffer.from('wrong size').toString('base64'));
+  await assert.rejects(changed.transport.removeRetiredParts(plan), reason('cleanupFailed'));
+  assert.equal(changed.remote.has(partName(old)), true);
+  assert.equal(changed.remote.has(manifestName(latest)), true);
+});
+
+test('403 on a mutation preserves the successful read-only path, while read denial and 401 report authentication', async () => {
+  let blocked;
+  let status;
+  const service = provider({ before(method, name, owner) {
+    if (method === blocked) return owner.response(status);
+  } });
+  const bytes = Buffer.from('older readable backup');
+  const old = await service.publish(bytes, authored(1000));
+  await service.publish(Buffer.from('newer readable backup'), authored(2000));
+  const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, verifiedPath);
+  status = 403;
+  blocked = 'DELETE';
+  await assert.rejects(service.transport.unpublish(plan), reason('readOnly'));
+  assert.equal(service.remote.has(retiredName(old)), false);
+  blocked = 'PUT';
+  await assert.rejects(service.publish(Buffer.from('forbidden new write')), reason('readOnly'));
+  const start = service.requests.length;
+  assert.equal(await service.receive(old), 'downloaded');
+  assert.deepEqual(service.files.get(restoredPath), bytes);
+  assert.ok(service.requests.slice(start).every(request => ['GET', 'PROPFIND'].includes(request.method)));
+  for (const method of ['GET', 'PROPFIND']) {
+    blocked = method;
+    await assert.rejects(service.receive(old), reason('authentication'));
+  }
+  status = 401;
+  blocked = 'PUT';
+  await assert.rejects(service.publish(Buffer.from('expired credentials')), reason('authentication'));
+});
+
+test('a denied archive DELETE keeps the exact manifest readable until removal is verified', async () => {
+  let old;
+  let denyTarget = false;
+  const service = provider({ before(method, name, owner) {
+    if (denyTarget && method === 'DELETE' && name === manifestName(old)) return owner.response(403);
+  } });
+  const bytes = Buffer.from('archive stays readable when provider denies removal');
+  old = await service.publish(bytes, authored(1000));
+  await service.publish(Buffer.from('retained successor'), authored(2000));
+  const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
+  const manifest = service.remote.get(manifestName(old)).body;
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, verifiedPath);
+  denyTarget = true;
+  await assert.rejects(service.transport.unpublish(plan), reason('readOnly'));
+  assert.equal(service.remote.has(retiredName(old)), true);
+  assert.equal(service.remote.has(removedName(old)), false);
+  assert.ok((await service.transport.listArchives({})).some(item => item.sha256 === old));
+  assert.equal(await service.receive(old), 'downloaded');
+  assert.deepEqual(service.files.get(restoredPath), bytes);
+  await assert.rejects(service.transport.removeRetiredParts(plan), reason('cleanupFailed'));
+  denyTarget = false;
+  await service.transport.unpublish(plan);
+  service.store(manifestName(old), manifest);
+  assert.equal(service.remote.has(removedName(old)), true);
+  assert.ok(!(await service.transport.listArchives({})).some(item => item.sha256 === old));
+  await assert.rejects(service.receive(old), reason('missing'));
+  await assert.rejects(service.transport.removeRetiredParts(plan), reason('cleanupFailed'));
+  assert.equal(service.remote.has(partName(old)), true);
+});
+
+test('a correct scratch DELETE must succeed and remove the object before any archive mutation', async () => {
+  for (const denial of [412, 204]) {
+    const service = provider({ before(method, name, owner, params) {
+      if (method === 'DELETE' && name === probe && params.headers['If-Match'] === owner.remote.get(probe)?.etag) {
+        return owner.response(denial);
+      }
+    } });
+    const old = await service.publish(Buffer.from('older archive'), authored(1000));
+    await service.publish(Buffer.from('newer archive'), authored(2000));
+    const row = (await service.transport.listArchives({})).find(item => item.sha256 === old);
+    const plan = await service.transport.planRemoval(old, row.manifestSha256, verifiedPath);
+    await assert.rejects(service.transport.unpublish(plan), reason('readOnly'));
+    assert.ok(service.remote.has(probe));
+    assert.ok(service.remote.has(manifestName(old)));
+    assert.ok(!service.remote.has(retiredName(old)));
+    assert.deepEqual(service.requests.filter(request => request.method === 'DELETE').map(request => request.name), [probe, probe]);
+  }
 });
 
 test('uses the installed declarations and ArkTS 1.1 checks for the production transport', () => {
@@ -289,9 +561,10 @@ test('uses the installed declarations and ArkTS 1.1 checks for the production tr
       export declare function recoveryVisitFile(path:string, emit:ChunkSink, current:()=>boolean, expected?:number):Promise<string>;`,
     '../../../platform/network/HttpExecuteHost': `
       import type { JsonObject } from '@reader/core-harmony';
+      export interface HttpBytesResponse { status:number; bytes:Uint8Array; headers:Record<string,string>; finalUrl:string; }
       export declare class HttpExecuteHost {
         static readonly instance:HttpExecuteHost;
-        executeBounded(params:JsonObject, maxBytes:number, requestId?:number, cancelled?:()=>boolean):Promise<JsonObject>;
+        executeWebDav(endpoint:string, params:JsonObject, maxBytes:number, cancelled?:()=>boolean):Promise<HttpBytesResponse>;
       }`,
   };
   const paths = new Map(Object.keys(declared).map((name, index) => [name, virtualFilePath(`webdav-library-transport-port-${index}.d.ts`)]));

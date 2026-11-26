@@ -11,6 +11,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
   createReaderCoreRuntimeAsync,
   probeReaderCoreStorageAsync,
+  readLibraryBackupIdentityAsync,
   type JsonObject,
   type ReaderCoreResultEvent,
   type ReaderCoreRuntime,
@@ -1559,6 +1560,14 @@ export class ReaderRuntimeOwner {
    */
   getUIAbilityContext(): common.UIAbilityContext {
     return this.host.getContext();
+  }
+
+  async readLibraryBackupIdentity(): Promise<{ libraryId: string; writerInstanceId: string } | undefined> {
+    const filesDir = this.host.getContext().filesDir;
+    const directory = this.publicFixture === undefined ? `${filesDir}/reader-core` :
+      buildReaderPublicFixtureDirectory(filesDir, this.publicFixture.id);
+    if (directory === undefined) throw new Error('Reader library identity directory unavailable');
+    return readLibraryBackupIdentityAsync(directory, (): boolean => ReaderRuntimeOwner.isCurrent(this) && this.state === 'ready');
   }
 
   getAppearanceStore(): ReaderAppearanceStore {

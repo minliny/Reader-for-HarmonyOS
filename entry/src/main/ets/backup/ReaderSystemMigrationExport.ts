@@ -1,7 +1,7 @@
 import { common } from '@kit.AbilityKit';
 import fileIo from '@ohos.file.fs';
 import util from '@ohos.util';
-import { createReaderCoreRuntimeAsync, probeReaderCoreStorageAsync, type JsonObject, type ReaderCoreStorageProbe } from
+import { exportReaderCoreLibraryReadOnlyAsync, probeReaderCoreStorageAsync, type JsonObject, type ReaderCoreStorageProbe } from
   '@reader/core-harmony';
 import { ReaderLocalRecoveryExportPort } from './ReaderSystemMigrationOriginals';
 import { LocalRecoveryGateway, type LocalRecoveryExportPort } from '../features/bookshelf/application/LocalRecoveryGateway';
@@ -25,7 +25,7 @@ async function requireSnapshotIdentity(context: common.Context, probe: ReaderCor
 
 export async function createReaderSystemMigrationArchive(context: common.Context, applicationFilesDir: string,
   includeOriginals: boolean, current: () => boolean): Promise<void> {
-  const dataDirectory = `${context.filesDir}/reader-core`;
+  const dataDirectory = `${applicationFilesDir}/reader-core`;
   const directory = `${applicationFilesDir}/${READER_SYSTEM_MIGRATION_DIRECTORY}`;
   await ensureSystemMigrationDirectory(directory);
   const manifestPath = `${directory}/${READER_SYSTEM_MIGRATION_MANIFEST}`;
@@ -37,35 +37,32 @@ export async function createReaderSystemMigrationArchive(context: common.Context
 
   const probe = await probeReaderCoreStorageAsync(dataDirectory, current);
   await requireSnapshotIdentity(context, probe);
-  const core = await createReaderCoreRuntimeAsync({ dataDirectory }, current);
-  try {
-    const secret = (util.generateRandomUUID(false) + util.generateRandomUUID(false)).replace(/-/g, '');
-    const source = new ReaderLocalRecoveryExportPort(context.filesDir);
-    const port: LocalRecoveryExportPort = {
-      filesDir: `${context.filesDir}/reader-system-migration-export-work`,
-      request: async (method: string, params: JsonObject): Promise<JsonObject> =>
-        (await core.request(method, params, { timeoutMs: 120000, shouldCancel: (): boolean => !current() })).data,
-      retainedLocalBookSourcePath: (bookId: string, live: () => boolean): Promise<string | undefined> =>
-        source.retainedLocalBookSourcePath(bookId, live),
-    };
-    const result = await new LocalRecoveryGateway(undefined, port).exportStagedPackage(secret, includeOriginals,
-      async (path: string, packageSha256: string, packageBytes: number): Promise<boolean> => {
+  if (probe.observation.freshStorage) return;
+  const secret = (util.generateRandomUUID(false) + util.generateRandomUUID(false)).replace(/-/g, '');
+  const source = new ReaderLocalRecoveryExportPort(applicationFilesDir);
+  const port: LocalRecoveryExportPort = {
+    filesDir: `${context.filesDir}/reader-system-migration-export-work`,
+    capture: (passphrase: string) => exportReaderCoreLibraryReadOnlyAsync(dataDirectory, passphrase, current),
+    retainedLocalBookSourcePath: (bookId: string, live: () => boolean): Promise<string | undefined> =>
+      source.retainedLocalBookSourcePath(bookId, live),
+  };
+  const result = await new LocalRecoveryGateway(undefined, port).exportStagedPackage(secret, includeOriginals,
+    async (path: string, packageSha256: string, packageBytes: number): Promise<boolean> => {
+      if (!current()) return false;
+      const manifest: ReaderSystemMigrationManifest = {
+        format: 'reader.system-migration', version: 1, secret, packageSha256, packageBytes, includeOriginals,
+      };
+      await recoveryReserve(directory, packageBytes);
+      const temp = `${directory}/library-${util.generateRandomUUID(true)}.stage`;
+      try {
+        await copySystemMigrationPayload(path, temp, manifest, current);
         if (!current()) return false;
-        const manifest: ReaderSystemMigrationManifest = {
-          format: 'reader.system-migration', version: 1, secret, packageSha256, packageBytes, includeOriginals,
-        };
-        await recoveryReserve(directory, packageBytes);
-        const temp = `${directory}/library-${util.generateRandomUUID(true)}.stage`;
-        try {
-          await copySystemMigrationPayload(path, temp, manifest, current);
-          if (!current()) return false;
-          await fileIo.rename(temp, payloadPath);
-          await replaceReaderAtomicSnapshot(manifestPath, directory, JSON.stringify(manifest));
-        } finally {
-          if (await fileIo.access(temp)) await fileIo.unlink(temp);
-        }
-        return current();
-      }, current);
-    if (result.state !== 'exported') throw new Error('SYSTEM_MIGRATION_EXPORT_UNCONFIRMED');
-  } finally { core.close(); }
+        await fileIo.rename(temp, payloadPath);
+        await replaceReaderAtomicSnapshot(manifestPath, directory, JSON.stringify(manifest));
+      } finally {
+        if (await fileIo.access(temp)) await fileIo.unlink(temp);
+      }
+      return current();
+    }, current);
+  if (result.state !== 'exported') throw new Error('SYSTEM_MIGRATION_EXPORT_UNCONFIRMED');
 }

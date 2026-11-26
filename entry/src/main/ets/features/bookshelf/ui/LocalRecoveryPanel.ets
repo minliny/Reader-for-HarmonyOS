@@ -28,6 +28,7 @@ export struct LocalRecoveryPanel {
   @State private statusUnavailable: boolean = false;
   @State private pendingRestore: boolean = false;
   @State private rollbackPending: boolean = false;
+  @State private systemPending: boolean = false;
   @State private active: LocalRecoveryAction | undefined = undefined;
   @State private preview: LocalRecoveryOutcome | undefined = undefined;
   @State private revision: number = 0;
@@ -72,7 +73,8 @@ export struct LocalRecoveryPanel {
     try {
       const pending = await this.gateway.pendingAction();
       if (this.current(revision, navigation)) {
-        this.pendingRestore = pending !== undefined;
+        this.systemPending = pending === 'system';
+        this.pendingRestore = pending === 'restore' || pending === 'rollback';
         this.rollbackPending = pending === 'rollback';
       }
     } catch (_) {
@@ -128,7 +130,7 @@ export struct LocalRecoveryPanel {
 
   private async perform(action: LocalRecoveryAction, expected: number): Promise<void> {
     if (!this.canStart(expected) || (action === 'resume' || action === 'rollback') !== this.pendingRestore ||
-      (action === 'apply') !== (this.preview !== undefined)) return;
+      (action === 'apply') !== (this.preview !== undefined) || (this.systemPending && action !== 'export')) return;
     const revision = ++this.revision, navigation = this.navigationGeneration;
     const current = (): boolean => this.current(revision, navigation);
     const passphrase = this.passphrase;
@@ -140,7 +142,9 @@ export struct LocalRecoveryPanel {
     try {
       if (action === 'export') outcome = await this.gateway.exportPackage(passphrase, current);
       else if (action === 'inspect') outcome = await this.gateway.inspectPackage(passphrase, current);
-      else if (action === 'apply') outcome = await this.gateway.applyPackage(passphrase);
+      else if (action === 'apply') outcome = await this.gateway.applyPackage(passphrase, async (): Promise<void> => {
+        if (!current() || !this.isInputAllowed()) throw new Error('Local recovery opening retired');
+      });
       else if (action === 'rollback') outcome = await this.gateway.rollbackPackage(passphrase);
       else outcome = await this.gateway.resumePackage(passphrase);
     } catch (_) {
@@ -180,9 +184,9 @@ export struct LocalRecoveryPanel {
   }
 
   @Builder
-  private passphraseField() {
+  private passphraseField(label: string = '恢复包口令') {
     ReaderFormField({ editingHost: this.editingHost, scheme: this.scheme, specId: 'sync-credential', text: this.passphrase, password: true,
-      placeholder: '恢复包口令', fieldAccessibilityLabel: '恢复包口令', isEditable: this.active === undefined,
+      placeholder: label, fieldAccessibilityLabel: label, isEditable: this.active === undefined,
       onTextChange: (value: string): void => {
         if (this.mounted && this.isInputAllowed() && this.active === undefined) this.passphrase = value;
       } });
@@ -207,11 +211,13 @@ export struct LocalRecoveryPanel {
 
   @Builder
   private resumeControl() {
-    ReaderRecoveryNotice({ tag: this.rollbackPending ? '回退中断' : '恢复中断',
+    ReaderRecoveryNotice({ tag: this.systemPending ? '系统迁移待继续' : this.rollbackPending ? '回退中断' : '恢复中断',
       actionLabel: this.rollbackPending ? '继续回退' : '继续恢复',
-      view: { visible: true, canRetry: true, generation: this.revision, message: this.rollbackPending ?
+      view: { visible: true, canRetry: !this.systemPending, generation: this.revision,
+        message: this.systemPending ? '系统迁移将在下次启动继续。可继续导出本地备份。' : this.rollbackPending ?
         '请输入原恢复包口令，继续未完成的回退。' : '请输入原恢复包口令，继续恢复或回退到恢复前。' },
-      actionEnabled: this.passphrase.length > 0, onReconcile: (expected: number): void => { void this.perform('resume', expected); } });
+      actionEnabled: !this.systemPending && this.passphrase.length > 0,
+      onReconcile: (expected: number): void => { void this.perform('resume', expected); } });
   }
 
   @Builder
@@ -225,8 +231,12 @@ export struct LocalRecoveryPanel {
           onAction: (): void => this.requestRestore(expected) });
       }.width('100%').padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, bottom: TOK_SPACE_SM });
     } else {
-      ReaderFormRow({ kind: 'standard', label: '恢复包口令', contentMinWidth: RECOVERY_PASSPHRASE_WIDTH }) {
-        Column() { this.passphraseField(); }.width(RECOVERY_PASSPHRASE_WIDTH);
+      if (this.systemPending) {
+        Column() { this.resumeControl(); }.width('100%').padding(TOK_SPACE_SM);
+      }
+      ReaderFormRow({ kind: 'standard', label: this.systemPending ? '导出包口令' : '恢复包口令',
+        contentMinWidth: RECOVERY_PASSPHRASE_WIDTH }) {
+        Column() { this.passphraseField(this.systemPending ? '导出包口令' : '恢复包口令'); }.width(RECOVERY_PASSPHRASE_WIDTH);
       }
       if (this.pendingRestore) {
         Column() { this.resumeControl(); }.width('100%').padding(TOK_SPACE_SM);
@@ -238,8 +248,10 @@ export struct LocalRecoveryPanel {
         Row({ space: TOK_SPACE_SM }) {
           ReaderButton({ scheme: this.scheme, variant: 'tonal', label: '导出恢复包', layout: 'equal',
             actionEnabled: this.passphrase.length > 0, onAction: (): void => { void this.perform('export', expected); } });
-          ReaderButton({ scheme: this.scheme, variant: 'tonal', label: '导入恢复包', layout: 'equal',
-            actionEnabled: this.passphrase.length > 0, onAction: (): void => { void this.perform('inspect', expected); } });
+          if (!this.systemPending) {
+            ReaderButton({ scheme: this.scheme, variant: 'tonal', label: '导入恢复包', layout: 'equal',
+              actionEnabled: this.passphrase.length > 0, onAction: (): void => { void this.perform('inspect', expected); } });
+          }
         }.width('100%').padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, bottom: TOK_SPACE_SM });
       }
     }

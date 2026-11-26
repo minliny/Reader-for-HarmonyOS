@@ -71,7 +71,7 @@ console.log('PASS: production proxy/DNS/transparent-gateway admission, selected-
 // Actual HTTP hop uses original hostname, system proxy and no application DNS override.
 let pins=0,pinHistory=[],transportCalls=0,destroys=0,optionsSeen,urlSeen,transportError,responseCode=200,requestBehavior;
 connection.addCustomDnsRule=async(host,addresses)=>{pins++;pinHistory.push({host,addresses:[...addresses]})};connection.removeCustomDnsRule=async()=>{pins--};
-const http={InterceptorType:{REDIRECTION:1},HttpInterceptorChain:class{addChain(){return true}apply(){return true}},HttpDataType:{ARRAY_BUFFER:1},createHttp:()=>({request:async(url,options)=>{transportCalls++;optionsSeen=options;urlSeen=url;if(transportError)throw transportError;if(requestBehavior)return requestBehavior(url,options);return {responseCode,header:{},result:new ArrayBuffer(0)}},destroy(){destroys++}})};
+const http={RequestMethod:{GET:'GET'},InterceptorType:{REDIRECTION:1},HttpInterceptorChain:class{addChain(){return true}apply(){return true}},HttpDataType:{ARRAY_BUFFER:1},createHttp:()=>({request:async(url,options)=>{transportCalls++;optionsSeen=options;urlSeen=url;if(transportError)throw transportError;if(requestBehavior)return requestBehavior(url,options);return {responseCode,header:{},result:new ArrayBuffer(0)}},destroy(){destroys++}})};
 const url={URL:{parseURL:(value,base)=>new URL(value,base)}};
 const Host=new Function('connection','http','url','prepareNetworkTarget','NetworkEnvironmentError','hilog','errorMessageOf',code('../platform/network/HttpTransportPolicy.ts')+code('../platform/network/HttpExecuteHost.ts')+';return HttpExecuteHost;')(connection,http,url,prepareNetworkTarget,NetworkEnvironmentError,{warn(){},error(){}},errorMessageOf);
 const host=new Host(),deadline=()=>({deadlineAt:Date.now()+10000,cancelled:false,expired:new Promise(()=>{})});
@@ -168,3 +168,44 @@ for(const [code,expected] of [['2100002',2100002],['-105',-105],['2100002 https:
 }
 assert.equal(calls.legacyPac,0);
 console.log('PASS: API 23 active PAC getter replaces throwing legacy getter; numeric string native codes survive without retaining messages');
+
+for (const address of ['10.20.30.40','172.16.0.1','172.31.255.254','192.168.0.2','[fc00::1]','[fd01::85]']) {
+ reset();
+ const target = 'https://' + address + ':8443/dav';
+ await assert.rejects(prepareNetworkTarget(target), /private, loopback/);
+ const admitted = await prepareNetworkTarget(target, true);
+ assert.equal(admitted.route, 'direct');
+ assert.deepEqual(admitted.addresses, [address.replace(/^\[|\]$/g, '')]);
+ assert.equal(calls.proxy, 0);
+ assert.equal(calls.dns, 0);
+}
+const disallowedWebDav = ['127.0.0.1','169.254.0.4','100.64.0.1','198.18.0.1','224.0.0.1',
+ '0.0.0.0','::','::1','fe80::1','ff02::1','::ffff:c0a8:101'];
+for (const address of disallowedWebDav) {
+ reset();
+ const literal = address.includes(':') ? '[' + address + ']' : address;
+ await assert.rejects(prepareNetworkTarget('https://' + literal + '/dav', true), /private, loopback/);
+ dns = ['192.168.1.22', address];
+ await assert.rejects(prepareNetworkTarget('https://nas.example/dav', true), /private, loopback/,
+  'one invalid DNS answer invalidates the entire resolution: ' + address);
+}
+reset();
+proxy={host:'system-proxy',port:8080,exclusionList:[]};
+dns=['192.168.1.22','fd01::85','93.184.216.34'];
+const webDavUrl='https://nas.example:8443/dav/snapshot';
+const beforePin=pinHistory.length;
+responseCode=200;
+await host.executeWebDav('https://nas.example:8443/dav', {url:webDavUrl,method:'GET'}, 256);
+assert.equal(calls.proxy,0,'WebDAV and its credentials avoid the system proxy');
+assert.equal(optionsSeen.usingProxy,false);
+assert.equal(urlSeen,webDavUrl,'keep the configured HTTPS hostname and port for TLS');
+assert.equal(pinHistory.length,beforePin+1);
+assert.deepEqual(pinHistory.at(-1),{host:'nas.example',addresses:dns});
+assert.equal(pins,0,'the direct DNS pin retires after the exact request');
+reset();
+dns=['192.168.1.22'];
+const beforeSourceDispatch=transportCalls;
+await assert.rejects(host.execute({url:webDavUrl,method:'GET',webDavOrigin:true}), /private, loopback/,
+ 'a book-source descriptor cannot invoke the privileged WebDAV route through a JSON field');
+assert.equal(transportCalls,beforeSourceDispatch);
+console.log('PASS: WebDAV exact Host entry admits only direct LAN unicast exceptions and pins DNS without weakening book-source routes');

@@ -80,6 +80,9 @@ async function openRuntime(name, receiverEvents = []) {
   const host = Object.assign(new HostRegistry(), { context: { filesDir }, stageRecovery: Promise.resolve() });
   let requestId = 20;
   const runtime = { dataDirectory, filesDir,
+    readLibraryBackupIdentity: async () => name === 'webdav-receiver' ?
+      { libraryId: 'b'.repeat(32), writerInstanceId: '2'.repeat(64) } :
+      { libraryId: 'a'.repeat(32), writerInstanceId: '1'.repeat(64) },
     getUIAbilityContext: () => host.context,
     prepareSystemLocalBookInput: uri => host.prepareSystemLocalBookInput(uri),
     commitLocalBookInput: input => host.commitLocalBookInput(input),
@@ -155,41 +158,54 @@ function simulatedWebDav() {
   const requests = [];
   let failManifestReadback = false;
   let manifestDispatched = false;
+  let uptime = 9000000;
+  let failPartDeletion = false;
+  const systemDateTime = { TimeType: { STARTUP: 0 }, getUptime: () => uptime };
   let saved = {
     saveOperationId: 'f022f1c7-7003-476b-a280-c0f10447f75d', savePayloadHash: 'a'.repeat(64),
     config: { url: base, directory, user: '', password: '', backupPassword: 'fixture recovery passphrase' },
   };
   const http = {
-    async executeBounded(params, _maximum, _rid, cancelled) {
+    async executeWebDav(endpoint, params, maximum, cancelled) {
+      assert.equal(endpoint, base);
       assert.equal(cancelled(), false);
-      assert.equal(params.httpsOnly, true);
-      assert.equal(params.sameOriginRedirectsOnly, true);
-      assert.equal(params.followRedirects, false);
       const target = new URL(params.url);
       assert.equal(target.origin, collection.origin);
       assert.ok(target.pathname === collection.pathname.slice(0, -1) || target.pathname.startsWith(collection.pathname));
       const name = target.pathname.slice(collection.pathname.length);
       requests.push([params.method, name]);
-      if (params.method === 'PROPFIND') return { status: 207,
-        body: `<D:multistatus xmlns:D="DAV:">${Array.from(remote.keys(), key =>
-          `<D:response><D:href>${collection.pathname}${key}</D:href><D:propstat><D:prop><D:getlastmodified>Wed, 25 Nov 2026 02:00:00 GMT</D:getlastmodified></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>`).join('')}</D:multistatus>` };
+      const response = (status, bytes = Buffer.alloc(0), headers = {}) => {
+        assert.ok(bytes.length <= maximum);
+        return { status, bytes, headers, finalUrl: target.href };
+      };
+      if (params.method === 'PROPFIND') return response(207, Buffer.from(
+        `<D:multistatus xmlns:D="DAV:">${Array.from(remote.keys(), key =>
+          `<D:response><D:href>${collection.pathname}${key}</D:href><D:propstat><D:prop><D:getlastmodified>Wed, 25 Nov 2026 02:00:00 GMT</D:getlastmodified></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>`).join('')}</D:multistatus>`));
+      if (params.method === 'DELETE') {
+        if (failPartDeletion && name.endsWith('.part')) { failPartDeletion = false; return response(503); }
+        const current = remote.get(name);
+        if (current === undefined) return response(404);
+        if (params.headers['If-Match'] !== `"${hash(current)}"`) return response(412);
+        remote.delete(name);
+        return response(204);
+      }
       if (params.method === 'GET') {
         if (failManifestReadback && manifestDispatched && name.endsWith('.manifest')) {
           failManifestReadback = false;
           throw Error('controlled loss of readback');
         }
         const body = remote.get(name);
-        if (body === undefined) return { status: 404 };
+        if (body === undefined) return response(404);
         const ETag = `"${hash(body)}"`;
-        if (params.headers['If-Match'] !== undefined && params.headers['If-Match'] !== ETag) return { status: 412 };
-        return { status: 200, bodyBase64: body.toString('base64'), headers: { ETag } };
+        if (params.headers['If-Match'] !== undefined && params.headers['If-Match'] !== ETag) return response(412);
+        return response(200, body, { ETag, 'Content-Type': 'text/plain; charset=UTF-8' });
       }
       assert.equal(params.method, 'PUT');
       assert.equal(params.headers['If-None-Match'], '*');
-      if (remote.has(name)) return { status: 412 };
+      if (remote.has(name)) return response(412);
       remote.set(name, Buffer.from(params.body));
       if (name.endsWith('.manifest')) manifestDispatched = true;
-      return { status: 201 };
+      return response(201);
     },
   };
   const url = { URL: { parseURL: (value, parent) => new URL(value, parent) } };
@@ -199,15 +215,18 @@ function simulatedWebDav() {
   } };
   const HttpExecuteHost = { instance: http };
   const transport = actualModule('features/sync/application/WebDavLibraryBackup.ts',
-    { ...support, HttpExecuteHost, url, util: transportUtil }, ['WebDavLibraryBackup', 'WebDavLibraryBackupError']);
+    { ...support, HttpExecuteHost, url, util: transportUtil, systemDateTime },
+    ['WebDavLibraryBackup', 'WebDavLibraryBackupError', 'WEB_DAV_ARCHIVE_READ_WINDOW']);
   const { SyncGateway } = actualModule('features/sync/application/SyncGateway.ts', {
     ...transport, ...support, fileIo: io, replaceReaderAtomicSnapshot, readerHostFilesDirectory, HttpExecuteHost,
-    url, util: transportUtil, ReaderRuntimeOwner, SyncHostConfigurationGateway: class {},
+    url, util: transportUtil, systemDateTime, ReaderRuntimeOwner, SyncHostConfigurationGateway: class {},
   }, ['SyncGateway']);
-  const credentials = { async requireConfigSettled() {}, loadSerializedState: async () => saved };
+  const credentials = { async requireConfigSettled() {}, async reconcileConfigIntent() {}, loadSerializedState: async () => saved };
   return {
     remote, requests, gateway: runtime => new SyncGateway(runtime, credentials),
     loseReadback: () => { failManifestReadback = true; },
+    moveClock: (millis) => { uptime += millis; },
+    failNextPartDeletion: () => { failPartDeletion = true; },
     setConfigRevision(other) {
       saved = { ...saved, saveOperationId: other ? 'cb49db58-9038-4e28-869f-3dd66f2d1b11' : 'f022f1c7-7003-476b-a280-c0f10447f75d' };
     },
@@ -389,6 +408,56 @@ try {
   assert.equal(provider.requests.some(([method]) => method === 'DELETE'), false);
   webDavReceiver.close();
   console.log('PASS WebDAV and actual Core roundtrip preserves pending upload across reopen, binds previews to provider and restores readable original');
+
+  webDavDonor = await openRuntime('donor');
+  currentRuntime = webDavDonor;
+  gateway = new LocalRecoveryGateway();
+  sync = provider.gateway(webDavDonor);
+  assert.deepEqual(await sync.backupLibrary(gateway, true, current), { state: 'exported' });
+  const list = await sync.listLibraryArchives(current);
+  assert.equal(list.state, 'listed');
+  assert.equal(list.archives.length, 2);
+  const [latest, older] = list.archives;
+  assert.equal(latest.library, 'same');
+  assert.equal(latest.latest, true);
+  assert.equal(latest.canDelete, false);
+  assert.equal(older.canDelete, true);
+  provider.setConfigRevision(true);
+  const beforeStaleSelection = [...provider.requests];
+  assert.deepEqual(await sync.removeLibraryArchive(older, current), { state: 'providerChanged' });
+  assert.deepEqual(await sync.previewLibraryBackup(gateway, current, older), { state: 'providerChanged' });
+  assert.deepEqual(provider.requests, beforeStaleSelection, 'stale selections never reach a new configuration');
+  provider.setConfigRevision(false);
+  assert.deepEqual(await sync.removeLibraryArchive(latest, current), { state: 'conflict' });
+  const oldManifest = `reader-library-v1-${older.sha256}.manifest`;
+  const oldPart = Array.from(provider.remote.keys()).find(name => name.includes(older.sha256) && name.endsWith('.part'));
+  assert.ok(oldPart);
+  assert.deepEqual(await sync.removeLibraryArchive(older, current), { state: 'retirementPending' });
+  assert.equal(provider.remote.has(oldManifest), false);
+  assert.equal(provider.remote.has(oldPart), true, 'the manifest-first transition keeps parts during admitted reads');
+  const pendingRetirement = (await sync.libraryBackupConfiguration()).removal;
+  assert.equal(pendingRetirement.phase, 'waiting');
+  const beforePendingRetry = [...provider.requests];
+  assert.deepEqual(await sync.resumeLibraryRetirement(pendingRetirement.receipt, current), { state: 'retirementPending' });
+  assert.deepEqual(provider.requests, beforePendingRetry);
+  webDavDonor.close();
+
+  provider.moveClock(31 * 60_000);
+  webDavDonor = await openRuntime('donor');
+  currentRuntime = webDavDonor;
+  sync = provider.gateway(webDavDonor);
+  assert.equal((await sync.libraryBackupConfiguration()).removal.phase, 'parts');
+  provider.failNextPartDeletion();
+  const requestStart = provider.requests.length;
+  assert.deepEqual(await sync.resumeLibraryRetirement(pendingRetirement.receipt, current), { state: 'cleanupFailed' });
+  assert.equal(provider.remote.has(oldPart), true);
+  assert.deepEqual(await sync.resumeLibraryRetirement(pendingRetirement.receipt, current), { state: 'retirementCompleted' });
+  assert.equal((await sync.libraryBackupConfiguration()).removal, undefined);
+  assert.equal(provider.remote.has(oldPart), false);
+  assert.equal(provider.remote.has(`reader-library-v1-${latest.sha256}.manifest`), true);
+  assert.equal(provider.requests.slice(requestStart).some(([method, name]) => method === 'PUT' && name.endsWith('.manifest')), false);
+  webDavDonor.close();
+  console.log('PASS user-selected remote retirement removes the exact manifest first and resumes only its parts after monotonic grace');
 
   assert.equal(handles.size, 0);
   assert.equal(hash(await readFile(gatewayPath)), hash(gatewaySource), 'Gateway source stayed stable during the native probe');

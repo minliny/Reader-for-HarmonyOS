@@ -115,6 +115,7 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
     if (this.closed) throw new Error('Reader TTS AVSession admission retired');
     const session = await avSession.createAVSession(this.context, 'ReaderTts', 'audio');
     this.session = session;
+    this.backgroundModePublished = undefined;
     if (this.closed) throw new Error('Reader TTS AVSession closed during initialization');
     try {
       // AVSession requires metadata for both the lock screen and headset commands.

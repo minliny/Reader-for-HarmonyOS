@@ -48,7 +48,10 @@ function fixture(version, api26 = true) {
       return async ids => { calls.push(['controls', ids]); };
     },
   };
-  const avSession = { async createAVSession() { calls.push(['create']); return session; }, PlaybackState: playback,
+  const avSession = { async createAVSession() {
+    calls.push(['create']);
+    return Object.defineProperties({}, Object.getOwnPropertyDescriptors(session));
+  }, PlaybackState: playback,
     get BackgroundPlayMode() {
       accesses.push('BackgroundPlayMode');
       assert.ok(version >= 60101, 'API 23 must not read API 24 enum');
@@ -96,6 +99,22 @@ test('API 24 and API 26 with failed version admission advertise only truthful ba
       version === 60101 ? [] : [['available', '26.0.0']]);
     await f.owner.close();
   }
+});
+
+test('replacing an incomplete native session republishes the previously acknowledged background mode', async () => {
+  const f = fixture(60101);
+  f.owner.setBackgroundPlaybackEnabled(true);
+  await f.owner.activate();
+  const first = f.owner.session;
+  // Model the defensive session replacement lane, where the platform handle
+  // exists with an acknowledged mode but initialization no longer qualifies.
+  f.owner.initialized = false;
+  f.owner.publish('playing');
+  await tick();
+  assert.notEqual(f.owner.session, first);
+  assert.deepEqual(f.calls.filter(([event]) => ['create', 'background', 'destroy'].includes(event)),
+    [['create'], ['background', 0], ['destroy'], ['create'], ['background', 0]]);
+  await f.owner.close();
 });
 
 test('API 26 publishes the actual rate steps, rejects invalid controls, and retires the precise speed callback', async () => {

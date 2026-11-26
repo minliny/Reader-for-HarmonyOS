@@ -5,6 +5,7 @@ import { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
 import { ReaderThemeHost } from '../../../app/ReaderThemeHost';
 import { ReaderNavigationAppearancePreferences } from '../../../app/ReaderNavigationAppearancePreferences';
 import { ReaderControlPlacementPreferences } from '../../../app/ReaderControlPlacementPreferences';
+import { ReaderSmartGesturePreferences } from '../../../app/ReaderSmartGesturePreferences';
 import { SettingsGateway, createDefaultSettingsSnapshot } from './SettingsGateway';
 import { ReaderSettingsGateway } from '../../reading/application/ReaderSettingsGateway';
 import { createDefaultReaderSettingsSnapshot } from '../../reading/application/ReaderSettingsState';
@@ -117,6 +118,8 @@ export class LocalConfigurationReset {
     await ReaderNavigationAppearancePreferences.resetDefaults((): boolean => ReaderRuntimeOwner.isCurrent(owner));
     LocalConfigurationReset.assertOwner(owner);
     await ReaderControlPlacementPreferences.resetDefaults();
+    LocalConfigurationReset.assertOwner(owner);
+    await ReaderSmartGesturePreferences.resetDefaults((): boolean => ReaderRuntimeOwner.isCurrent(owner));
     LocalConfigurationReset.assertOwner(owner);
     AppStorage.setOrCreate('readerBookshelfSelectedGroup', '');
     AppStorage.setOrCreate('readerBookshelfReadingFilter', 'all');

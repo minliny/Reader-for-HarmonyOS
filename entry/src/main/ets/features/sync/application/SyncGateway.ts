@@ -4,14 +4,16 @@ import { ReaderThemeHost } from '../../../app/ReaderThemeHost';
 import type { JsonObject } from '@reader/core-harmony';
 import util from '@ohos.util';
 import url from '@ohos.url';
+import systemDateTime from '@ohos.systemDateTime';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { HttpExecuteHost } from '../../../platform/network/HttpExecuteHost';
 import fileIo from '@ohos.file.fs';
 import { replaceReaderAtomicSnapshot } from '../../../app/ReaderAtomicSnapshotFile';
 import { readerHostFilesDirectory } from '../../../app/diagnostics/ReaderPublicFixtureScope';
-import { LOCAL_RECOVERY_MAX_BYTES, recoveryHashFile, recoveryOutput, recoveryVisitFile, recoveryWithFile } from '../../../platform/backup/LocalRecoveryFile';
+import { LOCAL_RECOVERY_MAX_BYTES, recoveryHashFile, recoveryOutput, recoveryReserve, recoveryVisitFile, recoveryWithFile } from '../../../platform/backup/LocalRecoveryFile';
 import type { LocalRecoveryGateway, LocalRecoveryOutcome } from '../../bookshelf/application/LocalRecoveryGateway';
-import { WebDavLibraryBackup, WebDavLibraryBackupError } from './WebDavLibraryBackup';
+import { WEB_DAV_ARCHIVE_READ_WINDOW, WebDavLibraryBackup, WebDavLibraryBackupError,
+  type WebDavArchiveRemoval, type WebDavArchiveRow, type WebDavLibraryPublicationMetadata } from './WebDavLibraryBackup';
 import {
   type StoredWebDavConfig,
   type StoredWebDavState,
@@ -124,12 +126,18 @@ export type SyncRestoreResult = {
 };
 
 export type SyncLibraryBackupState = LocalRecoveryOutcome['state'] | 'notConfigured' | 'authentication' |
-  'readOnly' | 'empty' | 'missingDirectory' | 'providerChanged' | 'conflict' | 'unconfirmed' | 'cleanupPending';
+  'readOnly' | 'empty' | 'missingDirectory' | 'providerChanged' | 'conflict' | 'unconfirmed' | 'cleanupPending' |
+  'listed' | 'retirementPending' | 'retirementCompleted' | 'cleanupFailed';
 
 export interface SyncLibraryBackupResult {
   state: SyncLibraryBackupState;
   included?: number;
   missing?: number;
+  archives?: SyncLibraryArchiveRow[];
+}
+
+export interface SyncLibraryArchiveRow extends WebDavArchiveRow {
+  providerIdentity: string;
 }
 
 export interface SyncLibraryBackupConfiguration {
@@ -137,8 +145,18 @@ export interface SyncLibraryBackupConfiguration {
   user: string;
   directory: string;
   configured: boolean;
+  providerIdentity?: string;
   pendingPublication: boolean;
   cleanupReceipt?: string;
+  pendingConfigId?: string;
+  configNeedsOriginal?: boolean;
+  removal?: SyncLibraryRemovalStatus;
+}
+
+export interface SyncLibraryRemovalStatus {
+  receipt: string;
+  phase: 'manifest' | 'waiting' | 'parts';
+  waitMinutes: number;
 }
 
 interface SyncLibraryProvider {
@@ -154,6 +172,14 @@ interface SyncLibraryPublication {
   sha256: string;
   bytes: number;
   remoteVerified?: boolean;
+  metadata?: WebDavLibraryPublicationMetadata;
+}
+
+interface SyncLibraryRemovalJournal {
+  schemaVersion: number;
+  configOperationId: string;
+  plan: WebDavArchiveRemoval;
+  removedAtUptime?: number;
 }
 
 class SyncLibraryProviderChanged extends Error {}
@@ -214,13 +240,19 @@ export class SyncGateway {
   /** Explicit foreground book-library backup alongside historical settings backups. */
   async libraryBackupConfiguration(): Promise<SyncLibraryBackupConfiguration> {
     this.assertOwner();
+    const pendingConfig = await this.credentials.reconcileConfigIntent((): boolean => this.isOwner());
     const saved = await this.credentials.loadSerializedState();
     const identity = this.libraryProviderIdentity(saved);
     const publication = identity === undefined ? undefined : await this.libraryPublication(identity);
+    const retirement = identity === undefined ? undefined : await this.libraryRetirement(identity);
+    if (pendingConfig === undefined) await this.retireUnusedLibraryPayloads(identity);
     return { url: saved.config?.url ?? '', user: saved.config?.user ?? '',
-      directory: saved.config?.directory ?? DEFAULT_WEBDAV_DIRECTORY, configured: identity !== undefined,
+      directory: saved.config?.directory ?? DEFAULT_WEBDAV_DIRECTORY, configured: identity !== undefined, providerIdentity: identity,
       pendingPublication: publication !== undefined && publication.remoteVerified !== true,
-      cleanupReceipt: publication?.remoteVerified === true ? this.libraryCleanupReceipt(publication) : undefined };
+      cleanupReceipt: publication?.remoteVerified === true ? this.libraryCleanupReceipt(publication) : undefined,
+      pendingConfigId: pendingConfig?.operationId,
+      configNeedsOriginal: pendingConfig !== undefined && !await this.credentials.canContinueConfigIntent(pendingConfig.operationId),
+      removal: retirement === undefined ? undefined : this.libraryRetirementStatus(retirement) };
   }
 
   async backupLibrary(recovery: LocalRecoveryGateway, includeOriginals: boolean, current: () => boolean,
@@ -231,6 +263,7 @@ export class SyncGateway {
       if (cleanupReceipt !== undefined &&
         (pending?.remoteVerified !== true || cleanupReceipt !== this.libraryCleanupReceipt(pending))) return { state: 'cancelled' };
       if (pending !== undefined) return this.publishLibraryBackup(provider, directory, pending);
+      const before = await this.runtimeOwner.readLibraryBackupIdentity();
       let transferError: Error | undefined;
       let completion: SyncLibraryBackupResult | undefined;
       const result = await recovery.exportStagedPackage(provider.config.backupPassword, includeOriginals,
@@ -238,12 +271,19 @@ export class SyncGateway {
           try {
             await provider.assertCurrent();
             if (!(await fileIo.access(directory))) await fileIo.mkdir(directory, true);
+            const captured = await this.runtimeOwner.readLibraryBackupIdentity();
+            if (before?.libraryId !== captured?.libraryId || before?.writerInstanceId !== captured?.writerInstanceId) {
+              throw new SyncLibraryProviderChanged();
+            }
+            const metadata: WebDavLibraryPublicationMetadata = { createdAt: Date.now(),
+              libraryId: captured?.libraryId, writerInstanceId: captured?.writerInstanceId };
+            await recoveryReserve(directory, bytes);
             const payloadPath = this.libraryPayload(directory, sha256);
             await recoveryOutput(payloadPath, async (emit): Promise<void> => {
               if (await recoveryVisitFile(path, emit, current, bytes) !== sha256) throw new Error('Staged backup digest changed');
             });
             if (await recoveryHashFile(payloadPath) !== sha256) throw new Error('Durable backup digest changed');
-            const plan: SyncLibraryPublication = { schemaVersion: 1, configOperationId: provider.identity, sha256, bytes };
+            const plan: SyncLibraryPublication = { schemaVersion: 1, configOperationId: provider.identity, sha256, bytes, metadata };
             await replaceReaderAtomicSnapshot(`${directory}/publish.json`, directory, JSON.stringify(plan));
             completion = await this.publishLibraryBackup(provider, directory, plan);
             return true;
@@ -257,14 +297,15 @@ export class SyncGateway {
     });
   }
 
-  async previewLibraryBackup(recovery: LocalRecoveryGateway, current: () => boolean): Promise<SyncLibraryBackupResult> {
+  async previewLibraryBackup(recovery: LocalRecoveryGateway, current: () => boolean, row?: SyncLibraryArchiveRow): Promise<SyncLibraryBackupResult> {
     this.cancelLibraryPreview(recovery);
     return this.runLibraryOperation(current, async (provider): Promise<SyncLibraryBackupResult> => {
+      if (row !== undefined && row.providerIdentity !== provider.identity) return { state: 'providerChanged' };
       let empty = false;
       let transferError: Error | undefined;
       const result = await recovery.inspectStagedPackage(provider.config.backupPassword, async (destination): Promise<boolean> => {
         try {
-          empty = await provider.transport.downloadLatest(destination) === 'empty';
+          empty = await provider.transport.downloadLatest(destination, row?.sha256) === 'empty';
           return !empty;
         } catch (error) {
           transferError = error instanceof Error ? error : new Error('Library download failed');
@@ -279,6 +320,56 @@ export class SyncGateway {
       }
       return result;
     });
+  }
+
+  async listLibraryArchives(current: () => boolean): Promise<SyncLibraryBackupResult> {
+    return this.runLibraryOperation(current, async (provider): Promise<SyncLibraryBackupResult> => {
+      const identity = await this.runtimeOwner.readLibraryBackupIdentity();
+      const remote = await provider.transport.listArchives(identity ?? {});
+      const archives = remote.map((row: WebDavArchiveRow): SyncLibraryArchiveRow => ({
+        sha256: row.sha256, manifestSha256: row.manifestSha256, bytes: row.bytes, createdAt: row.createdAt,
+        latest: row.latest, canDelete: row.canDelete, library: row.library, providerIdentity: provider.identity,
+      }));
+      return archives.length === 0 ? { state: 'empty', archives } : { state: 'listed', archives };
+    });
+  }
+
+  async removeLibraryArchive(row: SyncLibraryArchiveRow, current: () => boolean): Promise<SyncLibraryBackupResult> {
+    return this.runLibraryOperation(current, async (provider): Promise<SyncLibraryBackupResult> => {
+      if (row.providerIdentity !== provider.identity) return { state: 'providerChanged' };
+      if (!row.canDelete) return { state: 'conflict' };
+      if (await this.libraryRetirement(provider.identity) !== undefined) return { state: 'retirementPending' };
+      const directory = this.libraryDirectory(provider.identity);
+      if (!await fileIo.access(directory)) await fileIo.mkdir(directory, true);
+      const verification = `${directory}/verify.readerbackup`;
+      let plan: WebDavArchiveRemoval;
+      try {
+        plan = await provider.transport.planRemoval(row.sha256, row.manifestSha256, verification);
+      } finally {
+        await this.unlinkLibraryFile(verification);
+      }
+      await provider.assertCurrent();
+      const journal: SyncLibraryRemovalJournal = { schemaVersion: 1, configOperationId: provider.identity, plan };
+      await this.writeLibraryRetirement(directory, journal);
+      return this.driveLibraryRetirement(provider, directory, journal);
+    });
+  }
+
+  async resumeLibraryRetirement(receipt: string, current: () => boolean): Promise<SyncLibraryBackupResult> {
+    return this.runLibraryOperation(current, async (provider): Promise<SyncLibraryBackupResult> => {
+      const journal = await this.libraryRetirement(provider.identity);
+      if (journal === undefined || this.libraryRetirementStatus(journal).receipt !== receipt) return { state: 'cancelled' };
+      return this.driveLibraryRetirement(provider, this.libraryDirectory(provider.identity), journal);
+    });
+  }
+
+  async resumeLibraryConfiguration(operationId: string, current: () => boolean, urlValue?: string,
+    user?: string, password?: string, backupPassword?: string, directory?: string): Promise<boolean> {
+    try {
+      await this.continueConfigSave(operationId, new SyncWriteObservation(), current,
+        urlValue, user, password, backupPassword, directory);
+      return true;
+    } catch (_) { return false; }
   }
 
   cancelLibraryPreview(recovery: LocalRecoveryGateway): void {
@@ -355,7 +446,38 @@ export class SyncGateway {
   }
 
   private libraryDirectory(identity: string): string {
-    return `${readerHostFilesDirectory(this.runtimeOwner.getUIAbilityContext().filesDir)}/reader-webdav-library/${identity}`;
+    return `${this.libraryRoot()}/${identity}`;
+  }
+
+  private libraryRoot(): string {
+    return `${readerHostFilesDirectory(this.runtimeOwner.getUIAbilityContext().filesDir)}/reader-webdav-library`;
+  }
+
+  private async unlinkLibraryFile(path: string): Promise<void> {
+    try { await fileIo.unlink(path); }
+    catch (error) {
+      const code = (error as { code?: number | string }).code;
+      if (code !== 13900002 && code !== 'ENOENT') throw error;
+    }
+  }
+
+  private async retireUnusedLibraryPayloads(activeIdentity: string | undefined): Promise<void> {
+    const root = this.libraryRoot();
+    if (SyncGateway.libraryOperations.has(this.runtimeOwner) || !await fileIo.access(root)) return;
+    if (!(await fileIo.lstat(root)).isDirectory()) return;
+    for (const identity of await fileIo.listFile(root)) {
+      if (!this.isOwner() || SyncGateway.libraryOperations.has(this.runtimeOwner)) return;
+      if (!/^[a-f0-9-]{36}$/.test(identity)) continue;
+      const directory = this.libraryDirectory(identity);
+      if (!(await fileIo.lstat(directory)).isDirectory()) continue;
+      const pending = activeIdentity === identity ? await this.libraryPublication(identity) : undefined;
+      for (const name of await fileIo.listFile(directory)) {
+        if (!this.isOwner() || SyncGateway.libraryOperations.has(this.runtimeOwner)) return;
+        if ((name === 'verify.readerbackup' || /^[a-f0-9]{64}\.readerbackup$/.test(name)) &&
+          name !== `${pending?.sha256 ?? ''}.readerbackup`) await this.unlinkLibraryFile(`${directory}/${name}`);
+      }
+      if (activeIdentity !== identity) await this.unlinkLibraryFile(`${directory}/publish.json`);
+    }
   }
 
   private libraryPayload(directory: string, sha256: string): string { return `${directory}/${sha256}.readerbackup`; }
@@ -372,7 +494,10 @@ export class SyncGateway {
     const saved = JSON.parse(await fileIo.readText(path)) as SyncLibraryPublication;
     if (saved.schemaVersion !== 1 || saved.configOperationId !== identity || !/^[a-f0-9]{64}$/.test(saved.sha256) ||
       !Number.isSafeInteger(saved.bytes) || saved.bytes <= 0 || saved.bytes > LOCAL_RECOVERY_MAX_BYTES ||
-      (saved.remoteVerified !== undefined && saved.remoteVerified !== true)) {
+      (saved.remoteVerified !== undefined && saved.remoteVerified !== true) || (saved.metadata !== undefined &&
+        (!Number.isSafeInteger(saved.metadata.createdAt) || saved.metadata.createdAt <= 0 ||
+          (saved.metadata.libraryId !== undefined && !/^[a-f0-9]{32}$/.test(saved.metadata.libraryId)) ||
+          (saved.metadata.writerInstanceId !== undefined && !/^[a-f0-9]{64}$/.test(saved.metadata.writerInstanceId))))) {
       throw new Error('Invalid pending library publication identity');
     }
     return saved;
@@ -385,24 +510,81 @@ export class SyncGateway {
     if (publication.remoteVerified !== true) {
       if (await recoveryHashFile(path) !== publication.sha256) throw new Error('Pending library publication bytes changed');
       // An unconfirmed response leaves the original journal and ciphertext.
-      await provider.transport.publish(path, publication.sha256, publication.bytes);
+      await provider.transport.publish(path, publication.sha256, publication.bytes, publication.metadata);
     }
     const journalPath = `${directory}/publish.json`;
     try {
       // Keep the verified receipt durable before retiring its ciphertext.
       const verified: SyncLibraryPublication = { schemaVersion: 1, configOperationId: publication.configOperationId,
-        sha256: publication.sha256, bytes: publication.bytes, remoteVerified: true };
+        sha256: publication.sha256, bytes: publication.bytes, remoteVerified: true, metadata: publication.metadata };
       await replaceReaderAtomicSnapshot(journalPath, directory, JSON.stringify(verified));
-      try { await fileIo.unlink(path); } catch (error) {
-        const code = (error as { code?: number | string }).code;
-        if (code !== 13900002 && code !== 'ENOENT') throw error;
-      }
+      await this.unlinkLibraryFile(path);
       await recoveryWithFile(directory, fileIo.OpenMode.READ_ONLY, (file): Promise<void> => fileIo.fsync(file.fd));
       await fileIo.unlink(journalPath);
     } catch (_) {
       return { state: 'cleanupPending' };
     }
     return { state: 'exported' };
+  }
+
+  private async libraryRetirement(identity: string): Promise<SyncLibraryRemovalJournal | undefined> {
+    const path = `${this.libraryDirectory(identity)}/retirement.json`;
+    if (!await fileIo.access(path)) return undefined;
+    const stat = await fileIo.lstat(path);
+    if (!stat.isFile() || stat.size < 1 || stat.size > 16 * 1024) throw new Error('Invalid WebDAV retirement journal');
+    const journal = JSON.parse(await fileIo.readText(path)) as SyncLibraryRemovalJournal;
+    const sha256 = /^[a-f0-9]{64}$/;
+    const plan = journal.plan;
+    if (journal.schemaVersion !== 1 || journal.configOperationId !== identity || plan === undefined ||
+      !sha256.test(plan.sha256) || !sha256.test(plan.manifestSha256) || !sha256.test(plan.replacementSha256) ||
+      plan.replacementSha256 === plan.sha256 || !/^"[^"\x00-\x20]{1,512}"$/.test(plan.manifestEtag) ||
+      !Number.isSafeInteger(plan.bytes) || plan.bytes < 1 || plan.bytes > LOCAL_RECOVERY_MAX_BYTES ||
+      !Array.isArray(plan.parts) || plan.parts.length !== Math.ceil(plan.bytes / (4 * 1024 * 1024)) ||
+      !plan.parts.every((part: string): boolean => typeof part === 'string' && sha256.test(part)) ||
+      (journal.removedAtUptime !== undefined && (!Number.isSafeInteger(journal.removedAtUptime) || journal.removedAtUptime < 0))) {
+      throw new Error('Invalid WebDAV retirement binding');
+    }
+    return journal;
+  }
+
+  private libraryRetirementStatus(journal: SyncLibraryRemovalJournal): SyncLibraryRemovalStatus {
+    const receipt = `${journal.configOperationId}/${journal.plan.manifestSha256}`;
+    if (journal.removedAtUptime === undefined) return { receipt, phase: 'manifest', waitMinutes: 0 };
+    const uptime = systemDateTime.getUptime(systemDateTime.TimeType.STARTUP);
+    const elapsed = uptime >= journal.removedAtUptime ? uptime - journal.removedAtUptime : 0;
+    const waitMinutes = Math.max(0, Math.ceil((WEB_DAV_ARCHIVE_READ_WINDOW - elapsed) / 60000));
+    return { receipt, phase: waitMinutes === 0 ? 'parts' : 'waiting', waitMinutes };
+  }
+
+  private writeLibraryRetirement(directory: string, journal: SyncLibraryRemovalJournal): Promise<void> {
+    return replaceReaderAtomicSnapshot(`${directory}/retirement.json`, directory, JSON.stringify(journal));
+  }
+
+  private async driveLibraryRetirement(provider: SyncLibraryProvider, directory: string,
+    journal: SyncLibraryRemovalJournal): Promise<SyncLibraryBackupResult> {
+    if (journal.removedAtUptime === undefined) {
+      await provider.transport.unpublish(journal.plan);
+      journal.removedAtUptime = systemDateTime.getUptime(systemDateTime.TimeType.STARTUP);
+      await this.writeLibraryRetirement(directory, journal);
+      return { state: 'retirementPending' };
+    }
+    const now = systemDateTime.getUptime(systemDateTime.TimeType.STARTUP);
+    if (now < journal.removedAtUptime) {
+      // A reboot never credits time against an earlier boot's monotonic clock.
+      journal.removedAtUptime = now;
+      await this.writeLibraryRetirement(directory, journal);
+    }
+    if (this.libraryRetirementStatus(journal).phase !== 'parts') return { state: 'retirementPending' };
+    try {
+      await provider.transport.removeRetiredParts(journal.plan);
+      await this.unlinkLibraryFile(`${directory}/retirement.json`);
+      await recoveryWithFile(directory, fileIo.OpenMode.READ_ONLY, (file): Promise<void> => fileIo.fsync(file.fd));
+    } catch (error) {
+      await provider.assertCurrent();
+      if (error instanceof WebDavLibraryBackupError && ['authentication', 'readOnly', 'conflict'].includes(error.reason)) throw error;
+      return { state: 'cleanupFailed' };
+    }
+    return { state: 'retirementCompleted' };
   }
 
   /** Runs before presenting the app and before any new sync. The durable
@@ -513,6 +695,7 @@ export class SyncGateway {
     admitted?: () => boolean,
   ): Promise<SyncSaveResult> {
     try {
+      if (SyncGateway.libraryOperations.has(this.runtimeOwner)) throw new Error('WebDAV library operation active');
       await this.requireBackupSettled();
       const existing = await this.credentials.loadSerialized();
       const normalizedUrl = this.requireBaseUrl(urlValue);

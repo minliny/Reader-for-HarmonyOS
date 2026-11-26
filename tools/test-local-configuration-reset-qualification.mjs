@@ -55,6 +55,7 @@ function fixture() {
       } },
       '../../../app/ReaderNavigationAppearancePreferences': { ReaderNavigationAppearancePreferences: { resetDefaults: recordEffect('navigation') } },
       '../../../app/ReaderControlPlacementPreferences': { ReaderControlPlacementPreferences: { resetDefaults: recordEffect('placement') } },
+      '../../../app/ReaderSmartGesturePreferences': { ReaderSmartGesturePreferences: { resetDefaults: recordEffect('gestures') } },
       './SettingsGateway': { SettingsGateway: class { update = recordEffect('general'); }, createDefaultSettingsSnapshot: defaults },
       '../../reading/application/ReaderSettingsGateway': { ReaderSettingsGateway: class { update = recordEffect('reading'); } },
       '../../reading/application/ReaderSettingsState': { createDefaultReaderSettingsSnapshot: defaults },
@@ -84,7 +85,7 @@ async function journalQualification() {
   assert.equal(initial.evidence().confirmation(), 'unknown');
   initial.state.recoveryFailure = undefined;
   assert.equal(await initial.recover(), true, 'warm retry first qualifies the exact retained intent');
-  assert.deepEqual(initial.state.effects, ['general', 'reading', 'tts', 'bookshelf', 'appearance', 'navigation', 'placement']);
+  assert.deepEqual(initial.state.effects, ['general', 'reading', 'tts', 'bookshelf', 'appearance', 'navigation', 'placement', 'gestures']);
   assert.equal(await initial.recover(), false);
   assert.equal(initial.evidence().confirmation(), 'confirmed');
 

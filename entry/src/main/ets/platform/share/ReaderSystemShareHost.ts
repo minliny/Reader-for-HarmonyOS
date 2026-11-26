@@ -6,7 +6,13 @@ import { systemShare } from '@kit.ShareKit';
 import type { ReaderShareFile, ReaderShareImage, ReaderShareRecord, SystemSharePort, SystemShareResult } from '../../features/reading/application/ReaderShareActions';
 
 const SHARE_COPY_TTL_SECONDS = 24 * 60 * 60;
+const SHARE_DISMISS_SETTLE_MS = 250;
 export const READER_QUOTE_CARD_MAX_BYTES = 8 * 1024 * 1024;
+
+interface ReaderPreparedBookShare {
+  directory: string;
+  data: systemShare.SharedRecord;
+}
 
 export function readerShareCachePath(context: common.UIAbilityContext): string {
   return `${context.getApplicationContext().cacheDir}/reader-share`;
@@ -76,33 +82,52 @@ export class ReaderSystemShareHost implements SystemSharePort {
     if (!current() || !canIUse('SystemCapability.Collaboration.SystemShare')) return 'unavailable';
     const context = this.context();
     if (context === undefined) return 'unavailable';
-    let data: systemShare.SharedRecord;
     if (record.kind === 'file') {
-      const checked = await this.originalFile(record, context, current);
-      if (!current()) return 'dismissed';
-      if (checked === undefined) return 'unsafe';
-      data = checked;
-    } else if (record.kind === 'image') {
+      const prepared = await this.originalFile(record, context, current);
+      if (prepared === undefined) return current() ? 'unsafe' : 'dismissed';
+      let result: SystemShareResult = 'unavailable';
+      try {
+        if (!current()) return 'dismissed';
+        result = await this.present(context, prepared.data, true);
+        return result;
+      } finally {
+        if (result !== 'shown') await removeReaderShareCopy(prepared.directory);
+      }
+    }
+    if (record.kind === 'image') {
       const checked = await this.quoteImage(record, context);
       if (!current()) return 'dismissed';
       if (checked === undefined) return 'unsafe';
-      data = checked;
-    } else {
-      const utd = record.kind === 'link' ? uniformTypeDescriptor.UniformDataType.HYPERLINK :
-        uniformTypeDescriptor.UniformDataType.PLAIN_TEXT;
-      data = { utd, content: record.text, title: record.title, description: record.description };
+      return this.present(context, checked, true);
     }
+    const utd = record.kind === 'link' ? uniformTypeDescriptor.UniformDataType.HYPERLINK :
+      uniformTypeDescriptor.UniformDataType.PLAIN_TEXT;
+    return this.present(context, { utd, content: record.text, title: record.title, description: record.description }, false);
+  }
+
+  private present(context: common.UIAbilityContext, data: systemShare.SharedRecord,
+    hasStagedFile: boolean): Promise<SystemShareResult> {
     const controller = new systemShare.ShareController(new systemShare.SharedData(data));
     return new Promise<SystemShareResult>((resolve): void => {
       let finished = false;
+      let dismissTimer: number | undefined;
       const finish = (result: SystemShareResult): void => {
         if (finished) return;
         finished = true;
+        if (dismissTimer !== undefined) clearTimeout(dismissTimer);
         try { controller.off('dismiss', dismiss); } catch (_) { /* The OS may have already released the panel. */ }
         try { controller.off('shareCompleted', complete); } catch (_) { /* The OS may have already released the panel. */ }
         resolve(result);
       };
-      const dismiss = (): void => finish('dismissed');
+      const dismiss = (): void => {
+        if (!hasStagedFile) {
+          finish('dismissed');
+        } else if (dismissTimer === undefined) {
+          // Completion can follow the generic panel-close event. Keep the URI
+          // available while the two callbacks from the same interaction settle.
+          dismissTimer = setTimeout((): void => finish('dismissed'), SHARE_DISMISS_SETTLE_MS);
+        }
+      };
       const complete = (_result: systemShare.ShareOperationResult): void => finish('shown');
       try {
         controller.on('dismiss', dismiss);
@@ -128,7 +153,7 @@ export class ReaderSystemShareHost implements SystemSharePort {
   }
 
   private async originalFile(record: ReaderShareFile, context: common.UIAbilityContext,
-    current: () => boolean): Promise<systemShare.SharedRecord | undefined> {
+    current: () => boolean): Promise<ReaderPreparedBookShare | undefined> {
     if (!/^[0-9a-f]{64}$/.test(record.hash) || !/^\.(txt|epub|mobi|azw|azw3)$/.test(record.extension)) return undefined;
     const importDir = `${context.filesDir}/reader-import`;
     const booksDir = `${importDir}/books`;
@@ -154,7 +179,7 @@ export class ReaderSystemShareHost implements SystemSharePort {
       }
       const type = uniformTypeDescriptor.getUniformDataTypeByFilenameExtension(record.extension);
       const utd = type.length > 0 && !type.startsWith('flex.') ? type : uniformTypeDescriptor.UniformDataType.FILE;
-      return { utd, uri: fileUri.getUriFromPath(copy), title: record.title };
+      return { directory, data: { utd, uri: fileUri.getUriFromPath(copy), title: record.title } };
     } catch (error) {
       await removeReaderShareCopy(directory);
       throw error;

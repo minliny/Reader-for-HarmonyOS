@@ -16,6 +16,10 @@ export class HarmonySmartGestureHost {
   private context: UIContext | undefined;
   private generation: number = 0;
 
+  static detachCurrent(): void {
+    HarmonySmartGestureHost.owner?.detach();
+  }
+
   attach(context: UIContext, callbacks: HarmonySmartGestureCallbacks): void {
     if (this.context === context || !readerHarmonyCapabilities().api26) return;
     if (deviceInfo.distributionOSApiVersion >= 260000) {

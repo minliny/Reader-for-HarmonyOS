@@ -21,6 +21,11 @@ export interface ReaderShareImage {
   title: string;
 }
 
+export interface ReaderQuoteCardCopy {
+  path: string;
+  release: () => Promise<void>;
+}
+
 export type ReaderShareRecord = ReaderShareText | ReaderShareFile | ReaderShareImage;
 export type SystemShareResult = 'shown' | 'dismissed' | 'unavailable' | 'unsafe';
 export type ReaderShareResult = SystemShareResult | 'copied' | 'fileCopied' | 'quoteCopied' | 'quoteFailed' |
@@ -63,15 +68,21 @@ export class ReaderShareActions {
     return copyRequested ? this.copyText(text, current) : this.share({ kind: 'text', text }, text, current);
   }
 
-  async shareQuoteCard(text: string, title: string, render: () => Promise<string | undefined>,
+  async shareQuoteCard(text: string, title: string, render: () => Promise<ReaderQuoteCardCopy | undefined>,
     current: () => boolean): Promise<ReaderShareResult> {
     if (!current()) return 'retired';
     let result: SystemShareResult = 'unavailable';
+    let image: ReaderQuoteCardCopy | undefined;
     try {
-      const path = await render();
+      image = await render();
       if (!current()) return 'retired';
-      if (path !== undefined) result = await this.port.show({ kind: 'image', path, title }, current);
+      if (image !== undefined) result = await this.port.show({ kind: 'image', path: image.path, title }, current);
     } catch (_) { /* Export and platform failures fall back to the original text. */ }
+    finally {
+      if (image !== undefined && result !== 'shown') {
+        try { await image.release(); } catch (_) { /* Cache cleanup does not change the share result. */ }
+      }
+    }
     if (!current()) return 'retired';
     if (result === 'shown' || result === 'dismissed') return result;
     const copied = this.copyText(text, current);

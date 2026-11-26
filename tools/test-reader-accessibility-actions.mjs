@@ -24,7 +24,7 @@ test('API 23 and 24 preserve baseline accessibility; API 26 still verifies the s
   }
 });
 
-test('enhanced directory actions and focus use the current directory opening', () => {
+test('enhanced directory actions use the current opening and sort keeps natural forward focus', () => {
   const f = fixture(260000);
   const Toolbar = selectedProductionMethods(new URL('features/reading/ui/ReaderDirectoryToolbar.ets', root),
     'ReaderDirectoryToolbar', ['directoryAccessibility', 'currentDirectoryInput'], f);
@@ -38,7 +38,8 @@ test('enhanced directory actions and focus use the current directory opening', (
   modifier.applyNormalAttribute(f.attribute);
   const actions = f.calls[1];
   assert.deepEqual(actions.map(action => action.name), ['定位当前章节', '回到目录顶部', '前往目录底部']);
-  assert.deepEqual(f.calls[2], { id: 'query-2', options: { isConsiderDescendants: true } });
+  assert.deepEqual(f.calls[2], { id: '', options: { isConsiderDescendants: true } },
+    'the last tool must not send screen reader focus back to the search field');
   actions[0].onAction();
   toolbar.directoryFocusId = 'query-3';
   actions[1].onAction();

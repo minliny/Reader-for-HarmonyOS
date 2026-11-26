@@ -25,8 +25,14 @@ export type LocalRecoveryArchiveConsumer = (path: string, sha256: string, size: 
 /** The system extension can build an archive from its isolated read-only source. */
 export interface LocalRecoveryExportPort {
   readonly filesDir: string;
-  request(method: string, params: JsonObject): Promise<JsonObject>;
+  capture(passphrase: string): Promise<LocalRecoveryExportCapture>;
   retainedLocalBookSourcePath(bookId: string, current: () => boolean): Promise<string | undefined>;
+}
+
+export interface LocalRecoveryExportCapture {
+  content: string;
+  packageSha256: string;
+  localOriginals: unknown;
 }
 
 interface Original {
@@ -56,6 +62,7 @@ interface Journal {
   rollbackId?: string;
   rollbackSha256: string;
   rollbackRequested?: boolean;
+  origin?: 'system';
 }
 
 interface Preview {
@@ -69,6 +76,16 @@ const MAX_ORIGINALS = 10000;
 const HASH = /^[a-f0-9]{64}$/;
 const TIMEOUT = 120000;
 const LOG_DOMAIN = 0x5244;
+
+function systemRecoveryOperationId(digest: string): string {
+  return `quarantined-v1-${digest.slice(0, 8)}-${digest.slice(8, 12)}-${digest.slice(12, 16)}-` +
+    `${digest.slice(16, 20)}-${digest.slice(20, 32)}`;
+}
+
+function isSystemRecovery(journal: Journal): boolean {
+  // Accept the pre-origin journal format using its exact deterministic owner.
+  return journal.origin === 'system' || journal.operationId === systemRecoveryOperationId(journal.bundleSha256);
+}
 
 export class LocalRecoveryGateway {
   private static readonly active = new Set<string>();
@@ -88,9 +105,11 @@ export class LocalRecoveryGateway {
     return fileIo.access(this.journalPath());
   }
 
-  async pendingAction(): Promise<'restore' | 'rollback' | undefined> {
+  async pendingAction(): Promise<'restore' | 'rollback' | 'system' | undefined> {
     const journal = await this.readJournal();
-    return journal === undefined ? undefined : journal.rollbackRequested === true ? 'rollback' : 'restore';
+    if (journal === undefined) return undefined;
+    if (isSystemRecovery(journal)) return 'system';
+    return journal.rollbackRequested === true ? 'rollback' : 'restore';
   }
 
   clearPreview(): void {
@@ -116,12 +135,11 @@ export class LocalRecoveryGateway {
   exportStagedPackage(passphrase: string, includeOriginals: boolean, consume: LocalRecoveryArchiveConsumer,
     current: () => boolean): Promise<LocalRecoveryOutcome> {
     return this.perform(passphrase, async (work): Promise<LocalRecoveryOutcome> => {
-      if (await this.pending()) return { state: 'interrupted' };
-      const exported = await this.request('library.package.export', { password: passphrase });
-      const content = exported['content'];
-      const packageSha256 = exported['packageSha256'];
-      if (typeof content !== 'string' || typeof packageSha256 !== 'string') this.reject();
-      const rows = await this.inspectCore(content, packageSha256, passphrase);
+      const pending = await this.pendingAction();
+      if (pending !== undefined && pending !== 'system') return { state: 'interrupted' };
+      const captured = await this.captureForExport(passphrase);
+      const content = captured.content, packageSha256 = captured.packageSha256;
+      const rows = captured.rows;
       const originals = new Map<string, string>();
       let bytes = recoveryUtf8(content).length;
       for (const row of rows) {
@@ -183,12 +201,10 @@ export class LocalRecoveryGateway {
     return this.perform(passphrase, async (work): Promise<LocalRecoveryOutcome> => {
       if (!HASH.test(expectedBundleSha256)) this.reject();
       this.checkCurrent(current);
-      const identity = expectedBundleSha256;
-      const operationId = `quarantined-v1-${identity.slice(0, 8)}-${identity.slice(8, 12)}-${identity.slice(12, 16)}-` +
-        `${identity.slice(16, 20)}-${identity.slice(20, 32)}`;
+      const operationId = systemRecoveryOperationId(expectedBundleSha256);
       const accepted = await this.readJournal();
       if (accepted !== undefined) {
-        if (accepted.operationId !== operationId || accepted.bundleSha256 !== expectedBundleSha256 ||
+        if (!isSystemRecovery(accepted) || accepted.operationId !== operationId || accepted.bundleSha256 !== expectedBundleSha256 ||
           accepted.rollbackRequested === true) return { state: 'interrupted' };
         const archive = await this.openPending(work, passphrase, expectedBundleSha256);
         if (archive.packageSha256 !== accepted.packageSha256) this.reject();
@@ -210,7 +226,8 @@ export class LocalRecoveryGateway {
       await this.clearUnaccepted();
       await fileIo.moveFile(staged, this.packagePath());
       await this.syncDirectory();
-      const journal = await this.prepareJournal(archive.packageSha256, expectedBundleSha256, passphrase, operationId);
+      const checkpoint = await this.prepareJournal(archive.packageSha256, expectedBundleSha256, passphrase, operationId);
+      const journal: Journal = { ...checkpoint, origin: 'system' };
       this.checkCurrent(current);
       await replaceReaderAtomicSnapshot(this.journalPath(), this.directory, JSON.stringify(journal));
       this.preview = undefined;
@@ -253,8 +270,10 @@ export class LocalRecoveryGateway {
       const archive = await this.openPending(work, passphrase, preview.bundleSha256);
       if (archive.packageSha256 !== preview.packageSha256) this.reject();
       await this.checkOriginalsReadable(work, archive);
+      if (this.preview !== preview) return { state: 'cancelled' };
       if (admit !== undefined) await admit();
       const journal = await this.prepareJournal(archive.packageSha256, preview.bundleSha256, passphrase);
+      if (this.preview !== preview) return { state: 'cancelled' };
       if (admit !== undefined) await admit();
       await replaceReaderAtomicSnapshot(this.journalPath(), this.directory, JSON.stringify(journal));
       this.preview = undefined;
@@ -267,6 +286,7 @@ export class LocalRecoveryGateway {
     return this.perform(passphrase, async (work): Promise<LocalRecoveryOutcome> => {
       const journal = await this.readJournal();
       if (journal === undefined) return { state: 'cancelled' };
+      if (isSystemRecovery(journal)) return { state: 'interrupted' };
       if (journal.rollbackRequested === true) return this.rollback(work, journal, passphrase);
       if (journal.rollbackKind === 'portable' && await recoveryHashFile(this.rollbackPath()) !== journal.rollbackSha256) {
         throw new Error('Core rollback snapshot changed');
@@ -282,6 +302,7 @@ export class LocalRecoveryGateway {
     return this.perform(passphrase, async (work): Promise<LocalRecoveryOutcome> => {
       const journal = await this.readJournal();
       if (journal === undefined) return { state: 'cancelled' };
+      if (isSystemRecovery(journal)) return { state: 'interrupted' };
       if (journal.rollbackRequested === true) return this.rollback(work, journal, passphrase);
       // Authenticate before committing the user's choice. For an older
       // physical checkpoint the still-authenticated pending package supplies
@@ -545,6 +566,20 @@ export class LocalRecoveryGateway {
     return this.decodeRows(preview['localOriginals'], true);
   }
 
+  private async captureForExport(passphrase: string): Promise<Archive> {
+    if (this.exportPort !== undefined) {
+      const captured = await this.exportPort.capture(passphrase);
+      if (!HASH.test(captured.packageSha256) || typeof captured.content !== 'string') this.reject();
+      return { content: captured.content, packageSha256: captured.packageSha256,
+        rows: this.decodeRows(captured.localOriginals, true) };
+    }
+    const exported = await this.request('library.package.export', { password: passphrase });
+    const content = exported['content'], packageSha256 = exported['packageSha256'];
+    if (typeof content !== 'string' || typeof packageSha256 !== 'string') return this.reject();
+    const rows = await this.inspectCore(content, packageSha256, passphrase);
+    return { content, packageSha256, rows };
+  }
+
   private decodeRows(raw: unknown, fromCore: boolean): Row[] {
     if (!Array.isArray(raw) || raw.length > MAX_ORIGINALS) return this.reject();
     const rows: Row[] = [];
@@ -618,6 +653,8 @@ export class LocalRecoveryGateway {
     if ((await fileIo.stat(path)).size > 2048) throw new Error('Recovery journal exceeds its limit');
     const journal = JSON.parse(await fileIo.readText(path)) as Journal;
     if (journal.schemaVersion !== 1 || !/^quarantined-v1-[a-f0-9-]{36}$/.test(journal.operationId) ||
+      (journal.origin !== undefined && (journal.origin !== 'system' ||
+        journal.operationId !== systemRecoveryOperationId(journal.bundleSha256))) ||
       (journal.rollbackRequested !== undefined && journal.rollbackRequested !== true) ||
       !HASH.test(journal.packageSha256) || !HASH.test(journal.bundleSha256) ||
       !HASH.test(journal.rollbackSha256) || (journal.rollbackKind !== 'portable' &&
@@ -644,9 +681,6 @@ export class LocalRecoveryGateway {
   }
 
   private request(method: string, params: JsonObject): Promise<JsonObject> {
-    if (this.exportPort !== undefined && (method === 'library.package.export' || method === 'library.package.inspect')) {
-      return this.exportPort.request(method, params);
-    }
     return this.requireRuntime().request(method, params, { timeoutMs: TIMEOUT }).then((result) => result.data);
   }
 

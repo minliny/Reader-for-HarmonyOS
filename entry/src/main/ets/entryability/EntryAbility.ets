@@ -9,6 +9,7 @@ import { ReaderThemeHost } from '../app/ReaderThemeHost';
 import { ReaderNavigationAppearancePreferences } from '../app/ReaderNavigationAppearancePreferences';
 import { ReaderControlPlacementPreferences } from '../app/ReaderControlPlacementPreferences';
 import { ReaderSmartGesturePreferences } from '../app/ReaderSmartGesturePreferences';
+import { HarmonySmartGestureHost } from '../platform/interaction/HarmonySmartGestureHost';
 import { readerSystemMigrationIncludesOriginals } from '../app/ReaderSystemMigrationPreferences';
 import { resumeReaderSystemMigration } from '../backup/ReaderSystemMigrationStartup';
 import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, Want } from '@kit.AbilityKit';
@@ -540,12 +541,16 @@ export default class EntryAbility extends UIAbility {
     this.startupContent = undefined;
     ReaderThemeHost.detach();
     ReaderNavigationAppearancePreferences.detach();
+    const owner = this.runtimeOwner;
+    if (owner !== undefined && ReaderRuntimeOwner.isCurrent(owner)) {
+      HarmonySmartGestureHost.detachCurrent();
+      ReaderSmartGesturePreferences.detach();
+    }
     this.windowStageGeneration += 1;
     this.activeWindowStage = undefined;
     ReaderWindowCoordinator.destroyWindow();
     AppStorage.setOrCreate('readerAppForeground', false);
     ReaderDocumentPickerActivity.setForeground(false);
-    const owner = this.runtimeOwner;
     ReaderSystemFileOpenHost.detach(owner);
     this.runtimeOwner = undefined;
     owner?.release().catch((error: Error): void => {

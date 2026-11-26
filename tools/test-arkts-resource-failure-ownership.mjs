@@ -178,6 +178,7 @@ function nativeTextTeardown() {
   const warnings = [];
   const Host = load('features/reading/ui/ReaderNativeTextWindow.ets', 'ReaderNativeTextWindow', {
     readerNativeTextNodeGeometry: () => undefined, readerNativeTextNodeContent: () => undefined,
+    readerNativeTextPunctuationOverhang: () => 0,
     hilog: { warn(_domain, _tag, summary) { warnings.push(summary); } },
     FrameNode: class {
       commonAttribute = { width() { return this; }, clip() { return this; } };

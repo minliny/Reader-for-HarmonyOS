@@ -151,3 +151,44 @@ console.log('PASS late picker and native confirmation callbacks cannot apply aga
   assert.equal(panel.pendingRestore, false);
 }
 console.log('PASS rollback requires confirmation and resumes the already accepted rollback after opening retirement');
+
+{
+  const { panel, events } = fixture({ pendingAction: async () => 'system' });
+  panel.aboutToAppear(); await tick();
+  assert.equal(panel.pendingRestore, false);
+  assert.equal(panel.systemPending, true);
+  panel.passphrase = 'new export passphrase';
+  await panel.perform('inspect', panel.revision);
+  await panel.perform('resume', panel.revision);
+  await panel.perform('rollback', panel.revision);
+  await panel.perform('export', panel.revision);
+  assert.deepEqual(events, ['clearPreview', 'export']);
+}
+console.log('PASS a system pause exposes no user recovery action and still permits a separate export');
+
+{
+  let admission;
+  let activate;
+  const wait = new Promise(resolve => { activate = resolve; });
+  const { panel, dialogs, events } = fixture({
+    async applyPackage(_passphrase, admit) {
+      admission = admit;
+      await wait;
+      await admit();
+      events.push('apply dispatched');
+      return { state: 'restored' };
+    },
+  });
+  panel.aboutToAppear(); await tick();
+  panel.passphrase = 'fixture passphrase';
+  await panel.perform('inspect', panel.revision);
+  panel.requestRestore(panel.revision);
+  decide(dialogs[0], 'secondaryButton');
+  await admission();
+  panel.navigationGeneration++;
+  activate();
+  await tick();
+  assert.equal(events.includes('apply dispatched'), false);
+  await assert.rejects(admission(), /opening retired/);
+}
+console.log('PASS leaving an accepted preview while validation awaits retires its pre-journal dispatch authority');

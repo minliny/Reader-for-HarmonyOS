@@ -5,6 +5,7 @@ import { image } from '@kit.ImageKit';
 import { createReaderShareCopy, removeReaderShareCopy, READER_QUOTE_CARD_MAX_BYTES } from '../../../platform/share/ReaderSystemShareHost';
 import { prepareReaderFontFamily } from '../../../ui/foundation/ReaderFonts';
 import type { ReaderAppearanceSnapshot } from '../application/ReaderAppearanceState';
+import type { ReaderQuoteCardCopy } from '../application/ReaderShareActions';
 import { readerAppearanceSnapshotFontFamily, readerAppearanceThemeStyle, type ReaderAppearanceThemeStyle } from './ReaderAppearanceRenderStyle';
 
 const CARD_WIDTH_VP = 400;
@@ -60,7 +61,7 @@ function readerQuoteCard(model: ReaderQuoteCardModel) {
 }
 
 export async function exportReaderQuoteCard(ui: UIContext, text: string, title: string, author: string,
-  appearance: ReaderAppearanceSnapshot, current: () => boolean): Promise<string | undefined> {
+  appearance: ReaderAppearanceSnapshot, current: () => boolean): Promise<ReaderQuoteCardCopy | undefined> {
   const context = ui.getHostContext() as common.UIAbilityContext | undefined;
   if (context === undefined || !current() || text.trim().length === 0) return undefined;
   const nativeHeight = ui.vp2px(CARD_HEIGHT_VP);
@@ -80,9 +81,10 @@ export async function exportReaderQuoteCard(ui: UIContext, text: string, title: 
     const info = await pixels.getImageInfo();
     if (info.size.width <= 0 || info.size.width > MAX_PIXEL_EDGE ||
       info.size.height <= 0 || info.size.height > MAX_PIXEL_EDGE) return undefined;
-    directory = await createReaderShareCopy(context, 'quote', current);
-    if (directory === undefined || !current()) return undefined;
-    const path = `${directory}/quote.png`;
+    const ownedDirectory = await createReaderShareCopy(context, 'quote', current);
+    directory = ownedDirectory;
+    if (ownedDirectory === undefined || !current()) return undefined;
+    const path = `${ownedDirectory}/quote.png`;
     const file = await fileIo.open(path, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.NOFOLLOW);
     try {
       packer = image.createImagePacker();
@@ -94,10 +96,9 @@ export async function exportReaderQuoteCard(ui: UIContext, text: string, title: 
       await fileIo.close(file);
     }
     retained = current();
-    return retained ? path : undefined;
+    return retained ? { path, release: (): Promise<void> => removeReaderShareCopy(ownedDirectory) } : undefined;
   } finally {
-    // Drain the snapshot before disposing its offscreen tree; an old selection
-    // never leaves a partial PNG or revokes a completed file held by Share Kit.
+    // The share action owns a completed copy. Everything else stays with the exporter.
     if (directory !== undefined && !retained) await removeReaderShareCopy(directory);
     if (packer !== undefined) void packer.release().catch((): void => {});
     if (pixels !== undefined) void pixels.release().catch((): void => {});

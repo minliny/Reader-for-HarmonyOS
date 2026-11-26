@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { selectedProductionMethods } from './lib/selected-production-methods.mjs';
 
 const root = new URL('../entry/src/main/', import.meta.url);
+const material = new URL('ets/ui/foundation/ReaderPaperMaterial.ets', root);
 
 test('Reader paper overrides take effect only on platform-confirmed API 26', () => {
   for (const [distributionOSApiVersion, available, expectedCalls] of [
@@ -14,12 +15,30 @@ test('Reader paper overrides take effect only on platform-confirmed API 26', () 
   ]) {
     const calls = [];
     const PaperMaterial = selectedProductionMethods(
-      new URL('ets/ui/foundation/ReaderPaperMaterial.ets', root), 'ReaderPaperMaterial', ['applyNormalAttribute'], {
+      material, 'ReaderPaperMaterial', ['applyNormalAttribute'], {
         deviceInfo: { distributionOSApiVersion, apiAvailable: sdk => { calls.push(sdk); return available; } },
         uiMaterial: { Material: { empty: 'empty' } },
       });
     new PaperMaterial().applyNormalAttribute({ systemMaterial: material => calls.push(material) });
     assert.deepEqual(calls, expectedCalls);
+  }
+});
+
+test('paper controls lazy-load optional SDK material and survive unavailable native operations', () => {
+  assert.match(readFileSync(material, 'utf8'), /import\s+lazy\s+\{\s*uiMaterial\s*\}\s+from\s+'@kit\.ArkUI'/);
+  for (const failure of ['availability', 'module', 'modifier']) {
+    const fail = () => { throw new Error(`optional paper material: ${failure}`); };
+    const PaperMaterial = selectedProductionMethods(material, 'ReaderPaperMaterial', ['applyNormalAttribute'], {
+      deviceInfo: { distributionOSApiVersion: 260000, apiAvailable: failure === 'availability' ? fail : () => true },
+      uiMaterial: {
+        get Material() {
+          return failure === 'module' ? fail() : { empty: 'empty' };
+        },
+      },
+    });
+    assert.doesNotThrow(() => new PaperMaterial().applyNormalAttribute({
+      systemMaterial: failure === 'modifier' ? fail : () => assert.fail('unavailable material must not be applied'),
+    }));
   }
 });
 

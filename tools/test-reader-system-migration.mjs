@@ -135,10 +135,81 @@ test('the system restore callback queues only the extraction directory and repor
   assert.equal(queued.length, 1);
 });
 
+test('backup reserves before preferences, releases the owner after failure, and retains release cleanup', async () => {
+  let settlePreferences;
+  const prefs = new Promise(resolve => { settlePreferences = resolve; });
+  let attempts = 0;
+  const removed = [];
+  const Backup = selectedProductionMethods(new URL('ets/backup/ReaderBackupExtensionAbility.ets', root),
+    'ReaderBackupExtensionAbility', ['generation', 'backup', 'releaseTask', 'onBackupEx', 'prepareBackup', 'onRelease', 'clearReleasedArchive'], {
+      ...policy,
+      migrationResult: (error = '') => ({ error }),
+      fileIo: { access: async () => true, unlink: async path => removed.push(path) },
+      systemMigrationPayload: directory => join(directory, 'library.readerbackup'),
+      readerSystemMigrationIncludesOriginals: () => prefs,
+      createReaderSystemMigrationArchive: async (_extension, directory, include, current) => {
+        assert.equal(directory, '/reader-files');
+        assert.equal(include, false);
+        assert.equal(current(), true);
+        if (++attempts === 1) throw new Error('transient export failure');
+      },
+    });
+  const backup = Object.assign(new Backup(), { context: {
+    getApplicationContext: () => ({ filesDir: '/reader-files' }),
+  } });
+  const first = backup.onBackupEx('{}');
+  assert.deepEqual(await backup.onBackupEx('{}'), { error: 'READER_SYSTEM_MIGRATION_EXPORT_BUSY' });
+  settlePreferences(false);
+  assert.deepEqual(await first, { error: 'READER_SYSTEM_MIGRATION_EXPORT_FAILED' });
+  assert.equal(backup.backup, undefined);
+  assert.deepEqual(await backup.onBackupEx('{}'), { error: '' });
+  assert.equal(backup.backup, undefined);
+  await backup.onRelease(1);
+  assert.deepEqual(removed, ['/reader-files/reader-system-migration-v1/manifest.json',
+    '/reader-files/reader-system-migration-v1/library.readerbackup']);
+});
+
+test('system archive reads the admitted application database through the read-only SDK port', async () => {
+  const identity = { format: 'reader.storage-bootstrap-identity', version: 1, buildId: 'b', contractSha256: 'c', coreInputFingerprint: 'd' };
+  const calls = [];
+  const create = module('ets/backup/ReaderSystemMigrationExport.ts', {
+    ...policy,
+    fileIo: { access: async path => path === '/reader-files/reader-core' },
+    util: { generateRandomUUID: () => 'f'.repeat(32),
+      TextDecoder: { create: () => ({ decodeToString: bytes => Buffer.from(bytes).toString('utf-8') }) } },
+    probeReaderCoreStorageAsync: async (path, current) => {
+      calls.push(['readOnlyAdmission', path]); assert.equal(current(), true);
+      return { buildIdentity: { buildId: 'b' }, contractSha256: 'c', coreInputFingerprint: 'd',
+        observation: { freshStorage: false, requiresMigration: false } };
+    },
+    exportReaderCoreLibraryReadOnlyAsync: async (path, secret, current) => {
+      calls.push(['readOnlyExport', path]); assert.equal(current(), true); assert.match(secret, /^f{64}$/);
+      return { content: 'ciphertext', packageSha256: sha('ciphertext'), localOriginals: [] };
+    },
+    ensureSystemMigrationDirectory: async () => {}, systemMigrationPayload: directory => join(directory, 'library.readerbackup'),
+    ReaderLocalRecoveryExportPort: class { constructor(path) { assert.equal(path, '/reader-files'); } },
+    LocalRecoveryGateway: class {
+      constructor(runtime, port) { assert.equal(runtime, undefined); this.port = port; }
+      async exportStagedPackage(phrase, include) {
+        assert.equal(include, false);
+        assert.match(this.port.filesDir, /^\/extension-private\//);
+        assert.equal((await this.port.capture(phrase)).content, 'ciphertext');
+        return { state: 'exported' };
+      }
+    },
+  }, ['createReaderSystemMigrationArchive']).createReaderSystemMigrationArchive;
+  await create({ filesDir: '/extension-private', resourceManager: {
+    getRawFileContent: async () => Buffer.from(JSON.stringify(identity)),
+  } }, '/reader-files', false, () => true);
+  assert.deepEqual(calls, [['readOnlyAdmission', '/reader-files/reader-core'], ['readOnlyExport', '/reader-files/reader-core']]);
+});
+
 test('lost startup acknowledgement reuses the exact library restore identity and rejects a different local recovery', async () => {
+  const functions = module('ets/features/bookshelf/application/LocalRecoveryGateway.ts', {},
+    ['systemRecoveryOperationId', 'isSystemRecovery']);
   const Gateway = selectedProductionMethods(new URL('ets/features/bookshelf/application/LocalRecoveryGateway.ts', root),
     'LocalRecoveryGateway', ['restoreSystemStagedPackage'], {
-      HASH: /^[a-f0-9]{64}$/, MAX_ORIGINAL_BYTES: 67108864,
+      ...functions, HASH: /^[a-f0-9]{64}$/, MAX_ORIGINAL_BYTES: 67108864,
       fileIo: { stat: async () => ({ size: manifest.packageBytes }), moveFile: async () => {} },
       recoveryReserve: async () => {}, recoveryHashFile: async () => manifest.packageSha256,
       replaceReaderAtomicSnapshot: async (_path, _parent, json) => { accepted = JSON.parse(json); },
@@ -164,4 +235,19 @@ test('lost startup acknowledgement reuses the exact library restore identity and
   assert.deepEqual(new Set(applied).size, 1);
   accepted = { ...accepted, operationId: 'different-local-restore' };
   assert.equal((await run(async () => assert.fail('a different local restore keeps its owner'))).state, 'interrupted');
+});
+
+test('legacy and new system-owned recovery receipts cannot be adopted or rolled back by password UI', async () => {
+  const url = 'ets/features/bookshelf/application/LocalRecoveryGateway.ts';
+  const functions = module(url, {}, ['systemRecoveryOperationId', 'isSystemRecovery']);
+  const Gateway = selectedProductionMethods(new URL(url, root), 'LocalRecoveryGateway',
+    ['pendingAction', 'resumePackage', 'rollbackPackage'], functions);
+  for (const origin of [undefined, 'system']) {
+    const journal = { origin, operationId: functions.systemRecoveryOperationId(manifest.packageSha256), bundleSha256: manifest.packageSha256 };
+    const gateway = Object.assign(new Gateway(), { requireRuntime() {}, readJournal: async () => journal,
+      perform: (_passphrase, run) => run('/staging') });
+    assert.equal(await gateway.pendingAction(), 'system');
+    assert.deepEqual(await gateway.resumePackage('some user phrase'), { state: 'interrupted' });
+    assert.deepEqual(await gateway.rollbackPackage('some user phrase'), { state: 'interrupted' });
+  }
 });

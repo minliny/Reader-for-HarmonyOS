@@ -1,5 +1,5 @@
 import connection from '@ohos.net.connection';
-import { httpUrlHostname, isPrivateNetworkTarget } from './HttpTransportPolicy';
+import { httpUrlHostname, isPrivateNetworkTarget, isWebDavLanAddress } from './HttpTransportPolicy';
 
 export type NetworkTarget = {
   host: string;
@@ -120,52 +120,56 @@ async function hasSyntheticSystemRoute(network: connection.NetHandle, addresses:
  * A matching route proves routing delegation, not the proxy's final address.
  * Transports pin this original DNS answer while preserving the URL/Host/TLS.
  */
-export async function prepareNetworkTarget(requestUrl: string): Promise<NetworkTarget> {
+export async function prepareNetworkTarget(requestUrl: string, webDavOrigin: boolean = false): Promise<NetworkTarget> {
   const host = httpUrlHostname(requestUrl);
-  if (host === undefined || isPrivateNetworkTarget(host)) {
+  if (host === undefined || (isPrivateNetworkTarget(host) && !(webDavOrigin && isWebDavLanAddress(host)))) {
     throw new Error('url targets a private, loopback, link-local or invalid address and is not allowed');
   }
   let bypassSystemProxy = false;
-  let operation = 'getDefaultHttpProxy';
-  try {
-    const proxy = await connection.getDefaultHttpProxy();
-    if (proxy === null || typeof proxy !== 'object' || typeof proxy.host !== 'string' ||
-      typeof proxy.port !== 'number' || !Number.isInteger(proxy.port) || proxy.port < 0 || proxy.port > 65535 ||
-      !Array.isArray(proxy.exclusionList) || proxy.exclusionList.some((item: string): boolean => typeof item !== 'string')) {
-      throw new TypeError('Invalid system proxy result type');
-    }
-    // API 20+ getPacFileUrl reports the script used to enable system PAC and
-    // returns '' when none is configured (Phone PAC support starts at API 23).
-    // Legacy getPacUrl may throw 2100003 for an absent script; its setter only
-    // stores an address and does not enable the system proxy. Do not query it.
-    // Keep this read fresh: caching it without a configuration revision could
-    // route a PAC DIRECT request through a proxy, bypassing DNS admission.
-    operation = 'getPacFileUrl';
-    const pacFileUrl = connection.getPacFileUrl();
-    if (typeof pacFileUrl !== 'string') throw new TypeError('Invalid PAC file URL result type');
-    const pacConfigured = pacFileUrl.length > 0;
-    operation = 'proxy.configuration';
-    const hasProxy = proxy.host.trim().length > 0 && proxy.port > 0;
-    if (pacConfigured && !hasProxy) {
-      throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试', operation);
-    }
-    bypassSystemProxy = hasProxy;
-    if (hasProxy && !isSystemProxyExcluded(host, proxy.exclusionList)) {
-      // Reuse the system PAC engine. For DIRECT, the transport must explicitly
-      // bypass the local PAC proxy so the validated application DNS pin applies.
-      operation = 'findProxyForUrl';
-      const pac = pacConfigured ? connection.findProxyForUrl(requestUrl).trim() : '';
-      if (pacConfigured && pac.length === 0) {
+  // A saved WebDAV endpoint may resolve to a NAS. Keep its credential-bearing
+  // route direct and DNS-pinned, without delegating the private address to a proxy.
+  if (!webDavOrigin) {
+    let operation = 'getDefaultHttpProxy';
+    try {
+      const proxy = await connection.getDefaultHttpProxy();
+      if (proxy === null || typeof proxy !== 'object' || typeof proxy.host !== 'string' ||
+        typeof proxy.port !== 'number' || !Number.isInteger(proxy.port) || proxy.port < 0 || proxy.port > 65535 ||
+        !Array.isArray(proxy.exclusionList) || proxy.exclusionList.some((item: string): boolean => typeof item !== 'string')) {
+        throw new TypeError('Invalid system proxy result type');
+      }
+      // API 20+ getPacFileUrl reports the script used to enable system PAC and
+      // returns '' when none is configured (Phone PAC support starts at API 23).
+      // Legacy getPacUrl may throw 2100003 for an absent script; its setter only
+      // stores an address and does not enable the system proxy. Do not query it.
+      // Keep this read fresh: caching it without a configuration revision could
+      // route a PAC DIRECT request through a proxy, bypassing DNS admission.
+      operation = 'getPacFileUrl';
+      const pacFileUrl = connection.getPacFileUrl();
+      if (typeof pacFileUrl !== 'string') throw new TypeError('Invalid PAC file URL result type');
+      const pacConfigured = pacFileUrl.length > 0;
+      operation = 'proxy.configuration';
+      const hasProxy = proxy.host.trim().length > 0 && proxy.port > 0;
+      if (pacConfigured && !hasProxy) {
         throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试', operation);
       }
-      if (!pacConfigured || !/^DIRECT(?:\s*;|$)/i.test(pac)) {
-        return { host, addresses: [], route: 'systemProxy',
-          systemProxy: { ...proxy, exclusionList: [...proxy.exclusionList] } };
+      bypassSystemProxy = hasProxy;
+      if (hasProxy && !isSystemProxyExcluded(host, proxy.exclusionList)) {
+        // Reuse the system PAC engine. For DIRECT, the transport must explicitly
+        // bypass the local PAC proxy so the validated application DNS pin applies.
+        operation = 'findProxyForUrl';
+        const pac = pacConfigured ? connection.findProxyForUrl(requestUrl).trim() : '';
+        if (pacConfigured && pac.length === 0) {
+          throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试', operation);
+        }
+        if (!pacConfigured || !/^DIRECT(?:\s*;|$)/i.test(pac)) {
+          return { host, addresses: [], route: 'systemProxy',
+            systemProxy: { ...proxy, exclusionList: [...proxy.exclusionList] } };
+        }
       }
+    } catch (error) {
+      if (error instanceof NetworkEnvironmentError) throw error;
+      throw NetworkEnvironmentError.fromPlatform('route', '无法读取系统网络代理配置，请检查网络连接后重试', operation, error);
     }
-  } catch (error) {
-    if (error instanceof NetworkEnvironmentError) throw error;
-    throw NetworkEnvironmentError.fromPlatform('route', '无法读取系统网络代理配置，请检查网络连接后重试', operation, error);
   }
   if (host.includes(':') || /^[0-9.]+$/.test(host)) return { host, addresses: [host], route: 'direct', bypassSystemProxy };
   let network: SelectedNetwork;
@@ -186,8 +190,9 @@ export async function prepareNetworkTarget(requestUrl: string): Promise<NetworkT
   if (addresses.length === 0) throw new NetworkEnvironmentError('dns', '当前网络未返回书源地址，请稍后重试');
   const synthetic = addresses.filter((address: string): boolean => isSyntheticDnsAddress(address));
   for (const address of addresses) {
+    const allowedPrivateAddress = webDavOrigin ? isWebDavLanAddress(address) : isSyntheticDnsAddress(address);
     if (address.length === 0 || (!address.includes(':') && !/^[0-9.]+$/.test(address)) ||
-      (isPrivateNetworkTarget(address) && !isSyntheticDnsAddress(address))) {
+      (isPrivateNetworkTarget(address) && !allowedPrivateAddress)) {
       throw new Error('url resolves to a private, loopback, link-local or invalid address and is not allowed');
     }
   }

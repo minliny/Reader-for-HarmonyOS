@@ -12,9 +12,9 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../../ui/platform/ReaderNativeAlertOwner';
 import { LocalRecoveryGateway } from '../../bookshelf/application/LocalRecoveryGateway';
 import { CategorySection } from '../../settings/ui/CategorySection';
-import { SyncGateway, type SyncLibraryBackupResult } from '../application/SyncGateway';
+import { SyncGateway, type SyncLibraryArchiveRow, type SyncLibraryBackupResult, type SyncLibraryRemovalStatus } from '../application/SyncGateway';
 
-type LibraryAction = 'saveConfig' | 'export' | 'cleanup' | 'inspect' | 'apply';
+type LibraryAction = 'saveConfig' | 'export' | 'cleanup' | 'list' | 'inspect' | 'apply' | 'remove' | 'retireParts';
 
 @Component
 export struct ReaderWebDavLibraryPanel {
@@ -32,7 +32,13 @@ export struct ReaderWebDavLibraryPanel {
   @State private includeOriginals: boolean = false;
   @State private pending: boolean = false;
   @State private cleanupReceipt: string = '';
+  @State private pendingConfigId: string = '';
+  @State private configNeedsOriginal: boolean = false;
+  @State private removal: SyncLibraryRemovalStatus | undefined = undefined;
+  @State private archives: SyncLibraryArchiveRow[] | undefined = undefined;
+  private providerIdentity: string | undefined;
   @State private readOnly: boolean = false;
+  @State private deletionUnavailable: boolean = false;
   @State private loading: boolean = true;
   @State private loadError: boolean = false;
   @State private active: LibraryAction | undefined = undefined;
@@ -57,6 +63,8 @@ export struct ReaderWebDavLibraryPanel {
     this.preview = undefined;
     this.editing = false;
     this.readOnly = false;
+    this.deletionUnavailable = false;
+    this.archives = undefined;
     this.password = '';
     this.backupPassword = '';
     this.gateway.cancelLibraryPreview(this.recovery);
@@ -74,18 +82,25 @@ export struct ReaderWebDavLibraryPanel {
     return this.mounted && this.isInputAllowed() && !this.loading && this.active === undefined && !this.confirmationOpen;
   }
 
-  private async readConfiguration(revision: number): Promise<void> {
+  private async readConfiguration(revision: number, preserveDraft: boolean = false): Promise<void> {
     this.loading = true;
     this.loadError = false;
     try {
       const state = await this.gateway.libraryBackupConfiguration();
       if (!this.current(revision)) return;
-      this.url = state.url;
-      this.user = state.user;
-      this.directory = state.directory;
+      if (!preserveDraft) {
+        this.url = state.url;
+        this.user = state.user;
+        this.directory = state.directory;
+      }
       this.configured = state.configured;
+      if (this.providerIdentity !== state.providerIdentity) this.archives = undefined;
+      this.providerIdentity = state.providerIdentity;
       this.pending = state.pendingPublication;
       this.cleanupReceipt = state.cleanupReceipt ?? '';
+      this.pendingConfigId = state.pendingConfigId ?? '';
+      this.configNeedsOriginal = state.configNeedsOriginal === true;
+      this.removal = state.removal;
     } catch (_) {
       if (this.current(revision)) this.loadError = true;
     } finally {
@@ -93,11 +108,14 @@ export struct ReaderWebDavLibraryPanel {
     }
   }
 
-  private async run(action: LibraryAction): Promise<void> {
+  private async run(action: LibraryAction, row?: SyncLibraryArchiveRow): Promise<void> {
     if (!this.canAct() || (action === 'apply') !== (this.preview !== undefined)) return;
-    if (action === 'saveConfig' && (!this.editing || this.url.trim().length === 0)) return;
-    if (action !== 'saveConfig' && (!this.configured || this.editing)) return;
+    if (action === 'saveConfig' && (!this.editing || this.url.trim().length === 0) &&
+      (this.pendingConfigId.length === 0 || this.configNeedsOriginal)) return;
+    if (action !== 'saveConfig' && (!this.configured || this.editing || this.pendingConfigId.length > 0)) return;
     if (action === 'cleanup' && this.cleanupReceipt.length === 0) return;
+    if (action === 'remove' && (row === undefined || this.removal !== undefined || this.readOnly || this.deletionUnavailable)) return;
+    if (action === 'retireParts' && this.removal === undefined) return;
     const revision = ++this.revision;
     const current = (): boolean => this.current(revision) && this.isInputAllowed();
     this.active = action;
@@ -105,22 +123,34 @@ export struct ReaderWebDavLibraryPanel {
     let outcome: SyncLibraryBackupResult = { state: 'failed' };
     try {
       if (action === 'saveConfig') {
-        const saved = await this.gateway.saveConfig(this.url, this.user, this.password, this.backupPassword, this.directory,
-          undefined, current);
-        if (this.current(revision) && saved.ok) {
+        const recovering = this.pendingConfigId.length > 0;
+        const saved = recovering ?
+          await this.gateway.resumeLibraryConfiguration(this.pendingConfigId, current,
+            this.url, this.user, this.password, this.backupPassword, this.directory) :
+          (await this.gateway.saveConfig(this.url, this.user, this.password, this.backupPassword, this.directory,
+            undefined, current)).ok;
+        if (this.current(revision) && saved) {
           this.editing = false;
           this.readOnly = false;
+          this.deletionUnavailable = false;
+          this.archives = undefined;
         }
         if (this.current(revision)) {
           this.password = '';
           this.backupPassword = '';
-          this.showMessage(saved.ok ? 'WebDAV 配置已保存' : 'WebDAV 配置未保存，请核对 HTTPS 地址、账号及备份密码', current);
+          this.showMessage(saved ? 'WebDAV 配置已保存' :
+            recovering ? '原配置尚未恢复，请核对原 HTTPS 地址、账号和密码' :
+              'WebDAV 配置未保存，请核对 HTTPS 地址、账号及备份密码', current);
         }
       } else if (action === 'export' || action === 'cleanup') {
         outcome = await this.gateway.backupLibrary(this.recovery, this.includeOriginals, current,
           action === 'cleanup' ? this.cleanupReceipt : undefined);
-      } else if (action === 'inspect') outcome = await this.gateway.previewLibraryBackup(this.recovery, current);
-      else outcome = await this.gateway.restoreLibraryBackup(this.recovery, current);
+      } else if (action === 'list') outcome = await this.gateway.listLibraryArchives(current);
+      else if (action === 'inspect') outcome = await this.gateway.previewLibraryBackup(this.recovery, current, row);
+      else if (action === 'remove' && row !== undefined) outcome = await this.gateway.removeLibraryArchive(row, current);
+      else if (action === 'retireParts' && this.removal !== undefined) {
+        outcome = await this.gateway.resumeLibraryRetirement(this.removal.receipt, current);
+      } else if (action === 'apply') outcome = await this.gateway.restoreLibraryBackup(this.recovery, current);
     } catch (_) { /* Outcome stays failed for the current owner. */ }
     if (!this.current(revision)) return;
     this.active = undefined;
@@ -128,14 +158,25 @@ export struct ReaderWebDavLibraryPanel {
       this.preview = outcome;
       return;
     }
+    if (action === 'list' && outcome.archives !== undefined) this.archives = outcome.archives;
     this.preview = undefined;
-    if (outcome.state === 'readOnly') this.readOnly = true;
-    if (action === 'apply' || outcome.state === 'interrupted') this.onRestoreStateChanged();
-    if (action !== 'saveConfig') {
-      this.showMessage(action === 'cleanup' && outcome.state === 'exported' ? '本机暂存已清理' : this.outcomeMessage(outcome), current);
+    const removal = action === 'remove' || action === 'retireParts';
+    if (outcome.state === 'readOnly') {
+      if (removal) this.deletionUnavailable = true;
+      else this.readOnly = true;
     }
-    if (action === 'export' || action === 'cleanup' || action === 'saveConfig') {
-      if (!this.editing) await this.readConfiguration(revision);
+    if (action === 'apply' || outcome.state === 'interrupted') this.onRestoreStateChanged();
+    if (action !== 'saveConfig' && outcome.state !== 'listed') {
+      this.showMessage(action === 'cleanup' && outcome.state === 'exported' ? '本机暂存已清理' :
+        removal && outcome.state === 'conflict' ? '所选旧包或替代备份已变化，清理未继续' :
+          removal && outcome.state === 'readOnly' ? '服务未通过条件删除校验，现有备份仍可读取' : this.outcomeMessage(outcome), current);
+    }
+    if (action === 'export' || action === 'cleanup' || action === 'saveConfig' || action === 'remove' || action === 'retireParts') {
+      if (!this.editing || action === 'saveConfig') await this.readConfiguration(revision, this.editing);
+      if (action === 'remove' || action === 'retireParts') {
+        const refreshed = await this.gateway.listLibraryArchives(current);
+        if (this.current(revision) && refreshed.archives !== undefined) this.archives = refreshed.archives;
+      } else if (action === 'export' && outcome.state === 'exported' && this.current(revision)) this.archives = undefined;
     }
   }
 
@@ -143,6 +184,9 @@ export struct ReaderWebDavLibraryPanel {
     switch (outcome.state) {
       case 'exported': return '新备份已上传并完成回读校验，旧备份已保留';
       case 'cleanupPending': return '远端备份已完成回读校验，本机暂存待清理';
+      case 'retirementPending': return '远端旧包清理待续办，请查看清理状态';
+      case 'retirementCompleted': return '所选旧备份已清理';
+      case 'cleanupFailed': return '远端旧包清理未完成，可以继续原操作';
       case 'restored': return '阅读库已恢复';
       case 'cancelled': return '已取消 WebDAV 操作';
       case 'notConfigured': return '请先保存 WebDAV 配置';
@@ -200,6 +244,52 @@ export struct ReaderWebDavLibraryPanel {
     }
   }
 
+  private requestArchiveRemoval(row: SyncLibraryArchiveRow): void {
+    if (!this.canAct() || this.preview !== undefined || this.removal !== undefined ||
+      this.readOnly || this.deletionUnavailable || !row.canDelete) return;
+    const revision = this.revision;
+    const current = (): boolean => this.current(revision) && this.isInputAllowed() && this.removal === undefined &&
+      this.archives?.some((candidate: SyncLibraryArchiveRow): boolean => candidate.sha256 === row.sha256 &&
+        candidate.manifestSha256 === row.manifestSha256 && candidate.providerIdentity === row.providerIdentity &&
+        candidate.canDelete) === true;
+    this.confirmationOpen = true;
+    try {
+      const paint = resolveReaderButtonMatrixPaint('danger', true);
+      const decision = this.alert.present((options: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(options),
+        'confirmation-cancelable', {
+          title: '删除所选远端旧备份？',
+          message: `${this.archiveDate(row)} · ${this.archiveSize(row)} · ${this.archiveLibrary(row)}。校验最新备份后移除所选旧备份，正在读取的设备有 30 分钟完成读取。`,
+          primaryButton: { value: '取消', action: (): void => {} },
+          secondaryButton: { value: '删除旧备份', style: DialogButtonStyle.HIGHLIGHT,
+            backgroundColor: readerAppColor(paint.surface, this.scheme), fontColor: readerAppColor(paint.ink, this.scheme),
+            action: (): void => {
+              this.confirmationOpen = false;
+              if (current()) void this.run('remove', row);
+            } },
+        }, current);
+      void decision.decision.then((result): void => {
+        if (!current()) return;
+        this.confirmationOpen = false;
+        if (result === 'native-failure') this.showMessage('暂时无法确认远端清理，请重试', current);
+      });
+    } catch (_) {
+      this.confirmationOpen = false;
+      if (current()) this.showMessage('暂时无法确认远端清理，请重试', current);
+    }
+  }
+
+  private archiveDate(row: SyncLibraryArchiveRow): string {
+    return row.createdAt === undefined ? '时间未知' : new Date(row.createdAt).toLocaleString();
+  }
+
+  private archiveSize(row: SyncLibraryArchiveRow): string {
+    return row.bytes >= 1024 * 1024 ? `${(row.bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.ceil(row.bytes / 1024)} KB`;
+  }
+
+  private archiveLibrary(row: SyncLibraryArchiveRow): string {
+    return row.library === 'same' ? '本库备份' : row.library === 'other' ? '其他书库' : '书库未知';
+  }
+
   @Builder
   private field(label: string, text: string, secret: boolean, change: (value: string) => void) {
     ReaderFormRow({ kind: 'standard', label, contentMinWidth: 156 }) {
@@ -218,9 +308,51 @@ export struct ReaderWebDavLibraryPanel {
     Row({ space: TOK_SPACE_SM }) {
       ReaderButton({ scheme: this.scheme, variant: 'subtle', label: '取消', layout: 'equal',
         onAction: (): void => { if (this.canAct()) this.refreshOpening(); } });
-      ReaderButton({ scheme: this.scheme, variant: 'primary', label: '保存配置', layout: 'equal',
+      ReaderButton({ scheme: this.scheme, variant: 'primary',
+        label: this.pendingConfigId.length > 0 ? '续办原配置' : '保存配置', layout: 'equal',
         onAction: (): void => { void this.run('saveConfig'); } });
     }.width('100%').padding(TOK_SPACE_SM);
+  }
+
+  @Builder
+  private configNotice() {
+    ReaderRecoveryNotice({ tag: '配置保存待核对', actionLabel: this.configNeedsOriginal ? '重填原配置' : '续办原配置',
+      view: { visible: true, canRetry: true, generation: this.revision,
+        message: this.configNeedsOriginal ? '请输入原 HTTPS 地址、目录、账号和密码以继续。' : '从安全存储续办同一次保存。' },
+      onReconcile: (expected: number): void => {
+        if (!this.current(expected) || !this.canAct()) return;
+        if (this.configNeedsOriginal) this.editing = true;
+        else void this.run('saveConfig');
+      } });
+  }
+
+  @Builder
+  private retirementNotice() {
+    ReaderRecoveryNotice({ tag: '远端旧包清理待续办',
+      actionLabel: this.removal?.phase === 'manifest' ? '核对所选旧备份' : '继续清理分片',
+      view: { visible: true, canRetry: true, generation: this.revision,
+        message: this.removal?.phase === 'waiting' ? `为已开始的读取保留分片，预计还需 ${this.removal?.waitMinutes ?? 0} 分钟。` :
+          '只续办已确认的旧备份，不重新上传。' },
+      onReconcile: (expected: number): void => { if (this.current(expected)) void this.run('retireParts'); } });
+  }
+
+  @Builder
+  private archiveList() {
+    if (this.archives?.length === 0) {
+      ReaderFormRow({ label: '该目录暂无 Reader 书库备份' });
+    }
+    ForEach(this.archives ?? [], (row: SyncLibraryArchiveRow): void => {
+      ReaderFormRow({ kind: 'standard', label: this.archiveDate(row),
+        secondaryText: `${this.archiveSize(row)} · ${this.archiveLibrary(row)}${row.latest ? ' · 最新' : ''}` });
+      Row({ space: TOK_SPACE_SM }) {
+        ReaderButton({ scheme: this.scheme, variant: 'tonal', label: '读取备份', layout: 'equal',
+          onAction: (): void => { void this.run('inspect', row); } });
+        if (row.canDelete && this.removal === undefined && !this.readOnly && !this.deletionUnavailable) {
+          ReaderButton({ scheme: this.scheme, variant: 'subtle', label: '删除旧备份', layout: 'equal',
+            onAction: (): void => { this.requestArchiveRemoval(row); } });
+        }
+      }.width('100%').padding(TOK_SPACE_SM);
+    }, (row: SyncLibraryArchiveRow): string => row.sha256);
   }
 
   @Builder
@@ -239,7 +371,8 @@ export struct ReaderWebDavLibraryPanel {
     ReaderPageState({ variant: 'inline', padded: false, loading: true,
       title: this.loading ? '正在读取 WebDAV 配置…' : this.active === 'saveConfig' ? '正在保存 WebDAV 配置…' :
         this.active === 'export' ? '正在上传和核对备份…' : this.active === 'cleanup' ? '正在清理本机暂存…' :
-          this.active === 'inspect' ? '正在下载和校验备份…' : '正在恢复阅读库…' });
+          this.active === 'list' ? '正在读取远端备份列表…' : this.active === 'remove' || this.active === 'retireParts' ?
+            '正在核对远端旧备份…' : this.active === 'inspect' ? '正在下载和校验备份…' : '正在恢复阅读库…' });
   }
 
   @Builder
@@ -265,6 +398,9 @@ export struct ReaderWebDavLibraryPanel {
       ReaderFormRow({ label: this.configured ? '编辑 WebDAV 配置' : '配置 WebDAV', disclosure: true,
         onAction: (): void => { if (this.canAct()) this.editing = true; } });
       if (this.configured) {
+        if (this.removal !== undefined) {
+          Column() { this.retirementNotice(); }.width('100%').padding(TOK_SPACE_SM);
+        }
         if (this.cleanupReceipt.length > 0 || (this.pending && !this.readOnly)) {
           Column() { this.pendingNotice(); }.width('100%').padding(TOK_SPACE_SM);
         } else if (this.readOnly) {
@@ -284,7 +420,10 @@ export struct ReaderWebDavLibraryPanel {
           }
           ReaderButton({ scheme: this.scheme, variant: 'tonal', label: '读取最新备份', layout: 'equal',
             onAction: (): void => { void this.run('inspect'); } });
+          ReaderButton({ scheme: this.scheme, variant: 'tonal', label: '远端备份', layout: 'equal',
+            onAction: (): void => { void this.run('list'); } });
         }.width('100%').padding(TOK_SPACE_SM);
+        if (this.archives !== undefined) this.archiveList();
       }
     }
   }
@@ -298,6 +437,8 @@ export struct ReaderWebDavLibraryPanel {
         Column() { this.statusReadFailed(); }.width('100%').padding(TOK_SPACE_SM);
       } else if (this.editing) {
         this.configuration();
+      } else if (this.pendingConfigId.length > 0) {
+        Column() { this.configNotice(); }.width('100%').padding(TOK_SPACE_SM);
       } else {
         this.actions();
       }

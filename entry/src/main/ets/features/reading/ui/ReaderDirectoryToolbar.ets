@@ -104,7 +104,8 @@ export struct ReaderDirectoryToolbar {
         actions.push({ label: '前往目录底部', run: (): void => this.onBottom() });
       }
     }
-    return new ReaderAccessibilityActions(actions, kind === 'sort' && this.directoryFocusAllowed ? focusId : '',
+    // Let the screen reader continue into the chapter list after the last tool.
+    return new ReaderAccessibilityActions(actions, '',
       (): boolean => this.actionEnabled && focusId === this.directoryFocusId && this.currentDirectoryInput(focusId));
   }
 

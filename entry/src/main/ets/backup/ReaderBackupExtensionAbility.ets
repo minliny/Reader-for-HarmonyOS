@@ -20,20 +20,30 @@ function migrationResult(errorInfo: string = ''): string {
 export default class ReaderBackupExtensionAbility extends BackupExtensionAbility {
   private generation: number = 0;
   private backup: Promise<void> | undefined;
+  private releaseTask: Promise<void> | undefined;
 
   async onBackupEx(_backupInfo: string): Promise<string> {
-    if (this.backup !== undefined) return migrationResult('READER_SYSTEM_MIGRATION_EXPORT_BUSY');
+    if (this.backup !== undefined || this.releaseTask !== undefined) return migrationResult('READER_SYSTEM_MIGRATION_EXPORT_BUSY');
     const generation = ++this.generation;
+    const backup = this.prepareBackup(generation);
+    this.backup = backup;
     try {
-      const application = this.context.getApplicationContext();
-      const includeOriginals = await readerSystemMigrationIncludesOriginals(application);
-      if (this.generation !== generation) return migrationResult('READER_SYSTEM_MIGRATION_EXPORT_CANCELLED');
-      const backup = createReaderSystemMigrationArchive(this.context, application.filesDir, includeOriginals,
-        (): boolean => this.generation === generation);
-      this.backup = backup;
       await backup;
-      return migrationResult();
-    } catch (_) { return migrationResult('READER_SYSTEM_MIGRATION_EXPORT_FAILED'); }
+      return this.generation === generation ? migrationResult() : migrationResult('READER_SYSTEM_MIGRATION_EXPORT_CANCELLED');
+    } catch (_) {
+      return this.generation === generation ? migrationResult('READER_SYSTEM_MIGRATION_EXPORT_FAILED') :
+        migrationResult('READER_SYSTEM_MIGRATION_EXPORT_CANCELLED');
+    } finally {
+      if (this.backup === backup) this.backup = undefined;
+    }
+  }
+
+  private async prepareBackup(generation: number): Promise<void> {
+    const application = this.context.getApplicationContext();
+    const includeOriginals = await readerSystemMigrationIncludesOriginals(application);
+    if (this.generation !== generation) return;
+    await createReaderSystemMigrationArchive(this.context, application.filesDir, includeOriginals,
+      (): boolean => this.generation === generation);
   }
 
   async onRestoreEx(_version: BundleVersion, _restoreInfo: string): Promise<string> {
@@ -51,15 +61,21 @@ export default class ReaderBackupExtensionAbility extends BackupExtensionAbility
   }
 
   async onRelease(scenario: number): Promise<void> {
-    this.generation += 1;
-    if (scenario !== 1 || this.backup === undefined) return;
-    const released = this.generation;
-    await this.backup.catch((): void => {});
-    if (released !== this.generation) return;
-    this.backup = undefined;
+    const generation = ++this.generation;
+    if (scenario !== 1) return;
+    const release = this.clearReleasedArchive(generation, this.backup ?? this.releaseTask);
+    this.releaseTask = release;
+    try { await release; }
+    finally { if (this.releaseTask === release) this.releaseTask = undefined; }
+  }
+
+  private async clearReleasedArchive(generation: number, pending?: Promise<void>): Promise<void> {
+    await pending?.catch((): void => {});
+    if (generation !== this.generation) return;
     const directory = `${this.context.getApplicationContext().filesDir}/${READER_SYSTEM_MIGRATION_DIRECTORY}`;
     for (const path of [`${directory}/${READER_SYSTEM_MIGRATION_MANIFEST}`, systemMigrationPayload(directory)]) {
-      try { if (await fileIo.access(path)) await fileIo.unlink(path); } catch (_) {}
+      if (generation !== this.generation) return;
+      try { if (await fileIo.access(path) && generation === this.generation) await fileIo.unlink(path); } catch (_) {}
     }
   }
 }

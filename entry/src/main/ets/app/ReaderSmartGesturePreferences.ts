@@ -29,16 +29,35 @@ export class ReaderSmartGesturePreferences {
     this.tail = read.catch((): void => {});
   }
 
+  static detach(): void {
+    this.generation += 1;
+    this.store = undefined;
+  }
+
+  static resetDefaults(current: () => boolean): Promise<void> {
+    return this.write(DEFAULT_READER_SMART_GESTURES, current, true);
+  }
+
   static select(settings: ReaderSmartGestureSettings, current: () => boolean): Promise<void> {
+    return this.write(settings, current, false);
+  }
+
+  private static write(settings: ReaderSmartGestureSettings, current: () => boolean, required: boolean): Promise<void> {
     const generation = this.generation;
     const store = this.store;
+    const admitted = (): boolean => {
+      if (generation === this.generation && current()) return true;
+      if (required) throw new Error('SMART_GESTURE_PREFERENCES_RETIRED');
+      return false;
+    };
     const operation = this.tail.then(async (): Promise<void> => {
-      if (generation !== this.generation || !current()) return;
+      if (!admitted()) return;
       if (store === undefined) throw new Error('SMART_GESTURE_PREFERENCES_UNAVAILABLE');
       const owner = await store;
-      if (generation !== this.generation || !current()) return;
+      if (!admitted()) return;
       await owner.put(PREFERENCE_KEY, JSON.stringify(settings));
       await owner.flush();
+      if (required) admitted();
       if (generation === this.generation) AppStorage.setOrCreate(STATE_KEY, settings);
     });
     this.tail = operation.catch((): void => {});

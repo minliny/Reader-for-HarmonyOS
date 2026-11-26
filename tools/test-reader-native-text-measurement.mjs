@@ -21,6 +21,7 @@ const deviceInfo = {
 };
 const typeNode={createNode(_context,type){assert.equal(type,'Text');const node={disposed:0,props:{},initialize(content,options){events.push('initialize');this.content=content;this.controller=options.controller;},
  measure(constraint){events.push('measure');this.constraint=constraint;},layout(position){events.push('layout');this.position=position;},dispose(){this.disposed++;}};
+ node.commonAttribute={clip:value=>{node.props.clip=value;}};
  node.attribute={};for(const key of ['width','fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','textAlign','wordBreak','textIndent','direction'])node.attribute[key]=v=>{node.props[key]=v;return node.attribute;};
  if(bodyAttributesAvailable) for(const key of ['enableAutoSpacing','fallbackLineSpacing','compressLeadingPunctuation'])
    node.attribute[key]=v=>{node.props[key]=v;};
@@ -31,7 +32,9 @@ const typeNode={createNode(_context,type){assert.equal(type,'Text');const node={
  } });
  nodes.push(node);return node;}};
 const js=ts.transpileModule(source.replace(/^import.*$/gm,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
-const {Owner, geometryKey}=new Function('typeNode','WordBreak','deviceInfo',js+';return {Owner:ReaderNativeTextMeasurement,geometryKey:readerNativeTextGeometryKey};')(typeNode,{BREAK_ALL:'all'},deviceInfo);
+const {Owner, geometryKey, overhang}=new Function('typeNode','WordBreak','deviceInfo',js+
+ ';return {Owner:ReaderNativeTextMeasurement,geometryKey:readerNativeTextGeometryKey,overhang:readerNativeTextPunctuationOverhang};')
+ (typeNode,{BREAK_ALL:'all'},deviceInfo);
 const owner=new Owner(),controller={getLayoutManager:()=>({getLineCount:()=>{events.push('read');return lines;}})};
 const style={widthVp:300,fontFamily:'selected',fontSize:20,fontWeight:400,lineHeight:30,letterSpacing:1,color:'#000',alignment:'justify',breakAll:false};
 const body={...style,bookBody:true};
@@ -59,11 +62,13 @@ bodyAttributesAvailable=true;
 const hangingBody = { ...body, punctuationOverflow: true };
 assert.notEqual(geometryKey(hangingBody), geometryKey(body), 'hanging changes the measured/visible geometry identity');
 assert.equal(geometryKey({ ...style, punctuationOverflow: true }), geometryKey(style), 'title geometry ignores body-only shaping');
-const context = { vp2px: value => value };
+const context = { vp2px: value => value, fp2px: value => value * 1.5 };
 for (const version of [60100, 60101]) {
   distributionVersion = version;
   owner.measure(context, mixed, controller, hangingBody);
   assert.equal(nodes.at(-1).props.punctuationOverflow, undefined);
+  assert.equal(nodes.at(-1).props.clip, undefined);
+  assert.equal(overhang(nodes.at(-1)), 0);
 }
 assert.deepEqual(apiAvailabilityCalls, []);
 distributionVersion = 260000;
@@ -75,9 +80,13 @@ owner.clear();
 owner.measure(context, mixed, controller, hangingBody);
 const visibleBody = owner.take(controller);
 assert.equal(visibleBody.props.punctuationOverflow, true, 'the displayed paragraph retains native shaped attributes');
+assert.equal(visibleBody.props.clip, false, 'the Text itself must permit the punctuation to paint');
+assert.equal(overhang(visibleBody), 30, 'the transferred Text owns one native scaled em of visual overhang');
+assert.equal(visibleBody.constraint.maxSize.width, hangingBody.widthVp, 'overhang never changes wrapping width');
 visibleBody.dispose();
 owner.measure(context, 'title', controller, { ...style, punctuationOverflow: true });
 assert.equal(nodes.at(-1).props.punctuationOverflow, undefined);
+assert.equal(overhang(nodes.at(-1)), 0);
 assert.equal(nodes.at(-1).props.orphanCharOptimization, undefined);
 assert.deepEqual(apiAvailabilityCalls, ['26.0.0', '26.0.0']);
 owner.clear();
