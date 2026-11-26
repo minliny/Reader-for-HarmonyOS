@@ -1,0 +1,8 @@
+name: CI gate negative control
+on: workflow_dispatch
+permissions: {}
+jobs:
+  fixture:
+    runs-on: ubuntu-intentional-fixture-label
+    steps:
+      - run: 'true'
