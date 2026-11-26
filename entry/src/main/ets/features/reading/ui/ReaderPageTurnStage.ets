@@ -22,6 +22,7 @@ import {
 import { ReaderPageChromeSnapshot } from '../presentation/ReaderPageChromeModel';
 import type { ReaderBookmarkRibbonFrame, ReaderPageBookmarkMode, ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
 import type { ReaderFacingChapter } from './ReaderFacingChapter';
+import type { BookTurnTexturePage } from './BookTurnTextureCapture';
 
 class ReaderPageTurnFrameCallback extends FrameCallback {
   private callback: () => void;
@@ -44,7 +45,7 @@ const COVER_OCCLUSION_OFFSET_X_VP = 6;
  * This stage places retained presentation models next to one another for the
  * selected flat-page transition.
  */
-export class ReaderPageTurnRenderPage {
+export class ReaderPageTurnRenderPage implements BookTurnTexturePage {
   /** Stable mounted ArkUI subtree ID used only by ComponentSnapshot. */
   identity: string;
   /** Visual-content identity stored beside the native texture handle. */

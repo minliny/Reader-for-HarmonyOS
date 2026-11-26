@@ -184,13 +184,14 @@ import {
   BOOK_TURN_PROFILE_MANUAL,
   BOOK_TURN_PROFILE_RAPID,
   BOOK_TURN_PROFILE_AUTOMATIC,
-  BOOK_TURN_TEXTURE_CURRENT,
-  BOOK_TURN_TEXTURE_NEXT,
-  BOOK_TURN_TEXTURE_PREVIOUS,
   BookTurnNativeEvent,
   BookTurnPresentationSession,
-  type BookTurnTextureSlot,
 } from './BookTurnPresentationSession';
+import {
+  BOOK_TURN_TEXTURE_CURRENT, BOOK_TURN_TEXTURE_NEXT, BOOK_TURN_TEXTURE_PREVIOUS,
+  BookTurnTextureCapture, bookTurnTextureSnapshotScale, captureDecodedBookTurnBitmap,
+  type BookTurnTexturePlan, type BookTurnTextureSlot, type BookTurnTextureStep,
+} from './BookTurnTextureCapture';
 import {
   beginBookTurnMotion,
   bookTurnInput,
@@ -598,7 +599,6 @@ const LOCAL_READING_SOURCE_ID = 'local';
 const READER_BOOK_TURN_COMPONENT_ID = 'reader-book-turn-surface';
 const READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID = 'reader-book-turn-current-page';
 /** Contract ceiling for one prepared page texture before RGB8 upload. */
-const READER_BOOK_TURN_TEXTURE_MAX_PIXELS = 3_000_000;
 const UNICODE_PROBE = 'A😀B';
 /** Stable empty input for the mounted-but-hidden Reader Control shell. */
 const EMPTY_CONTROL_DIRECTORY_ENTRIES: LocalReadingTocEntry[] = [];
@@ -1156,14 +1156,23 @@ export struct ReadingExperience {
   private readonly bookTurnSession: BookTurnPresentationSession =
     new BookTurnPresentationSession(READER_BOOK_TURN_COMPONENT_ID);
   private bookTurnMotion: BookTurnMotionState | undefined = undefined;
-  private bookTurnTextureRefreshInFlight: Promise<void> | undefined = undefined;
+  private readonly bookTurnTexture: BookTurnTextureCapture<ReaderPageTurnRenderPage, image.PixelMap> =
+    new BookTurnTextureCapture<ReaderPageTurnRenderPage, image.PixelMap>({
+      postFrame: (callback: () => void): void => this.getUIContext().postFrameCallback(new ReaderUIFrameCallback(callback)),
+      mounted: (): boolean => this.mounted,
+      plan: (): BookTurnTexturePlan<ReaderPageTurnRenderPage> | undefined => this.bookTurnTexturePlan(),
+      preferredDirection: (): ReaderPageTurnDirection => this.preferredPageTextureDirection,
+      pageGeneration: (): number => this.pageTurnGeneration,
+      allows: (step: BookTurnTextureStep): boolean => this.allowsBookTurnTextureStep(step),
+      snapshot: (slot: BookTurnTextureSlot, page: ReaderPageTurnRenderPage, retained: boolean, mayDecode: () => boolean):
+        Promise<image.PixelMap | undefined> | undefined => this.bookTurnTextureSnapshot(slot, page, retained, mayDecode),
+      captureFailed: (slot: BookTurnTextureSlot, generation: number, message: string): void =>
+        this.failBookTurnTextureCapture(slot, generation, message),
+      release: (bitmap: image.PixelMap): void => { bitmap.release(); },
+    }, this.bookTurnSession);
   private bookTurnTextureContent: ComponentContent<BookTurnTextureBuildInput> | undefined = undefined;
   private bookTurnTextureBuildPage: ReaderPageTurnRenderPage | undefined = undefined;
-  private bookTurnTextureCaptureGeneration: number = 0;
-  /** Distinguishes pending snapshots across EGL replacement, even on the same page. */
-  private bookTurnSurfaceCaptureEpoch: number = 0;
   private preferredPageTextureDirection: ReaderPageTurnDirection = 'next';
-  private bookTurnTextureCaptureScheduled: boolean = false;
   /** Rare capability state; unlike MOVE geometry it must rebuild settings/stage semantics. */
   @State private bookTurnRuntimeFailed: boolean = false;
   private bookTurnSurfaceRecoveryPending: boolean = false;
@@ -1400,9 +1409,8 @@ export struct ReadingExperience {
     // undefined or belong to a prior session during cold entry.
     this.bookTurnSurfaceOpacity = 0;
     this.bookTurnSurfaceGeneration = 0;
-    this.bookTurnTextureCaptureGeneration += 1;
-    this.bookTurnTextureCaptureScheduled = false;
-    this.clearBookTurnCapturedIdentities();
+    this.bookTurnTexture.invalidate(true);
+    this.bookTurnSession.clearCapturedTextures();
     this.bookTurnSession.setEventListener((event: BookTurnNativeEvent): void =>
       this.onBookTurnNativeEvent(event));
     this.screenAwakeKeepScreenOn = false;
@@ -1831,8 +1839,7 @@ export struct ReadingExperience {
     // unmounted us. Normal exit is serialized through requestExit() instead.
     this.invalidatePageTurnRuntime(true);
     this.bookTurnSession.setEventListener((_event: BookTurnNativeEvent): void => {});
-    this.bookTurnTextureCaptureGeneration += 1;
-    this.bookTurnTextureCaptureScheduled = false;
+    this.bookTurnTexture.invalidate(true);
     this.bookTurnMotion = undefined;
     this.bookTurnSurfaceGeneration += 1;
     this.bookTurnSurfaceOpacity = 0;
@@ -3205,8 +3212,7 @@ export struct ReadingExperience {
     if (!this.mounted) return;
     if (event.event === BOOK_TURN_EVENT_SURFACE_READY) {
       if (!this.shouldMountBookTurnSurface()) return;
-      this.bookTurnTextureCaptureGeneration += 1;
-      this.bookTurnSurfaceCaptureEpoch += 1;
+      this.bookTurnTexture.replaceSurface();
       this.bookTurnSurfaceRecoveryPending = true;
       // A replacement EGL surface cannot inherit the previous generation's
       // input owner or retained slots. An old LOST may already be discarded
@@ -3312,7 +3318,7 @@ export struct ReadingExperience {
     this.bookTurnSurfaceRecoveryPending = recoverWhenIdle;
     this.bookTurnRuntimeFailed = true;
     this.bookTurnSurfaceOpacity = 0;
-    this.clearBookTurnCapturedIdentities();
+    this.bookTurnSession.clearCapturedTextures();
     // Once the visual endpoint has been reported, the Core transaction owns
     // the result. Keep that atomic decision and reveal the static admitted
     // page when it finishes; before the endpoint no progress write has begun.
@@ -3341,228 +3347,86 @@ export struct ReadingExperience {
 
   private scheduleBookTurnTextureRefresh(): void {
     if (!this.mounted || !this.usesBookTurnSimulation() || this.sessionLaunchRenderWorkBlocked()) return;
-    this.bookTurnTextureCaptureGeneration += 1;
-    if (this.bookTurnTextureCaptureScheduled) return;
-    this.bookTurnTextureCaptureScheduled = true;
-    this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
-      this.bookTurnTextureCaptureScheduled = false;
-      const generation = this.bookTurnTextureCaptureGeneration;
-      void this.refreshBookTurnTextures(generation);
-    }));
+    this.bookTurnTexture.schedule();
   }
 
-  private async refreshBookTurnTextures(generation: number): Promise<void> {
-    while (this.bookTurnTextureRefreshInFlight !== undefined) await this.bookTurnTextureRefreshInFlight;
-    if (generation !== this.bookTurnTextureCaptureGeneration || !this.mounted) return;
-    const operation = this.performBookTurnTextureRefresh(generation);
-    this.bookTurnTextureRefreshInFlight = operation;
-    try { await operation; } finally {
-      if (this.bookTurnTextureRefreshInFlight === operation) this.bookTurnTextureRefreshInFlight = undefined;
-    }
-  }
-
-  private async performBookTurnTextureRefresh(generation: number): Promise<void> {
-    if (generation !== this.bookTurnTextureCaptureGeneration || !this.mounted ||
-      this.sessionLaunchRenderWorkBlocked() ||
-      !this.usesBookTurnSimulation() || this.controlVisible() || this.bookTurnRuntimeFailed || !this.bookTurnSession.isReady() ||
-      this.phase !== 'ready' || this.pageTurnPreparation !== undefined ||
-      this.pageTurnInputPhase() !== 'idle') {
-      return;
-    }
+  private bookTurnTexturePlan(): BookTurnTexturePlan<ReaderPageTurnRenderPage> | undefined {
+    if (!this.mounted || this.sessionLaunchRenderWorkBlocked() || !this.usesBookTurnSimulation() ||
+      this.controlVisible() || this.bookTurnRuntimeFailed || !this.bookTurnSession.isReady() || this.phase !== 'ready' ||
+      this.pageTurnPreparation !== undefined || this.pageTurnInputPhase() !== 'idle') return undefined;
     const current = this.currentPageTurnRenderPage();
-    // Snapshot.get waits for paint of the node it receives; it does not prove
-    // that a pending parent revision has reached that node. The slot callback
-    // re-schedules this lane after that exact revision has been delivered.
-    if (this.bookTurnArkUIContentRevision !== current.renderRevision) return;
-    const previous = this.preparedPageTurnRenderPage('previous');
-    const next = this.preparedPageTurnRenderPage('next');
-    let capturedThisFrame = this.bookTurnCapturedIdentity(BOOK_TURN_TEXTURE_CURRENT) !== current.textureIdentity;
-    if (!await this.captureBookTurnTexture(BOOK_TURN_TEXTURE_CURRENT, current, generation)) return;
-    const first = this.preferredPageTextureDirection === 'previous' ? previous : next;
-    const second = this.preferredPageTextureDirection === 'previous' ? next : previous;
-    const firstSlot = this.preferredPageTextureDirection === 'previous' ? BOOK_TURN_TEXTURE_PREVIOUS : BOOK_TURN_TEXTURE_NEXT;
-    const secondSlot = this.preferredPageTextureDirection === 'previous' ? BOOK_TURN_TEXTURE_NEXT : BOOK_TURN_TEXTURE_PREVIOUS;
-    // This yield only spreads expensive snapshot work across UI frames.
-    // Cached slots need no work or extra delay; revision, paint and upload
-    // admission remain enforced by the capture path for every new texture.
-    if (first !== undefined && this.bookTurnCapturedIdentity(firstSlot) !== first.textureIdentity) {
-      if (capturedThisFrame) await this.yieldPageTextureFrame();
-      if (!await this.captureBookTurnTexture(firstSlot, first, generation)) return;
-      capturedThisFrame = true;
-    }
-    if (second !== undefined && this.bookTurnCapturedIdentity(secondSlot) !== second.textureIdentity) {
-      if (capturedThisFrame) await this.yieldPageTextureFrame();
-      await this.captureBookTurnTexture(secondSlot, second, generation);
+    // Snapshot paint readiness cannot acknowledge a pending parent revision.
+    if (this.bookTurnArkUIContentRevision !== current.renderRevision) return undefined;
+    return { current, previous: this.preparedPageTurnRenderPage('previous'), next: this.preparedPageTurnRenderPage('next') };
+  }
+
+  private allowsBookTurnTextureStep(step: BookTurnTextureStep): boolean {
+    if (!this.mounted) return false;
+    switch (step) {
+      case 'snapshot':
+        return !this.sessionLaunchRenderWorkBlocked() && this.usesBookTurnSimulation() && !this.controlVisible() &&
+          !this.bookTurnRuntimeFailed && this.phase === 'ready' && this.pageTurnInputPhase() === 'idle';
+      case 'decode':
+        return this.usesBookTurnSimulation() && !this.controlVisible() && this.phase === 'ready' &&
+          this.pageTurnInputPhase() === 'idle' && !this.bookTurnRuntimeFailed;
+      case 'before-upload':
+        return this.usesBookTurnSimulation() && !this.controlVisible() && this.pageTurnInputPhase() === 'idle';
+      case 'upload':
+        return this.usesBookTurnSimulation() && !this.controlVisible() && this.phase === 'ready' &&
+          this.pageTurnInputPhase() === 'idle' && !this.bookTurnRuntimeFailed && !this.sessionLaunchRenderWorkBlocked();
+      case 'retain':
+        return !this.exitRequested && this.usesBookTurnSimulation() && !this.bookTurnRuntimeFailed;
     }
   }
 
-  private yieldPageTextureFrame(): Promise<void> {
-    return new Promise<void>((resolve: () => void): void => {
-      this.getUIContext().postFrameCallback(new ReaderUIFrameCallback(resolve));
-    });
-  }
-
-  private async captureBookTurnTexture(
-    slot: BookTurnTextureSlot,
-    page: ReaderPageTurnRenderPage,
-    generation: number,
-  ): Promise<boolean> {
-    if (generation !== this.bookTurnTextureCaptureGeneration || !this.mounted ||
-      this.sessionLaunchRenderWorkBlocked() ||
-      !this.usesBookTurnSimulation() || this.controlVisible() || this.bookTurnRuntimeFailed || this.phase !== 'ready' ||
-      this.pageTurnInputPhase() !== 'idle') {
-      return false;
+  private bookTurnTextureSnapshot(slot: BookTurnTextureSlot, page: ReaderPageTurnRenderPage,
+    retained: boolean, mayDecode: () => boolean): Promise<image.PixelMap | undefined> | undefined {
+    const uiContext = this.getUIContext();
+    const snapshot = uiContext.getComponentSnapshot();
+    const hasBodyImages = page.fragments.some((fragment: ReadingSurfacePageFragment): boolean =>
+      (fragment.fileUri?.length ?? 0) > 0 || fragment.imageSource !== undefined);
+    if (retained) return undefined;
+    if (slot === BOOK_TURN_TEXTURE_CURRENT && !hasBodyImages) {
+      // The mounted physical slot may supply only the current text-only page.
+      return snapshot.get(`${READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID}-${this.pageTurnCurrentSlot}`, {
+        scale: this.bookTurnTextureScale(), waitUntilRenderFinished: true,
+      });
     }
-    if (this.bookTurnCapturedIdentity(slot) === page.textureIdentity) return true;
-    const pageGeneration = this.pageTurnGeneration;
-    const surfaceCaptureEpoch = this.bookTurnSurfaceCaptureEpoch;
-    let published = false;
-    let pixelMap = this.takeBookTurnPendingSnapshot(page.textureIdentity);
-    let content: ComponentContent<BookTurnTextureBuildInput> | undefined = undefined;
-    try {
-      const uiContext = this.getUIContext();
-      const snapshot = uiContext.getComponentSnapshot();
-      const hasBodyImages = page.fragments.some((fragment: ReadingSurfacePageFragment): boolean =>
-        (fragment.fileUri?.length ?? 0) > 0 || fragment.imageSource !== undefined);
-      if (pixelMap !== undefined) {
-        // A DOWN may have delayed publication after a completed snapshot.
-        // Reuse only its exact content/layout identity; all upload gates below
-        // still require the current idle generation.
-      } else if (slot === BOOK_TURN_TEXTURE_CURRENT && !hasBodyImages) {
-        // Text-only current pages can reuse their mounted physical subtree.
-        // Image pages require the checked capture lane below: layout/paint
-        // readiness alone does not establish completion of image decoding.
-        pixelMap = await snapshot.get(`${READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID}-${this.pageTurnCurrentSlot}`, {
-          scale: this.bookTurnTextureSnapshotScale(),
-          // A new chrome/content revision must be painted before its identity
-          // is attached to these pixels. Reuse the mounted image-ready tree.
-          waitUntilRenderFinished: true,
-        });
-      } else {
-        const input = new BookTurnTextureBuildInput(
-          page,
-          this.viewportWidth,
-          this.viewportHeight,
-          this.readingLayout(),
-          page.appearance ?? this.appearanceSnapshot,
-          (): ReadingSurfacePageFragment[] => this.bookTurnTextureBuildPage?.fragments ?? [],
-        );
-        this.bookTurnTextureBuildPage = page;
-        content = this.bookTurnTextureContent;
-        if (content === undefined) {
-          content = new ComponentContent<BookTurnTextureBuildInput>(uiContext, wrapBuilder(BookTurnTextureBuilder), input);
-          this.bookTurnTextureContent = content;
-        } else {
-          content.update(input);
-        }
-        pixelMap = await this.captureDecodedBookTurnPage(content, generation);
-        if (pixelMap === undefined) return false;
-      }
-      if (generation !== this.bookTurnTextureCaptureGeneration || !this.mounted ||
-        !this.usesBookTurnSimulation() || this.controlVisible() || this.pageTurnInputPhase() !== 'idle') {
-        return false;
-      }
-      const canPublish = (): boolean => generation === this.bookTurnTextureCaptureGeneration && this.mounted &&
-        this.usesBookTurnSimulation() && !this.controlVisible() && this.phase === 'ready' &&
-        this.pageTurnInputPhase() === 'idle' && !this.bookTurnRuntimeFailed && !this.sessionLaunchRenderWorkBlocked();
-      const uploaded = await this.bookTurnSession.uploadTexture(slot, pixelMap, page.textureIdentity, canPublish);
-      if (!canPublish()) return false;
-      if (!uploaded) {
-        this.failBookTurnTextureCapture(slot, generation, 'Native rejected the PixelMap');
-        return false;
-      }
-      published = true;
-      return true;
-    } catch (error) {
-      const message = errorMessageOf(error);
-      this.failBookTurnTextureCapture(slot, generation, message);
-      return false;
-    } finally {
-      if (pixelMap !== undefined) {
-        if (!published && surfaceCaptureEpoch === this.bookTurnSurfaceCaptureEpoch &&
-          pageGeneration === this.pageTurnGeneration && this.mounted && !this.exitRequested &&
-          this.usesBookTurnSimulation() && !this.bookTurnRuntimeFailed) {
-          // Retain at most one completed bitmap while a newer finger owns
-          // input. No upload or page turn is admitted by retaining CPU pixels.
-          this.bookTurnSession.retainPendingSnapshot(page.textureIdentity, pageGeneration, pixelMap);
-        } else {
-          try { pixelMap.release(); } catch (_) {}
-        }
-      }
-    }
+    // Keep one offscreen tree. Checked capture verifies its decoded images.
+    const input = new BookTurnTextureBuildInput(page, this.viewportWidth, this.viewportHeight, this.readingLayout(),
+      page.appearance ?? this.appearanceSnapshot, (): ReadingSurfacePageFragment[] => this.bookTurnTextureBuildPage?.fragments ?? []);
+    this.bookTurnTextureBuildPage = page;
+    let content = this.bookTurnTextureContent;
+    if (content === undefined) {
+      content = new ComponentContent<BookTurnTextureBuildInput>(uiContext, wrapBuilder(BookTurnTextureBuilder), input);
+      this.bookTurnTextureContent = content;
+    } else content.update(input);
+    const captureContent = content;
+    return captureDecodedBookTurnBitmap<image.PixelMap>(
+      (delay: number): Promise<image.PixelMap> => this.getUIContext().getComponentSnapshot().createFromComponent(
+        captureContent, delay, true, { scale: this.bookTurnTextureScale(), waitUntilRenderFinished: true }),
+      mayDecode, (error: Error): boolean => (error as BusinessError).code === 160001);
   }
-
-  private takeBookTurnPendingSnapshot(identity: string): image.PixelMap | undefined {
-    return this.bookTurnSession.takePendingSnapshot(identity, this.pageTurnGeneration);
-  }
-
-  private releaseBookTurnPendingSnapshot(): void { this.bookTurnSession.releasePendingSnapshot(); }
 
   private releaseBookTurnTextureContent(): void {
     const content = this.bookTurnTextureContent;
     this.bookTurnTextureContent = undefined;
     this.bookTurnTextureBuildPage = undefined;
-    if (content === undefined) return;
-    // Never destroy a tree while the platform still owns its pending snapshot.
-    const pending = this.bookTurnTextureRefreshInFlight;
-    if (pending === undefined) content.dispose();
-    else void pending.then((): void => content.dispose(), (): void => content.dispose());
-  }
-
-  private async captureDecodedBookTurnPage(
-    content: ComponentContent<BookTurnTextureBuildInput>, generation: number,
-  ): Promise<image.PixelMap | undefined> {
-    // One bounded offscreen tree is updated between serialized idle captures.
-    // Its local Images decode synchronously; the ordinary reading tree stays
-    // asynchronous. Checked capture still rejects unready/failed image pixels.
-    const delays: number[] = [0, 16, 64, 128];
-    for (let attempt = 0; attempt < delays.length; attempt += 1) {
-      if (generation !== this.bookTurnTextureCaptureGeneration || !this.mounted ||
-        !this.usesBookTurnSimulation() || this.controlVisible() || this.phase !== 'ready' ||
-        this.pageTurnInputPhase() !== 'idle' || this.bookTurnRuntimeFailed) return undefined;
-      try {
-        return await this.getUIContext().getComponentSnapshot().createFromComponent(
-          content, delays[attempt], true,
-          { scale: this.bookTurnTextureSnapshotScale(), waitUntilRenderFinished: true });
-      } catch (error) {
-        // 160001 means decoding has not completed, not a successful empty
-        // picture. Other errors and an exhausted budget follow capability
-        // failure handling; stale work is rejected before any further try.
-        if ((error as BusinessError).code !== 160001 || attempt === delays.length - 1) throw (error as Error);
-      }
-    }
-    return undefined;
+    if (content !== undefined) this.bookTurnTexture.disposeAfterRefresh((): void => content.dispose());
   }
 
   private failBookTurnTextureCapture(slot: BookTurnTextureSlot, generation: number, message: string): void {
     hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience book-turn texture failed slot=${slot}: ${message}`);
-    if (generation !== this.bookTurnTextureCaptureGeneration || !this.mounted ||
-      !this.usesBookTurnSimulation()) return;
-    // A missing required texture must not turn the full-screen interaction
-    // layer into a permanent wait state. Fail this mounted Native capability
-    // and immediately drain any complete user intent through the admitted
-    // no-animation path.
+    if (!this.bookTurnTexture.isCurrent(generation) || !this.mounted || !this.usesBookTurnSimulation()) return;
+    // Drain any complete user intent through the admitted no-animation path.
     this.failBookTurnRuntime();
     this.drainRapidPageTurn();
   }
 
-  private bookTurnTextureSnapshotScale(): number {
+  private bookTurnTextureScale(): number {
     const context = this.getUIContext();
-    const widthPx = Math.max(1, context.vp2px(this.viewportWidth));
-    const heightPx = Math.max(1, context.vp2px(this.viewportHeight));
-    const pixelCount = widthPx * heightPx;
-    // ComponentSnapshot rounds each scaled edge to a whole pixel. Without a
-    // small area margin both edges can round up and cross the Native ceiling
-    // (1178 x 2548 = 3,001,544 on the VM), causing every turn to wait forever.
-    return pixelCount <= READER_BOOK_TURN_TEXTURE_MAX_PIXELS ? 1 :
-      Math.sqrt(READER_BOOK_TURN_TEXTURE_MAX_PIXELS / pixelCount) * 0.99;
+    return bookTurnTextureSnapshotScale(context.vp2px(this.viewportWidth), context.vp2px(this.viewportHeight));
   }
-
-  private bookTurnCapturedIdentity(slot: BookTurnTextureSlot): string {
-    return this.bookTurnSession.capturedIdentity(slot);
-  }
-
-  private clearBookTurnCapturedIdentities(): void { this.bookTurnSession.clearCapturedTextures(); }
 
   private autoPageHighlightStart(): number | undefined {
     return this.autoPageHighlightFragment()?.startScalar;
@@ -5879,9 +5743,8 @@ export struct ReadingExperience {
         this.publishGeometryImagePixels(chapter, owners, resolved));
     if (changed) {
       this.pageTurnRenderRevision += 1;
-      this.bookTurnTextureCaptureGeneration += 1;
-      this.bookTurnTextureCaptureScheduled = false;
-      this.clearBookTurnCapturedIdentities();
+      this.bookTurnTexture.invalidate(true);
+      this.bookTurnSession.clearCapturedTextures();
       this.scheduleBookTurnTextureRefresh();
     }
   }
@@ -9079,8 +8942,7 @@ export struct ReadingExperience {
     this.reconcilePageBookmarkFeedback();
     this.bookmarkPresentationRevision += 1;
     if (this.usesBookTurnSimulation() && this.pageTurnInputPhase() === 'idle') {
-      this.bookTurnTextureCaptureGeneration += 1;
-      this.bookTurnTextureCaptureScheduled = false;
+      this.bookTurnTexture.invalidate(true);
       this.scheduleBookTurnTextureRefresh();
     }
     // Parent detail admission may arrive before the reader's own TOC promise.
@@ -10113,7 +9975,7 @@ export struct ReadingExperience {
     this.sessionLaunchSourceMinimum = { generation: this.sessionLaunch.generation, kind: kind,
       requiresNaturalProfile: nativeMinimumContract, receipt: sourceMinimum };
     this.suspendAdjacentMeasurement();
-    this.bookTurnTextureCaptureGeneration += 1;
+    this.bookTurnTexture.invalidate();
     this.invalidateControlBackdrop();
     AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', true);
     this.pageTurnRenderRevision += 1;
@@ -10226,13 +10088,12 @@ export struct ReadingExperience {
     this.bookTurnSurfaceGeneration = generation;
     this.pageTurnSlideTimeline = undefined;
     this.pageTurnAutomaticStart = undefined;
-    this.bookTurnTextureCaptureGeneration += 1;
-    this.bookTurnTextureCaptureScheduled = false;
+    this.bookTurnTexture.invalidate(true);
     this.bookTurnSurfaceOpacity = 0;
     if (this.bookTurnMotion !== undefined) stopBookTurnMotion(this.bookTurnMotion);
     this.bookTurnMotion = undefined;
     this.bookTurnAwaitingSlotCommit = false;
-    this.clearBookTurnCapturedIdentities();
+    this.bookTurnSession.clearCapturedTextures();
     this.bookTurnSession.releaseTerminalFrame(generation);
     this.bookTurnSession.clearSurface(generation);
     if (this.pageTurnAnimationFinished && this.pageTurnCommitStarted) {
@@ -12325,11 +12186,10 @@ export struct ReadingExperience {
     this.bookmarkPullHintOpacity = 0;
     this.bookmarkPreviewChanged = false;
     if (this.bookmarkMutationConfirmed) this.reconcilePageBookmarkFeedback();
-    this.bookTurnTextureCaptureGeneration += 1;
-    this.bookTurnTextureCaptureScheduled = false;
-    this.clearBookTurnCapturedIdentities();
+    this.bookTurnTexture.invalidate(true);
+    this.bookTurnSession.clearCapturedTextures();
     this.releaseBookTurnTextureContent();
-    this.releaseBookTurnPendingSnapshot();
+    this.bookTurnSession.releasePendingSnapshot();
     this.pageTurnRenderRevision += 1;
     if (preparation === undefined && discovery === undefined) {
       this.releaseUnretainedReadingImages();
@@ -12400,12 +12260,12 @@ export struct ReadingExperience {
   }
 
   private resumePagePreparationAfterTextureFrame(): void {
-    this.bookTurnTextureCaptureGeneration += 1;
+    this.bookTurnTexture.invalidate();
     const generation = this.pageTurnGeneration;
     // Capture the ready current/requested pages before measuring the other direction.
     this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
       if (!this.mounted || generation !== this.pageTurnGeneration) return;
-      void this.refreshBookTurnTextures(this.bookTurnTextureCaptureGeneration).finally((): void => {
+      void this.bookTurnTexture.refresh().finally((): void => {
         if (this.mounted && generation === this.pageTurnGeneration) this.drainPageTurnPreparationQueue();
       });
     }));
@@ -12675,8 +12535,8 @@ export struct ReadingExperience {
     const current = this.currentPageTurnRenderPage();
     const adjacent = this.preparedPageTurnRenderPage(direction);
     const ready = adjacent !== undefined &&
-      this.bookTurnCapturedIdentity(BOOK_TURN_TEXTURE_CURRENT) === current.textureIdentity &&
-      this.bookTurnCapturedIdentity(direction === 'next' ?
+      this.bookTurnSession.capturedIdentity(BOOK_TURN_TEXTURE_CURRENT) === current.textureIdentity &&
+      this.bookTurnSession.capturedIdentity(direction === 'next' ?
         BOOK_TURN_TEXTURE_NEXT : BOOK_TURN_TEXTURE_PREVIOUS) === adjacent.textureIdentity &&
       this.bookTurnSession.canStart(direction);
     if (ready) this.pageTurnAdmittedPrepared = prepared;
@@ -12833,8 +12693,7 @@ export struct ReadingExperience {
         // ComponentSnapshot cannot be cancelled after dispatch, but changing
         // this generation prevents an idle capture from uploading after the
         // first gesture-owned frame.
-        this.bookTurnTextureCaptureGeneration += 1;
-        this.bookTurnTextureCaptureScheduled = false;
+        this.bookTurnTexture.invalidate(true);
       }
       this.updateBookTurnGesturePresentation(state);
       return;
@@ -13072,8 +12931,7 @@ export struct ReadingExperience {
     this.bookmarkPreviewChanged = false;
     this.reconcilePageBookmarkFeedback();
     if (this.usesBookTurnSimulation() && this.pageTurnInputPhase() === 'idle') {
-      this.bookTurnTextureCaptureGeneration += 1;
-      this.bookTurnTextureCaptureScheduled = false;
+      this.bookTurnTexture.invalidate(true);
       this.scheduleBookTurnTextureRefresh();
     }
     if (this.pageTurnGestureState.owner !== 'bookmark') return;
@@ -13674,8 +13532,7 @@ export struct ReadingExperience {
       this.viewportWidth <= 0) {
       return false;
     }
-    this.bookTurnTextureCaptureGeneration += 1;
-    this.bookTurnTextureCaptureScheduled = false;
+    this.bookTurnTexture.invalidate(true);
     const lifecycleToken = this.lifecycleToken;
     const simulation = this.usesBookTurnSimulation();
     const noAnimation = this.usesNoAnimationPageTurnRuntime();
@@ -14082,7 +13939,7 @@ export struct ReadingExperience {
     if (!this.reduceMotion) this.bookTurnRuntimeFailed = true;
     this.bookTurnSurfaceOpacity = 0;
     this.bookTurnAwaitingSlotCommit = false;
-    this.clearBookTurnCapturedIdentities();
+    this.bookTurnSession.clearCapturedTextures();
     // No transparent swap. Best-effort cleanup remains generation/epoch gated;
     // UI ownership no longer depends on a lost native completion notification.
     this.bookTurnSession.releaseTerminalFrame(generation);
