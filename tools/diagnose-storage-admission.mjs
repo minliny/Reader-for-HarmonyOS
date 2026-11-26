@@ -78,14 +78,18 @@ export function validateDiagnosticAuthorization(auth, options, binding, now = Da
   'fresh-operator-vm-confirmation-required');
 }
 
-async function runtimePorts() {
-  const [transport, lease, evidence, pipeline, diagnostic, boundary] = await Promise.all([
-    import('../scripts/lib/harmony-toolchain.mjs'), import('./reader-hdc-lease.mjs'),
-    import('../scripts/lib/hap-delivery-evidence.mjs'), import('../scripts/hap-pipeline.mjs'),
-    import('../scripts/lib/hap-storage-admission-diagnostics.mjs'), import('../scripts/lib/hap-diagnostic-transport.mjs'),
+async function runtimePorts(injected) {
+  // Host-only tests supply these two ports in place of the delivery modules that require Reader-Core.
+  const [transport, lease, diagnostic, boundary, targetReadiness, parseBundleMetadata] = await Promise.all([
+    import('../scripts/lib/harmony-toolchain.mjs'),
+    import('./reader-hdc-lease.mjs'),
+    import('../scripts/lib/hap-storage-admission-diagnostics.mjs'),
+    import('../scripts/lib/hap-diagnostic-transport.mjs'),
+    injected.targetReadiness ?? import('../scripts/lib/hap-delivery-evidence.mjs').then(module => module.targetReadiness),
+    injected.parseBundleMetadata ?? import('../scripts/hap-pipeline.mjs').then(module => module.parseBundleMetadata),
   ]);
-  return { spawn: transport.portableSpawnSync, ...lease, targetReadiness: evidence.targetReadiness,
-    parseBundleMetadata: pipeline.parseBundleMetadata, ...diagnostic, ...boundary };
+  return { spawn: transport.portableSpawnSync, ...lease, ...diagnostic, ...boundary, ...injected,
+    targetReadiness, parseBundleMetadata };
 }
 
 // A receipt is a one-use operator guard, not an independent grant of permission.
@@ -155,7 +159,7 @@ export async function runDiagnosticCli(argv, injected = {}) {
     save(resolve(ledgerRoot, grantDigest + '.json'), claim, true); claimed = true;
     save(claimPath, claim, true);
     mkdirSync(output, { mode: 0o700 }); outputCreated = true;
-    ports = { ...await runtimePorts(), ...injected };
+    ports = await runtimePorts(injected);
     const server = ports.canonicalServerKey(options['--server-key']), target = options['--target'];
     const tool = ports.createNativeToolGuard(options['--hdc'], binding.hdcSha256);
     signalScope = injected.signalScope ?? ports.createDiagnosticSignalScope();
