@@ -428,3 +428,65 @@ export function readerControlModuleFactsDisplayEqual(first: ReaderControlModuleF
   }
   return true;
 }
+
+export function readerControlPresentationProfileMatches(profile: ReaderControlMeasuredProfile,
+  layout: ReaderControlLayoutSnapshot, location: ReaderControlLocation, identity: string): boolean {
+  const module = location.level === 'secondary' ? location.module : 'home';
+  return profile.identity === identity && profile.module === module && profile.widths.panelWidthVp === layout.fullPanelWidth &&
+    profile.moduleFacts !== undefined && readerControlModuleFactsMatch(profile.moduleFacts, module) &&
+    (module === 'home' || (profile.moduleData !== undefined && readerControlModuleProfileMatches(profile.moduleData, module)));
+}
+
+function readerControlLayoutGeometryKey(layout: ReaderControlLayoutSnapshot): string {
+  const budget = layout.contentBudget;
+  return JSON.stringify([layout.widthClass, layout.viewportWidth, layout.viewportHeight,
+    layout.topBarTop, layout.topBarHeight, layout.topBarVisible, layout.minimumPanelTop, layout.topBarWidth,
+    layout.dockBottomGap, layout.dockRightGap, layout.dockWidth, layout.fullPanelTop,
+    layout.fullPanelLeftGap, layout.fullPanelRightGap,
+    layout.fullPanelWidth, layout.fullPanelHeight, layout.quickPanelHeight, layout.minimumStatus,
+    layout.quickMinimumFits, layout.fullMinimumFits,
+    budget === undefined ? undefined : [budget.quickContentHeightVp, budget.fullContentHeightVp,
+      budget.brightnessContentHeightVp, budget.navigationHeightVp, budget.headerHeightVp,
+      budget.brightnessAutoHeightVp, budget.brightnessAutoWidthVp]]);
+}
+
+export function readerControlPresentationGeometryMatches(previous: ReaderControlPresentationReceipt,
+  layout: ReaderControlLayoutSnapshot, profile: ReaderControlMeasuredProfile): boolean {
+  return readerControlLayoutGeometryKey(previous.layout) === readerControlLayoutGeometryKey(layout) &&
+    readerControlMeasuredProfileGeometryKey(previous.profile) === readerControlMeasuredProfileGeometryKey(profile);
+}
+
+export function readerControlPresentationReceipt(identity: string, ownerKey: string, environmentKey: string,
+  location: ReaderControlLocation, layout: ReaderControlLayoutSnapshot,
+  profile: ReaderControlMeasuredProfile): ReaderControlPresentationReceipt {
+  return { identity: identity, ownerKey: ownerKey, environmentKey: environmentKey,
+    key: layout.minimumKey, layout: layout, profile: profile, facts: profile.moduleFacts,
+    location: { level: location.level, module: location.module, directoryTab: location.directoryTab, form: location.form },
+    prepared: profile.moduleData === undefined || profile.moduleFacts === undefined ? undefined :
+      { identity: identity, key: layout.minimumKey, moduleData: profile.moduleData, facts: profile.moduleFacts } };
+}
+
+export function adoptReaderControlPresentationFacts(previous: ReaderControlPresentationReceipt,
+  facts: ReaderControlModuleFacts | undefined): ReaderControlPresentationReceipt {
+  if (readerControlModuleFactsDisplayEqual(previous.facts, facts)) return previous;
+  return { identity: previous.identity, ownerKey: previous.ownerKey, environmentKey: previous.environmentKey,
+    key: previous.key, location: previous.location, layout: previous.layout, profile: previous.profile, facts: facts,
+    prepared: previous.prepared === undefined || facts === undefined ? undefined :
+      { identity: previous.identity, key: previous.key, moduleData: previous.prepared.moduleData, facts: facts } };
+}
+
+export function refreshReaderControlPresentationEnvironment(previous: ReaderControlPresentationReceipt,
+  environment: string, metricsRevision: number): ReaderControlPresentationReceipt {
+  // Revalidate under the current owner and exact structural inputs while retaining measurement provenance.
+  const profile = previous.profile;
+  return { identity: previous.identity, ownerKey: previous.ownerKey,
+    environmentKey: environment, key: previous.key, location: previous.location, layout: previous.layout,
+    facts: previous.facts, prepared: previous.prepared,
+    profile: { module: profile.module, moduleData: profile.moduleData, moduleFacts: profile.moduleFacts,
+      headerPaint: profile.headerPaint, identity: profile.identity, metricsRevision: metricsRevision,
+      measurementMetricsRevision: profile.measurementMetricsRevision ?? profile.metricsRevision,
+      widths: profile.widths, playbackData: profile.playbackData, quick: profile.quick, full: profile.full,
+      topBarVisible: profile.topBarVisible, navigationLabelHeight: profile.navigationLabelHeight,
+      navigationHeight: profile.navigationHeight, titleHeight: profile.titleHeight,
+      collapseLabelHeight: profile.collapseLabelHeight, collapseWidth: profile.collapseWidth, headerHeight: profile.headerHeight } };
+}

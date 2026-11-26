@@ -5,7 +5,8 @@ import { projectReaderControlDirectoryTitles, readableReaderDirectoryEntries, re
   from '../presentation/ReaderDirectoryProjection';
 import { readerControlStructureKey } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { drainReaderPagePreparation, type ReaderPagePreparationAttempt } from './ReaderPagePreparationCoordinator';
-import { measureReaderControlMinimumCandidates } from './ReaderControlMinimumReceipt';
+import { ReaderControlMinimumState, readerControlMinimumUsesDirectSheet,
+  type ReaderControlMinimumWindow } from './ReaderControlMinimumState';
 import { admitReaderControlVisualSnapshot } from './ReaderControlVisualHostPort';
 import { CoreReadingAnchor, InitialReadingToc, ParagraphRange, createCoreReadingLayout,
   type CoreReadingLayout, type MeasuredReadingLine } from '../application/ReadingMeasurementFacts';
@@ -204,8 +205,9 @@ import { ReaderControlPanel, type ReaderControlPage } from './ReaderControlPanel
 import type { ReaderControlFontOrderPresentation } from './ReaderControlAppearanceContent';
 import { readerControlPlaybackProfileMatches, type ReaderControlPlaybackProfileReceipt,
   type ReaderControlPlaybackLaunchProfile } from './ReaderControlPlaybackProfile';
-import { readerControlMeasuredProfileGeometryKey, readerControlModuleProfileMatches, readerControlModuleFactsDisplayEqual,
-  readerControlModuleFactsMatch,
+import { adoptReaderControlPresentationFacts, readerControlModuleFactsMatch, readerControlPresentationGeometryMatches,
+  readerControlPresentationProfileMatches, readerControlPresentationReceipt, refreshReaderControlPresentationEnvironment,
+  type ReaderControlMeasuredProfile,
   type ReaderControlMeasuredProfileReader, type ReaderControlPresentationReceipt,
   type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
 import { readerControlThemeStyle } from './ReaderControlThemeStyle';
@@ -216,7 +218,7 @@ import {
 } from './ReaderControlSessionState';
 import {
   backReaderControlHostSession, readerControlHostCloseCommitted, readerControlHostClosing,
-  readerControlHostInputEnabled, readerControlHostPage, readerControlHostVisible, readerControlIsDirectSheet,
+  readerControlHostInputEnabled, readerControlHostPage, readerControlHostVisible,
   setReaderControlHostPage, type ReaderControlHostTiming,
 } from './ReaderControlHostSession';
 import {
@@ -420,7 +422,6 @@ import {
   createReaderWindowMetricsLayoutKey,
   resolveReaderControlLayout,
   resolveReaderReadingLayout,
-  readerControlCandidateWidths,
   type ReaderControlCandidateMinimum, type ReaderControlContentMeasurer,
 } from './ReaderLayoutGeometry';
 import { ReaderSettingsGateway } from '../application/ReaderSettingsGateway';
@@ -1137,30 +1138,20 @@ export struct ReadingExperience {
   private controlModuleVisitRevision: number = 0;
   @State private controlMinimumRevision: number = 0;
   @State private controlMinimumReady: boolean = false;
-  private controlMinimumProvider: ReaderControlContentMeasurer | undefined = undefined;
-  private controlMinimumProfileReader: ReaderControlMeasuredProfileReader | undefined = undefined;
-  private controlMinimumProviderIdentity: string = '';
-  private controlMinimumProviderEnvironment: string = '';
-  private controlMinimumProviderFacts: ReaderControlModuleFacts | undefined = undefined;
-  private controlMinimumProviderFactsKey: string = '';
-  private controlMinimumCommittedFactsKey: string = '';
+  private readonly controlMinimum: ReaderControlMinimumState<ReaderControlMeasuredProfile, ReaderControlModuleFacts> =
+    new ReaderControlMinimumState<ReaderControlMeasuredProfile, ReaderControlModuleFacts>({
+      sourceId: (): string => this.sourceId,
+      bookId: (): string => this.bookId,
+      lifecycleToken: (): number => this.lifecycleToken,
+      openRevision: (): number => this.controlOpenRevision,
+      visitRevision: (): number => this.controlModuleVisitRevision,
+      expandedLayout: (): boolean => this.expandedLayout,
+      minimumRevision: (): number => this.controlMinimumRevision,
+    });
   @State private controlPresentationReceipt: ReaderControlPresentationReceipt | undefined = undefined;
   @State private controlNavigationIntent: ReaderControlNavigationIntent | undefined = undefined;
   private controlNavigationGeneration: number = 0;
   private controlPlaybackProfile: ReaderControlPlaybackProfileReceipt | undefined = undefined;
-  private controlMinimumGeneration: number = 0;
-  private controlMinimumCandidates: ReaderControlCandidateMinimum[] = [];
-  private controlMinimumCandidateSource: string = '';
-  private controlMinimumCandidateBook: string = '';
-  private controlMinimumCandidateLifecycle: number = -1;
-  private controlMinimumCandidateOpen: number = -1;
-  private controlMinimumCandidateVisit: number = -1;
-  private controlMinimumCandidateWidth: number = -1;
-  private controlMinimumCandidateHeight: number = -1;
-  private controlMinimumCandidateMetrics: number = -1;
-  private controlMinimumRetainedLayout: ReaderControlLayoutSnapshot | undefined = undefined;
-  private pendingControlMinimum: ReaderControlCandidateMinimum[] | undefined = undefined;
-  private pendingControlMinimumIdentity: string = '';
   private controlInputRevision: number = 0;
   private controlBackdropRegions: ReaderControlBackdropRect[] = [];
   private controlBackdropGeometryReady: boolean = false;
@@ -1832,18 +1823,12 @@ export struct ReadingExperience {
     this.appearanceSaveRecovery = { message: '', visible: false, canRetry: false,
       generation: this.appearanceSaveRecovery.generation + 1 };
     this.appearanceSaveRecoveryBusy = false;
-    this.controlMinimumGeneration += 1;
-    this.controlMinimumProvider = undefined;
-    this.controlMinimumProfileReader = undefined;
-    this.controlMinimumProviderFacts = undefined;
-    this.controlMinimumProviderFactsKey = '';
-    this.controlMinimumCommittedFactsKey = '';
+    this.controlMinimum.retireProvider();
     this.controlPresentationReceipt = undefined;
     this.controlNavigationIntent = undefined;
     this.controlNavigationGeneration += 1;
     this.controlPlaybackProfile = undefined;
-    this.controlMinimumCandidates = [];
-    this.controlMinimumRetainedLayout = undefined;
+    this.controlMinimum.clearCandidates();
     this.controlMinimumReady = false;
     this.transientFeedback.reset();
     this.retainedReadingRecencyReceipt = undefined;
@@ -4571,31 +4556,17 @@ export struct ReadingExperience {
   private refreshControlEditingEnvironment(): boolean {
     const previous = this.controlPresentationReceipt;
     const key = this.currentControlStructureKey();
-    const facts = this.controlMinimumProviderFacts;
+    const facts = this.controlMinimum.providerFacts;
     if (previous === undefined || key !== this.lastControlStructureKey ||
       previous.identity !== this.controlMinimumCommittedIdentity() || this.activeControlNavigationIntent() !== undefined ||
       previous.ownerKey !== this.controlMinimumOwnerKey() || !this.controlMinimumCurrent(previous.identity) ||
       facts === undefined || !readerControlModuleFactsMatch(facts, previous.profile.module) ||
-      this.controlMinimumProviderFactsKey !== this.controlMinimumCommittedFactsKey) return false;
+      !this.controlMinimum.factsMatchCommitted()) return false;
     const metrics = ReaderWindowCoordinator.metrics();
     const environment = this.controlMinimumEnvironmentKey();
-    this.controlMinimumGeneration += 1;
-    this.controlMinimumProviderEnvironment = environment;
-    // Revalidate synchronous measured facts under the current owner and exact
-    // structural inputs; retain their original measurement provenance.
-    const profile = previous.profile;
-    this.controlPresentationReceipt = { identity: previous.identity, ownerKey: previous.ownerKey,
-      environmentKey: environment, key: previous.key, location: previous.location, layout: previous.layout,
-      facts: previous.facts, prepared: previous.prepared,
-      profile: { module: profile.module, moduleData: profile.moduleData, moduleFacts: profile.moduleFacts,
-        headerPaint: profile.headerPaint, identity: profile.identity, metricsRevision: metrics.revision,
-        measurementMetricsRevision: profile.measurementMetricsRevision ?? profile.metricsRevision,
-        widths: profile.widths, playbackData: profile.playbackData, quick: profile.quick, full: profile.full,
-        topBarVisible: profile.topBarVisible, navigationLabelHeight: profile.navigationLabelHeight,
-        navigationHeight: profile.navigationHeight, titleHeight: profile.titleHeight,
-        collapseLabelHeight: profile.collapseLabelHeight, collapseWidth: profile.collapseWidth, headerHeight: profile.headerHeight } };
-    this.controlMinimumCandidateMetrics = metrics.revision;
-    this.controlLayoutCacheRevision = -1;
+    this.controlMinimum.revalidateEnvironment(environment);
+    this.controlPresentationReceipt = refreshReaderControlPresentationEnvironment(previous, environment, metrics.revision);
+    this.controlMinimum.revalidateCandidateMetrics(metrics.revision);
     if (this.controlFontOrderRequest !== undefined) this.reconcileControlFontOrderPresentation();
     return true;
   }
@@ -4605,7 +4576,7 @@ export struct ReadingExperience {
       return;
     }
     if (!this.refreshControlEditingEnvironment()) {
-      this.controlMinimumGeneration += 1;
+      this.controlMinimum.invalidateRequest();
       this.scheduleControlMinimum();
     }
     this.reconcileSessionLaunchLayout();
@@ -7493,13 +7464,6 @@ export struct ReadingExperience {
     return layout;
   }
 
-  private controlLayoutCache: ReaderControlLayoutSnapshot | undefined = undefined;
-  private controlLayoutCacheWidth: number = -1;
-  private controlLayoutCacheHeight: number = -1;
-  private controlLayoutCacheRevision: number = -1;
-  private controlLayoutCacheTablet: boolean = false;
-  private controlLayoutCacheMinimumRevision: number = -1;
-
   private controlLayout(_windowMetricsRevision: number): ReaderControlLayoutSnapshot {
     const metrics = ReaderWindowCoordinator.metrics();
     const held = this.sessionLaunchSourceMinimum;
@@ -7511,31 +7475,8 @@ export struct ReadingExperience {
     const height = this.effectiveViewportHeight();
     const committed = this.controlPresentationReceipt;
     if (committed !== undefined && committed.environmentKey === this.controlMinimumEnvironmentKey() &&
-      this.controlMinimumCandidateSource === this.sourceId && this.controlMinimumCandidateBook === this.bookId &&
-      this.controlMinimumCandidateLifecycle === this.lifecycleToken && this.controlMinimumCandidateOpen === this.controlOpenRevision)
-      return committed.layout;
-    if (this.controlLayoutCache !== undefined && this.controlLayoutCacheWidth === width &&
-      this.controlLayoutCacheHeight === height && this.controlLayoutCacheRevision === metrics.revision &&
-      this.controlLayoutCacheTablet === this.expandedLayout &&
-      this.controlLayoutCacheMinimumRevision === this.controlMinimumRevision) return this.controlLayoutCache;
-    const measured = this.controlMinimumCandidateSource === this.sourceId && this.controlMinimumCandidateBook === this.bookId &&
-      this.controlMinimumCandidateLifecycle === this.lifecycleToken && this.controlMinimumCandidateOpen === this.controlOpenRevision &&
-      this.controlMinimumCandidateVisit === this.controlModuleVisitRevision && this.controlMinimumCandidateWidth === width &&
-      this.controlMinimumCandidateHeight === height && this.controlMinimumCandidateMetrics === metrics.revision ?
-        this.controlMinimumCandidates : undefined;
-    const retained = this.controlMinimumRetainedLayout;
-    const retaining = measured === undefined && retained !== undefined &&
-      this.controlMinimumCandidateSource === this.sourceId && this.controlMinimumCandidateBook === this.bookId &&
-      this.controlMinimumCandidateLifecycle === this.lifecycleToken && this.controlMinimumCandidateWidth === width &&
-      this.controlMinimumCandidateHeight === height && this.controlMinimumCandidateMetrics === metrics.revision;
-    const layout = retaining && retained !== undefined ? retained :
-      resolveReaderControlLayout(width, height, this.expandedLayout, metrics, 0, measured);
-    if (layout.minimumStatus !== 'legacy') this.controlMinimumRetainedLayout = layout;
-    this.controlLayoutCache = layout;
-    this.controlLayoutCacheWidth = width; this.controlLayoutCacheHeight = height;
-    this.controlLayoutCacheRevision = metrics.revision; this.controlLayoutCacheTablet = this.expandedLayout;
-    this.controlLayoutCacheMinimumRevision = this.controlMinimumRevision;
-    return layout;
+      this.controlMinimum.matchesOpen()) return committed.layout;
+    return this.controlMinimum.layout(width, height, metrics);
   }
 
   private controlMinimumIdentity(): string {
@@ -7571,19 +7512,6 @@ export struct ReadingExperience {
       metrics.keyboardInsets, metrics.keyboardArea, metrics.statusBarRect, metrics.statusBarHeight, metrics.statusBarCutoutRect]);
   }
 
-  private controlLayoutGeometryKey(layout: ReaderControlLayoutSnapshot): string {
-    const budget = layout.contentBudget;
-    return JSON.stringify([layout.widthClass, layout.viewportWidth, layout.viewportHeight,
-      layout.topBarTop, layout.topBarHeight, layout.topBarVisible, layout.minimumPanelTop, layout.topBarWidth,
-      layout.dockBottomGap, layout.dockRightGap, layout.dockWidth, layout.fullPanelTop,
-      layout.fullPanelLeftGap, layout.fullPanelRightGap,
-      layout.fullPanelWidth, layout.fullPanelHeight, layout.quickPanelHeight, layout.minimumStatus,
-      layout.quickMinimumFits, layout.fullMinimumFits,
-      budget === undefined ? undefined : [budget.quickContentHeightVp, budget.fullContentHeightVp,
-        budget.brightnessContentHeightVp, budget.navigationHeightVp, budget.headerHeightVp,
-        budget.brightnessAutoHeightVp, budget.brightnessAutoWidthVp]]);
-  }
-
   private acceptControlPlaybackProfile(receipt: ReaderControlPlaybackProfileReceipt): void {
     const location = readerControlContentLocation(this.controlSession);
     const module = location.module;
@@ -7615,15 +7543,8 @@ export struct ReadingExperience {
   private bindControlMinimum(identity: string, measurer: ReaderControlContentMeasurer | undefined,
     profileReader?: ReaderControlMeasuredProfileReader, facts?: ReaderControlModuleFacts, factsGeometryKey?: string): void {
     if (identity !== this.controlMinimumIdentity() || !this.mounted) return;
-    this.controlMinimumGeneration += 1;
-    this.controlMinimumProvider = measurer;
-    this.controlMinimumProfileReader = profileReader;
-    this.controlMinimumProviderIdentity = identity;
-    this.controlMinimumProviderEnvironment = this.controlMinimumEnvironmentKey();
-    this.controlMinimumProviderFacts = facts;
-    this.controlMinimumProviderFactsKey = factsGeometryKey ?? '';
-    this.pendingControlMinimum = undefined;
-    this.pendingControlMinimumIdentity = '';
+    this.controlMinimum.bind(identity, measurer, profileReader, (): string => this.controlMinimumEnvironmentKey(),
+      facts, factsGeometryKey ?? '');
     this.scheduleControlMinimum();
   }
 
@@ -7631,69 +7552,44 @@ export struct ReadingExperience {
     const committed = this.controlPresentationReceipt;
     if (committed !== undefined) return committed.key === key && committed.identity === this.controlMinimumCommittedIdentity() &&
       committed.environmentKey === this.controlMinimumEnvironmentKey();
-    if (this.controlMinimumProfileReader !== undefined) return false;
-    const identity = this.controlMinimumProviderIdentity;
-    const prefix = `${identity}|${this.controlMinimumGeneration}|`;
-    return this.controlMinimumProvider !== undefined && identity === this.controlMinimumIdentity() && key.startsWith(prefix) &&
-      this.controlMinimumCandidates.some((candidate: ReaderControlCandidateMinimum): boolean => candidate.key === key);
+    return this.controlMinimum.unprofiledReceiptCurrent(key, (): string => this.controlMinimumIdentity());
+  }
+
+  private controlMinimumWindow(): ReaderControlMinimumWindow {
+    return { width: this.effectiveViewportWidth(), height: this.effectiveViewportHeight(),
+      expanded: this.expandedLayout, metrics: ReaderWindowCoordinator.metrics() };
   }
 
   private scheduleControlMinimum(): void {
-    const identity = this.controlMinimumProviderIdentity;
-    const measure = this.controlMinimumProvider;
-    if (!this.controlMinimumCurrent(identity)) return;
-    const generation = this.controlMinimumGeneration;
-    const environment = this.controlMinimumEnvironmentKey();
-    const profileReader = this.controlMinimumProfileReader;
-    const facts = this.controlMinimumProviderFacts;
-    const factsKey = this.controlMinimumProviderFactsKey;
-    const navigationGeneration = this.activeControlNavigationIntent()?.generation;
-    this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
-      if (generation !== this.controlMinimumGeneration || measure !== this.controlMinimumProvider ||
-        facts !== this.controlMinimumProviderFacts || factsKey !== this.controlMinimumProviderFactsKey ||
-        navigationGeneration !== this.activeControlNavigationIntent()?.generation ||
-        environment !== this.controlMinimumEnvironmentKey() || !this.controlMinimumCurrent(identity)) return;
-      // Pending measurements retire requests. A committed current geometry
-      // remains usable until an actual owner/environment change or new commit.
-      if (this.controlPresentationReceipt === undefined) this.controlMinimumReady = false;
-      if (measure === undefined) {
+    this.controlMinimum.schedule({
+      current: (identity: string): boolean => this.controlMinimumCurrent(identity),
+      environment: (): string => this.controlMinimumEnvironmentKey(),
+      navigationGeneration: (): number | undefined => this.activeControlNavigationIntent()?.generation,
+      location: (): ReaderControlLocation => this.controlMinimumRequestLocation(),
+      window: (): ReaderControlMinimumWindow => this.controlMinimumWindow(),
+      postFrame: (run: () => void): void => this.getUIContext().postFrameCallback(new ReaderUIFrameCallback(run)),
+      onPending: (): void => {
+        // A committed current geometry remains usable until an owner/environment change or a new commit.
+        if (this.controlPresentationReceipt === undefined) this.controlMinimumReady = false;
+      },
+      onUnavailable: (identity: string): void => {
         if (this.controlFontOrderRequest !== undefined) this.recordControlFontOrderMeasurementUnavailable(identity);
-        return;
-      }
-      const previous = this.controlPresentationReceipt;
-      if (profileReader !== undefined && facts !== undefined && factsKey.length > 0 &&
-        previous !== undefined && previous.identity === identity && previous.environmentKey === environment &&
-        readerControlModuleFactsMatch(facts, previous.profile.module) &&
-        factsKey === this.controlMinimumCommittedFactsKey) {
-        this.adoptControlDisplayFacts(facts);
-        return;
-      }
-      const location = profileReader === undefined ? undefined : this.controlMinimumRequestLocation();
-      const directSheet = location?.level === 'secondary' && location.form === 'full' && readerControlIsDirectSheet(location.module);
-      const widths = readerControlCandidateWidths(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
-        this.expandedLayout, ReaderWindowCoordinator.metrics(), directSheet);
-      const measured = measureReaderControlMinimumCandidates(widths, identity, generation, measure,
-        (candidate: ReaderControlCandidateMinimum): boolean =>
-          resolveReaderControlLayout(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
-            this.expandedLayout, ReaderWindowCoordinator.metrics(), 0, [candidate], directSheet).minimumStatus === 'preferred');
-      if (generation !== this.controlMinimumGeneration || measure !== this.controlMinimumProvider ||
-        navigationGeneration !== this.activeControlNavigationIntent()?.generation ||
-        profileReader !== this.controlMinimumProfileReader || environment !== this.controlMinimumEnvironmentKey() ||
-        !this.controlMinimumCurrent(identity)) return;
-      this.admitControlMinimum(measured, identity);
-    }));
+      },
+      canAdoptFacts: (facts: ReaderControlModuleFacts, identity: string, environment: string): boolean => {
+        const previous = this.controlPresentationReceipt;
+        return previous !== undefined && previous.identity === identity && previous.environmentKey === environment &&
+          readerControlModuleFactsMatch(facts, previous.profile.module);
+      },
+      adoptFacts: (facts: ReaderControlModuleFacts): void => this.adoptControlDisplayFacts(facts),
+      admit: (candidates: ReaderControlCandidateMinimum[], identity: string): void => this.admitControlMinimum(candidates, identity),
+    });
   }
 
   private adoptControlDisplayFacts(facts: ReaderControlModuleFacts | undefined): void {
     const previous = this.controlPresentationReceipt;
     if (previous === undefined) return;
-    if (!readerControlModuleFactsDisplayEqual(previous.facts, facts)) {
-      this.controlPresentationReceipt = { identity: previous.identity, ownerKey: previous.ownerKey,
-        environmentKey: previous.environmentKey, key: previous.key, location: previous.location,
-        layout: previous.layout, profile: previous.profile, facts: facts,
-        prepared: previous.prepared === undefined || facts === undefined ? undefined :
-          { identity: previous.identity, key: previous.key, moduleData: previous.prepared.moduleData, facts: facts } };
-    }
+    const updated = adoptReaderControlPresentationFacts(previous, facts);
+    if (updated !== previous) this.controlPresentationReceipt = updated;
     if (this.controlFontOrderRequest !== undefined) this.reconcileControlFontOrderPresentation();
     if (this.controlPage() === 'quickReplace') this.prepareControlReplacePage();
   }
@@ -7702,10 +7598,9 @@ export struct ReadingExperience {
     if (!this.controlMinimumCurrent(identity)) return;
     let preparedPage: ReaderControlPage | undefined = undefined;
     let nextReceipt: ReaderControlPresentationReceipt | undefined = undefined;
-    if (this.controlMinimumProfileReader !== undefined) {
-      const prefix = `${identity}|${this.controlMinimumGeneration}|`;
-      if (candidates.some((candidate: ReaderControlCandidateMinimum): boolean => !candidate.key.startsWith(prefix)) ||
-        this.controlMinimumProviderEnvironment !== this.controlMinimumEnvironmentKey()) return;
+    if (this.controlMinimum.profileReader !== undefined) {
+      if (!this.controlMinimum.acceptsProfiledCandidates(candidates, identity, (): string => this.controlMinimumEnvironmentKey()))
+        return;
       if (candidates.length === 0) {
         if (this.controlFontOrderRequest !== undefined) this.recordControlFontOrderMeasurementUnavailable(identity);
         return;
@@ -7714,40 +7609,33 @@ export struct ReadingExperience {
     if (this.pageTurnInputPhase() !== 'idle') {
       // Control reflow is UI-only. Let an in-flight page transaction finish;
       // unlike body/recovery changes it does not invalidate or roll it back.
-      this.pendingControlMinimum = candidates;
-      this.pendingControlMinimumIdentity = identity;
+      this.controlMinimum.defer(candidates, identity);
       return;
     }
-    const readProfile = this.controlMinimumProfileReader;
+    const readProfile = this.controlMinimum.profileReader;
     const location = readProfile === undefined ? undefined : this.controlMinimumRequestLocation();
-    const directSheet = location?.level === 'secondary' && location.form === 'full' && readerControlIsDirectSheet(location.module);
-    const layout = resolveReaderControlLayout(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
-      this.expandedLayout, ReaderWindowCoordinator.metrics(), 0, candidates, directSheet);
+    const directSheet = readerControlMinimumUsesDirectSheet(location);
+    const geometry = this.controlMinimumWindow();
+    const layout = resolveReaderControlLayout(geometry.width, geometry.height, geometry.expanded, geometry.metrics,
+      0, candidates, directSheet);
     if (readProfile !== undefined && location !== undefined) {
       const profile = readProfile(layout.minimumKey);
-      const module = location.level === 'secondary' ? location.module : 'home';
-      if (layout.minimumStatus === 'legacy' || profile === undefined || profile.identity !== identity ||
-        profile.module !== module || profile.widths.panelWidthVp !== layout.fullPanelWidth ||
-        profile.moduleFacts === undefined || !readerControlModuleFactsMatch(profile.moduleFacts, module) ||
-        (module !== 'home' && (profile.moduleData === undefined || !readerControlModuleProfileMatches(profile.moduleData, module)))) {
+      if (layout.minimumStatus === 'legacy' || profile === undefined ||
+        !readerControlPresentationProfileMatches(profile, layout, location, identity)) {
         if (this.controlFontOrderRequest !== undefined) this.recordControlFontOrderMeasurementUnavailable(identity);
         return;
       }
       const previous = this.controlPresentationReceipt;
       const environment = this.controlMinimumEnvironmentKey();
       if (previous !== undefined && previous.identity === identity && previous.environmentKey === environment &&
-        this.controlLayoutGeometryKey(previous.layout) === this.controlLayoutGeometryKey(layout) &&
-        readerControlMeasuredProfileGeometryKey(previous.profile) === readerControlMeasuredProfileGeometryKey(profile)) {
+        readerControlPresentationGeometryMatches(previous, layout, profile)) {
         this.controlMinimumReady = true;
-        this.controlMinimumCommittedFactsKey = this.controlMinimumProviderFactsKey;
+        this.controlMinimum.commitFacts();
         this.adoptControlDisplayFacts(profile.moduleFacts);
         return;
       }
-      nextReceipt = { identity: identity, ownerKey: this.controlMinimumOwnerKey(), environmentKey: environment,
-        key: layout.minimumKey, layout: layout, profile: profile, facts: profile.moduleFacts,
-        location: { level: location.level, module: location.module, directoryTab: location.directoryTab, form: location.form },
-        prepared: profile.moduleData === undefined || profile.moduleFacts === undefined ? undefined :
-          { identity: identity, key: layout.minimumKey, moduleData: profile.moduleData, facts: profile.moduleFacts } };
+      nextReceipt = readerControlPresentationReceipt(identity, this.controlMinimumOwnerKey(), environment,
+        location, layout, profile);
       const intent = this.activeControlNavigationIntent();
       if (intent !== undefined) {
         const visual = this.latestControlVisualSession;
@@ -7765,18 +7653,11 @@ export struct ReadingExperience {
         this.controlSession = committed;
         if (previousModule !== this.observedControlModule) preparedPage = this.controlPage();
       }
-      this.controlMinimumCommittedFactsKey = this.controlMinimumProviderFactsKey;
+      this.controlMinimum.commitFacts();
     }
     this.lastControlStructureKey = this.currentControlStructureKey();
-    this.controlMinimumCandidates = candidates;
-    this.controlMinimumCandidateSource = this.sourceId;
-    this.controlMinimumCandidateBook = this.bookId;
-    this.controlMinimumCandidateLifecycle = this.lifecycleToken;
-    this.controlMinimumCandidateOpen = this.controlOpenRevision;
-    this.controlMinimumCandidateVisit = this.controlModuleVisitRevision;
-    this.controlMinimumCandidateWidth = this.effectiveViewportWidth();
-    this.controlMinimumCandidateHeight = this.effectiveViewportHeight();
-    this.controlMinimumCandidateMetrics = ReaderWindowCoordinator.metrics().revision;
+    this.controlMinimum.commitCandidates(candidates, (): number => this.effectiveViewportWidth(),
+      (): number => this.effectiveViewportHeight(), (): number => ReaderWindowCoordinator.metrics().revision);
     this.controlMinimumRevision += 1;
     this.controlMinimumReady = candidates.length > 0;
     // Receipt observers can synchronously read the accepted layout and publish the launch source.
@@ -9300,7 +9181,7 @@ export struct ReadingExperience {
     if (this.controlNavigationIntent === undefined) return false;
     const consumed = this.activeControlNavigationIntent() !== undefined;
     this.controlNavigationGeneration += 1;
-    this.controlMinimumGeneration += 1;
+    this.controlMinimum.invalidateRequest();
     this.controlNavigationIntent = undefined;
     return consumed;
   }
@@ -9360,7 +9241,7 @@ export struct ReadingExperience {
     if (receipt !== undefined) {
       if (receipt.identity !== identity || receipt.ownerKey !== this.controlMinimumOwnerKey() ||
         receipt.environmentKey !== this.controlMinimumEnvironmentKey() || receipt.location.module !== 'replace') return;
-    } else if (this.controlMinimumProfileReader !== undefined) return;
+    } else if (this.controlMinimum.profileReader !== undefined) return;
     const preparedIdentity = JSON.stringify([identity, this.replacePanelGeneration]);
     if (preparedIdentity === this.controlReplacePreparedIdentity) return;
     // A dispatched write retains its original owner. Pending entries leave
@@ -10074,8 +9955,8 @@ export struct ReadingExperience {
   private recordControlFontOrderMeasurementUnavailable(identity: string): void {
     const request = this.controlFontOrderRequest;
     if (request === undefined || identity !== request.identity ||
-      !this.controlFontOrderFactsMatch(this.controlMinimumProviderFacts, request.requested.join('|'))) return;
-    request.unavailableGeneration = this.controlMinimumGeneration;
+      !this.controlFontOrderFactsMatch(this.controlMinimum.providerFacts, request.requested.join('|'))) return;
+    request.unavailableGeneration = this.controlMinimum.generation;
     request.unavailableEnvironment = this.controlMinimumEnvironmentKey();
     this.reconcileControlFontOrderPresentation();
   }
@@ -10101,7 +9982,7 @@ export struct ReadingExperience {
       this.controlVerification.effect('font-reorder', 'order-admitted', facts);
       return;
     }
-    if (request.unavailableGeneration === this.controlMinimumGeneration &&
+    if (request.unavailableGeneration === this.controlMinimum.generation &&
       request.unavailableEnvironment === this.controlMinimumEnvironmentKey()) {
       this.finishControlFontOrderPresentation(request, false);
     }
@@ -10481,7 +10362,7 @@ export struct ReadingExperience {
     if (kind === undefined || (type === 'tts') !== (kind === 'quickTts' || kind === 'fullTtsPlayback')) return false;
     let sourceMinimum: ReaderControlPlaybackProfileReceipt | undefined = undefined;
     const nativeMinimumContract = this.effectiveViewportWidth() > 0 && this.effectiveViewportHeight() > 0 &&
-      typeof this.controlMinimumProviderIdentity === 'string' && this.controlMinimumProviderIdentity.length > 0;
+      typeof this.controlMinimum.providerIdentity === 'string' && this.controlMinimum.providerIdentity.length > 0;
     if (nativeMinimumContract) {
       const receipt = this.controlPlaybackProfile;
       const module = type === 'tts' ? 'tts' : 'autoPage';
@@ -11245,7 +11126,7 @@ export struct ReadingExperience {
     this.refreshAppearanceSaveRecovery(this.lifecycleToken);
     if (!this.readerInputIsCurrent() || this.windowChromeOverlayActive) this.retirePendingPlaybackStarts();
     if (!this.isControlInputEnabled()) this.retirePagePointer();
-    this.controlMinimumGeneration += 1;
+    this.controlMinimum.invalidateRequest();
     this.scheduleControlMinimum();
     if (!this.appForeground || this.interactionBlocked || this.controlObscured) this.cancelAutomaticPageStart?.();
     if (this.mounted && this.appForeground && this.ttsCoordinator !== undefined &&
@@ -11320,7 +11201,7 @@ export struct ReadingExperience {
       this.prepareControlPage(page);
     }
     // The module/opening identity changes only at semantic edges, never p.
-    this.controlLayoutCache = undefined;
+    this.controlMinimum.invalidateLayout();
     if (!readerControlHostCloseCommitted(this.controlSession, this.observedControlCloseRevision)) return;
     this.observedControlCloseRevision = this.controlSession.closeRevision;
     this.invalidateControlBackdrop();
@@ -14562,8 +14443,7 @@ export struct ReadingExperience {
     const pendingViewportHeight = this.pageTurnPendingViewportHeight;
     const pendingWindowReflow = this.pageTurnPendingWindowReflow;
     const pendingWindowSettings = this.pageTurnPendingWindowSettings;
-    const pendingControlMinimum = this.pendingControlMinimum;
-    const pendingControlMinimumIdentity = this.pendingControlMinimumIdentity;
+    const pendingControlMinimum = this.controlMinimum.deferred;
     this.clearDeferredPageTurnWork();
 
     if (pendingExit) {
@@ -14602,7 +14482,7 @@ export struct ReadingExperience {
       this.commitReaderWindowSettings(pendingWindowSettings);
     }
     if (pendingControlMinimum !== undefined) {
-      this.admitControlMinimum(pendingControlMinimum, pendingControlMinimumIdentity);
+      this.admitControlMinimum(pendingControlMinimum.candidates, pendingControlMinimum.identity);
     }
   }
 
@@ -14617,8 +14497,7 @@ export struct ReadingExperience {
     this.pageTurnPendingViewportHeight = 0;
     this.pageTurnPendingWindowReflow = false;
     this.pageTurnPendingWindowSettings = undefined;
-    this.pendingControlMinimum = undefined;
-    this.pendingControlMinimumIdentity = '';
+    this.controlMinimum.clearDeferred();
   }
 
   private promotePreparedPageTurn(prepared: PreparedReaderPageTurn, stored?: LocalReadingProgress): void {
