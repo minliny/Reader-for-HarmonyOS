@@ -149,6 +149,25 @@ export function createDefaultReaderSettingsSnapshot(): ReaderSettingsSnapshot {
   };
 }
 
+export function safeReaderWindowSettingsFallback(snapshot: ReaderSettingsSnapshot): ReaderSettingsSnapshot {
+  return normalizeReaderSettingsSnapshot({
+    version: 5,
+    screenDirection: 'system',
+    navigationMode: snapshot.navigationMode,
+    pageTransition: snapshot.pageTransition,
+    screenTimeout: 'system',
+    hideStatusBar: false,
+    hideNavigationBar: false,
+    extendIntoCutout: false,
+    justifyText: snapshot.justifyText,
+    alignPageBottom: snapshot.alignPageBottom,
+    volumeKeysTurnPage: snapshot.volumeKeysTurnPage,
+    stopTtsOnScreenOff: snapshot.stopTtsOnScreenOff,
+    longPressSelectText: snapshot.longPressSelectText,
+    widePageLayout: snapshot.widePageLayout,
+  });
+}
+
 /**
  * Decoded preferences are not trusted. V1/V2/V3 are migrated at this boundary;
  * every field then validates independently and malformed values fail back to

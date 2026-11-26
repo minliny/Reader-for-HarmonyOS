@@ -50,12 +50,12 @@ function committedReleaseLedger(root, parseJson5, env) {
 }
 
 export function prepareAppIdentity(root, inputs, { abi, buildMode = 'debug', product = 'default', channel,
-  buildClass = 'iteration', signed = true, env = process.env } = {}) {
+  buildClass = 'iteration', signed = true, env = process.env, precomputedRecords } = {}) {
   if (product !== 'default' || !['debug', 'release'].includes(buildMode)) throw new Error('Unsupported app identity product/build mode');
   const parseJson5 = appIdentityParser(root, env);
   const ledger = JSON.parse(readFileSync(resolve(root, APP_RELEASE_LEDGER), 'utf8'));
   validateReleaseLedgerAdvance(ledger, committedReleaseLedger(root, parseJson5, env));
-  const files = appContentSnapshot(root, inputs, { abi, parseJson5 });
+  const files = appContentSnapshot(root, inputs, { abi, parseJson5, precomputedRecords });
   const buildIdentityInputs = { abi, buildMode, product, toolchain: appBuildToolchain(root, env) };
   const expectedVersion = createAppBuildIdentity({ files, buildIdentityInputs, ledger,
     channel: channel ?? env.READER_APP_CHANNEL ?? ledger.developmentChannel, buildClass, signed });
@@ -63,8 +63,10 @@ export function prepareAppIdentity(root, inputs, { abi, buildMode = 'debug', pro
     buildIdentityInputs, files }, ledger, root, inputs, abi, buildMode, product, buildClass, signed };
 }
 
-export function assertAppIdentityUnchanged(session, env = process.env) {
-  const current = prepareAppIdentity(session.root, session.inputs, { ...session, channel: session.expectedVersion.channel, env });
+export function assertAppIdentityUnchanged(session, env = process.env, { precomputedRecords } = {}) {
+  const current = prepareAppIdentity(session.root, session.inputs, {
+    ...session, channel: session.expectedVersion.channel, env, precomputedRecords,
+  });
   if (session.expectedVersion.appContentHash !== current.expectedVersion.appContentHash) {
     const before = new Map(session.contentSnapshot.files.map(file => [file.path, file.sha256]));
     const after = new Map(current.contentSnapshot.files.map(file => [file.path, file.sha256]));

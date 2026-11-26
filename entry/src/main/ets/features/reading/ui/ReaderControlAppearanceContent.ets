@@ -1,3 +1,4 @@
+import type { ReaderControlFontOrderPresentation } from './ReaderControlPresentationCoordinator';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { readReaderControlNativeActor, type MotionActor } from './ReaderControlVerificationMotion';
@@ -83,11 +84,7 @@ interface ReaderControlFontDragRelease {
   order: ReaderAppearanceFontSlot[];
 }
 
-export interface ReaderControlFontOrderPresentation {
-  displayed: Promise<boolean>;
-  current: () => boolean;
-  retire: () => void;
-}
+export type { ReaderControlFontOrderPresentation } from './ReaderControlPresentationCoordinator';
 
 interface ReaderControlPendingFontOrder {
   presentation: ReaderControlFontOrderPresentation;

@@ -34,7 +34,8 @@ import { READER_BOOKMARK_RIBBON_HEIGHT, ReaderBookmarkRibbonFrame, readerBookmar
   type ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
 import { ReaderPageBookmarkRibbon } from './ReaderPageBookmarkRibbon';
 import { ReaderPaperBackground } from './ReaderPaperBackground';
-import { ReaderFacingChapterColumn, type ReaderFacingChapter } from './ReaderFacingChapter';
+import { ReaderFacingChapterColumn } from './ReaderFacingChapter';
+import type { ReaderFacingChapter } from './ReaderFacingChapterPreview';
 
 export type { ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
 

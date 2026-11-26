@@ -4,9 +4,10 @@ import type { BookTurnInput } from './BookTurnMotionState';
 import type { ReaderPageTurnDirection } from './ReaderPageGestureState';
 import { readerHighlightValuesEqual } from './ReaderDynamicHighlight';
 
-export const BOOK_TURN_TEXTURE_PREVIOUS = 0;
-export const BOOK_TURN_TEXTURE_CURRENT = 1;
-export const BOOK_TURN_TEXTURE_NEXT = 2;
+import type { BookTurnTextureCache, BookTurnTextureSlot } from './BookTurnTextureCapture';
+
+export { BOOK_TURN_TEXTURE_PREVIOUS, BOOK_TURN_TEXTURE_CURRENT, BOOK_TURN_TEXTURE_NEXT } from './BookTurnTextureCapture';
+export type { BookTurnTextureSlot } from './BookTurnTextureCapture';
 
 export const BOOK_TURN_PROFILE_MANUAL = 0;
 export const BOOK_TURN_PROFILE_RAPID = 1;
@@ -27,8 +28,6 @@ export const BOOK_TURN_EVENT_TERMINAL_RELEASED = 8;
 export const BOOK_TURN_EVENT_FRAME_PRESENTED = 9;
 
 export interface BookTurnRegrabFrame { generation: number; edgeX: number; edgeY: number; theta: number; }
-
-export type BookTurnTextureSlot = 0 | 1 | 2;
 
 interface BookTurnPendingSnapshot {
   identity: string;
@@ -52,7 +51,7 @@ export class BookTurnNativeEvent {
  * Thin presentation-only bridge. It owns neither gesture arbitration nor the
  * Core page transaction; both remain in LocalReadingExperience.
  */
-export class BookTurnPresentationSession {
+export class BookTurnPresentationSession implements BookTurnTextureCache<image.PixelMap> {
   readonly componentId: string;
   private capturedIdentities: string[] = ['', '', ''];
   private pendingSlotGeneration: number = -1;

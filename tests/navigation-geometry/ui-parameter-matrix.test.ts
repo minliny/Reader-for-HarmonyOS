@@ -4,6 +4,7 @@ import { sampleReaderControlMotionComposition } from '../../entry/src/main/ets/f
 import { ReaderPageSettlementTimeline } from '../../entry/src/main/ets/features/reading/ui/ReaderPageSettlementTimeline.ts';
 import { buildReaderSessionLaunchGeometry, sampleReaderSessionLaunch }
   from '../../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts';
+import { readerSessionCapsuleColor } from '../../entry/src/main/ets/features/reading/ui/ReaderSessionCapsulePaint.ts';
 import { READER_TTS_WAVEFORM_BAR_COUNT, ReaderTtsWaveformMotion }
   from '../../entry/src/main/ets/features/reading/ui/ReaderTtsWaveformModel.ts';
 import { createReaderTransientToastState, READER_FEEDBACK_BRIEF_MS, READER_FEEDBACK_DEDUPE_MS, READER_FEEDBACK_EXTENDED_MS }
@@ -12,6 +13,7 @@ import { readerAvailableWindowHeight, readerDynamicSurfaceWidth, readerReadableF
   readerScaledControlHeight, readerSurfaceMaxHeight } from '../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts';
 import { ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot }
   from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { readerAppColor } from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { readerIsExpandedWidth, readerWidthClass } from '../../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts';
 import { readerFrameStyle } from '../../entry/src/main/ets/ui/layout/ReaderFrameStyle.ts';
 import { readerExpandedLayout } from '../../entry/src/main/ets/ui/layout/ReaderLayoutCapability.ts';
@@ -37,6 +39,19 @@ function windowMetrics(width: number, height: number = 844, safeTop: number = 32
 }
 
 const linear = (progress: number): number => progress;
+
+test('both reader capsule actors keep their original theme roles and explicit paint overrides', () => {
+  for (const scheme of ['day', 'night']) {
+    assert.equal(readerSessionCapsuleColor('surface', scheme), readerAppColor('app.sessionCapsule.surface', scheme));
+    assert.equal(readerSessionCapsuleColor('border', scheme), readerAppColor('app.sessionCapsule.border', scheme));
+    assert.equal(readerSessionCapsuleColor('ink', scheme), readerAppColor('app.sessionCapsule.ink', scheme));
+    assert.equal(readerSessionCapsuleColor('primary', scheme), readerAppColor('TOK_READ_PRIMARY', scheme));
+    assert.equal(readerSessionCapsuleColor('onPrimary', scheme), readerAppColor('app.sessionCapsule.onPrimary', scheme));
+    for (const role of ['surface', 'border', 'ink', 'primary', 'onPrimary'] as const) {
+      assert.equal(readerSessionCapsuleColor(role, scheme, '#FFAABBCC'), '#FFAABBCC');
+    }
+  }
+});
 
 test('the width class switches at 600vp and treats unknown widths as compact', () => {
   assert.equal(readerWidthClass(0), 'compact');

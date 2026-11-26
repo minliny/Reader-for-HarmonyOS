@@ -1,3 +1,4 @@
+import type { ReaderFacingChapter } from './ReaderFacingChapterPreview';
 import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerRegisteredFontFamily } from '../../../ui/foundation/ReaderFonts';
 import { readerAppColor, readerThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -6,19 +7,6 @@ import { readerAppearanceLineHeight, readerAppearanceParagraphIndentPrefix, read
   readerAppearanceUsesJustify } from './ReaderAppearanceRenderStyle';
 import { createDefaultReaderReadingLayout, READER_FACING_CHAPTER_GAP_VP,
   type ReaderReadingLayoutSnapshot } from './ReaderLayoutGeometry';
-
-/** Bounded display text supplied by the current book's admitted adjacent chapter. */
-export class ReaderFacingChapter {
-  readonly title: string;
-  readonly paragraphs: string[];
-  readonly identity: string;
-
-  constructor(title: string, paragraphs: string[], identity: string = '') {
-    this.title = title;
-    this.paragraphs = paragraphs;
-    this.identity = identity;
-  }
-}
 
 /** Passive right leaf in a full-viewport reading stack. */
 @Component

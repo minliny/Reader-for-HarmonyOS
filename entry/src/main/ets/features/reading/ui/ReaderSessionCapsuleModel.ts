@@ -27,6 +27,20 @@ export type ReaderSessionCapsuleSnapshot = {
  * Preparing preserves the authored geometry but reports the honest business
  * state. It never pretends that audio has already started.
  */
+export class ReaderSessionCapsuleMeasurement {
+  readonly type: ReaderSessionCapsuleType;
+  readonly identity: string;
+  readonly width: number;
+  readonly height: number;
+
+  constructor(type: ReaderSessionCapsuleType, identity: string, width: number, height: number) {
+    this.type = type;
+    this.identity = identity;
+    this.width = width;
+    this.height = height;
+  }
+}
+
 export function deriveReaderSessionCapsule(
   input: ReaderSessionCapsuleInput,
 ): ReaderSessionCapsuleSnapshot | undefined {

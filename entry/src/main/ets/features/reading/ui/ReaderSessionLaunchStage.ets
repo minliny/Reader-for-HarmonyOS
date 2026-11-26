@@ -107,8 +107,8 @@ export struct ReaderSessionLaunchStage {
       // CapsuleContent reveal clip and CapsuleTransitionContent leading row.
       Stack({ alignContent: Alignment.TopStart }) {
         ReaderSessionCapsuleLeading({ type: this.sample.type, countdown: this.countdown,
-          textColor: this.effectiveTextColor(), primaryColor: this.effectivePrimaryColor(),
-          onPrimaryColor: this.effectiveOnPrimaryColor(), themeScheme: this.themeScheme, capsuleWidth: this.sample.capsuleWidth,
+          textColor: this.textColor, primaryColor: this.primaryColor,
+          onPrimaryColor: this.onPrimaryColor, themeScheme: this.themeScheme, capsuleWidth: this.sample.capsuleWidth,
           capsuleHeight: this.sample.capsuleHeight, labelWidth: this.metrics().labelWidth,
           labelHeight: this.metrics().labelHeight, countdownSize: this.metrics().countdownSize })
           .translate({ x: this.sample.leadingOffsetX }).opacity(this.sample.leadingOpacity);
@@ -116,7 +116,7 @@ export struct ReaderSessionLaunchStage {
 
       // The pause control keeps its own position throughout the reveal.
       ReaderSessionCapsulePause({ sessionState: this.sessionState, themeScheme: this.themeScheme, desiredPlaying: this.desiredPlaying,
-        primaryColor: this.effectivePrimaryColor(), onPrimaryColor: this.effectiveOnPrimaryColor() })
+        primaryColor: this.primaryColor, onPrimaryColor: this.onPrimaryColor })
         .position({ x: this.sample.pauseX, y: (this.sample.proxyHeight - 16) / 2 }).opacity(this.sample.pauseOpacity);
     }
     .id('reader-session-launch-proxy')
@@ -160,15 +160,4 @@ export struct ReaderSessionLaunchStage {
     return this.sourceBorderColor.length > 0 ? this.sourceBorderColor : readerAppColor('TOK_LINE_STRONG', this.themeScheme);
   }
 
-  private effectiveTextColor(): string {
-    return this.textColor.length > 0 ? this.textColor : readerAppColor('TOK_READ_INK', this.themeScheme);
-  }
-
-  private effectivePrimaryColor(): string {
-    return this.primaryColor.length > 0 ? this.primaryColor : readerAppColor('TOK_READ_PRIMARY', this.themeScheme);
-  }
-
-  private effectiveOnPrimaryColor(): string {
-    return this.onPrimaryColor.length > 0 ? this.onPrimaryColor : readerAppColor('app.control.onPrimary', this.themeScheme);
-  }
 }

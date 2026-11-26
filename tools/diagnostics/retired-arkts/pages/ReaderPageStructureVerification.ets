@@ -1,0 +1,703 @@
+// Component-only DEBUG fixture. It never creates a Runtime/Host, opens a
+// picker/Web surface or consumes user records. Bundled production fonts and
+// real WindowCoordinator metrics are deliberately shared with the actor.
+import { DEBUG, BUILD_MODE_NAME } from '../../../../entry/build/default/generated/profile/default/BuildProfile';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+import type { common } from '@kit.AbilityKit';
+import { SourceManagementPage } from '../../../../entry/src/main/ets/features/source/ui/SourceManagementPage';
+import type { BookSource } from '../../../../entry/src/main/ets/features/source/application/SourceGateway';
+import type { SourceManagementProjection } from '../../../../entry/src/main/ets/features/source/application/SourceOrchestrator';
+import type { SourceManagementViewState } from '../../../../entry/src/main/ets/features/source/presentation/SourceJourneyPresentation';
+import { prepareReaderFonts } from '../../../../entry/src/main/ets/ui/foundation/ReaderFonts';
+import { ReaderPageState } from '../../../../entry/src/main/ets/ui/feedback/ReaderPageState';
+import { readerPageAreaLength } from '../../../../entry/src/main/ets/ui/layout/ReaderPageShell';
+import { ReaderPostLayoutFrame } from '../../../../entry/src/main/ets/ui/layout/ReaderPostLayoutFrame';
+import { ReaderSourceTextMetrics } from '../../../../entry/src/main/ets/pages/ReaderSourceTextMetrics';
+import { readerWindowMetrics } from '../../../../entry/src/main/ets/ui/foundation/ReaderWindowEnvironment';
+import { readerContentSafeTop, readerInteractiveSafeBottom } from '../../../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics';
+import { projectPersistedReceipt } from '../../../../entry/src/main/ets/app/ReaderPersistedReceiptProjection';
+import { projectCommitReadback, projectOperationFacts } from '../../../../entry/src/main/ets/app/ReaderOperationFacts';
+import { ReaderDirectoryStructureFixture } from './ReaderDirectoryStructureFixture';
+import { ReaderDownloadStructureFixture, DOWNLOAD_FIXTURE_SCENARIOS } from './ReaderDownloadStructureFixture';
+import type { DownloadFixtureCase, DownloadFixtureScenario } from './ReaderDownloadStructureFixture';
+import { ReaderSourceToolsStructureFixture, SOURCE_TOOLS_FIXTURE_SCENARIOS } from './ReaderSourceToolsStructureFixture';
+import type { SourceToolsFixtureCase, SourceToolsFixtureScenario } from './ReaderSourceToolsStructureFixture';
+import { ReaderGroupRecoveryStructureFixture } from './ReaderGroupRecoveryStructureFixture';
+import { ReaderFrameworkGeometryStructureFixture } from './ReaderFrameworkGeometryStructureFixture';
+import { ReaderLegacyBookmarkRecoveryStructureFixture } from './ReaderLegacyBookmarkRecoveryStructureFixture';
+
+interface SourceManagementFilterState {
+  searchQuery: string;
+  statusValue: string;
+  categoryValue: string;
+  groupValue: string;
+}
+
+function defaultSourceManagementFilters(): SourceManagementFilterState {
+  return { searchQuery: '', statusValue: '全部', categoryValue: 'all', groupValue: '全部分组' };
+}
+
+type PageStructureFixtureScene = 'menu' | 'default' | 'empty' | 'recovery' | 'busy' |
+  'read-error' | 'read-empty-error' | 'read-empty-refresh-error' | 'unknown-empty' | 'original-unknown' | 'original-cleanup' |
+  'directory-detail' | 'directory-reader' | 'directory-manga' | 'directory-offline-recovery' | 'directory-source-switch' | 'directory-source-switch-short' |
+  'directory-source-switch-flat' | 'directory-source-switch-flat-short' | 'directory-empty-retry' | 'directory-control-expanded' | 'directory-control-compact' | 'directory-control-flat-expanded' | 'directory-control-flat-compact' |
+  'directory-control-short-122' | 'directory-control-short-168' | 'directory-control-short-190' |
+  'downloads' | 'downloads-short' | 'source-tools' | 'group-recovery' | 'framework-geometry' | 'legacy-recovery';
+interface PageStructureFixtureObservation {
+  kind: string;
+  scene: string;
+  presentation: number;
+  requestedWidthVp: number;
+  actualWidthVp: number;
+  actualHeightVp: number;
+  systemFontScale: number;
+  contentTopInsetVp: number;
+  nativeFontObservationStatus: 'ready' | 'unavailable';
+  nativeFontFollowing?: boolean;
+  nativeFontMaxScale?: number;
+  nativeFontScaleVp?: number;
+  appFontPreviewScale?: number;
+  sourceId: string;
+  sourceVersion?: string;
+  intentCount: number;
+  filterObservation: string;
+  queryLength: number;
+  statusFilter: string;
+  categoryFilter: string;
+  groupFilter: string;
+}
+
+@Entry
+@Component
+struct ReaderPageStructureVerification {
+  @StorageLink('readerWindowMetricsRevision') @Watch('onMetricsChanged') private windowMetricsRevision: number = 0;
+  @State private admitted: boolean = false;
+  @State private scene: PageStructureFixtureScene = 'menu';
+  @State private toolsScenario: SourceToolsFixtureScenario = 'content';
+  @State private downloadScenario: DownloadFixtureScenario = 'content';
+  @State private fontState: string = 'loading';
+  @State private requestedWidth: number = 366;
+  @State private appFontPreviewScale: number = 0;
+  @State private actualWidth: number = 0;
+  @State private actualHeight: number = 0;
+  @State private sources: BookSource[] = [];
+  @State private operation: SourceManagementProjection = { action: 'fixture', sourceId: '' };
+  @State private lastIntent: string = '尚未操作';
+  @State private intentCount: number = 0;
+  private filters: SourceManagementFilterState = defaultSourceManagementFilters();
+  private mounted: boolean = false;
+  @State private fontAttempt: number = 0;
+  private presentation: number = 0;
+  private operationRevision: number = 0;
+  private temporaryBack: (() => boolean) | undefined;
+  private temporaryBackIdentity: string = '';
+  private previewApplication: common.ApplicationContext | undefined;
+  private originalPreviewScale: number = 1;
+  private sourceTextMetrics: ReaderSourceTextMetrics | undefined;
+  private readonly previewScales: number[] = [1.3, 1.45, 1.6, 2];
+
+  aboutToAppear(): void {
+    this.mounted = true;
+    this.admitted = this.debugBuild();
+    if (!this.admitted) {
+      this.fontState = 'denied';
+      void this.getUIContext().getRouter().replaceUrl({ url: 'pages/Index' });
+      return;
+    }
+    void this.loadFonts();
+  }
+
+  aboutToDisappear(): void {
+    this.restoreFontPreview();
+    this.mounted = false;
+    this.admitted = false;
+    this.fontAttempt += 1;
+    this.presentation += 1;
+    this.sourceTextMetrics = undefined;
+    this.temporaryBack = undefined;
+    this.temporaryBackIdentity = '';
+  }
+
+  onPageHide(): void { this.restoreFontPreview(); }
+
+  onBackPress(): boolean {
+    if (!this.admitted || this.scene === 'menu') return false;
+    this.leaveScene(this.presentation);
+    return true;
+  }
+
+  private debugBuild(): boolean { return DEBUG === true && BUILD_MODE_NAME === 'debug'; }
+
+  private async loadFonts(): Promise<void> {
+    if (!this.mounted || !this.admitted || !this.debugBuild()) return;
+    const attempt = ++this.fontAttempt;
+    this.fontState = 'loading';
+    try {
+      await prepareReaderFonts();
+      if (!this.mounted || !this.admitted || !this.debugBuild() || attempt !== this.fontAttempt) return;
+      this.fontState = 'ready';
+      this.record('fonts-checked');
+    } catch (error) {
+      if (!this.mounted || !this.admitted || attempt !== this.fontAttempt) return;
+      this.fontState = 'failed';
+      hilog.error(0x5244, 'ReaderPageStructure', 'font-checked-failed %{public}s', (error as Error).message);
+    }
+  }
+
+  private current(presentation: number): boolean {
+    return this.mounted && this.admitted && this.debugBuild() && this.fontState === 'ready' &&
+      this.scene !== 'menu' && presentation === this.presentation;
+  }
+
+  private selectWidth(width: number, menuPresentation: number): void {
+    if (!this.mounted || !this.admitted || this.scene !== 'menu' || menuPresentation !== this.presentation ||
+      (width !== 320 && width !== 366)) return;
+    this.requestedWidth = width;
+  }
+
+  private selectFontPreview(scale: number, menuPresentation: number): void {
+    if (!this.mounted || !this.admitted || !this.debugBuild() || this.fontState !== 'ready' ||
+      this.scene !== 'menu' || menuPresentation !== this.presentation) return;
+    if (scale === 0) {
+      this.restoreFontPreview();
+      return;
+    }
+    if (!this.previewScales.includes(scale) || scale === this.appFontPreviewScale) return;
+    try {
+      const application = this.previewApplication ?? this.getUIContext().getHostContext()?.getApplicationContext();
+      if (application === undefined) return;
+      const original = this.previewApplication === undefined ? this.systemFontScale() : this.originalPreviewScale;
+      application.setFontSizeScale(scale);
+      this.previewApplication = application;
+      this.originalPreviewScale = original;
+      this.appFontPreviewScale = scale;
+      this.record('font-preview-request');
+    } catch (error) {
+      hilog.error(0x5244, 'ReaderPageStructure', 'font-preview-request-failed %{public}s', (error as Error).message);
+    }
+  }
+
+  private restoreFontPreview(): void {
+    const application = this.previewApplication;
+    if (application === undefined) return;
+    try {
+      application.setFontSizeScale(this.originalPreviewScale);
+      this.previewApplication = undefined;
+      this.appFontPreviewScale = 0;
+      if (this.mounted && this.admitted) this.record('font-preview-restore');
+    } catch (error) {
+      hilog.error(0x5244, 'ReaderPageStructure', 'font-preview-restore-failed %{public}s', (error as Error).message);
+    }
+  }
+
+  private returnToPilot(menuPresentation: number): void {
+    if (this.mounted && this.admitted && this.scene === 'menu' && menuPresentation === this.presentation) this.getUIContext().getRouter().back();
+  }
+
+  private createSources(scene: PageStructureFixtureScene): BookSource[] {
+    const sources: BookSource[] = [];
+    if (scene === 'empty' || scene === 'read-empty-error' || scene === 'read-empty-refresh-error' || scene === 'unknown-empty') return sources;
+    for (let index = 0; index < 24; index++) {
+      const id = `https://fixture-${index + 1}.example.invalid`;
+      const source: BookSource = { sourceId: id, name: `夹具书源${index + 1} · 中文 English`,
+        baseUrl: id, enabled: index % 3 !== 1, enabledExplore: false,
+        // Opaque memory versions exercise accepted-value changes independently of Core I/O.
+        sourceVersion: `memory-source-${index + 1}-revision-0`,
+        category: index % 3 === 0 ? 'novel' : index % 3 === 1 ? 'comic' : 'music',
+        group: index % 2 === 0 ? '科幻样本' : '纪实样本',
+        loginUrl: index % 2 === 0 ? `${id}/fixture-login` : undefined,
+        checkState: scene === 'busy' && index === 0 ? 'checking' : index % 4 === 1 ? 'passed' : index % 4 === 2 ? 'failed' : 'unchecked',
+        checkMessage: scene === 'busy' && index === 0 ? '等待登录 / 验证（内存夹具）' :
+          index % 4 === 1 ? '检测通过（内存样本）' : index % 4 === 2 ? '检测失败（内存样本）' : undefined };
+      sources.push(source);
+    }
+    return sources;
+  }
+
+  private fixtureOperation(scene: PageStructureFixtureScene): SourceManagementProjection {
+    if (scene === 'read-error' || scene === 'read-empty-error' || scene === 'read-empty-refresh-error') {
+      return { action: 'fixture-read', sourceId: '', readFacts: projectOperationFacts<BookSource[]>({
+        phase: 'failed', value: scene === 'read-empty-error' ? undefined : this.sources, canRetry: true,
+        generation: ++this.operationRevision, message: '内存夹具：读取失败；已有样本保持可用，重试只记录夹具意图。' }) };
+    }
+    if (scene === 'unknown-empty') {
+      return { action: 'fixture-toggle', sourceId: '',
+        readFacts: projectOperationFacts<BookSource[]>({ phase: 'succeeded', value: this.sources, generation: ++this.operationRevision }),
+        receipt: projectPersistedReceipt<BookSource[]>({ confirmation: 'unknown', readback: 'failed',
+          value: this.sources, canRetry: true, generation: ++this.operationRevision }) };
+    }
+    if (scene === 'original-unknown' || scene === 'original-cleanup') {
+      return { action: 'fixture-original', sourceId: this.sources[0]?.sourceId ?? '', original: {
+        generation: ++this.operationRevision, busy: false,
+        confirmation: scene === 'original-cleanup' ? 'confirmed' : 'unknown',
+        label: '夹具原操作', method: 'fixture.memory', operationId: `fixture-${this.presentation}`,
+        blocked: true, canRetryOriginal: true, writeStage: scene === 'original-cleanup' ? 'cleanup' : 'core',
+        message: '内存夹具：原操作仍需核对，继续按钮只记录当前身份与世代，不调用原业务。'.repeat(8) } };
+    }
+    if (scene !== 'recovery' && scene !== 'busy') return { action: 'fixture', sourceId: '' };
+    return { action: 'fixture-toggle', sourceId: this.sources[0]?.sourceId ?? '',
+      receipt: projectPersistedReceipt<BookSource[]>({
+        confirmation: scene === 'recovery' ? 'unknown' : 'confirmed',
+        readback: scene === 'recovery' ? 'failed' : 'reading',
+        value: this.sources, canRetry: scene === 'recovery', generation: ++this.operationRevision,
+        message: scene === 'recovery' ? projectCommitReadback('unknown', 'failed').message +
+          '：内存夹具：回执待核对，不会操作用户数据。'.repeat(12) : '内存夹具：正在刷新' }) };
+  }
+
+  private launchSource(scene: PageStructureFixtureScene, menuPresentation: number, measureText: boolean = false): void {
+    if (!this.mounted || !this.admitted || !this.debugBuild() || this.fontState !== 'ready' ||
+      this.scene !== 'menu' || menuPresentation !== this.presentation ||
+      !this.isSourceScene(scene)) return;
+    this.presentation += 1;
+    this.temporaryBack = undefined;
+    this.temporaryBackIdentity = '';
+    this.filters = defaultSourceManagementFilters();
+    this.sources = this.createSources(scene);
+    this.sourceTextMetrics = measureText && this.sources.length > 0 ?
+      new ReaderSourceTextMetrics(this.sources[0].sourceId) : undefined;
+    this.operation = this.fixtureOperation(scene);
+    this.actualWidth = 0;
+    this.actualHeight = 0;
+    this.scene = scene;
+    this.record('launch');
+  }
+
+  private launchFixture(scene: PageStructureFixtureScene, menuPresentation: number): void {
+    if (!this.mounted || !this.admitted || !this.debugBuild() || this.fontState !== 'ready' || this.scene !== 'menu' ||
+      menuPresentation !== this.presentation ||
+      (scene !== 'directory-detail' && scene !== 'directory-reader' && scene !== 'directory-manga' && scene !== 'directory-offline-recovery' &&
+        scene !== 'directory-source-switch' && scene !== 'directory-source-switch-short' &&
+        scene !== 'directory-source-switch-flat' && scene !== 'directory-source-switch-flat-short' && scene !== 'directory-empty-retry' &&
+        scene !== 'directory-control-expanded' && scene !== 'directory-control-compact' &&
+        scene !== 'directory-control-flat-expanded' && scene !== 'directory-control-flat-compact' &&
+        scene !== 'directory-control-short-122' && scene !== 'directory-control-short-168' && scene !== 'directory-control-short-190' &&
+        scene !== 'downloads' && scene !== 'downloads-short' && scene !== 'source-tools' && scene !== 'group-recovery' && scene !== 'framework-geometry' && scene !== 'legacy-recovery')) return;
+    this.presentation += 1;
+    this.temporaryBack = undefined;
+    this.temporaryBackIdentity = '';
+    this.actualWidth = 0; this.actualHeight = 0;
+    if (scene === 'source-tools') this.toolsScenario = 'content';
+    if (scene === 'downloads' || scene === 'downloads-short') this.downloadScenario = 'content';
+    this.scene = scene;
+    this.record('launch');
+  }
+
+  private launchToolsFixture(scenario: SourceToolsFixtureScenario, menuPresentation: number): void {
+    if (scenario !== 'content' && !SOURCE_TOOLS_FIXTURE_SCENARIOS.some((item: SourceToolsFixtureCase): boolean =>
+      item.value === scenario)) return;
+    const previousPresentation = this.presentation;
+    this.launchFixture('source-tools', menuPresentation);
+    if (this.presentation !== previousPresentation && this.scene === 'source-tools') this.toolsScenario = scenario;
+  }
+
+  private launchDownloadFixture(scenario: DownloadFixtureScenario, menuPresentation: number, short: boolean): void {
+    if (!DOWNLOAD_FIXTURE_SCENARIOS.some((item: DownloadFixtureCase): boolean => item.value === scenario)) return;
+    const previousPresentation = this.presentation;
+    this.launchFixture(short ? 'downloads-short' : 'downloads', menuPresentation);
+    if (this.presentation !== previousPresentation && (this.scene === 'downloads' || this.scene === 'downloads-short')) {
+      this.downloadScenario = scenario;
+    }
+  }
+
+  private sourceScene(): boolean {
+    return this.isSourceScene(this.scene);
+  }
+
+  private isSourceScene(scene: PageStructureFixtureScene): boolean {
+    return scene === 'default' || scene === 'empty' || scene === 'recovery' || scene === 'busy' ||
+      scene === 'read-error' || scene === 'read-empty-error' || scene === 'read-empty-refresh-error' ||
+      scene === 'unknown-empty' || scene === 'original-unknown' || scene === 'original-cleanup';
+  }
+
+  private shortControlHeight(): number {
+    if (this.scene === 'directory-control-short-122') return 122;
+    if (this.scene === 'directory-control-short-168') return 168;
+    if (this.scene === 'directory-control-short-190') return 190;
+    return 0;
+  }
+
+  private leaveScene(presentation: number): void {
+    if (!this.current(presentation)) return;
+    if (this.temporaryBack?.() === true) { this.record('temporary-back'); return; }
+    this.temporaryBack = undefined;
+    this.temporaryBackIdentity = '';
+    this.sourceTextMetrics = undefined;
+    this.scene = 'menu';
+  }
+
+  private bindTemporaryBack(presentation: number, handler: (() => boolean) | undefined, identity: string): void {
+    if (handler !== undefined) {
+      if (!this.current(presentation) || identity.length === 0) return;
+      this.temporaryBack = handler; this.temporaryBackIdentity = identity;
+    } else if (presentation === this.presentation && identity === this.temporaryBackIdentity) {
+      this.temporaryBack = undefined; this.temporaryBackIdentity = '';
+    }
+  }
+
+  private fixtureIntent(presentation: number, kind: string, sourceId: string = '', enabled: boolean = false): void {
+    if (!this.current(presentation) || !this.sourceScene() ||
+      (sourceId.length > 0 && !this.sources.some((source: BookSource): boolean => source.sourceId === sourceId))) return;
+    this.intentCount += 1;
+    this.lastIntent = `${kind}${sourceId.length > 0 ? ` · ${sourceId}` : ''}`;
+    if (kind === 'toggle' || kind === 'login' || kind === 'detect') {
+      this.sources = this.sources.map((source: BookSource): BookSource => {
+        if (source.sourceId !== sourceId) return source;
+        const next: BookSource = { sourceId: source.sourceId, name: source.name, baseUrl: source.baseUrl,
+          enabled: kind === 'toggle' ? enabled : source.enabled, enabledExplore: source.enabledExplore,
+          sourceVersion: kind === 'toggle' ? `memory-source-revision-${this.intentCount}` : source.sourceVersion,
+          category: source.category, group: source.group, loginUrl: source.loginUrl,
+          checkState: kind === 'toggle' ? source.checkState : 'checking',
+          checkMessage: kind === 'toggle' ? source.checkMessage : kind === 'login' ?
+            '等待登录 / 验证（内存夹具，无平台登录）' : '检测中（内存夹具，无网络）' };
+        return next;
+      });
+    }
+    this.record(`intent-${kind}`, sourceId);
+  }
+
+  private reconcileFixture(presentation: number, revision: number): void {
+    const generation = this.operation.original?.generation ?? this.operation.receipt?.facts.generation ?? this.operation.readFacts?.generation;
+    if (!this.current(presentation) || !this.sourceScene() || generation !== revision || this.operation.original?.busy === true) return;
+    this.fixtureIntent(presentation, 'reconcile');
+    this.operation = { action: 'fixture-toggle', sourceId: this.operation.sourceId,
+      receipt: projectPersistedReceipt<BookSource[]>({ confirmation: 'confirmed', readback: 'succeeded',
+        value: this.sources, canRetry: false, generation: ++this.operationRevision }) };
+  }
+
+  private continueFixture(presentation: number, revision: number): void {
+    const original = this.operation.original;
+    if (!this.current(presentation) || !this.sourceScene() || original?.generation !== revision ||
+      !original.blocked || !original.canRetryOriginal || original.busy) return;
+    this.fixtureIntent(presentation, original.confirmation === 'confirmed' && original.writeStage === 'cleanup' ?
+      'continue-cleanup' : 'continue-original');
+    this.operation = { action: 'fixture-continued', sourceId: '', readFacts: projectOperationFacts<BookSource[]>({
+      phase: 'succeeded', value: this.sources, generation: ++this.operationRevision }) };
+  }
+
+  private statusFixture(presentation: number, revision: number): void {
+    if (!this.current(presentation) || this.scene !== 'read-error' || this.operation.readFacts?.generation !== revision) return;
+    this.fixtureIntent(presentation, 'status-action');
+  }
+
+  private observeArea(presentation: number, area: Area): void {
+    if (!this.current(presentation)) return;
+    const width = readerPageAreaLength(area.width), height = readerPageAreaLength(area.height);
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0 ||
+      (width === this.actualWidth && height === this.actualHeight)) return;
+    this.actualWidth = width; this.actualHeight = height;
+    this.record('actual-area');
+    const metrics = this.sourceTextMetrics;
+    if (metrics === undefined) return;
+    const context = this.getUIContext();
+    context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
+      if (!this.current(presentation) || this.sourceTextMetrics !== metrics ||
+        this.actualWidth !== width || this.actualHeight !== height) return;
+      const vpPx = context.vp2px(1);
+      const fontScale = context.fp2px(1) / vpPx;
+      if (!Number.isFinite(vpPx) || vpPx <= 0 || !Number.isFinite(fontScale) || fontScale <= 0) return;
+      hilog.info(0x5244, 'ReaderSourceTextMetrics', 'READER_SOURCE_TEXT_METRICS %{public}s', JSON.stringify({
+        presentation, scene: this.scene, requestedWidthVp: this.requestedWidth,
+        actualWidthVp: width, actualHeightVp: height, fontScale, vpPx, labels: metrics.read(),
+      }));
+    }));
+  }
+
+  private fixtureAction(presentation: number, kind: string, chapterIndex: number = -1): void {
+    if (!this.current(presentation) || this.sourceScene()) return;
+    this.intentCount += 1;
+    this.lastIntent = `${kind}${chapterIndex >= 0 ? ` · 章节 ${chapterIndex}` : ''}`;
+    this.record(`fixture-action-${kind}`);
+  }
+
+  private readerOwnsWindowEdges(): boolean {
+    return this.scene === 'directory-reader' || this.scene === 'directory-manga' || this.scene === 'directory-offline-recovery' ||
+      this.scene === 'directory-source-switch' || this.scene === 'directory-source-switch-short' ||
+      this.scene === 'directory-source-switch-flat' || this.scene === 'directory-source-switch-flat-short' || this.scene === 'directory-empty-retry' ||
+      this.scene === 'directory-control-expanded' || this.scene === 'directory-control-compact' ||
+      this.scene === 'directory-control-flat-expanded' || this.scene === 'directory-control-flat-compact' ||
+      this.scene === 'directory-control-short-122' || this.scene === 'directory-control-short-168' ||
+      this.scene === 'directory-control-short-190';
+  }
+
+  private appContentTopInset(): number {
+    // Like Index, observe the revision while leaving metric ownership in the coordinator.
+    if (this.windowMetricsRevision < 0 || this.readerOwnsWindowEdges()) return 0;
+    return readerContentSafeTop(readerWindowMetrics());
+  }
+
+  private onMetricsChanged(): void {
+    if (this.mounted && this.admitted) this.record('window-metrics');
+  }
+
+  private menuBottomInset(): number {
+    if (this.windowMetricsRevision < 0) return 0;
+    return readerInteractiveSafeBottom(readerWindowMetrics());
+  }
+
+  private retryFonts(attempt: number, menuPresentation: number): void {
+    if (!this.mounted || !this.admitted || !this.debugBuild() || this.scene !== 'menu' || this.fontState !== 'failed' ||
+      attempt !== this.fontAttempt || menuPresentation !== this.presentation) return;
+    void this.loadFonts();
+  }
+
+  private record(kind: string, sourceId: string = ''): void {
+    const observation: PageStructureFixtureObservation = { kind, scene: this.scene, presentation: this.presentation,
+      requestedWidthVp: this.requestedWidth, actualWidthVp: this.actualWidth, actualHeightVp: this.actualHeight,
+      systemFontScale: readerWindowMetrics().systemFontScale, contentTopInsetVp: this.appContentTopInset(),
+      sourceId, sourceVersion: this.sources.find((source: BookSource): boolean => source.sourceId === sourceId)?.sourceVersion,
+      intentCount: this.intentCount, nativeFontObservationStatus: 'unavailable',
+      filterObservation: 'initial-or-tools-capture', queryLength: this.filters.searchQuery.length, statusFilter: this.filters.statusValue,
+      categoryFilter: this.filters.categoryValue, groupFilter: this.filters.groupValue };
+    if (this.appFontPreviewScale > 0) observation.appFontPreviewScale = this.appFontPreviewScale;
+    try {
+      // This component is mounted after loadContent. Observe its actual native
+      // conversion/policy; it never writes the Coordinator's configuration fact.
+      const context = this.getUIContext();
+      const following = context.isFollowingSystemFontScale(), maxScale = context.getMaxFontScale();
+      const vpPx = context.vp2px(1), fpPx = context.fp2px(1);
+      const scaleVp = fpPx / vpPx;
+      if (typeof following === 'boolean' && Number.isFinite(maxScale) && maxScale > 0 &&
+        Number.isFinite(vpPx) && vpPx > 0 && Number.isFinite(fpPx) && fpPx > 0 &&
+        Number.isFinite(scaleVp) && scaleVp > 0) {
+        observation.nativeFontObservationStatus = 'ready'; observation.nativeFontFollowing = following;
+        observation.nativeFontMaxScale = maxScale; observation.nativeFontScaleVp = scaleVp;
+      }
+    } catch (_error) { /* Older/unready UI contexts remain explicitly unobserved. */ }
+    hilog.info(0x5244, 'ReaderPageStructure', 'READER_PAGE_STRUCTURE %{public}s', JSON.stringify(observation));
+  }
+
+  @Builder
+  private fontPreparationState(menuPresentation: number) {
+    ForEach([this.fontAttempt], (attempt: number): void => {
+      ReaderPageState({ title: this.fontState === 'denied' ? '当前构建不提供组件验证' :
+        this.fontState === 'failed' ? '生产字体准备失败' : '生产字体准备中',
+        message: '字体checked完成前不挂载被测页面；失败详见诊断记录。',
+        loading: this.fontState === 'loading',
+        actionLabel: this.fontState === 'failed' ? '重试字体准备' : '',
+        onAction: (): void => this.retryFonts(attempt, menuPresentation) });
+    }, (attempt: number): string => attempt.toString());
+  }
+
+  private systemFontScale(): number {
+    this.windowMetricsRevision;
+    return readerWindowMetrics().systemFontScale;
+  }
+
+  @Builder
+  private menu() {
+    ForEach([this.presentation], (menuPresentation: number): void => {
+    Scroll() {
+    Column({ space: 12 }) {
+      Text('页面结构 · 原生组件夹具').fontSize(20).fontWeight(FontWeight.Bold);
+      Text('仅内存样本，业务操作只记录意图。').fontSize(14);
+      Text(`外层请求 ${this.requestedWidth}vp；上次实测 ${this.actualWidth}×${this.actualHeight}vp；当前字号 ${this.systemFontScale()}`)
+        .fontSize(12).id('reader-page-structure-metrics');
+      Row({ space: 12 }) {
+        Button('宽度 320').id('reader-page-structure-width-320').onClick((): void => this.selectWidth(320, menuPresentation));
+        Button('宽度 366').id('reader-page-structure-width-366').onClick((): void => this.selectWidth(366, menuPresentation));
+      }
+      Flex({ wrap: FlexWrap.Wrap }) {
+        ForEach(this.previewScales, (scale: number): void => {
+          Button(`预览 ${scale}×`).enabled(this.fontState === 'ready')
+            .id(`reader-page-structure-font-${scale.toString().replace('.', '-')}`)
+            .onClick((): void => this.selectFontPreview(scale, menuPresentation));
+        }, (scale: number): string => scale.toString());
+        Button('恢复字号').enabled(this.appFontPreviewScale > 0).id('reader-page-structure-font-restore')
+          .onClick((): void => this.selectFontPreview(0, menuPresentation));
+      }
+      if (this.fontState !== 'ready') { this.fontPreparationState(menuPresentation); }
+      Button('书源 · 默认').enabled(this.fontState === 'ready').id('reader-page-structure-source-default')
+        .onClick((): void => this.launchSource('default', menuPresentation));
+      Button('书源 · 原生文字尺寸').enabled(this.fontState === 'ready').id('reader-page-structure-source-text-metrics')
+        .onClick((): void => this.launchSource('default', menuPresentation, true));
+      Button('书源 · 空').enabled(this.fontState === 'ready').id('reader-page-structure-source-empty')
+        .onClick((): void => this.launchSource('empty', menuPresentation));
+      Button('书源 · 回执待核对').enabled(this.fontState === 'ready').id('reader-page-structure-source-recovery')
+        .onClick((): void => this.launchSource('recovery', menuPresentation));
+      Button('书源 · 忙碌').enabled(this.fontState === 'ready').id('reader-page-structure-source-busy')
+        .onClick((): void => this.launchSource('busy', menuPresentation));
+      Button('书源 · 保留列表读取失败').enabled(this.fontState === 'ready').id('reader-page-structure-source-read-error')
+        .onClick((): void => this.launchSource('read-error', menuPresentation));
+      Button('书源 · 空列表读取失败').enabled(this.fontState === 'ready').id('reader-page-structure-source-read-empty-error')
+        .onClick((): void => this.launchSource('read-empty-error', menuPresentation));
+      Button('书源 · 空列表刷新失败').enabled(this.fontState === 'ready').id('reader-page-structure-source-read-empty-refresh-error')
+        .onClick((): void => this.launchSource('read-empty-refresh-error', menuPresentation));
+      Button('书源 · 空列表回执待核对').enabled(this.fontState === 'ready').id('reader-page-structure-source-unknown-empty')
+        .onClick((): void => this.launchSource('unknown-empty', menuPresentation));
+      Button('书源 · 原操作未确认可继续').enabled(this.fontState === 'ready').id('reader-page-structure-source-original-unknown')
+        .onClick((): void => this.launchSource('original-unknown', menuPresentation));
+      Button('书源 · 原操作已确认待清理').enabled(this.fontState === 'ready').id('reader-page-structure-source-original-cleanup')
+        .onClick((): void => this.launchSource('original-cleanup', menuPresentation));
+      Button('目录 · 详情完整目录').enabled(this.fontState === 'ready').id('reader-page-structure-directory-detail')
+        .onClick((): void => this.launchFixture('directory-detail', menuPresentation));
+      Button('目录 · 阅读中完整目录').enabled(this.fontState === 'ready').id('reader-page-structure-directory-reader')
+        .onClick((): void => this.launchFixture('directory-reader', menuPresentation));
+      Button('目录 · 漫画').enabled(this.fontState === 'ready').id('reader-page-structure-directory-manga')
+        .onClick((): void => this.launchFixture('directory-manga', menuPresentation));
+      Button('目录 · 原离线恢复').enabled(this.fontState === 'ready').id('reader-page-structure-directory-offline-recovery')
+        .onClick((): void => this.launchFixture('directory-offline-recovery', menuPresentation));
+      Button('目录 · 控制内容展开').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-expanded')
+        .onClick((): void => this.launchFixture('directory-control-expanded', menuPresentation));
+      Button('目录 · 控制内容收拢').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-compact')
+        .onClick((): void => this.launchFixture('directory-control-compact', menuPresentation));
+      Button('目录 · 平面内容展开').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-flat-expanded')
+        .onClick((): void => this.launchFixture('directory-control-flat-expanded', menuPresentation));
+      Button('目录 · 平面内容收拢').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-flat-compact')
+        .onClick((): void => this.launchFixture('directory-control-flat-compact', menuPresentation));
+      Button('目录 · 短视口 122').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-short-122')
+        .onClick((): void => this.launchFixture('directory-control-short-122', menuPresentation));
+      Button('目录 · 短视口 168').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-short-168')
+        .onClick((): void => this.launchFixture('directory-control-short-168', menuPresentation));
+      Button('目录 · 短视口 190').enabled(this.fontState === 'ready').id('reader-page-structure-directory-control-short-190')
+        .onClick((): void => this.launchFixture('directory-control-short-190', menuPresentation));
+      Button('下载 · 常态列表').enabled(this.fontState === 'ready').id('reader-page-structure-downloads')
+        .onClick((): void => this.launchFixture('downloads', menuPresentation));
+      Button('下载 · 真实短视口 168').enabled(this.fontState === 'ready').id('reader-page-structure-downloads-short')
+        .onClick((): void => this.launchFixture('downloads-short', menuPresentation));
+      Button('书源 · 批量管理与工具').enabled(this.fontState === 'ready').id('reader-page-structure-source-tools')
+        .onClick((): void => this.launchToolsFixture('content', menuPresentation));
+      Button('分组 · 长恢复提示').enabled(this.fontState === 'ready').id('reader-page-structure-group-recovery')
+        .onClick((): void => this.launchFixture('group-recovery', menuPresentation));
+      Button('框架 · 页头与移除确认').enabled(this.fontState === 'ready').id('reader-page-structure-framework-geometry')
+        .onClick((): void => this.launchFixture('framework-geometry', menuPresentation));
+      Button('旧版原书签 · 恢复入口').enabled(this.fontState === 'ready').id('reader-page-structure-legacy-recovery')
+        .onClick((): void => this.launchFixture('legacy-recovery', menuPresentation));
+      Text(`夹具意图 ${this.intentCount} · ${this.lastIntent}`).fontSize(12);
+      Button('返回诊断菜单').id('reader-page-structure-back-pilot').onClick((): void => this.returnToPilot(menuPresentation));
+      ForEach(SOURCE_TOOLS_FIXTURE_SCENARIOS, (item: SourceToolsFixtureCase): void => {
+        Button(item.title).enabled(this.fontState === 'ready').id(`reader-page-structure-tools-${item.value}`)
+          .onClick((): void => this.launchToolsFixture(item.value, menuPresentation));
+      }, (item: SourceToolsFixtureCase): string => item.value);
+      ForEach(DOWNLOAD_FIXTURE_SCENARIOS, (item: DownloadFixtureCase): void => {
+        Button(`下载 · ${item.title}`).enabled(this.fontState === 'ready').id(`reader-page-structure-downloads-${item.value}`)
+          .onClick((): void => this.launchDownloadFixture(item.value, menuPresentation, false));
+        Button(`短页下载 · ${item.title}`).enabled(this.fontState === 'ready').id(`reader-page-structure-downloads-short-${item.value}`)
+          .onClick((): void => this.launchDownloadFixture(item.value, menuPresentation, true));
+      }, (item: DownloadFixtureCase): string => item.value);
+      Button('短页目录 · 空结果读取续接').enabled(this.fontState === 'ready').id('reader-page-structure-directory-empty-retry')
+        .onClick((): void => this.launchFixture('directory-empty-retry', menuPresentation));
+      Button('目录 · 漫画换源目标').enabled(this.fontState === 'ready').id('reader-page-structure-directory-source-switch')
+        .onClick((): void => this.launchFixture('directory-source-switch', menuPresentation));
+      Button('短页目录 · 漫画换源目标').enabled(this.fontState === 'ready').id('reader-page-structure-directory-source-switch-short')
+        .onClick((): void => this.launchFixture('directory-source-switch-short', menuPresentation));
+      Button('目录 · 漫画换源平面回退').enabled(this.fontState === 'ready').id('reader-page-structure-directory-source-switch-flat')
+        .onClick((): void => this.launchFixture('directory-source-switch-flat', menuPresentation));
+      Button('短页目录 · 漫画换源平面回退').enabled(this.fontState === 'ready').id('reader-page-structure-directory-source-switch-flat-short')
+        .onClick((): void => this.launchFixture('directory-source-switch-flat-short', menuPresentation));
+    }.width('100%').padding(20);
+    }.width('100%').height(`calc(100% - ${this.menuBottomInset()}vp)`)
+      .align(Alignment.Top).clip(true).id('reader-page-structure-menu-scroll');
+    }, (menuPresentation: number): string => `fixture-menu-${menuPresentation}`);
+  }
+
+  private initialSourceView(): SourceManagementViewState {
+    return { searchQuery: this.filters.searchQuery, status: this.filters.statusValue,
+      category: this.filters.categoryValue, group: this.filters.groupValue, anchorSourceId: '' };
+  }
+
+  @Builder
+  private sourceStage() {
+    ForEach([this.presentation], (presentation: number): void => {
+      Stack() {
+        SourceManagementPage({ sources: this.sources, expandedLayout: false, initialViewState: this.initialSourceView(),
+          operation: this.operation, statusKind: this.scene === 'busy' ? 'loading' : 'idle',
+          textLayoutOptions: this.sourceTextMetrics?.options,
+          statusActionLabel: this.scene === 'read-error' ? '夹具状态动作' : '',
+          statusActionGeneration: this.operation.readFacts?.generation ?? 0,
+          onStatusAction: (revision: number): void => this.statusFixture(presentation, revision),
+          onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity),
+          onBack: (): void => this.leaveScene(presentation),
+          onToggleSource: (id: string, enabled: boolean): void => this.fixtureIntent(presentation, 'toggle', id, enabled),
+          onDetectSource: (id: string): void => this.fixtureIntent(presentation, 'detect', id),
+          onLoginSource: (id: string): void => this.fixtureIntent(presentation, 'login', id),
+          onAddSource: (): void => this.fixtureIntent(presentation, 'add'),
+          onRetryLoad: (): void => this.fixtureIntent(presentation, 'refresh'),
+          onReconcile: (revision: number): void => this.reconcileFixture(presentation, revision),
+          onContinueOriginal: (revision: number): void => this.continueFixture(presentation, revision),
+        });
+      }.width(this.requestedWidth).constraintSize({ maxWidth: '100%' }).height('100%')
+        .id('reader-page-structure-source-stage')
+        .onAreaChange((_oldArea: Area, area: Area): void => this.observeArea(presentation, area));
+    }, (presentation: number): string => presentation.toString());
+  }
+
+  @Builder
+  private fixtureStage() {
+    ForEach([this.presentation], (presentation: number): void => {
+      Stack() {
+        if (this.scene === 'directory-detail' || this.scene === 'directory-reader') {
+          ReaderDirectoryStructureFixture({ mode: 'text', fontsReady: this.fontState === 'ready',
+            catalogContext: this.scene === 'directory-reader' ? 'reader' : 'detail',
+            onBack: (): void => this.leaveScene(presentation),
+            onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
+        } else if (this.scene === 'directory-manga' || this.scene === 'directory-offline-recovery') {
+          ReaderDirectoryStructureFixture({ mode: 'manga', fontsReady: this.fontState === 'ready', catalogContext: 'detail',
+            offlineRecovery: this.scene === 'directory-offline-recovery',
+            onBack: (): void => this.leaveScene(presentation),
+            onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
+        } else if (this.scene === 'directory-source-switch' || this.scene === 'directory-source-switch-short' ||
+          this.scene === 'directory-source-switch-flat' || this.scene === 'directory-source-switch-flat-short' || this.scene === 'directory-empty-retry') {
+          Stack({ alignContent: Alignment.TopStart }) {
+            ReaderDirectoryStructureFixture({ mode: 'manga', fontsReady: this.fontState === 'ready', sourceSwitchCandidate: true, emptyRetry: this.scene === 'directory-empty-retry',
+              flatCatalog: this.scene === 'directory-source-switch-flat' || this.scene === 'directory-source-switch-flat-short',
+              catalogContext: 'detail', onBack: (): void => this.leaveScene(presentation),
+              onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
+          }.width('100%').height(this.scene === 'directory-source-switch-short' || this.scene === 'directory-source-switch-flat-short' || this.scene === 'directory-empty-retry' ? 168 : '100%').clip(true)
+            .id('reader-directory-source-switch-viewport');
+        } else if (this.scene === 'directory-control-expanded' || this.scene === 'directory-control-compact' ||
+          this.scene === 'directory-control-flat-expanded' || this.scene === 'directory-control-flat-compact' || this.shortControlHeight() > 0) {
+          ReaderDirectoryStructureFixture({ mode: 'control', fontsReady: this.fontState === 'ready', catalogContext: 'reader',
+            controlExpanded: this.scene !== 'directory-control-compact' && this.scene !== 'directory-control-flat-compact',
+            flatCatalog: this.scene === 'directory-control-flat-expanded' || this.scene === 'directory-control-flat-compact', controlViewportHeight: this.shortControlHeight(),
+            onBack: (): void => this.leaveScene(presentation),
+            onAction: (kind: string, index: number): void => this.fixtureAction(presentation, kind, index) });
+        } else if (this.scene === 'downloads') {
+          ReaderDownloadStructureFixture({ fontsReady: this.fontState === 'ready', scenario: this.downloadScenario,
+            onBack: (): void => this.leaveScene(presentation),
+            onAction: (kind: string): void => this.fixtureAction(presentation, kind),
+            onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
+        } else if (this.scene === 'downloads-short') {
+          // A real constrained Native viewport; no injected window/page metric.
+          Stack({ alignContent: Alignment.TopStart }) {
+            ReaderDownloadStructureFixture({ fontsReady: this.fontState === 'ready', scenario: this.downloadScenario,
+              onBack: (): void => this.leaveScene(presentation),
+              onAction: (kind: string): void => this.fixtureAction(presentation, kind),
+              onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
+          }.width('100%').height(168).align(Alignment.Top).clip(true).id('reader-download-short-viewport');
+        } else if (this.scene === 'framework-geometry') {
+          ReaderFrameworkGeometryStructureFixture({ fontsReady: this.fontState === 'ready',
+            onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
+        } else if (this.scene === 'legacy-recovery') {
+          ReaderLegacyBookmarkRecoveryStructureFixture({ fontsReady: this.fontState === 'ready',
+            onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
+        } else if (this.scene === 'group-recovery') {
+          ReaderGroupRecoveryStructureFixture({ fontsReady: this.fontState === 'ready',
+            onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
+        } else if (this.scene === 'source-tools') {
+          ReaderSourceToolsStructureFixture({ fontsReady: this.fontState === 'ready', scenario: this.toolsScenario,
+            onBack: (): void => this.leaveScene(presentation),
+            onAction: (kind: string): void => this.fixtureAction(presentation, kind),
+            onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void => this.bindTemporaryBack(presentation, handler, identity) });
+        }
+      }.width(this.requestedWidth).constraintSize({ maxWidth: '100%' }).height('100%')
+        .id('reader-page-structure-fixture-stage')
+        .onAreaChange((_old: Area, area: Area): void => this.observeArea(presentation, area));
+    }, (presentation: number): string => `fixture-${presentation}`);
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.Top }) {
+      if (!this.admitted) { this.fontPreparationState(this.presentation); }
+      else if (this.scene === 'menu') { this.menu(); }
+      else if (this.fontState === 'ready' && this.sourceScene()) { this.sourceStage(); }
+      else if (this.fontState === 'ready') { this.fixtureStage(); }
+      else { this.fontPreparationState(this.presentation); }
+    }.width('100%').height('100%')
+      .padding({ top: this.appContentTopInset() })
+      .expandSafeArea((this.scene === 'directory-manga' || this.scene === 'directory-offline-recovery') ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
+        (this.scene === 'directory-manga' || this.scene === 'directory-offline-recovery') ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
+          this.readerOwnsWindowEdges() ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [SafeAreaEdge.BOTTOM])
+      .ignoreLayoutSafeArea((this.scene === 'directory-manga' || this.scene === 'directory-offline-recovery') ? [LayoutSafeAreaType.SYSTEM] : [],
+        (this.scene === 'directory-manga' || this.scene === 'directory-offline-recovery') ? [LayoutSafeAreaEdge.ALL] : []);
+  }
+}

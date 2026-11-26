@@ -21,7 +21,8 @@ import {
 } from './ReadingSurface';
 import { ReaderPageChromeSnapshot } from '../presentation/ReaderPageChromeModel';
 import type { ReaderBookmarkRibbonFrame, ReaderPageBookmarkMode, ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
-import type { ReaderFacingChapter } from './ReaderFacingChapter';
+import type { ReaderFacingChapter } from './ReaderFacingChapterPreview';
+import type { BookTurnTexturePage } from './BookTurnTextureCapture';
 
 class ReaderPageTurnFrameCallback extends FrameCallback {
   private callback: () => void;
@@ -44,7 +45,7 @@ const COVER_OCCLUSION_OFFSET_X_VP = 6;
  * This stage places retained presentation models next to one another for the
  * selected flat-page transition.
  */
-export class ReaderPageTurnRenderPage {
+export class ReaderPageTurnRenderPage implements BookTurnTexturePage {
   /** Stable mounted ArkUI subtree ID used only by ComponentSnapshot. */
   identity: string;
   /** Visual-content identity stored beside the native texture handle. */
@@ -326,90 +327,8 @@ export struct ReaderPageTurnStage {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      ReaderPageTurnSurface({
-        pageIdentity: this.slotPage('a').identity,
-        slotIdentity: this.slotIdentity('a'),
-        staticSnapshotId: this.slotSnapshotId('a'),
-        highlightTextureIdentity: this.slotPage('a').textureIdentity,
-        onDynamicHighlights: this.onDynamicHighlights,
-        renderRevision: this.slotPage('a').renderRevision,
-        onContentReady: (revision: number): void => this.slotContentReady('a', revision),
-        onPresented: (revision: number): void => this.slotPresented('a', revision),
-        chapterTitle: this.slotPage('a').chapterTitle,
-        showChapterTitle: this.slotPage('a').showChapterTitle,
-        bottomJustifyGap: this.slotPage('a').bottomJustifyGap,
-        chromeTopStartText: this.slotPage('a').chromeTopStartText,
-        chromeTopEndText: this.slotPage('a').chromeTopEndText,
-        chromeTopTranslateY: this.topInfoMovesWithPage ? 0 : -this.translateY,
-        chromeBottomStartText: this.slotPage('a').chromeBottomStartText,
-        chromeBottomEndText: this.slotPage('a').chromeBottomEndText,
-        chromeSessionVisible: this.slotPage('a').chromeSessionVisible,
-        chromeSessionWidth: this.slotPage('a').chromeSessionWidth,
-        chromeSessionHeight: this.slotPage('a').chromeSessionHeight,
-        pageFragmentsProvider: (): ReadingSurfacePageFragment[] => this.slotPage('a').fragments,
-        layout: this.layout,
-        appearance: this.slotPage('a').appearance ?? this.appearance,
-        facingChapter: this.slotPage('a').facingChapter,
-        bookmark: this.slotPage('a').bookmark,
-        bookmarkMode: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkMode : undefined,
-        bookmarkOpacity: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkOpacity : undefined,
-        bookmarkRibbon: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkRibbon : undefined,
-        bookmarkPaperTop: this.currentPageSlot === 'a' && this.bookmarkEdgeFactor() > 0 ? this.bookmarkPaperTop : undefined,
-        longPressSelectText: this.currentPageSlot === 'a' && this.longPressSelectText,
-        selectionInputCurrent: (): boolean => this.currentPageSlot === 'a' && this.selectionInputCurrent?.() !== false,
-        translateX: this.slotX('a'),
-        pageVisible: this.slotVisible('a'),
-        layerOrder: this.slotLayer('a'),
-        shadowStrength: this.slotShadow('a'),
-        // Keep idle pages in the parent stacking context so sibling controls
-        // can occlude them; isolate only while an active turn is presented.
-        compositorIsolation: this.hasActiveTurn(),
-        ttsHighlightStart: this.currentPageSlot === 'a' ? this.ttsHighlightStart : undefined,
-        ttsHighlightEnd: this.currentPageSlot === 'a' ? this.ttsHighlightEnd : undefined,
-        autoPageHighlightStart: this.currentPageSlot === 'a' ? this.autoPageHighlightStart : undefined,
-        autoPageHighlightEnd: this.currentPageSlot === 'a' ? this.autoPageHighlightEnd : undefined,
-      });
-      ReaderPageTurnSurface({
-        pageIdentity: this.slotPage('b').identity,
-        slotIdentity: this.slotIdentity('b'),
-        staticSnapshotId: this.slotSnapshotId('b'),
-        highlightTextureIdentity: this.slotPage('b').textureIdentity,
-        onDynamicHighlights: this.onDynamicHighlights,
-        renderRevision: this.slotPage('b').renderRevision,
-        onContentReady: (revision: number): void => this.slotContentReady('b', revision),
-        onPresented: (revision: number): void => this.slotPresented('b', revision),
-        chapterTitle: this.slotPage('b').chapterTitle,
-        showChapterTitle: this.slotPage('b').showChapterTitle,
-        bottomJustifyGap: this.slotPage('b').bottomJustifyGap,
-        chromeTopStartText: this.slotPage('b').chromeTopStartText,
-        chromeTopEndText: this.slotPage('b').chromeTopEndText,
-        chromeTopTranslateY: this.topInfoMovesWithPage ? 0 : -this.translateY,
-        chromeBottomStartText: this.slotPage('b').chromeBottomStartText,
-        chromeBottomEndText: this.slotPage('b').chromeBottomEndText,
-        chromeSessionVisible: this.slotPage('b').chromeSessionVisible,
-        chromeSessionWidth: this.slotPage('b').chromeSessionWidth,
-        chromeSessionHeight: this.slotPage('b').chromeSessionHeight,
-        pageFragmentsProvider: (): ReadingSurfacePageFragment[] => this.slotPage('b').fragments,
-        layout: this.layout,
-        appearance: this.slotPage('b').appearance ?? this.appearance,
-        facingChapter: this.slotPage('b').facingChapter,
-        bookmark: this.slotPage('b').bookmark,
-        bookmarkMode: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkMode : undefined,
-        bookmarkOpacity: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkOpacity : undefined,
-        bookmarkRibbon: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkRibbon : undefined,
-        bookmarkPaperTop: this.currentPageSlot === 'b' && this.bookmarkEdgeFactor() > 0 ? this.bookmarkPaperTop : undefined,
-        longPressSelectText: this.currentPageSlot === 'b' && this.longPressSelectText,
-        selectionInputCurrent: (): boolean => this.currentPageSlot === 'b' && this.selectionInputCurrent?.() !== false,
-        translateX: this.slotX('b'),
-        pageVisible: this.slotVisible('b'),
-        layerOrder: this.slotLayer('b'),
-        shadowStrength: this.slotShadow('b'),
-        compositorIsolation: this.hasActiveTurn(),
-        ttsHighlightStart: this.currentPageSlot === 'b' ? this.ttsHighlightStart : undefined,
-        ttsHighlightEnd: this.currentPageSlot === 'b' ? this.ttsHighlightEnd : undefined,
-        autoPageHighlightStart: this.currentPageSlot === 'b' ? this.autoPageHighlightStart : undefined,
-        autoPageHighlightEnd: this.currentPageSlot === 'b' ? this.autoPageHighlightEnd : undefined,
-      });
+      this.pageSurface('a');
+      this.pageSurface('b');
       if (this.bookmarkEdgeFactor() > 0) {
         Stack()
           .width('100%').height(1)
@@ -428,6 +347,53 @@ export struct ReaderPageTurnStage {
     })
     // Keep a counter-translated header inside the outer reading viewport.
     .clip(this.topInfoMovesWithPage || this.translateY <= 0 || this.bookmarkEdgeFactor() > 0);
+  }
+
+  @Builder
+  private pageSurface(slot: ReaderPageTurnSlot) {
+    ReaderPageTurnSurface({
+      pageIdentity: this.slotPage(slot).identity,
+      slotIdentity: this.slotIdentity(slot),
+      staticSnapshotId: this.slotSnapshotId(slot),
+      highlightTextureIdentity: this.slotPage(slot).textureIdentity,
+      onDynamicHighlights: this.onDynamicHighlights,
+      renderRevision: this.slotPage(slot).renderRevision,
+      onContentReady: (revision: number): void => this.slotContentReady(slot, revision),
+      onPresented: (revision: number): void => this.slotPresented(slot, revision),
+      chapterTitle: this.slotPage(slot).chapterTitle,
+      showChapterTitle: this.slotPage(slot).showChapterTitle,
+      bottomJustifyGap: this.slotPage(slot).bottomJustifyGap,
+      chromeTopStartText: this.slotPage(slot).chromeTopStartText,
+      chromeTopEndText: this.slotPage(slot).chromeTopEndText,
+      chromeTopTranslateY: this.topInfoMovesWithPage ? 0 : -this.translateY,
+      chromeBottomStartText: this.slotPage(slot).chromeBottomStartText,
+      chromeBottomEndText: this.slotPage(slot).chromeBottomEndText,
+      chromeSessionVisible: this.slotPage(slot).chromeSessionVisible,
+      chromeSessionWidth: this.slotPage(slot).chromeSessionWidth,
+      chromeSessionHeight: this.slotPage(slot).chromeSessionHeight,
+      pageFragmentsProvider: (): ReadingSurfacePageFragment[] => this.slotPage(slot).fragments,
+      layout: this.layout,
+      appearance: this.slotPage(slot).appearance ?? this.appearance,
+      facingChapter: this.slotPage(slot).facingChapter,
+      bookmark: this.slotPage(slot).bookmark,
+      bookmarkMode: this.currentPageSlot === slot && this.turnDirection === undefined ? this.bookmarkMode : undefined,
+      bookmarkOpacity: this.currentPageSlot === slot && this.turnDirection === undefined ? this.bookmarkOpacity : undefined,
+      bookmarkRibbon: this.currentPageSlot === slot && this.turnDirection === undefined ? this.bookmarkRibbon : undefined,
+      bookmarkPaperTop: this.currentPageSlot === slot && this.bookmarkEdgeFactor() > 0 ? this.bookmarkPaperTop : undefined,
+      longPressSelectText: this.currentPageSlot === slot && this.longPressSelectText,
+      selectionInputCurrent: (): boolean => this.currentPageSlot === slot && this.selectionInputCurrent?.() !== false,
+      translateX: this.slotX(slot),
+      pageVisible: this.slotVisible(slot),
+      layerOrder: this.slotLayer(slot),
+      shadowStrength: this.slotShadow(slot),
+      // Keep idle pages in the parent stacking context so sibling controls
+      // can occlude them; isolate only while an active turn is presented.
+      compositorIsolation: this.hasActiveTurn(),
+      ttsHighlightStart: this.currentPageSlot === slot ? this.ttsHighlightStart : undefined,
+      ttsHighlightEnd: this.currentPageSlot === slot ? this.ttsHighlightEnd : undefined,
+      autoPageHighlightStart: this.currentPageSlot === slot ? this.autoPageHighlightStart : undefined,
+      autoPageHighlightEnd: this.currentPageSlot === slot ? this.autoPageHighlightEnd : undefined,
+    });
   }
 
   private bookmarkEdgeFactor(): number {

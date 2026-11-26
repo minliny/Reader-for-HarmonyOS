@@ -1,6 +1,7 @@
 import type { ReaderDirectoryTargetProof } from './ReaderDirectoryTargetProof';
 import { readingChapterTextIdentity, type ReadingDocumentRange } from './ReadingSurfaceLayoutMap.ts';
 import type { RemoteReadingPositionMigration } from './RemoteReadingPositionMigration';
+import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 
 /**
  * One materialized chapter consumed by the native reading session.
@@ -62,6 +63,13 @@ export function hasKnownReadingImageGeometry(image: ReadingSessionImage): boolea
  * existing platform resource adapter before archive access. */
 export function hasImmutableLocalReadingImageSource(source: string): boolean {
   return /^reader-local-(epub|mobi):\/\/bG9jYWw6[A-Za-z0-9_-]{86}(?:==)?\/[A-Za-z0-9_-]+={0,2}$/.test(source);
+}
+
+/** Keep the historical body in the window without adding it to the readable directory. */
+export function readingChapterWindowOrder(entries: LocalReadingTocEntry[], resumeOnlyChapterIndex?: number): number[] {
+  return entries.filter((entry: LocalReadingTocEntry): boolean =>
+    entry.navigable !== false || entry.index === resumeOnlyChapterIndex)
+    .map((entry: LocalReadingTocEntry): number => entry.index);
 }
 
 /**

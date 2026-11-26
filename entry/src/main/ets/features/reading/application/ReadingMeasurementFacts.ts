@@ -22,6 +22,54 @@ export class CoreReadingAnchor implements LocalReadingAnchor {
   }
 }
 
+/** Original UTF-16 and Unicode-scalar boundaries for one measured paragraph. */
+export class ParagraphRange {
+  id: string;
+  startUtf16: number;
+  endUtf16: number;
+  startScalar: number;
+  endScalar: number;
+
+  constructor(
+    id: string,
+    startUtf16: number,
+    endUtf16: number,
+    startScalar: number,
+    endScalar: number,
+  ) {
+    this.id = id;
+    this.startUtf16 = startUtf16;
+    this.endUtf16 = endUtf16;
+    this.startScalar = startScalar;
+    this.endScalar = endScalar;
+  }
+}
+
+export class MeasuredReadingLine {
+  lineIndex: number;
+  startUtf16: number;
+  endUtf16: number;
+  startScalar: number;
+  endScalar: number;
+  height: number;
+
+  constructor(
+    lineIndex: number,
+    startUtf16: number,
+    endUtf16: number,
+    startScalar: number,
+    endScalar: number,
+    height: number,
+  ) {
+    this.lineIndex = lineIndex;
+    this.startUtf16 = startUtf16;
+    this.endUtf16 = endUtf16;
+    this.startScalar = startScalar;
+    this.endScalar = endScalar;
+    this.height = height;
+  }
+}
+
 export class InitialReadingToc implements LocalReadingToc {
   bookId: string;
   entries: LocalReadingTocEntry[];
@@ -51,3 +99,17 @@ export class CoreReadingLayout implements LocalReadingLayout {
   }
 }
 
+/** Core takes a uint32 viewport snapshot; measurements retain fractional vp. */
+export function createCoreReadingLayout(
+  viewportWidth: number,
+  viewportHeight: number,
+  fontScale: number,
+  lineHeight: number,
+): CoreReadingLayout {
+  return new CoreReadingLayout(
+    Math.max(1, Math.round(viewportWidth)),
+    Math.max(1, Math.round(viewportHeight)),
+    fontScale,
+    lineHeight,
+  );
+}

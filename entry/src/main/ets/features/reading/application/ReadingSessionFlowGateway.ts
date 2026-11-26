@@ -102,7 +102,18 @@ export type ReadingSessionCommittedProgress = ReadingSessionProgressReceipt;
 
 interface ReadingSourceSwitchReceipt { transactionId: string | undefined; }
 
-export class ReadingSessionFlowGateway {
+/** Reads used to resolve the initial chapter. The session retains all Core request ownership. */
+export interface ReadingInitialEntryGateway {
+  captureEntryContentValidity?(): () => boolean;
+  loadEntrySnapshot?(chapterIndex: number | undefined, isCurrent: () => boolean,
+    positionContext?: RemoteReadingPositionContext, windowMode?: ReadingParagraphBoundaryMode): Promise<ReadingEntrySnapshot | undefined>;
+  loadProgress(bookId: string, isCurrent?: () => boolean): Promise<LocalReadingProgressState>;
+  hasPendingSourceSwitch(): boolean;
+  pendingPresentedProgress?(): LocalReadingProgressState | undefined;
+  awaitPresentedProgressPersistence?(): Promise<ReadingSessionCommittedProgress | undefined>;
+}
+
+export class ReadingSessionFlowGateway implements ReadingInitialEntryGateway {
   /** Mount first; acquisition and transaction admission belong to this flow.
    * Every awaited result checks the same selection/lifecycle intent before it
    * can publish a remote session or install a gateway in the visible reader.
