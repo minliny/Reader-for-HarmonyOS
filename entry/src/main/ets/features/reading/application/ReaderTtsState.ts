@@ -80,6 +80,19 @@ export function normalizeReaderTtsRate(rate: number): number {
   return Math.round(clamped * READER_TTS_RATE_STEP_SCALE) / READER_TTS_RATE_STEP_SCALE;
 }
 
+export function isReaderTtsSupportedPlaybackRate(rate: number): boolean {
+  return Number.isFinite(rate) && rate >= READER_TTS_RATE_MIN && rate <= READER_TTS_RATE_MAX &&
+    Math.abs(rate * READER_TTS_RATE_STEP_SCALE - Math.round(rate * READER_TTS_RATE_STEP_SCALE)) <= 1e-9;
+}
+
+export function readerTtsSupportedPlaybackRates(): number[] {
+  const rates: number[] = [];
+  const first = Math.round(READER_TTS_RATE_MIN * READER_TTS_RATE_STEP_SCALE);
+  const last = Math.round(READER_TTS_RATE_MAX * READER_TTS_RATE_STEP_SCALE);
+  for (let step = first; step <= last; step += 1) rates.push(step / READER_TTS_RATE_STEP_SCALE);
+  return rates;
+}
+
 export function readerTtsRateLabel(rate: number): string {
   return `${normalizeReaderTtsRate(rate).toFixed(2)}x`;
 }
@@ -432,8 +445,7 @@ function assertScalarRange(start: number, end: number): void {
 }
 
 function assertSpeechRate(rate: number): void {
-  if (!Number.isFinite(rate) || rate < READER_TTS_RATE_MIN || rate > READER_TTS_RATE_MAX ||
-    Math.abs(rate * READER_TTS_RATE_STEP_SCALE - Math.round(rate * READER_TTS_RATE_STEP_SCALE)) > 1e-9) {
+  if (!isReaderTtsSupportedPlaybackRate(rate)) {
     throw new Error('Reader TTS rate must be between 0.5 and 2.0');
   }
 }

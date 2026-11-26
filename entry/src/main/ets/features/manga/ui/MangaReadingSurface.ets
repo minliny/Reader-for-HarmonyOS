@@ -4,6 +4,11 @@ import { common } from '@kit.AbilityKit';
 import { ReaderDocumentSaveHost, type ReaderDocumentSaveResult } from '../../../platform/share/ReaderDocumentSaveHost';
 import { readerDocumentSaveMessage } from '../../reading/ui/ReaderSharePresentation';
 import { readerHardwareKeyboardShortcut } from '../../../platform/interaction/ReaderHardwareKeyboard';
+import { HarmonySmartGestureHost, ReaderSmartGestureShortcut } from '../../../platform/interaction/HarmonySmartGestureHost';
+import { ReaderNativeAlertWindow } from '../../../ui/platform/ReaderNativeAlertWindow';
+import { DEFAULT_READER_SMART_GESTURES, READER_SMART_GESTURE_VIEWPORT_FRACTION, readerSmartGestureAction,
+  type ReaderSmartGesture, type ReaderSmartGestureAction, type ReaderSmartGestureSettings } from
+    '../../reading/application/ReaderSmartGesturePolicy';
 import { readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
@@ -102,6 +107,9 @@ export struct MangaReadingSurface {
   @State private savingPageImage: boolean = false;
   @StorageLink('readerWindowMetricsRevision') @Watch('onDirectoryMetricsChanged') private windowMetricsRevision: number = 0;
   @StorageLink('readerAppForeground') @Watch('onPanelForegroundChanged') private appForeground: boolean = true;
+  @StorageLink('readerSmartGestureSettings') @Watch('syncSmartGestureMonitor')
+  private smartGestureSettings: ReaderSmartGestureSettings = DEFAULT_READER_SMART_GESTURES;
+  private readonly smartGestureHost: HarmonySmartGestureHost = new HarmonySmartGestureHost();
   @State private quickHeaderMeasured: number = 0;
   @State private quickToolsMeasured: number = 0;
   @State private directoryUtilityMeasured: number = 0;
@@ -316,6 +324,7 @@ export struct MangaReadingSurface {
     this.open(controller);
   }
   aboutToDisappear(): void {
+    this.smartGestureHost.detach();
     this.transientFeedback.reset();
     // Withdraw before resetting watched state: disposal cannot reissue reader policy.
     this.mounted = false;
@@ -1246,6 +1255,45 @@ export struct MangaReadingSurface {
     return true;
   }
 
+  private syncSmartGestureMonitor(): void {
+    if (!this.mounted || !this.appForeground || !this.windowChromeActive || !this.smartGestureSettings.enabled ||
+      !this.isReaderIdentityCurrent()) {
+      this.smartGestureHost.detach();
+      return;
+    }
+    try {
+      this.smartGestureHost.attach(this.getUIContext(), {
+        decide: (gesture: ReaderSmartGesture): ReaderSmartGestureAction => this.smartGestureDecision(gesture),
+        dispatch: (action: ReaderSmartGestureAction): void => this.dispatchSmartGesture(action),
+      });
+    } catch (_) { this.smartGestureHost.detach(); }
+  }
+
+  private smartGestureDecision(gesture: ReaderSmartGesture): ReaderSmartGestureAction {
+    return readerSmartGestureAction(gesture, this.smartGestureSettings, {
+      foreground: this.readerPanelForeground(),
+      controlsOpen: this.controlsVisible || this.panelPhase !== 'closed' || this.chapterEnd,
+      directoryOpen: this.panel === 'directory',
+      sourceSwitchOpen: this.windowChromeOverlayActive,
+      settingsOpen: this.panel === 'settings' || this.panel === 'mode',
+      dialogOpen: this.panel.length > 0 || ReaderNativeAlertWindow.isPresented(),
+      selectionActive: false,
+      zoomed: this.zoom !== 1,
+      chapterLoading: !this.opened || this.recovering || this.refreshing || this.restoringAnchor ||
+        this.loginRequiredForControls || this.error.length > 0,
+      sourceSwitching: this.boundaryBusy || this.boundaryDragging || this.rollbackPainting ||
+        this.pendingChapterTransition !== undefined,
+      continuous: !this.horizontal,
+    });
+  }
+
+  private dispatchSmartGesture(action: ReaderSmartGestureAction): void {
+    if (action === 'back') void this.handleBack();
+    else if (action === 'toggleControls') this.toggleControls();
+    else if (action === 'pageNext') void this.stepPage(1);
+    else if (action === 'scrollNext') this.scroller.scrollBy(0, this.viewportHeight * READER_SMART_GESTURE_VIEWPORT_FRACTION);
+  }
+
   private async openDirectory(focusSearch: boolean = false): Promise<void> {
     const session = this.remoteSession;
     if (session?.contentKind === 'manga' && session.identity.sourceId === this.sourceId && session.identity.bookId === this.bookId)
@@ -1939,6 +1987,7 @@ export struct MangaReadingSurface {
     }));
   }
   private onPanelForegroundChanged(): void {
+    this.syncSmartGestureMonitor();
     if (!this.mounted || this.readerPanelForeground()) return;
     this.panelFocusGeneration += 1;
     this.pageTurnInputRevision += 1;
@@ -2395,9 +2444,12 @@ export struct MangaReadingSurface {
             this.refreshProgress();
             this.recoveryOverlay();
           }.width('100%').height('100%')
+            .id(`reader-manga-stage:${this.sourceId}:${this.bookId}`)
             .focusable(true)
             .defaultFocus(true)
             .onKeyEvent((event: KeyEvent): boolean => this.onReaderKeyEvent(event))
+            .attributeModifier(new ReaderSmartGestureShortcut(this.smartGestureSettings.enabled))
+            .onAppear((): void => this.syncSmartGestureMonitor())
             .enabled(this.phonePanelBackgroundEnabled())
             .accessibilityLevel(this.phonePanelBackgroundEnabled() ? 'auto' : 'no-hide-descendants');
           // The chapter-end actions remain operable while the covered phone

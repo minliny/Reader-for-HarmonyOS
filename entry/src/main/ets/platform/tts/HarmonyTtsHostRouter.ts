@@ -64,6 +64,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     this.mediaSession = mediaSession;
     this.backgroundSession = backgroundSession;
     this.backgroundSession?.setRevocationListener?.((): void => {
+      this.publishMediaBackgroundMode();
       if (!this.closed && this.foregroundSessionActive && this.backgroundPlaybackEnabled && !isForeground()) {
         this.markTrace('tts.background-revoke');
         this.listener?.({ type: 'backgroundLeaseRevoked' });
@@ -106,6 +107,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     this.foregroundSessionActive = false;
     this.foregroundActivation = undefined;
     this.backgroundActivationAttempted = false;
+    this.publishMediaBackgroundMode();
     void this.active.deactivateAudioSession().catch((): void => {});
     void this.backgroundSession?.deactivate().catch((): void => {});
     const selected = await target.selectEngine(engine);
@@ -155,6 +157,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
       this.backgroundActivationAttempted = false;
       void this.backgroundSession?.deactivate().catch((): void => {});
     }
+    this.publishMediaBackgroundMode();
   }
 
   async deactivateAudioSession(): Promise<void> {
@@ -164,6 +167,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     this.foregroundSessionActive = false;
     this.foregroundActivation = undefined;
     this.backgroundActivationAttempted = false;
+    this.publishMediaBackgroundMode();
     await Promise.all([
       this.active.deactivateAudioSession(),
       this.backgroundSession?.deactivate() ?? Promise.resolve(),
@@ -253,9 +257,9 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     }
   }
 
-  publishPlaybackState(state: ReaderTtsPublishedPlaybackState): void {
+  publishPlaybackState(state: ReaderTtsPublishedPlaybackState, rate?: number): void {
     if (this.closed) return;
-    this.mediaSession.publish(state);
+    this.mediaSession.publish(state, rate);
   }
 
   async close(): Promise<void> {
@@ -301,6 +305,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
 
   private activateOptionalSessions(): void {
     if (this.closed || !this.foregroundSessionActive) return;
+    this.publishMediaBackgroundMode();
     // Neither optional platform bridge belongs on the per-slice speech path.
     // A single attempt per foreground lease also avoids repeated native calls
     // when the coordinator asks to keep the same audio focus for each slice.
@@ -311,8 +316,13 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     if (this.backgroundPlaybackEnabled && this.backgroundSession !== undefined &&
       !this.backgroundActivationAttempted) {
       this.backgroundActivationAttempted = true;
-      this.backgroundActivation = this.backgroundSession.activate().then((): void => {}, (): void => {});
+      this.backgroundActivation = this.backgroundSession.activate().then(
+        (): void => this.publishMediaBackgroundMode(), (): void => this.publishMediaBackgroundMode());
     }
+  }
+
+  private publishMediaBackgroundMode(): void {
+    if (!this.closed) this.mediaSession.setBackgroundPlaybackEnabled?.(this.isBackgroundPlaybackActive());
   }
 
   private assertOpen(): void {

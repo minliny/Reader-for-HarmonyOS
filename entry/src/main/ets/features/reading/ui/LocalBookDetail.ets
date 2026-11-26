@@ -730,8 +730,7 @@ export struct LocalBookDetail {
         Column({ space: 2 }) {
           Text('当前书源').fontFamily(TYPE_READER_PANEL_META.fontFamily).fontWeight(TYPE_READER_PANEL_META.fontWeight).fontSize(TYPE_READER_PANEL_META.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
           Text(this.book.sourceName?.trim() || (this.book.sourceId === 'local' ? '本地文件' : '书源未知'))
-            .width('100%').fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
+            .width('100%').fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start);
         if (this.book.sourceId !== 'local') {
           Button({ type: ButtonType.Normal, stateEffect: false }) {

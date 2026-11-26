@@ -66,7 +66,8 @@ function Repeat(data) {
     };
 }
 const constants = source => pureModuleProbe(source.match(/^const .+;$/gm)?.join('\n') ?? '', 'PageConstants.ts', {}, [...source.matchAll(/^const (\w+) =/gm)].map(m => m[1]));
-const detailDeps = source => ({ ...fontFamilies, ...constants(source), EllipsisMode: { END: 'EllipsisMode.END' } });
+const detailDeps = source => ({ ...fontFamilies, ...constants(source), EllipsisMode: { END: 'EllipsisMode.END' },
+    readerHarmonyApi24: () => false, deviceInfo: { distributionOSApiVersion: 60100 } });
 let metrics;
 function setMetrics(width, scale, left = 0, right = 0) {
     metrics = new windowMetrics.ReaderWindowMetricsSnapshot(new windowMetrics.ReaderRectVp(0, 0, width, 844));

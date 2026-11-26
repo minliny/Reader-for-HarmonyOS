@@ -8,6 +8,7 @@ import { LocalConfigurationReset } from '../features/settings/application/LocalC
 import { ReaderThemeHost } from '../app/ReaderThemeHost';
 import { ReaderNavigationAppearancePreferences } from '../app/ReaderNavigationAppearancePreferences';
 import { ReaderControlPlacementPreferences } from '../app/ReaderControlPlacementPreferences';
+import { ReaderSmartGesturePreferences } from '../app/ReaderSmartGesturePreferences';
 import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, Want } from '@kit.AbilityKit';
 import contextConstant from '@ohos.app.ability.contextConstant';
 import fileIo from '@ohos.file.fs';
@@ -155,6 +156,7 @@ export default class EntryAbility extends UIAbility {
         parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : parameters?.readerMangaOfflineProbe) : undefined,
       mangaSelectionMode, this.publicFixture);
     this.runtimeOwner = owner;
+    ReaderSmartGesturePreferences.attach(this.context);
     ReaderNavigationAppearancePreferences.attach(this.context);
     if (DEBUG === true && BUILD_MODE_NAME === 'debug' && parameters?.readerCapacityTrace === true) {
       this.capacityProbe = ReaderCapacityProbe.create(DEBUG, BUILD_MODE_NAME, parameters?.readerCapacityTrace,

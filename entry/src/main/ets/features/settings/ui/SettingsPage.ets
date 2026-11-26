@@ -40,6 +40,8 @@ import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame'
 import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
 import { SettingsSelectOverlay, type SettingsSelectField } from './SettingsSelectOverlay';
 import { NavigationAppearanceSettings } from './NavigationAppearanceSettings';
+import { ReaderSmartGestureSettingsRows } from './ReaderSmartGestureSettingsRows';
+import { readerHarmonyCapabilities } from '../../../app/HarmonyCapabilityProbe';
 import { isReaderProductSurfaceEnabled } from '../../../app/ReaderProductScope';
 import { emptyReaderAppBuildInfo, readReaderAppBuildInfo, readerAppBuildDisplay, readerAppBuildCopy, type ReaderAppBuildInfo } from '../../../platform/bundle/ReaderAppBuildInfo';
 import { copyReaderBuildIdentity } from '../../../platform/clipboard/ReaderClipboardHost';
@@ -749,6 +751,11 @@ export struct SettingsPage {
         this.switchRow('宽屏使用侧边导航', 'wideNavigationRail');
       }
       this.controlPlacementRow();
+      if (readerHarmonyCapabilities().api26) {
+        ReaderSmartGestureSettingsRows({ generation: this.navigationGeneration,
+          inputCurrent: (): boolean => this.activeSection === 'general' && this.settingsInputIsCurrent(),
+          onFailure: (): void => this.showFeedbackToast('智慧手势偏好保存失败，请重试') });
+      }
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
         this.switchRow('点击当前底栏回顶部', 'tapBottomScrollTop');
         this.switchRow('崩溃日志', 'crashLog');

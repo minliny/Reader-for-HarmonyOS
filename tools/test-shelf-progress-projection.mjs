@@ -1,5 +1,6 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"progress-boundaries": {"description": "实际生产进度finite/clamp/零态与Grid/List当前显示", "resources": []}, "formatter-propagation": {"description": "真实formatter变动传播两consumer和Grid variant隔离/旧负例", "resources": []}, "retained-list": {"description": "实际Page→List Props保label/Progress/More identity", "resources": []}};
+const definitions={"progress-boundaries": {"description": "实际生产进度finite/clamp/零态与Grid/List当前显示", "resources": []}, "formatter-propagation": {"description": "真实formatter变动传播两consumer和Grid variant隔离/旧负例", "resources": []}, "retained-list": {"description": "实际Page→List Props保label/Progress/More identity", "resources": []},
+  'source-metadata': { description: '实际 SDK 书架副行仅在 API 24+ 中段省略公开书源名称', resources: [] }};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { virtualFilePath } = await import('./lib/tool-environment.mjs');
@@ -36,7 +37,8 @@ const listTree = parse(listSource);
 const listConstants = listTree.statements.filter(ts.isVariableStatement).map(node => node.getText(listTree));
 const listConstantNames = listTree.statements.filter(ts.isVariableStatement)
   .flatMap(node => [...node.declarationList.declarations].map(declaration => declaration.name.getText(listTree)));
-const listDependencies = { ...geometry, ...fonts, EllipsisMode: { END: 'EllipsisMode.END' },
+const listDependencies = { ...geometry, ...fonts, EllipsisMode: { END: 'EllipsisMode.END', MULTILINE_CENTER: 'EllipsisMode.MULTILINE_CENTER' },
+  readerHarmonyApi24: () => false, deviceInfo: { distributionOSApiVersion: 60100, sdkApiVersion: 23 },
   ...new Function(`${listConstants.join('\n')}; return {${listConstantNames.join(',')}};`)() };
 const listMembers = boundedMembers(listSource);
 function projection(text) {
@@ -76,16 +78,34 @@ function grid(text, Projection, book) {
   owner.projectionGridDetails(book, false);
   return owner;
 }
-function list(Projection, book) {
+function list(Projection, book, distributionOSApiVersion = 60100) {
   const properties = createArkUIPropertyRuntimeProbe();
   const { owner } = createReaderBuilderProbe(listSource, listMembers,
-    { ...properties.sdk, ...listDependencies, ShelfBookPresentation: Projection, runtime: forbiddenTransport },
+    { ...properties.sdk, ...listDependencies, ShelfBookPresentation: Projection, runtime: forbiddenTransport,
+      readerHarmonyApi24: () => distributionOSApiVersion >= 60101,
+      deviceInfo: { distributionOSApiVersion, sdkApiVersion: distributionOSApiVersion >= 60101 ? 24 : 23 } },
     { ...properties.hooks, initialParams: { book } });
   owner.initialRender();
   return owner;
 }
 const row = progress => Object.freeze({ sourceId: 'online', bookId: 'progress-book', title: '原书名', author: '原作者', addedAt: 1,
   sourceName: '原书源', lastChapter: '原最新章', ...(progress === undefined ? {} : { readProgress: progress }) });
+if (selectedCase === 'source-metadata') {
+  const sourceName = '首尾均应保留的公开书源名称'.repeat(5);
+  const book = { ...row(3499), sourceName };
+  const baseline = textNodes(list(ShelfBookPresentation, book, 60100));
+  assert.equal(baseline.find(node => node.create === '最新 原最新章').ellipsisMode, 'EllipsisMode.END');
+  assert.ok(baseline.every(node => !node.create.includes(sourceName)));
+  for (const version of [60101, 260000]) {
+    const current = textNodes(list(ShelfBookPresentation, book, version));
+    const metadata = current.find(node => node.create === `最新 原最新章 · ${sourceName}`);
+    assert.ok(metadata);
+    assert.equal(metadata.ellipsisMode, 'EllipsisMode.MULTILINE_CENTER');
+    assert.equal(metadata.maxLines, 1);
+    assert.equal(metadata.height, baseline.find(node => node.create === '最新 原最新章').height);
+    assert.equal(current.find(node => node.create === book.title).ellipsisMode, 'EllipsisMode.END');
+  }
+}
 const cases = [
   [undefined, 0, '未读', ''], [0, 0, '未读', ''], [1, .01, '已读 <1%', '已读 <1%'],
   [99, .99, '已读 <1%', '已读 <1%'], [100, 1, '已读 1%', '已读 1%'],

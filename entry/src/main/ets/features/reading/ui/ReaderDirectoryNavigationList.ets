@@ -259,6 +259,7 @@ export struct ReaderDirectoryNavigationList {
   @Prop bookId: string = '';
   @Prop sourceId: string = 'local';
   @Prop @Watch('onControlRowHeightChanged') rowHeight: number = 44;
+  @Prop titleMaxLines: number = 1;
   @Prop mangaDisplay: boolean = false;
   @Prop @Watch('onMangaQuickChanged') mangaQuickDisplay: boolean = false;
   @Prop mangaRowMinHeight: number = 58;
@@ -1531,12 +1532,12 @@ export struct ReaderDirectoryNavigationList {
           .padding({ left: 9 + Math.min(3, this.displayLevel(this.currentPaintNode(item.node)) - 1) * 12, right: 9 })
           .fontFamily(TYPE_READER_DIRECTORY_TITLE.fontFamily).fontSize(TYPE_READER_DIRECTORY_TITLE.fontSizeFp).fontWeight(TYPE_READER_DIRECTORY_TITLE.fontWeight)
           .fontColor(readerAppColor(this.currentPaintNode(item.node).kind === 'disabled' ? 'TOK_READ_MUTED' : 'TOK_READ_INK', this.appThemeScheme))
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+          .maxLines(this.titleMaxLines).textOverflow({ overflow: TextOverflow.Ellipsis })
           .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.chapterPressKey === item.key, this.reduceMotion))
           .scale(readerPressScale(this.chapterPressKey === item.key, this.reduceMotion))
           .opacity(readerPressOpacity(this.chapterPressKey === item.key, this.reduceMotion))
           .accessibilityText(this.textRowAccessibility(item.node))
-          .responseRegion(readerActionTouchRegion('100%', this.rowHeight))
+          .responseRegion(readerActionTouchRegion('100%', '100%'))
           .attributeModifier(new ReaderActionAccessibility(this.textRowAccessibility(item.node),
             this.interactionEnabled && this.currentPaintNode(item.node).kind !== 'disabled', false))
           .onTouch((event: TouchEvent): void => this.observeChapterPress(event, item.key, this.interactionEnabled &&
@@ -1554,7 +1555,7 @@ export struct ReaderDirectoryNavigationList {
               .fillColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).accessibilityLevel('no');
           }.width(44).height(this.rowHeight).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText(`${this.currentPaintNode(item.node).expanded ? '折叠' : '展开'}${this.currentPaintNode(item.node).title}子目录`)
-      .responseRegion(readerActionTouchRegion(44, this.rowHeight))
+      .responseRegion(readerActionTouchRegion(44, '100%'))
       .attributeModifier(new ReaderActionAccessibility(`${this.currentPaintNode(item.node).expanded ? '折叠' : '展开'}${this.currentPaintNode(item.node).title}子目录`, this.interactionEnabled, false, true,
         new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.interactionEnabled), 'nativeButton'))
             .onClick((): void => { if (item.node !== undefined) this.toggleNode(this.currentPaintNode(item.node)); });
@@ -1573,7 +1574,7 @@ export struct ReaderDirectoryNavigationList {
             .accessibilityText(this.chapterDownloadActionsEnabled ? '管理本章下载' :
               this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)?.downloadState === 'completed' ? '已下载' : '下载章节')
             .enabled(this.canDownloadTarget(this.currentPaintNode(item.node)))
-      .responseRegion(readerActionTouchRegion(44, this.rowHeight))
+      .responseRegion(readerActionTouchRegion(44, '100%'))
       .attributeModifier(new ReaderActionAccessibility(this.chapterDownloadActionsEnabled ? '管理本章下载' :
               this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(this.currentPaintNode(item.node)), false, true,
               new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0,
@@ -1592,7 +1593,7 @@ export struct ReaderDirectoryNavigationList {
             .accessibilityText((this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)?.bookmarks?.length ?? 0) > 0 ?
               '删除本章已有书签' : '添加本章章首书签')
             .enabled(this.bookmarkActionEnabled(this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)))
-      .responseRegion(readerActionTouchRegion(44, this.rowHeight))
+      .responseRegion(readerActionTouchRegion(44, '100%'))
       .attributeModifier(new ReaderActionAccessibility((this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)?.bookmarks?.length ?? 0) > 0 ?
               '删除本章已有书签' : '添加本章章首书签', this.bookmarkActionEnabled(this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)), false, true,
               new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0,

@@ -15,9 +15,14 @@ export class ShelfBookPresentation {
       if (kind.toLowerCase() === 'local' || kind.toLowerCase() === 'txt') return '本地 TXT';
       return kind.length > 0 ? `本地 ${kind.toUpperCase()}` : '本地书';
     }
+    return this.remoteSourceName(book) || '书源名称暂不可用';
+  }
+
+  static remoteSourceName(book: ShelfBook): string {
+    if (book.sourceId === 'local') return '';
     const name = book.sourceName?.trim() ?? '';
-    return name.length > 0 && name !== book.sourceId.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)
-      ? name : '书源名称暂不可用';
+    return name !== book.sourceId.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(name) &&
+      !/^www\./i.test(name) && !/^\.{0,2}[/\\]/.test(name) ? name : '';
   }
 
   static latestChapter(book: ShelfBook): string {

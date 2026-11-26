@@ -17,6 +17,7 @@ import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryT
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
+import { ReaderAccessibilityActions, type ReaderAccessibleAction } from '../../../ui/controls/ReaderAccessibilityActions';
 import { ReaderReadingTopBar, readerReadingTopBarHeight } from '../../../ui/chrome/ReaderReadingTopBar';
 import { TYPE_READER_CONTROL_BOOK_TITLE, TYPE_READER_CONTROL_CHAPTER_SOURCE, TYPE_READER_CONTROL_COLLAPSE_INTER, TYPE_READER_CONTROL_COLLAPSE_UI, TYPE_READER_CONTROL_COLLAPSE_TTS, TYPE_READER_CONTROL_HEADER_INTER, TYPE_READER_CONTROL_HEADER_UI, type ReaderTextStyle } from '../../../ui/foundation/ReaderTypography';
 import { TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL, TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_COLLAPSE, TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_VALUE, TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL, TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL, TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY } from '../../../ui/foundation/ReaderTypography';
@@ -3255,12 +3256,14 @@ export struct ReaderControlPanel {
         .lineHeight(TYPE_READER_CONTROL_CHAPTER_TITLE.lineHeightFp)
         .letterSpacing(TYPE_READER_CONTROL_CHAPTER_TITLE.letterSpacingFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
+        .attributeModifier(this.chapterAccessibility())
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
 
       ReaderIconButton({ specId: 'reader-chapter-step', scheme: this.appScheme,
         icon: $r(this.appScheme === 'night' ? 'app.media.rc_chevron_right_theme_night' : 'app.media.rc_chevron_right'),
+        focusId: this.nextChapterAccessibilityId(),
         accessibilityLabel: '下一章', actionEnabled: this.progressInputEnabled(true) && this.canStepChapter(1),
         actionScope: this.controlActionScope(),
         onTap: (): void => { if (this.progressInputEnabled() && this.canStepChapter(1)) this.onNextChapter(); },
@@ -3272,6 +3275,24 @@ export struct ReaderControlPanel {
     .padding({ left: 11, right: 11 })
     .alignItems(VerticalAlign.Center)
     .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto');
+  }
+
+  private nextChapterAccessibilityId(): string { return `reader-control-next-chapter:${this.controlActionScope()}`; }
+
+  private chapterAccessibility(): ReaderAccessibilityActions {
+    const scope = this.controlActionScope();
+    const actions: ReaderAccessibleAction[] = [];
+    if (this.canStepChapter(-1)) actions.push({
+      label: '上一章',
+      run: (): void => { if (this.canStepChapter(-1)) this.onPreviousChapter(); },
+    });
+    if (this.canStepChapter(1)) actions.push({
+      label: '下一章',
+      run: (): void => { if (this.canStepChapter(1)) this.onNextChapter(); },
+    });
+    return new ReaderAccessibilityActions(actions, this.canStepChapter(1) ? this.nextChapterAccessibilityId() : '',
+      (): boolean => this.controlActionScope() === scope && this.progressInputEnabled(true) &&
+        !this.moreMenuVisible && this.temporaryLayerKind === '');
   }
 
   @Builder

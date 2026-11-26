@@ -102,7 +102,7 @@ const checks = {
     const calls = [];
     let creates = 0;
     let releases = 0;
-    const Host = host('HarmonyTtsMediaSession', { avSession: { async createAVSession() {
+    const Host = host('HarmonyTtsMediaSession', { deviceInfo: { distributionOSApiVersion: 60100 }, avSession: { async createAVSession() {
       calls.push(`create:${++creates}`);
       if (creates > 1) return { async setAVMetadata() {}, on() {}, async activate() { calls.push('activate'); } };
       return { async setAVMetadata() { throw setup; }, off() {}, async deactivate() {}, async destroy() {

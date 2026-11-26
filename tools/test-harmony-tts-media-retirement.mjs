@@ -20,8 +20,8 @@ function fixture() {
     PLAYBACK_STATE_PREPARE: 1, PLAYBACK_STATE_PLAY: 2, PLAYBACK_STATE_PAUSE: 3,
     PLAYBACK_STATE_COMPLETED: 4, PLAYBACK_STATE_ERROR: 5, PLAYBACK_STATE_STOP: 6,
   } };
-  const Class = new Function('avSession', 'hilog', stripTypeScriptTypes(source.replace(/^import[^;]*;\s*/gm, ''))
-    .replace(/^export /gm, '') + ';return HarmonyTtsMediaSession;')(native, { error() {} });
+  const Class = new Function('avSession', 'hilog', 'deviceInfo', stripTypeScriptTypes(source.replace(/^import[^;]*;\s*/gm, ''))
+    .replace(/^export /gm, '') + ';return HarmonyTtsMediaSession;')(native, { error() {} }, { distributionOSApiVersion: 60100 });
   return { Class, owner: new Class({}), native, session, calls, callbacks,
     set failDestroy(value) { failDestroy = value; }, set failOn(value) { failOn = value; } };
 }

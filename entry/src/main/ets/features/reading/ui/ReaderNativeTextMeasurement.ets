@@ -1,5 +1,6 @@
 import { typeNode, LengthMetrics } from '@ohos.arkui.node';
 import { UIContext } from '@ohos.arkui.UIContext';
+import deviceInfo from '@ohos.deviceInfo';
 
 // The chapter heading is part of the reading layout contract. Keep its size
 // beside native shaping so rendering and pagination cannot drift apart when
@@ -17,6 +18,7 @@ export interface ReaderNativeTextStyle {
   alignment: TextAlign;
   breakAll: boolean;
   bookBody?: boolean;
+  punctuationOverflow?: boolean;
   indentVp?: number;
   direction?: Direction;
   extraLineSpacingVp?: number;
@@ -29,7 +31,8 @@ const nativeTextContent: WeakMap<typeNode.Text, string> = new WeakMap();
 export function readerNativeTextGeometryKey(style: ReaderNativeTextStyle): string {
   return JSON.stringify([style.widthVp, style.fontFamily, style.fontSize, style.fontWeight,
     style.lineHeight, style.letterSpacing, style.alignment, style.breakAll,
-    style.bookBody === true, style.indentVp ?? 0, style.direction ?? null, style.extraLineSpacingVp ?? 0]);
+    style.bookBody === true, style.indentVp ?? 0, style.direction ?? null, style.extraLineSpacingVp ?? 0,
+    style.bookBody === true && style.punctuationOverflow === true]);
 }
 export function readerNativeTextNodeGeometry(node: typeNode.Text): string | undefined {
   return nativeTextGeometry.get(node);
@@ -62,6 +65,11 @@ export class ReaderNativeTextMeasurement {
         attribute.enableAutoSpacing?.(true);
         attribute.fallbackLineSpacing?.(true);
         attribute.compressLeadingPunctuation?.(true);
+        if (style.punctuationOverflow === true) {
+          if (deviceInfo.distributionOSApiVersion >= 260000) {
+            if (deviceInfo.apiAvailable('26.0.0')) attribute.punctuationOverflow?.(true);
+          }
+        }
       }
       if (style.breakAll) node.attribute.wordBreak(WordBreak.BREAK_ALL);
       if (style.indentVp !== undefined) node.attribute.textIndent(style.indentVp);
