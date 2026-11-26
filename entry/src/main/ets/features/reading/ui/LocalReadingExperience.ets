@@ -1,3 +1,4 @@
+import type { UIContext } from '@ohos.arkui.UIContext';
 import type { ReaderControlTemporaryInputKind } from './ReaderControlSessionState';
 import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
 import { projectReaderControlDirectoryTitles, readableReaderDirectoryEntries, readerDirectoryEntryRanks,
@@ -200,6 +201,9 @@ import {
   type BookTurnMotionState,
 } from './BookTurnMotionState';
 import { ReaderContinuousReadingStage } from './ReaderContinuousReadingStage';
+import { ReaderContinuousReadingProjection } from './ReaderContinuousReadingProjection';
+import { materializeReaderContinuousImage, materializeReaderContinuousText, materializeReaderContinuousTitle,
+  ReaderContinuousTextStyleContext } from './ReaderContinuousFragmentMaterializer';
 import { readerTextSelectionEnabled } from './ReaderTextSelectionPolicy';
 import { readerReadingTopBarHeight, readerReadingTopBarFontsReady } from '../../../ui/chrome/ReaderReadingTopBar';
 import { ReaderControlPanel, type ReaderControlPage } from './ReaderControlPanel';
@@ -790,10 +794,8 @@ export struct ReadingExperience {
    * signal, preventing a new chapter title from rendering with the previous
    * chapter's complex fragment array.
    */
-  private continuousFragments: ReadingSurfacePageFragment[] = [];
-  private continuousRenderChapterIdentity: string = 'continuous:empty';
-  private continuousRenderChapterTitle: string = '';
-  private continuousRenderGeometryKey: string = '';
+  private readonly continuousProjection: ReaderContinuousReadingProjection<ReadingSurfacePageFragment> =
+    new ReaderContinuousReadingProjection<ReadingSurfacePageFragment>();
   private continuousEntryPositionReady: boolean = false;
   private continuousTitleRecipe: ReaderNativeParagraphRecipe | undefined;
   @State private continuousRenderRevision: number = 0;
@@ -808,8 +810,6 @@ export struct ReadingExperience {
   // Visible indices are progress cursors, not render inputs. Keeping them
   // non-reactive prevents every List settle callback from rebuilding the
   // entire reading stage and flashing the already rendered rows.
-  private continuousVisibleFragmentIndex: number = 0;
-  private continuousVisibleEndFragmentIndex: number = 0;
   @State private pageTurnOffsetX: number = 0;
   @State private pageTurnPresentationWidth: number = 0;
   @State private pageTurnDirection: ReaderPageTurnDirection | undefined = undefined;
@@ -1113,7 +1113,6 @@ export struct ReadingExperience {
   private pageTurnTransactionSerial: number = 0;
   private continuousAnchorSampler: (() => void) | undefined = undefined;
   private continuousUserInteractionActive: boolean = false;
-  private readonly continuousFragmentIndexByStartScalar: Map<number, number> = new Map<number, number>();
   private preparedPreviousPage: PreparedReaderPageTurn | undefined = undefined;
   private preparedNextPage: PreparedReaderPageTurn | undefined = undefined;
   private pageTurnPreparation: ReaderPageTurnPreparation | undefined = undefined;
@@ -1969,13 +1968,13 @@ export struct ReadingExperience {
           onInputLost: (revision: number): void => {
             if (revision === this.pageTurnInputRevision) this.retirePagePointer();
           },
-          chapterIdentity: this.continuousRenderChapterIdentity,
-          chapterTitle: this.continuousRenderChapterTitle,
-          geometryKey: this.continuousRenderGeometryKey,
+          chapterIdentity: this.continuousProjection.chapterIdentity,
+          chapterTitle: this.continuousProjection.chapterTitle,
+          geometryKey: this.continuousProjection.geometryKey,
           titleRecipeProvider: (): ReaderNativeParagraphRecipe | undefined => this.continuousTitleRecipe,
           contentRevision: this.continuousRenderRevision,
           changedFragmentIndex: this.continuousChangedFragmentIndex,
-          fragmentsProvider: (): ReadingSurfacePageFragment[] => this.continuousFragments,
+          fragmentsProvider: (): ReadingSurfacePageFragment[] => this.continuousProjection.fragments,
           initialFragmentIndex: this.continuousInitialFragmentIndex,
           initialFragmentProgress: this.continuousInitialFragmentProgress,
           initialAnchorRevision: this.continuousInitialAnchorRevision,
@@ -3441,9 +3440,9 @@ export struct ReadingExperience {
       return undefined;
     }
     const visible = this.readerSettingsSnapshot.navigationMode === 'continuous' ?
-      this.continuousFragments.slice(
-        this.continuousVisibleFragmentIndex,
-        this.continuousVisibleEndFragmentIndex + 1,
+      this.continuousProjection.fragments.slice(
+        this.continuousProjection.visibleStart,
+        this.continuousProjection.visibleEnd + 1,
       ) : this.visibleFragments;
     return this.autoPageCoordinator.highlightVisibleFragment(visible,
       (fragment: ReadingSurfacePageFragment): boolean => fragment.text.length > 0);
@@ -3604,29 +3603,18 @@ export struct ReadingExperience {
   }
 
   private onContinuousVisibleRangeChanged(start: number, end: number, startProgress: number): void {
-    if (this.readerSettingsSnapshot.navigationMode !== 'continuous' ||
-      this.continuousFragments.length === 0) {
-      return;
-    }
-    const clampedStart = Math.max(0, Math.min(this.continuousFragments.length - 1, start));
-    const clampedEnd = Math.max(clampedStart, Math.min(this.continuousFragments.length - 1, end));
-    this.continuousVisibleFragmentIndex = clampedStart;
-    this.continuousVisibleEndFragmentIndex = clampedEnd;
-    const first = this.continuousFragments[clampedStart];
-    const span = Math.max(0, first.endScalar - first.startScalar);
-    // The persisted unit is a scalar. Choose its nearest viewport fraction:
-    // flooring both physical geometry and scalar conversion drifts backwards
-    // by one scalar on each reopen and biases long rows by a full scalar cell.
-    const scalarWithinFragment = span === 0 ? 0 : Math.min(span - 1,
-      Math.round(span * Math.max(0, Math.min(1, startProgress))));
-    this.continuousVisibleScalar = first.startScalar + scalarWithinFragment;
+    if (this.readerSettingsSnapshot.navigationMode !== 'continuous') return;
+    const visible = this.continuousProjection.admitVisibleRange(start, end, startProgress);
+    if (visible === undefined) return;
+    this.continuousVisibleScalar = visible.scalar;
     this.desiredChapterOffset = this.continuousVisibleScalar;
     const scalarCount = this.chapterLayoutMap?.scalarCount() ?? 0;
     this.desiredChapterProgress = scalarCount === 0 ? 0 : this.continuousVisibleScalar / scalarCount;
     this.continuousProgressRevision += 1;
     const chromeProgress = this.continuousPageChromeSnapshot(this.continuousRenderRevision, '').bottomEndText;
     if (chromeProgress !== this.continuousChromeProgressText) this.continuousChromeProgressText = chromeProgress;
-    this.resolveVisibleContinuousImages(clampedStart, clampedEnd);
+    this.continuousProjection.resolveVisibleImages(visible.startIndex, visible.endIndex,
+      (startScalar: number): void => this.resolveContinuousImage(startScalar));
     this.continuousEntryPositionReady = true;
     if (this.hasPartialEntryWindow()) this.scheduleEntryWindowHydration();
   }
@@ -3653,7 +3641,7 @@ export struct ReadingExperience {
 
   private onContinuousReachStart(): void {
     if (this.hasPartialEntryWindow()) { this.scheduleEntryWindowHydration(); return; }
-    if (!this.continuousUserInteractionActive || this.continuousVisibleFragmentIndex > 0 ||
+    if (!this.continuousUserInteractionActive || this.continuousProjection.visibleStart > 0 ||
       !this.isContinuousScrollerAtStart()) {
       return;
     }
@@ -3720,15 +3708,6 @@ export struct ReadingExperience {
       return this.continuousScroller?.isAtEnd() ?? false;
     } catch (_) {
       return false;
-    }
-  }
-
-  private resolveVisibleContinuousImages(start: number, end: number): void {
-    for (let index = start; index <= end; index += 1) {
-      const fragment = this.continuousFragments[index];
-      if (fragment !== undefined && fragment.text.length === 0) {
-        this.resolveContinuousImage(fragment.startScalar);
-      }
     }
   }
 
@@ -4480,8 +4459,7 @@ export struct ReadingExperience {
     this.clearContinuousRenderProjection();
     this.continuousInitialFragmentIndex = 0;
     this.continuousInitialFragmentProgress = 0;
-    this.continuousVisibleFragmentIndex = 0;
-    this.continuousVisibleEndFragmentIndex = 0;
+    this.continuousProjection.focus(0);
     this.continuousVisibleScalar = 0;
     this.continuousProgressRevision += 1;
     this.continuousUserInteractionActive = false;
@@ -4849,7 +4827,7 @@ export struct ReadingExperience {
 
   private retainNativeParagraphResources(): void {
     const keys = new Set<string>();
-    const fragments = this.visibleFragments.concat(this.continuousFragments, this.preparedPreviousPage?.page.fragments ?? [],
+    const fragments = this.visibleFragments.concat(this.continuousProjection.fragments, this.preparedPreviousPage?.page.fragments ?? [],
       this.preparedNextPage?.page.fragments ?? [], this.readingReadyPage?.fragments ?? [],
       this.pendingControlSelectionOrigin?.page.fragments ?? [], this.pendingControlSelectionCandidate?.page.fragments ?? []);
     for (const fragment of fragments) {
@@ -5712,8 +5690,8 @@ export struct ReadingExperience {
       }
       if (this.readingReadyPage !== undefined && this.replaceFragmentPixels(this.readingReadyPage.fragments, image))
         this.readingReadyPage.fragments = this.readingReadyPage.fragments.slice();
-      if (this.replaceFragmentPixels(this.continuousFragments, image)) {
-        this.continuousFragments = this.continuousFragments.slice();
+      if (this.replaceFragmentPixels(this.continuousProjection.fragments, image)) {
+        this.continuousProjection.republishFragments();
         // ArkUI can coalesce several promises/revisions into one observer
         // delivery. Publish the complete unchanged-geometry projection so an
         // earlier row cannot be lost behind the last changed image index.
@@ -6509,7 +6487,7 @@ export struct ReadingExperience {
     let capturedRevision = -1;
     const active = (): boolean => this.isMountedToken(lifecycleToken) && this.phase === 'ready' &&
       this.readerSettingsSnapshot.navigationMode === 'continuous' && this.chapter !== undefined &&
-      this.chapterLayoutMap !== undefined && this.continuousFragments.length > 0;
+      this.chapterLayoutMap !== undefined && this.continuousProjection.fragments.length > 0;
     return {
       active,
       capture: (): ReaderProgressProducerIntent | undefined => {
@@ -6741,7 +6719,7 @@ export struct ReadingExperience {
     // Both the mode branch and input overlay must observe the projection's
     // revision even before a continuous child exists. Reading only the plain
     // array length leaves cold restores permanently on the paged fallback.
-    return this.continuousRenderRevision >= 0 && this.continuousFragments.length > 0;
+    return this.continuousRenderRevision >= 0 && this.continuousProjection.fragments.length > 0;
   }
 
   private rebuildContinuousFragments(preserveExisting: boolean = false): void {
@@ -6751,120 +6729,36 @@ export struct ReadingExperience {
       this.clearContinuousRenderProjection();
       return;
     }
-    const fragments: ReadingSurfacePageFragment[] = [];
-    const renderedAppearance = this.visibleReadingAppearance();
-    const retained = new Map<number, ReadingSurfacePageFragment>();
-    if (preserveExisting) {
-      for (const fragment of this.continuousFragments) retained.set(fragment.startScalar, fragment);
-    }
-    for (const range of this.paragraphLayout.ranges) {
-      const existing = retained.get(range.startScalar);
-      if (existing !== undefined && existing.endScalar === range.endScalar) {
-        fragments.push(existing);
-        continue;
-      }
-      const bodyImage = this.continuousImageForRange(chapter, range);
-      if (bodyImage !== undefined) {
-        const capacity = Math.max(readerAppearanceLineHeight(renderedAppearance),
-          this.readingLayout().bodyHeight(false));
-        const imageHeight = bodyImage.state === 'ready' || hasKnownReadingImageGeometry(bodyImage) ?
-          this.scaledReadingImageHeight(bodyImage, capacity) :
-          readerAppearanceLineHeight(renderedAppearance);
-        fragments.push(new ReadingSurfacePageFragment(
-          `continuous:${chapter.chapterIndex}:image:${bodyImage.startScalar}-${bodyImage.endScalar}`,
-          '',
-          true,
-          bodyImage.startScalar,
-          bodyImage.endScalar,
-          bodyImage.state === 'ready' ? bodyImage.pixelMap : undefined,
-          imageHeight,
-          bodyImage.state === 'ready' ? bodyImage.fileUri : undefined,
-          imageHeight,
-          bodyImage.imageWidthBasisPoints,
-        ));
-        continue;
-      }
-      const fragment = new ReadingSurfacePageFragment(
-        `continuous:${chapter.chapterIndex}:text:${range.startScalar}-${range.endScalar}`,
-        chapter.content.substring(range.startUtf16, range.endUtf16), true, range.startScalar, range.endScalar,
-      );
-      const measured = this.visiblePageSelectionToken === this.chapterSelectionToken ?
-        this.visibleFragments.find((visible: ReadingSurfacePageFragment): boolean =>
-          visible.nativeParagraph?.startScalar === range.startScalar && visible.nativeParagraph.text === fragment.text)?.nativeParagraph : undefined;
-      // Preserve the complete semantic paragraph. ArkUI owns wrapping and
-      // exact line coordinates; no fixed-character chunk starts a new shape.
-      fragment.nativeParagraph = { key: measured?.key ?? readerNativeParagraphKey(), text: fragment.text,
-        startScalar: range.startScalar, firstLine: 0, lastLine: 0, wholeParagraph: true,
-        style: { widthVp: this.measurementTextWidth(),
-          fontFamily: readerAppearanceSnapshotFontFamily(renderedAppearance),
-          fontSize: renderedAppearance.fontSize, fontWeight: FontWeight.Regular,
-          lineHeight: readerAppearanceLineHeight(renderedAppearance), letterSpacing: renderedAppearance.letterSpacing,
-          color: readerAppearanceThemeStyle(renderedAppearance.activeTheme).ink,
-          alignment: readerAppearanceUsesJustify(renderedAppearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-          breakAll: false, bookBody: true, indentVp: this.getUIContext().px2vp(this.getUIContext().fp2px(
-            readerAppearanceParagraphIndent(renderedAppearance.fontSize, renderedAppearance.indent))) } };
-      fragment.nativeParagraphFirst = true;
-      fragments.push(fragment);
-    }
-    this.continuousTitleRecipe = this.measuredNativeTitle?.text === chapter.chapterTitle ? this.measuredNativeTitle : {
-      key: readerNativeParagraphKey(), text: chapter.chapterTitle, startScalar: 0,
-      firstLine: 0, lastLine: 0, wholeParagraph: true,
-      style: { widthVp: this.measurementTextWidth(), color: readerAppearanceThemeStyle(renderedAppearance.activeTheme).ink,
-        fontFamily: readerRegisteredFontFamily(this.getUIContext().getFont(),
-          readerAppearanceSnapshotFontFamily(renderedAppearance)), fontWeight: FontWeight.Bold,
-        fontSize: READER_CHAPTER_TITLE_FONT_SIZE_FP, lineHeight: this.readingLayout().titleLineHeightFp,
-        letterSpacing: 0, alignment: TextAlign.Center, breakAll: true },
-    };
-    this.commitContinuousRenderProjection(chapter, fragments);
-  }
-
-  private commitContinuousRenderProjection(
-    chapter: ReadingSessionChapter,
-    fragments: ReadingSurfacePageFragment[],
-  ): void {
-    for (let index = 0; index < fragments.length; index += 1) {
-      fragments[index].continuousSpaceBefore = index > 0 || (chapter.documentRange?.startScalar ?? 0) > 0;
-    }
-    this.continuousFragments = fragments;
-    this.rebuildContinuousFragmentIndex();
-    this.continuousVisibleFragmentIndex = this.continuousFragmentIndexForScalar(this.continuousVisibleScalar);
-    this.continuousVisibleEndFragmentIndex = this.continuousVisibleFragmentIndex;
-    this.continuousRenderChapterIdentity =
-      `continuous:${JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterIndex, chapter.contentVersion])}`;
-    this.continuousRenderChapterTitle = (chapter.documentRange?.startScalar ?? 0) === 0 ? chapter.chapterTitle : '';
-    this.continuousRenderGeometryKey = this.paginationLayoutSignature();
+    const appearance = this.visibleReadingAppearance();
+    const context = new ReaderContinuousTextStyleContext(
+      (): number => this.measurementTextWidth(), (): UIContext => this.getUIContext());
+    const fragments = this.continuousProjection.project(chapter, this.paragraphLayout.ranges, preserveExisting,
+      (startScalar: number): ReadingSessionImage | undefined => this.readingImageResources.atScalar(startScalar),
+      (id: string, image: ReadingSessionImage): ReadingSurfacePageFragment =>
+        this.materializeContinuousImage(id, image, appearance),
+      (id: string, text: string, startScalar: number, endScalar: number): ReadingSurfacePageFragment =>
+        materializeReaderContinuousText(id, text, startScalar, endScalar, appearance, context,
+          (): ReaderNativeParagraphRecipe | undefined => this.visiblePageSelectionToken === this.chapterSelectionToken ?
+            this.visibleFragments.find((visible: ReadingSurfacePageFragment): boolean =>
+              visible.nativeParagraph?.startScalar === startScalar && visible.nativeParagraph.text === text)?.nativeParagraph : undefined));
+    this.continuousTitleRecipe = materializeReaderContinuousTitle(chapter.chapterTitle, this.measuredNativeTitle,
+      appearance, context, (): number => this.readingLayout().titleLineHeightFp);
+    this.continuousProjection.commit(chapter, fragments, this.continuousVisibleScalar, (): string => this.paginationLayoutSignature());
     this.continuousChangedFragmentIndex = -1;
     this.continuousRenderRevision += 1;
   }
 
-  private rebuildContinuousFragmentIndex(): void {
-    this.continuousFragmentIndexByStartScalar.clear();
-    for (let index = 0; index < this.continuousFragments.length; index += 1) {
-      this.continuousFragmentIndexByStartScalar.set(this.continuousFragments[index].startScalar, index);
-    }
+  private materializeContinuousImage(id: string, image: ReadingSessionImage,
+    appearance: ReaderAppearanceSnapshot): ReadingSurfacePageFragment {
+    return materializeReaderContinuousImage(id, image, appearance, (): number => this.readingLayout().bodyHeight(false),
+      (bodyImage: ReadingSessionImage, capacity: number): number => this.scaledReadingImageHeight(bodyImage, capacity));
   }
 
   private refreshContinuousImageFragment(image: ReadingSessionImage): boolean {
-    const chapter = this.chapter;
-    if (chapter === undefined || image.state !== 'ready') return false;
-    const index = this.continuousFragmentIndexByStartScalar.get(image.startScalar) ?? -1;
-    if (index < 0) return false;
-    const capacity = Math.max(readerAppearanceLineHeight(this.visibleReadingAppearance()),
-      this.readingLayout().bodyHeight(false));
-    const imageHeight = this.scaledReadingImageHeight(image, capacity);
-    this.continuousFragments.splice(index, 1, new ReadingSurfacePageFragment(
-      `continuous:${chapter.chapterIndex}:image:${image.startScalar}-${image.endScalar}`,
-      '',
-      true,
-      image.startScalar,
-      image.endScalar,
-      image.pixelMap,
-      imageHeight,
-      image.fileUri,
-      imageHeight,
-      image.imageWidthBasisPoints,
-    ));
-    this.continuousFragments[index].continuousSpaceBefore = index > 0 || (chapter.documentRange?.startScalar ?? 0) > 0;
+    const index = this.continuousProjection.replaceResolvedImage(this.chapter, image,
+      (id: string, resolved: ReadingSessionImage): ReadingSurfacePageFragment =>
+        this.materializeContinuousImage(id, resolved, this.visibleReadingAppearance()));
+    if (index === undefined) return false;
     this.continuousChangedFragmentIndex = index;
     this.continuousRenderRevision += 1;
     return true;
@@ -6872,54 +6766,18 @@ export struct ReadingExperience {
 
   private clearContinuousRenderProjection(): void {
     this.continuousEntryPositionReady = false;
-    this.continuousFragments = [];
-    this.continuousFragmentIndexByStartScalar.clear();
-    this.continuousRenderChapterIdentity = 'continuous:empty';
-    this.continuousRenderChapterTitle = '';
+    this.continuousProjection.clear();
     this.continuousTitleRecipe = undefined;
     this.continuousChangedFragmentIndex = -1;
     this.continuousRenderRevision += 1;
   }
 
-  private continuousImageForRange(
-    chapter: ReadingSessionChapter,
-    range: ParagraphRange,
-  ): ReadingSessionImage | undefined {
-    if (range.endScalar !== range.startScalar + 1 ||
-      chapter.content.substring(range.startUtf16, range.endUtf16) !== '\uFFFC') {
-      return undefined;
-    }
-    const image = this.readingImageResources.atScalar(range.startScalar);
-    return image?.endScalar === range.endScalar ? image : undefined;
-  }
-
-  private continuousFragmentIndexForScalar(scalar: number): number {
-    if (this.continuousFragments.length === 0) {
-      return 0;
-    }
-    let lower = 0;
-    let upper = this.continuousFragments.length - 1;
-    while (lower < upper) {
-      const middle = Math.floor((lower + upper) / 2);
-      if (scalar < this.continuousFragments[middle].endScalar) {
-        upper = middle;
-      } else {
-        lower = middle + 1;
-      }
-    }
-    return lower;
-  }
-
   private setContinuousInitialAnchor(scalar: number): void {
     this.continuousVisibleScalar = scalar;
-    const index = this.continuousFragmentIndexForScalar(scalar);
-    const fragment = this.continuousFragments[index];
-    const span = fragment === undefined ? 0 : Math.max(0, fragment.endScalar - fragment.startScalar);
-    this.continuousInitialFragmentIndex = index;
-    this.continuousInitialFragmentProgress = span === 0 ? 0 : Math.max(0, Math.min(1,
-      (scalar - fragment.startScalar) / span));
-    this.continuousVisibleFragmentIndex = index;
-    this.continuousVisibleEndFragmentIndex = index;
+    const anchor = this.continuousProjection.anchor(scalar);
+    this.continuousInitialFragmentIndex = anchor.index;
+    this.continuousInitialFragmentProgress = anchor.progress;
+    this.continuousProjection.focus(anchor.index);
     this.continuousInitialAnchorRevision += 1;
   }
 
@@ -12948,7 +12806,7 @@ export struct ReadingExperience {
 
   private currentReadingViewportStart(): number | undefined {
     if (this.readerSettingsSnapshot.navigationMode !== 'continuous') return this.visiblePage?.startScalar;
-    return this.hasCurrentMaterializedChapter() && this.continuousFragments.length > 0 ?
+    return this.hasCurrentMaterializedChapter() && this.continuousProjection.fragments.length > 0 ?
       this.continuousVisibleScalar : undefined;
   }
 
@@ -12958,7 +12816,7 @@ export struct ReadingExperience {
       return page === undefined ? undefined : { startScalar: page.startScalar, endScalar: page.endScalar };
     }
     const startScalar = this.currentReadingViewportStart();
-    const last = this.continuousFragments[this.continuousVisibleEndFragmentIndex];
+    const last = this.continuousProjection.fragments[this.continuousProjection.visibleEnd];
     if (startScalar === undefined || last === undefined) return undefined;
     return { startScalar: startScalar, endScalar: Math.max(startScalar, last.endScalar) };
   }
@@ -14302,7 +14160,7 @@ export struct ReadingExperience {
   private performContinuousPageTurn(direction: ReaderPageTurnDirection): ReaderPageTurnOutcome {
     if (!this.mounted || this.exitRequested || this.controlVisible() || this.phase !== 'ready' ||
       this.chapter === undefined || this.continuousScroller === undefined ||
-      this.continuousFragments.length === 0 || this.progressProducers.continuousInFlight) {
+      this.continuousProjection.fragments.length === 0 || this.progressProducers.continuousInFlight) {
       return { kind: 'busy' };
     }
     const chapter = this.chapter;
