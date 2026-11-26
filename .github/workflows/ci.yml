@@ -9,10 +9,10 @@ on:
   workflow_dispatch:
     inputs:
       sdk:
-        description: HarmonyOS SDK image for unsigned verification
+        description: api26r builds the unsigned HAP, api23 and api24 compile Core Native only
         type: choice
-        default: api23
-        options: [api23, api24, api26r]
+        default: api26r
+        options: [api26r, api23, api24]
   schedule:
     - cron: '17 3 * * 1'
 
@@ -57,6 +57,7 @@ jobs:
           node scripts/ci/run-impact-checks.mjs --base "$BASE_SHA" --summary-file "$GITHUB_STEP_SUMMARY"
 
   unsigned-hap-build:
+    name: ${{ format('{0} ({1})', matrix.sdk == 'api26r' && 'unsigned-hap-build' || 'core-native-only', matrix.sdk) }}
     needs: host-fast-checks
     if: >-
       ${{
@@ -70,7 +71,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sdk: ${{ fromJSON(github.event_name == 'schedule' && '["api24","api26r"]' || inputs.sdk == 'api24' && '["api24"]' || inputs.sdk == 'api26r' && '["api26r"]' || '["api23"]') }}
+        sdk: >-
+          ${{ fromJSON(
+            github.event_name == 'workflow_dispatch' && inputs.sdk == 'api23' && '["api23"]' ||
+            github.event_name == 'workflow_dispatch' && inputs.sdk == 'api24' && '["api24"]' ||
+            '["api26r"]'
+          ) }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -116,21 +122,29 @@ jobs:
           docker pull --platform linux/amd64 "$image"
           df -h "$docker_root" "$RUNNER_TEMP"
           printf 'image=%s\n' "$image" >> "$GITHUB_OUTPUT"
-      - name: Compile Native and verify the unsigned HAP
+      - name: ${{ matrix.sdk == 'api26r' && 'Compile Native and verify the unsigned HAP' || 'Compile Native only' }}
         id: evidence
         shell: bash
         env:
           IMAGE: ${{ steps.sdk.outputs.image }}
+          SDK: ${{ matrix.sdk }}
         run: |
           build_temp=$(mktemp -d "$RUNNER_TEMP/reader-unsigned.XXXXXX")
           node_home=$(dirname "$(dirname "$(command -v node)")")
+          args=()
+          if [ "$SDK" != api26r ]; then
+            args+=(--native-only)
+          fi
           docker run --rm --platform linux/amd64 \
             --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/workspace" \
             --mount "type=bind,src=$node_home,dst=/reader-node,readonly" \
             --mount "type=bind,src=$build_temp,dst=/reader-ci" \
-            "$IMAGE" bash /workspace/Reader-for-HarmonyOS/scripts/ci/build-unsigned-hap.sh
-          printf 'directory=%s/public\n' "$build_temp" >> "$GITHUB_OUTPUT"
+            "$IMAGE" bash /workspace/Reader-for-HarmonyOS/scripts/ci/build-unsigned-hap.sh "${args[@]}"
+          if [ "$SDK" = api26r ]; then
+            printf 'directory=%s/public\n' "$build_temp" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: matrix.sdk == 'api26r'
         with:
           name: unsigned-hap-evidence-${{ matrix.sdk }}-attempt-${{ github.run_attempt }}
           path: |

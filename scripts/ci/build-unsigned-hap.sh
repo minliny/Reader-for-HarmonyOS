@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if (( $# == 0 )); then
+  build_mode=hap
+elif [[ $# == 1 && $1 == --native-only ]]; then
+  build_mode=native-only
+else
+  printf 'Usage: %s [--native-only]\n' "${0##*/}" >&2
+  exit 2
+fi
+readonly build_mode
+
 readonly workspace=/workspace
 readonly host="$workspace/Reader-for-HarmonyOS"
 readonly core="$workspace/Reader-Core"
@@ -33,11 +43,13 @@ export OHOS_NATIVE_HOME="$READER_HARMONY_SDK_HOME/default/openharmony/native"
 export LIBCLANG_PATH="$OHOS_NATIVE_HOME/llvm/lib"
 export NODE_HOME=/reader-node READER_NODE=/reader-node/bin/node
 export PATH="$NODE_HOME/bin:$CARGO_HOME/bin:$cli/bin:$PATH"
-export HVIGORW="$cli/bin/hvigorw" OHPM="$cli/bin/ohpm"
-export READER_HVIGOR_PLUGIN_PACKAGE="$cli/hvigor/hvigor-ohos-plugin/package.json"
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-export HVIGOR_SHARED_TOOLS="$HOME/.hvigor/wrapper/tools"
-export npm_config_cache="$private/npm-cache"
+if [[ "$build_mode" == hap ]]; then
+  export HVIGORW="$cli/bin/hvigorw" OHPM="$cli/bin/ohpm"
+  export READER_HVIGOR_PLUGIN_PACKAGE="$cli/hvigor/hvigor-ohos-plugin/package.json"
+  export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+  export HVIGOR_SHARED_TOOLS="$HOME/.hvigor/wrapper/tools"
+  export npm_config_cache="$private/npm-cache"
+fi
 unset READER_HARMONY_SIGNING_PROFILE
 
 run_stage() {
@@ -78,14 +90,14 @@ prepare_workspace() {
   require_clean_checkout "$core"
 
   cd "$workspace"
-  "$READER_NODE" --input-type=module - "$lock" "$private" <<'NODE'
+  "$READER_NODE" --input-type=module - "$lock" "$private" "$build_mode" <<'NODE'
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { coreBuildSnapshot } from './Reader-Core/scripts/build-input-snapshot.mjs';
 import { harmonySdkContainerRoot } from './Reader-Core/scripts/lib/development-environment.mjs';
 
-const [lockPath, privateDir] = process.argv.slice(2);
+const [lockPath, privateDir, mode] = process.argv.slice(2);
 const dependency = JSON.parse(readFileSync(lockPath, 'utf8'));
 assert.match(dependency.coreCommit, /^[a-f0-9]{40}$/);
 assert.match(dependency.coreInputFingerprint, /^[a-f0-9]{64}$/);
@@ -105,8 +117,13 @@ assert.equal(trackedContract.coreInputFingerprint, dependency.coreInputFingerpri
 
 const sdk = harmonySdkContainerRoot(process.env.READER_HARMONY_SDK_HOME);
 assert.ok(sdk, 'Official Harmony SDK container is missing');
-const api = String(JSON.parse(readFileSync(resolve(sdk.packageRoot, 'sdk-pkg.json'), 'utf8')).data.apiVersion);
+const sdkPackage = JSON.parse(readFileSync(resolve(sdk.packageRoot, 'sdk-pkg.json'), 'utf8')).data;
+const api = String(sdkPackage.apiVersion);
 assert.match(api, /^(23|24|26)$/);
+if (mode === 'hap') {
+  assert.equal(api, '26', 'Full HAP compilation requires SDK API 26; use --native-only with lower SDKs');
+  assert.equal(sdkPackage.releaseType, 'Release', 'Full HAP compilation requires a release SDK');
+}
 writeFileSync(resolve(privateDir, 'sdk-api'), `${api}\n`);
 writeFileSync(resolve(privateDir, 'rust-toolchain'), `${dependency.rustToolchain}\n`);
 NODE
@@ -117,16 +134,26 @@ NODE
   require_clean_checkout "$core"
 }
 
-prepare_tools() {
+prepare_hap_tools() {
   local executable
   for executable in "$HVIGORW" "$OHPM" "$JAVA_HOME/bin/java" \
-    "$OHOS_NATIVE_HOME/llvm/bin/clang" "$OHOS_NATIVE_HOME/llvm/bin/llvm-objcopy" \
-    "$OHOS_NATIVE_HOME/llvm/bin/$rust_target-clang"; do
+    "$OHOS_NATIVE_HOME/llvm/bin/llvm-objcopy"; do
     test -x "$executable"
   done
-  test -r "$LIBCLANG_PATH/libclang.so"
   test -r "$READER_HARMONY_SDK_HOME/default/openharmony/toolchains/lib/hap-sign-tool.jar"
   command -v unzip
+  printf '%s\n' '@ohos:registry=https://repo.harmonyos.com/npm/' > "$HOME/.npmrc"
+  test -f "$READER_HVIGOR_PLUGIN_PACKAGE"
+  test -f "$(dirname "$READER_HVIGOR_PLUGIN_PACKAGE")/../hvigor/package.json"
+  cd "$host"
+  "$READER_NODE" tools/reader-build-tools.mjs --install
+}
+
+prepare_tools() {
+  local executable
+  test -x "$OHOS_NATIVE_HOME/llvm/bin/clang"
+  test -x "$OHOS_NATIVE_HOME/llvm/bin/$rust_target-clang"
+  test -r "$LIBCLANG_PATH/libclang.so"
   for executable in cc pkg-config; do
     if ! command -v "$executable"; then
       apt-get -q update
@@ -149,12 +176,9 @@ prepare_tools() {
   chmod 700 "$rustup_init"
   "$rustup_init" -y --no-modify-path --default-toolchain none
   rustup toolchain install "$(cat "$private/rust-toolchain")" --profile minimal --target "$rust_target"
-
-  printf '%s\n' '@ohos:registry=https://repo.harmonyos.com/npm/' > "$HOME/.npmrc"
-  test -f "$READER_HVIGOR_PLUGIN_PACKAGE"
-  test -f "$(dirname "$READER_HVIGOR_PLUGIN_PACKAGE")/../hvigor/package.json"
-  cd "$host"
-  "$READER_NODE" tools/reader-build-tools.mjs --install
+  if [[ "$build_mode" == hap ]]; then
+    prepare_hap_tools
+  fi
 }
 
 build_native() {
@@ -232,5 +256,7 @@ run_stage toolchain-setup prepare_tools
 RUSTUP_TOOLCHAIN=$(<"$private/rust-toolchain")
 export RUSTUP_TOOLCHAIN
 run_stage core-native-napi build_native
-run_stage unsigned-hap-build build_hap
-run_stage public-evidence stage_public_evidence
+if [[ "$build_mode" == hap ]]; then
+  run_stage unsigned-hap-build build_hap
+  run_stage public-evidence stage_public_evidence
+fi
