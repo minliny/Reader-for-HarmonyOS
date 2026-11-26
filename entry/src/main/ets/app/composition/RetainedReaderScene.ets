@@ -48,6 +48,7 @@ export struct RetainedReaderScene {
   @ObjectLink source: SourceSwitchPresentation;
   @ObjectLink manga: MangaSourceSwitchPresentation;
   @Prop visibleRoute: 'reading' | 'directory' | undefined = undefined;
+  @Prop ownsWindowChrome: boolean = true;
   @Prop reduceMotion: boolean = false;
   @Prop expandedLayout: boolean = false;
   @Prop inputAllowed: boolean = true;
@@ -80,7 +81,8 @@ export struct RetainedReaderScene {
         requestedMangaOfflineChapterId: this.reading.requestedMangaOfflineChapterId,
         requestedBookmarkAnchor: this.reading.requestedBookmarkAnchor, bookmarkIdentity: this.reading.bookmarkIdentity(),
         expandedLayout: this.expandedLayout, reduceMotion: this.reduceMotion,
-        visible: this.visibleRoute !== undefined, route: this.visibleRoute ?? 'reading', inputAllowed: this.inputAllowed,
+        visible: this.visibleRoute !== undefined, ownsWindowChrome: this.ownsWindowChrome,
+        route: this.visibleRoute ?? 'reading', inputAllowed: this.inputAllowed,
         inputCurrent: (readerIdentity: string): boolean => this.ports?.inputCurrent(readerIdentity) === true,
         tocEntries: this.reading.toc, catalogMessage: this.reading.loadingMessage, catalogBusy: this.reading.catalogBusy,
         bookmarkLoadMessage: this.ports.directory.bookmarkMessage(this.reading.directoryOperation),

@@ -20,7 +20,7 @@ import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { registerReaderFonts, prepareMangaSheetFonts } from '../../../ui/foundation/ReaderFonts';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout } from '../../../ui/layout/ReaderScrollLayout';
-import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerStableInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../../../ui/layout/SurfaceHorizontalGeometry';
 import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
 import { snapshotReaderDirectoryData, sameReaderDirectoryData } from '../presentation/ReaderDirectoryDataSnapshot';
@@ -406,7 +406,7 @@ export struct BookDirectoryPage {
     return this.mangaFooterMeasured > 0 ? this.mangaFooterMeasured :
       readerDirectoryQuickActionsHeight(this.mangaFontScale(), this.mangaCurrentPosition() !== '—');
   }
-  private mangaBottomInset(): number { return Math.max(0, readerInteractiveSafeBottom(readerWindowMetrics())); }
+  private mangaBottomInset(): number { return Math.max(0, readerStableInteractiveSafeBottom(readerWindowMetrics())); }
   /** The footer follows the safe area closely; the released 4vp is usable list space. */
   private mangaFooterBottomOffset(): number { return Math.max(0, visual.footerBottom - 4); }
   private mangaBottomClearance(): number { return this.mangaBottomInset() + (this.mangaFlowFooter() ? 0 : this.mangaFooterHeight()) + this.mangaFooterBottomOffset() * 2; }

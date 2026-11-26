@@ -17,7 +17,10 @@ import { readerAppColor } from '../../entry/src/main/ets/ui/foundation/ReaderThe
 import { readerIsExpandedWidth, readerWidthClass } from '../../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts';
 import { readerFrameStyle } from '../../entry/src/main/ets/ui/layout/ReaderFrameStyle.ts';
 import { readerExpandedLayout } from '../../entry/src/main/ets/ui/layout/ReaderLayoutCapability.ts';
-import { ReaderPageGeometry } from '../../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts';
+import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts';
+import { readerFloatingBarBottomInset, readerFloatingTabOccupiedHeight } from
+  '../../entry/src/main/ets/ui/layout/ReaderFloatingBarMetrics.ts';
+import { readerStandardPageContentEndInset } from '../../entry/src/main/ets/ui/layout/ReaderPageShell.ts';
 import { readerScrollBottomPadding, readerScrollEndOffset, readerScrollLayout, readerScrollStartOffset, readerScrollTopPadding }
   from '../../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts';
 
@@ -37,6 +40,25 @@ function windowMetrics(width: number, height: number = 844, safeTop: number = 32
   const window = new ReaderRectVp(0, 0, width, height);
   return new ReaderWindowMetricsSnapshot(window, window, new ReaderInsetsVp(0, safeTop, 0, safeBottom));
 }
+
+test('ordinary footer coordinates and scroll tail agree on the first frame and after system bars return', () => {
+  const readingToDetail = windowMetrics(320, 710, 32, 0);
+  readingToDetail.stableSafeBottom = 32;
+  const steadyDetail = windowMetrics(320, 710, 32, 32);
+  for (const metrics of [readingToDetail, steadyDetail]) {
+    const detail = new ReaderPageGeometryInput(metrics);
+    detail.footerHeight = 68;
+    detail.footerBottom = readerFloatingBarBottomInset(metrics, 0) + 12;
+    detail.contentEndInset = detail.footerHeight + detail.footerBottom + 24;
+    const geometry = resolveReaderPageGeometry(detail);
+    assert.equal(geometry.footer.top, 598);
+    assert.equal(geometry.content.endInset, 136);
+    const measuredTabs = readerFloatingTabOccupiedHeight(metrics);
+    assert.equal(measuredTabs, 100);
+    assert.equal(readerStandardPageContentEndInset('settingsHome', metrics), 116);
+    assert.equal(readerStandardPageContentEndInset('settingsHome', metrics, measuredTabs), 116);
+  }
+});
 
 const linear = (progress: number): number => progress;
 

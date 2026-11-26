@@ -15,7 +15,7 @@ import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { readerSurfaceMaxHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
-import { readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerStableInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import { TYPE_SHELF_UPDATE_BADGE, TYPE_SHELF_FILTER_LABEL, TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_STATE, TYPE_SECTION_HEADING } from '../../../ui/foundation/ReaderTypography';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
 import { bookshelfHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
@@ -527,7 +527,7 @@ export struct BookshelfPage {
     const metrics = ReaderWindowCoordinator.metrics();
     const windowHeight = Math.max(0, metrics.windowRect.height - this.recoveryOriginY);
     const height = Math.min(this.recoveryViewportHeight >= 0 ? this.recoveryViewportHeight : windowHeight, windowHeight);
-    const bottom = Math.max(this.shelfContentEndInset(), readerInteractiveSafeBottom(metrics, false));
+    const bottom = Math.max(this.shelfContentEndInset(), readerStableInteractiveSafeBottom(metrics, false));
     return readerSurfaceMaxHeight(Math.min(height - bottom,
       readerKeyboardHostBottom(metrics, this.recoveryOriginY, height)), this.shelfHeaderClearance() + this.noticeTopInset + 8);
   }

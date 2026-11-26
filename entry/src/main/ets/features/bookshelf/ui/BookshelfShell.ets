@@ -11,7 +11,7 @@ import { ReaderBottomSheet } from '../../../ui/surfaces/ReaderBottomSheet';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerScrimmedOpaqueColor } from '../../../ui/surfaces/ReaderScrimColor';
 import { SheetSurfaceSpec, resolveSheetSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerStableInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerSurfaceMaxHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { bookshelfHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
@@ -344,7 +344,7 @@ export struct BookshelfShell {
     const metrics = ReaderWindowCoordinator.metrics();
     const windowHeight = Math.max(0, metrics.windowRect.height - this.recoveryOriginY);
     const height = Math.min(this.recoveryViewportHeight >= 0 ? this.recoveryViewportHeight : windowHeight, windowHeight);
-    const bottom = Math.max(this.measuredFooterHeight, readerInteractiveSafeBottom(metrics, false));
+    const bottom = Math.max(this.measuredFooterHeight, readerStableInteractiveSafeBottom(metrics, false));
     return readerSurfaceMaxHeight(Math.min(height - bottom,
       readerKeyboardHostBottom(metrics, this.recoveryOriginY, height)), this.headerBottom + bookshelfHeaderSpec().contentGap + 8);
   }

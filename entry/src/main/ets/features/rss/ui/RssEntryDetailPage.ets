@@ -24,6 +24,7 @@ import {
   type RssSubscription,
 } from '../application/RssGateway';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
+import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import {
@@ -90,6 +91,7 @@ export struct RssEntryDetailPage {
     ReaderStandardPage({
       floatingHeader: true,
       variant: 'rssDetail',
+      initialFooterHeight: this.footerHeight(),
       header: (): void => { this.backBar(); },
       content: (): void => { this.pageContent(); },
       footer: (): void => { this.bottomActions(); },
@@ -401,11 +403,18 @@ export struct RssEntryDetailPage {
     }
     .width(this.contentFrame().width)
     .margin({ left: this.contentFrame().left, right: this.contentFrame().right })
-    .constraintSize({ minHeight: RSS_DETAIL_ACTION_AREA_HEIGHT })
+    .constraintSize({ minHeight: this.footerHeight() })
     .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Center)
     .hitTestBehavior(HitTestMode.Default)
     .onTouch((): void => {});
+  }
+
+  private footerHeight(): number {
+    this.readerWindowMetricsRevision;
+    const fontScale = ReaderWindowCoordinator.metrics().systemFontScale;
+    const lineHeight = TYPE_RSS_BOTTOM_ACTION.lineHeightFp ?? TYPE_RSS_BOTTOM_ACTION.fontSizeFp * 1.5;
+    return Math.max(RSS_DETAIL_ACTION_AREA_HEIGHT, readerScaledControlHeight(44, lineHeight, fontScale) + 2 * TOK_SPACE_XS);
   }
 
   private summaryParagraphs(): string[] {

@@ -29,7 +29,7 @@ import type { ReaderDirectoryChapterStartBookmarkRequest } from '../presentation
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import {
-  readerInteractiveSafeBottom,
+  readerInteractiveSafeBottom, readerStableInteractiveSafeBottom,
   readerVisualSafeLeft,
   readerVisualSafeRight,
   readerVisualSafeTop,
@@ -794,7 +794,9 @@ export struct ReaderFullDirectory {
 
   private fullPanelHeight(): number {
     const designHeight = this.usesExpandedLayout() ? 852 : 736;
-    const safeBottom = Math.max(20, readerInteractiveSafeBottom(readerWindowMetrics()));
+    const metrics = readerWindowMetrics();
+    const safeBottom = Math.max(20, this.catalogContext === 'detail' ?
+      readerStableInteractiveSafeBottom(metrics) : readerInteractiveSafeBottom(metrics));
     const available = Math.max(0, this.liveContainerHeight() - this.fullPanelTop() - safeBottom);
     return this.catalogContext === 'detail' ? available : Math.min(designHeight, available);
   }

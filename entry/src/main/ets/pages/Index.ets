@@ -7,6 +7,7 @@ import { ReaderDocumentPickerActivity } from '../platform/ReaderDocumentPickerAc
 import { MangaPositionHydrator, type MangaPositionCandidate, type MangaPositionScene } from '../features/manga/presentation/MangaPositionHydrator';
 import { MangaSourceLogin, type MangaSourceLoginScene } from '../features/manga/presentation/MangaSourceLogin';
 import { FrameCallback } from '@kit.ArkUI';
+import type { AnimatorResult } from '@ohos.animator';
 import { readerAppColor } from '../ui/foundation/ReaderThemeRegistry';
 import { BookshelfGroupDialog } from '../features/bookshelf/ui/BookshelfGroupDialog';
 import { BookshelfGroupPresentation } from '../features/bookshelf/presentation/BookshelfGroupPresentation';
@@ -115,8 +116,10 @@ import { isReaderProductSurfaceEnabled } from '../app/ReaderProductScope';
 import { ReaderNavigation, retainedReaderRoute, type DetailReturnRoute, type DirectoryReturnTarget,
   type ReaderNavigationSnapshot, type ReaderReturnContext, type ReaderRoute, type SettingsSection,
   type ReaderBackTarget, type ReaderRouteMotionKind, type TemporaryBackScope } from '../app/navigation/ReaderNavigation';
-import { readerSceneTransition, READER_ROUTE_PARENT_DIM, READER_ROUTE_PARENT_PARALLAX } from '../app/navigation/ReaderRouteMotion';
-import { motionAnimateParam } from '../ui/foundation/MotionSpec';
+import { readerSceneTransition } from '../app/navigation/ReaderRouteMotion';
+import { ReaderDetailSceneTransition, READER_ROUTE_PARENT_DIM, READER_ROUTE_PARENT_PARALLAX,
+  readerConditionalSceneMotion, readerRouteMotionPose, type ReaderDetailSceneSnapshot } from '../app/navigation/ReaderRouteMotionModel';
+import { motionAnimateParam, motionSpecGet, readerMotionStandardCurve } from '../ui/foundation/MotionSpec';
 import { ReaderRouteStackSurface, type ReaderRouteSurfaceKey } from '../app/navigation/ReaderRouteStackSurface';
 import { ReaderBottomNavigation } from '../app/navigation/ReaderBottomNavigation';
 import { readerMainNavigationMode } from '../features/shell/MainNavigationSpec';
@@ -244,25 +247,22 @@ struct Index {
   @State private readerParentAnimated: boolean = false;
   private readerParentAnimationGeneration: number = 0;
   private readerParentAnimationViewport: ReaderRectVp | undefined;
-  @State private readerDetailCover: boolean = false;
-  private readerDetailCoverGeneration: number = 0;
-  @State private pendingBackDuringCover: number | undefined = undefined;
-  private replayingReaderDetailBack: boolean = false;
-  @State private readerDetailReturnPaint: number | undefined = undefined;
+  private readonly readerDetailTransition: ReaderDetailSceneTransition = new ReaderDetailSceneTransition();
+  @State private readerDetailScene: ReaderDetailSceneSnapshot | undefined = undefined;
+  private readerDetailBook: string = '';
+  private readerDetailAnimator: AnimatorResult | undefined = undefined;
+  private readerDetailDeadline: number = -1;
   private readerOriginLane: ReaderRoute = 'bookshelf';
   @State private sourceOpeningGeneration: number = 0;
+  @State private sourceBackPreviewBlocked: boolean = false;
   @State private sourceToolsOpeningGeneration: number = 0;
   private publishNavigation(snapshot: ReaderNavigationSnapshot): void {
     const restoringDirectory = this.route === 'reading' && snapshot.route === 'directory' &&
       snapshot.directoryReturnTarget === 'detail';
-    const returningFromCover = this.replayingReaderDetailBack && this.route === 'detail' &&
-      snapshot.route === 'reading' && this.readingEntry.sessionActive;
+    if (this.readerDetailScene !== undefined && !this.readerDetailSceneMatchesBook()) this.clearReaderDetailMotion();
     if (snapshot.generation !== this.navigationGeneration || snapshot.route !== this.route) {
       this.bookRemovalConfirmation.dismiss();
       this.jsonImportPresentation.dismiss();
-      this.pendingBackDuringCover = undefined;
-      this.readerDetailCover = false;
-      this.readerDetailReturnPaint = returningFromCover ? snapshot.generation : undefined;
     }
     if (this.route === 'bookshelf' && snapshot.route !== 'bookshelf' && this.bookshelfModalVisible()) {
       if (this.shelfMutations.snapshot.importPresentation !== undefined) this.shelfMutations.closeImport();
@@ -278,14 +278,36 @@ struct Index {
     const toReader = snapshot.route === 'reading' ||
       (snapshot.route === 'directory' && snapshot.directoryReturnTarget === 'readerControl');
     const previousLane = routeChanged && !fromReader && toReader ? this.appRouteLane() : this.readerOriginLane;
+    const routeMotion = this.navigationOwner.routeMotion();
+    const incomingDetail = routeChanged && fromReader && snapshot.route === 'detail' && routeMotion === 'push' &&
+      this.searchAppForeground && this.readingEntry.book !== undefined;
+    const returningFromDetail = routeChanged && this.route === 'detail' && toReader &&
+      this.readingEntry.sessionActive && routeMotion === 'pop' && this.searchAppForeground;
     if (routeChanged) {
       const from = this.route, to = snapshot.route;
       if (to === 'source') this.sourceOpeningGeneration = snapshot.generation;
       else if (to === 'sourceTools') this.sourceToolsOpeningGeneration = snapshot.generation;
+      if (fromReader && !toReader) {
+        // Advance native policy with the same navigation decision, before the normal page mounts.
+        ReaderWindowCoordinator.requestAppChrome();
+        void ReaderWindowCoordinator.requestAppWindowPolicy().catch((_error: Error): void => {});
+      }
+      if (incomingDetail) {
+        this.readerDetailBook = this.readerDetailBookIdentity();
+        this.readerDetailScene = this.readerDetailTransition.open(true);
+      } else if (returningFromDetail) {
+        if (this.readerDetailScene === undefined) {
+          this.readerDetailBook = this.readerDetailBookIdentity();
+          this.readerDetailTransition.open(false);
+        }
+        this.readerDetailScene = this.readerDetailTransition.back();
+      } else if (this.readerDetailScene !== undefined) {
+        this.clearReaderDetailMotion();
+      }
       const shelfSearch = (from === 'bookshelf' && to === 'search') || (from === 'search' && to === 'bookshelf');
       const readerChangesHost = !fromReader && toReader && previousLane !== this.navigationOwner.returns.snapshot().readingOrigin;
-      this.visibleRouteMotion = shelfSearch || (fromReader && toReader) || readerChangesHost || returningFromCover ?
-        'none' : this.navigationOwner.routeMotion();
+      this.visibleRouteMotion = shelfSearch || (fromReader && toReader) || readerChangesHost || incomingDetail || returningFromDetail ?
+        'none' : routeMotion;
     }
     // Keep the last right-hand pane mounted while the whole Settings tab leaves.
     const pane = this.navigationOwner.settingsPane();
@@ -302,22 +324,12 @@ struct Index {
     this.directoryReturnTarget = snapshot.directoryReturnTarget;
     this.settingsSection = snapshot.settingsSection;
     this.route = snapshot.route;
-    if (routeChanged) {
-      if (fromReader !== toReader) {
-        const lane = returningFromCover ? this.navigationOwner.returns.snapshot().readingOrigin : this.appRouteLane();
-        const sameLane = previousLane === lane;
-        if (toReader) this.readerOriginLane = lane;
-        // Hold the exited reader's paint below the native detail push.
-        const cover = fromReader && snapshot.route === 'detail' && this.visibleRouteMotion === 'push' &&
-          this.searchAppForeground && this.readingEntry.book !== undefined;
-        if (cover) {
-          this.readerDetailCoverGeneration += 1;
-          this.readerDetailCover = true;
-        }
-        this.updateReaderParentMotion(toReader, sameLane && !this.readerDetailCover && !returningFromCover);
-      }
+    if (routeChanged && fromReader !== toReader) {
+      const lane = returningFromDetail ? this.navigationOwner.returns.snapshot().readingOrigin : this.appRouteLane();
+      if (toReader) this.readerOriginLane = lane;
+      this.updateReaderParentMotion(toReader, previousLane === lane && !incomingDetail && !returningFromDetail);
     }
-    if (returningFromCover) this.retireReaderDetailReturnPaintAfterLayout(snapshot.generation);
+    if (incomingDetail || returningFromDetail) this.animateReaderDetailMotion();
     if (restoringDirectory) this.directoryJourney.refreshDetailPosition();
   }
   private setSettingsSection(section: SettingsSection): void {
@@ -340,10 +352,17 @@ struct Index {
     if (this.readerParentAnimated && !this.readerParentViewportMatches()) {
       this.readerParentAnimated = false;
     }
+    if (this.readerDetailScene?.phase === 'preview' &&
+      !this.readerDetailTransition.previewViewportMatches(this.routeViewportWidth())) this.cancelReaderDetailBackPreview();
   }
 
   private onReaderParentMotionPolicyChanged(): void {
     if (this.appReduceMotion) this.readerParentAnimated = false;
+    const scene = this.readerDetailScene;
+    if (scene !== undefined && scene.phase !== 'covered') {
+      this.readerDetailScene = this.readerDetailTransition.settle(scene.generation);
+      this.stopReaderDetailAnimator();
+    }
   }
 
   private readerParentViewportMatches(): boolean {
@@ -367,50 +386,115 @@ struct Index {
   }
 
   private detailAboveReader(): boolean {
-    return this.route === 'detail' && this.visibleRouteMotion === 'push';
+    return this.readerDetailScene !== undefined || (this.route === 'detail' && this.visibleRouteMotion === 'push');
   }
 
-  private completeReaderDetailCover(generation: number): void {
-    if (!this.readerDetailCover || generation !== this.readerDetailCoverGeneration || this.route !== 'detail') return;
-    this.readerDetailCover = false;
-    if (this.pendingBackDuringCover !== generation) return;
-    // Allow the retired reader surface to leave layout before Back recreates it.
-    try {
-      const context = this.getUIContext();
-      context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
-        if (this.pendingBackDuringCover !== generation) return;
-        this.pendingBackDuringCover = undefined;
-        if (this.route !== 'detail' || !this.searchAppForeground) return;
-        this.replayingReaderDetailBack = true;
-        try { this.onBackPress(); }
-        finally { this.replayingReaderDetailBack = false; }
-      }));
-    } catch (_) {
-      this.pendingBackDuringCover = undefined;
-    }
+  private readerDetailBookIdentity(): string {
+    return JSON.stringify([this.readingEntry.book?.sourceId, this.readingEntry.book?.bookId]);
   }
 
-  private retireReaderDetailReturnPaintAfterLayout(generation: number): void {
-    // Keep the outgoing detail beneath the opaque replacement reader until its
-    // first layout. Align the native stack silently once it is covered.
-    const release = (): void => {
-      if (this.readerDetailReturnPaint === generation && this.navigationGeneration === generation)
-        this.readerDetailReturnPaint = undefined;
+  private readerDetailSceneMatchesBook(): boolean {
+    return this.readingEntry.book !== undefined && this.readerDetailBook === this.readerDetailBookIdentity();
+  }
+
+  private stopReaderDetailAnimator(): void {
+    if (this.readerDetailDeadline >= 0) clearTimeout(this.readerDetailDeadline);
+    this.readerDetailDeadline = -1;
+    const animator = this.readerDetailAnimator;
+    this.readerDetailAnimator = undefined;
+    try { animator?.cancel(); }
+    catch (_error) { /* A completed native animator is already retired. */ }
+  }
+
+  private clearReaderDetailMotion(): void {
+    this.readerDetailTransition.clear();
+    this.stopReaderDetailAnimator();
+    this.readerDetailScene = undefined;
+    this.readerDetailBook = '';
+  }
+
+  private animateReaderDetailMotion(): void {
+    this.stopReaderDetailAnimator();
+    const motion = this.readerDetailScene;
+    if (motion === undefined || motion.phase === 'preview' || motion.phase === 'covered') return;
+    const target = motion.phase === 'pop' ? 0 : 1;
+    const current = (): boolean => this.readerDetailTransition.snapshot()?.generation === motion.generation;
+    const finish = (): void => {
+      if (!current()) return;
+      this.readerDetailScene = this.readerDetailTransition.settle(motion.generation);
+      this.stopReaderDetailAnimator();
     };
-    try {
-      const context = this.getUIContext();
-      context.postFrameCallback(new ReaderPostLayoutFrame(context, release));
-    } catch (_) { release(); }
+    const id = this.appReduceMotion ? 'app.motion.reduced.fade' :
+      motion.phase === 'pop' ? 'app.navigation.pop' : 'app.navigation.push';
+    const distance = Math.abs(target - motion.coverage);
+    if (distance < .001 || !this.searchAppForeground) { finish(); return; }
+    const duration = Math.max(1, Math.round((motionSpecGet(id)?.durationMs ?? 200) * distance));
+    const context = this.getUIContext();
+    const reduced = this.appReduceMotion;
+    this.readerDetailDeadline = setTimeout(finish, duration + 300);
+    const start = (): void => {
+      if (!current()) return;
+      try {
+        const animator = context.createAnimator({ duration, easing: reduced ? 'ease-out' : 'linear',
+          delay: 0, fill: 'forwards', direction: 'normal', iterations: 1, begin: 0, end: 1 });
+        this.readerDetailAnimator = animator;
+        animator.onFrame = (fraction: number): void => {
+          if (this.readerDetailAnimator !== animator || !current()) return;
+          const progress = reduced ? fraction : readerMotionStandardCurve().interpolate(fraction);
+          this.readerDetailScene = this.readerDetailTransition.sample(motion.generation, progress);
+        };
+        animator.onFinish = (): void => {
+          if (this.readerDetailAnimator === animator) finish();
+        };
+        animator.play();
+      } catch (_error) { finish(); }
+    };
+    // A freshly pushed detail and a restored reader receive native layout before motion.
+    try { context.postFrameCallback(new ReaderPostLayoutFrame(context, start)); }
+    catch (_error) { finish(); }
   }
 
   private readerSceneMotionEnabled(): boolean {
-    return this.searchAppForeground && !this.readerDetailCover && this.readerDetailReturnPaint === undefined;
+    return readerConditionalSceneMotion(this.searchAppForeground, this.readerDetailScene !== undefined).enter === 'push';
   }
 
   private appRouteBackGestureEnabled(): boolean {
-    return !this.readerDetailCover && this.pendingBackDuringCover === undefined && this.journeyRecoveryInputAllowed() &&
+    return this.readerDetailScene === undefined && this.journeyRecoveryInputAllowed() &&
+      !(this.route === 'source' && this.sourceBackPreviewBlocked) &&
       retainedReaderRoute(this.route, this.directoryReturnTarget) === undefined;
   }
+
+  private readerDetailBackGestureEnabled(): boolean {
+    return this.route === 'detail' && this.readerDetailScene !== undefined && this.readerDetailScene.phase !== 'pop' &&
+      this.readerDetailSceneMatchesBook() && !this.appReduceMotion && this.journeyRecoveryInputAllowed() && this.detailMoreBack === undefined &&
+      this.shelfGroupPresentation.identity.length === 0;
+  }
+
+  private beginReaderDetailBackPreview(offset: number): void {
+    if (!this.readerDetailBackGestureEnabled()) return;
+    const preview = this.readerDetailTransition.preview(this.routeViewportWidth());
+    if (preview === undefined) return;
+    this.readerDetailScene = this.readerDetailTransition.updatePreview(preview.generation, offset);
+  }
+
+  private updateReaderDetailBackPreview(offset: number): void {
+    const scene = this.readerDetailScene;
+    if (scene?.phase === 'preview') this.readerDetailScene = this.readerDetailTransition.updatePreview(scene.generation, offset);
+  }
+
+  private endReaderDetailBackPreview(offset: number): void {
+    this.updateReaderDetailBackPreview(offset);
+    if (this.readerDetailTransition.shouldCommitPreview()) this.onBackPress();
+    this.cancelReaderDetailBackPreview();
+  }
+
+  private cancelReaderDetailBackPreview(): void {
+    const cancel = this.readerDetailTransition.cancelPreview();
+    if (cancel === undefined) return;
+    this.readerDetailScene = cancel;
+    this.animateReaderDetailMotion();
+  }
+
   @StorageLink('readerAppForeground') @Watch('onSearchVisibilityChanged') private searchAppForeground: boolean = true;
   @State private jsonImportPresentation: JsonImportPresentation = new JsonImportPresentation();
   @State private readingEntryActions: ReaderReadingEntryActions =
@@ -426,7 +510,7 @@ struct Index {
       shelfBooks: (): ShelfBook[] => this.shelfRead.snapshot.books,
       removalPending: (): boolean => this.shelfMutations.snapshot.removalKey.length > 0,
       advance: (): number => this.nextNavigationGeneration(),
-      show: (route: ReaderRoute): void => this.navigateTo(route),
+      show: (route: ReaderRoute, motion?: 'pop'): void => this.navigateTo(route, motion),
       bindReader: (): void => this.bindReadingEntryReader(),
       restoreReaderReturn: (context: ReaderReturnContext | undefined): boolean => this.downloadNavigation.restoreReaderReturn(context),
       entryPorts: (owner: ReaderRuntimeOwner): ReadingEntryPorts => this.readingEntryPorts(owner),
@@ -801,9 +885,7 @@ struct Index {
   aboutToDisappear(): void {
     this.shelfReceiptRetired = true;
     this.readerParentAnimated = false;
-    this.readerDetailCover = false;
-    this.pendingBackDuringCover = undefined;
-    this.readerDetailReturnPaint = undefined;
+    this.clearReaderDetailMotion();
     this.sourceSwitchPresentation.retireMangaRecovery();
     this.entryStartupTrace.retire();
     this.libraryAcquisition.dispose();
@@ -843,11 +925,7 @@ struct Index {
 
   onBackPress(): boolean {
     if (this.currentReadingRuntime() === undefined) return false;
-    if (this.readerDetailCover) {
-      this.pendingBackDuringCover = this.readerDetailCoverGeneration;
-      return true;
-    }
-    if (this.pendingBackDuringCover !== undefined || this.readerDetailReturnPaint !== undefined) return true;
+    if (this.readerDetailScene?.phase === 'pop') return true;
     return this.navigationOwner.dispatchBack({
       wideSettings: this.wideSettingsPane() !== undefined,
       nativeSurface: (): boolean => this.arkWebBack?.() === true ||
@@ -1134,7 +1212,7 @@ struct Index {
         this.mangaOwnsWindowEdges() ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
           [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM],
-        this.mangaOwnsWindowEdges() ? [LayoutSafeAreaEdge.ALL] : [LayoutSafeAreaEdge.TOP])
+        this.mangaOwnsWindowEdges() ? [LayoutSafeAreaEdge.ALL] : [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
   }
 
   @Builder
@@ -1144,10 +1222,11 @@ struct Index {
         ReaderRouteStackSurface({
           route: this.appRouteLane(), routeMotion: this.searchAppForeground ? this.visibleRouteMotion : 'none',
           surfaceId: 'reader-app-route-stack',
-          extendsToWindowTop: true,
+          extendsToWindowEdges: true,
           viewportWidth: this.routeViewportWidth(), reduceMotion: this.appReduceMotion,
-          readerCoverGeneration: this.readerDetailCover ? this.readerDetailCoverGeneration : undefined,
-          onReaderCovered: (generation: number): void => this.completeReaderDetailCover(generation),
+          readerDetailActive: this.readerDetailScene !== undefined,
+          readerDetailCoverage: this.readerDetailScene?.coverage ?? 1,
+          readerDetailInputEnabled: this.readerDetailScene?.phase === 'covered',
           backGestureEnabled: this.appRouteBackGestureEnabled(),
           content: (route: ReaderRouteSurfaceKey): void => { this.appRouteContent(route as ReaderRoute); },
           onBack: (): boolean => this.onBackPress(),
@@ -1161,19 +1240,29 @@ struct Index {
         .width('100%').height('100%')
         .zIndex(this.detailAboveReader() ? 1 : 0);
       Stack({ alignContent: Alignment.TopStart }) {
-        if ((this.readingEntry.sessionActive || this.readerDetailCover) && this.readingEntry.book !== undefined) {
+        if ((this.readingEntry.sessionActive || (this.readerDetailScene !== undefined && this.readerDetailSceneMatchesBook())) &&
+          this.readingEntry.book !== undefined) {
           RetainedReaderScene({
             reading: this.readingEntry, commits: this.readingCommits,
             source: this.sourceSwitchPresentation, manga: this.mangaSourceSwitch,
-            visibleRoute: this.readerDetailCover ? 'reading' : retainedReaderRoute(this.route, this.directoryReturnTarget),
+            visibleRoute: this.readerDetailScene !== undefined ? 'reading' : retainedReaderRoute(this.route, this.directoryReturnTarget),
+            ownsWindowChrome: retainedReaderRoute(this.route, this.directoryReturnTarget) !== undefined,
             expandedLayout: this.expandedLayout(), reduceMotion: this.appReduceMotion,
             inputAllowed: this.readingEntry.sessionActive && this.searchAppForeground && !this.arkWebCapturesInput &&
-              this.readerDetailReturnPaint === undefined,
+              this.readerDetailScene === undefined,
             ports: this.retainedReaderPorts(),
           }).transition(readerSceneTransition(this.routeViewportWidth(), this.appReduceMotion, this.readerSceneMotionEnabled()));
+          if (this.readerDetailScene !== undefined) {
+            Column().width('100%').height('100%').backgroundColor(Color.Black)
+              .opacity(this.appReduceMotion ? 0 : this.readerDetailScene.coverage * READER_ROUTE_PARENT_DIM)
+              .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
+          }
         }
       }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
+        .translate({ x: readerRouteMotionPose('push', 'parent', this.routeViewportWidth(),
+          this.readerDetailScene?.coverage ?? 0, this.appReduceMotion) })
         .zIndex(this.detailAboveReader() ? 0 : 1);
+      this.readerDetailBackEdge();
       this.primaryBottomNavigation();
       this.pageOverlays();
     }
@@ -1181,6 +1270,19 @@ struct Index {
     .enabled(!this.arkWebCapturesInput)
     .hitTestBehavior(this.arkWebCapturesInput ? HitTestMode.None : HitTestMode.Default)
     .accessibilityLevel(this.arkWebCapturesInput ? 'no-hide-descendants' : 'auto');
+  }
+
+  @Builder
+  private readerDetailBackEdge() {
+    if (this.readerDetailBackGestureEnabled()) {
+      Row().width(18).height('100%').zIndex(2)
+        .hitTestBehavior(HitTestMode.Transparent).accessibilityLevel('no-hide-descendants')
+        .gesture(PanGesture({ fingers: 1, direction: PanDirection.Right })
+          .onActionStart((event: GestureEvent): void => this.beginReaderDetailBackPreview(event.offsetX))
+          .onActionUpdate((event: GestureEvent): void => this.updateReaderDetailBackPreview(event.offsetX))
+          .onActionEnd((event: GestureEvent): void => this.endReaderDetailBackPreview(event.offsetX))
+          .onActionCancel((): void => this.cancelReaderDetailBackPreview()));
+    }
   }
 
   @Builder
@@ -1218,7 +1320,7 @@ struct Index {
   }
 
   private appRouteLane(): ReaderRoute {
-    if (this.readerDetailReturnPaint !== undefined) return 'detail';
+    if (this.readerDetailScene?.phase === 'pop') return 'detail';
     if (this.route === 'search') return 'bookshelf';
     if (retainedReaderRoute(this.route, this.directoryReturnTarget) !== undefined) {
       return this.navigationOwner.returns.snapshot().readingOrigin;
@@ -1628,7 +1730,7 @@ struct Index {
 
   private mangaOwnsWindowEdges(): boolean {
     if (this.mangaSourceSwitch.selectionVisible) return true;
-    return (this.readingEntry.sessionActive || this.readerDetailCover) && this.readingEntry.contentKind === 'manga' &&
+    return (this.readingEntry.sessionActive || this.readerDetailScene !== undefined) && this.readingEntry.contentKind === 'manga' &&
       this.readerOwnsWindowEdges();
   }
 
@@ -1783,6 +1885,10 @@ struct Index {
         this.jsonImportPresentation.opening === undefined,
       onBack: (): void => { this.onBackPress(); },
       captureImportSearchAction: (): (() => void) | undefined => this.sourceNavigation.importSearchAction(),
+      onBackPreviewBlocked: (blocked: boolean): void => {
+        if (!showingTools && generation === this.sourceOpeningGeneration &&
+          (!blocked || this.sourceJourney.isManagementCurrent(identity))) this.sourceBackPreviewBlocked = blocked;
+      },
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, bridgeIdentity: string): void => {
         this.registerTemporaryBackBridge('source', generation, owner, handler, bridgeIdentity);
       },
@@ -1877,9 +1983,12 @@ struct Index {
   private onSearchVisibilityChanged(): void {
     if (!this.searchAppForeground) {
       this.readerParentAnimated = false;
-      this.readerDetailCover = false;
-      this.pendingBackDuringCover = undefined;
-      this.readerDetailReturnPaint = undefined;
+      const scene = this.readerDetailScene;
+      if (scene?.phase === 'pop') this.clearReaderDetailMotion();
+      else if (scene !== undefined && scene.phase !== 'covered') {
+        this.readerDetailScene = this.readerDetailTransition.settle(scene.generation);
+        this.stopReaderDetailAnimator();
+      }
     }
     this.transientFeedback.reset();
     if (this.libraryAcquisition.currentOwner() === undefined || this.shelfReceiptRetired) return;

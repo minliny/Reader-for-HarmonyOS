@@ -12,7 +12,7 @@ import { ShelfBookListDetails } from './ShelfBookListDetails';
 import { ShelfBookPresentation } from '../presentation/ShelfBookPresentation';
 import type { ShelfBook } from '../../../app/ReaderCoreGateway';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
-import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerStableInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import { prepareReaderFontFamily, readerFontFamilyReady, registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { NoCoverCover, noCoverGlyph } from '../../../ui/patterns/NoCoverCover';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
@@ -330,7 +330,8 @@ export struct BookshelfMultiSelectPage {
             .fontFamily(TYPE_SHELF_SELECTION_REMOVE.fontFamily)
             .fontWeight(TYPE_SHELF_SELECTION_REMOVE.fontWeight)
             .fontSize(TYPE_SHELF_SELECTION_REMOVE.fontSizeFp)
-            .lineHeight(TYPE_SHELF_SELECTION_REMOVE.lineHeightFp as number)
+            .lineHeight(this.removeLabelHeight())
+            .maxLines(1)
             .fontColor(readerAppColor('TOK_DOWNLOAD_DANGER', this.appThemeScheme));
         }.width('100%').alignItems(HorizontalAlign.Center)
           .opacity(this.canRemoveSelection() ? 1 : 0.38)
@@ -342,7 +343,8 @@ export struct BookshelfMultiSelectPage {
           .accessibilityText('移除书架')
           .enabled(this.canRemoveSelection())
           .onClick((): void => this.removeVisibleSelection());
-      }.width(74).constraintSize({ minHeight: READER_ACTION_MIN_TARGET });
+      }.width(Math.max(74, Math.ceil(TYPE_SHELF_SELECTION_REMOVE.fontSizeFp * this.fontScale() * '移除书架'.length) + 8))
+        .constraintSize({ minHeight: this.removeActionHeight() });
     }
     .width('100%')
     .padding({ top: 12, bottom: this.bottomInset() })
@@ -404,8 +406,11 @@ export struct BookshelfMultiSelectPage {
 
   private removeBarClearance(): number {
     return this.measurements.readForGeneration('selection:footer', this.footerMeasurementKey,
-      12 + READER_ACTION_MIN_TARGET + this.bottomInset());
+      12 + this.removeActionHeight() + this.bottomInset() + 1);
   }
+
+  private removeLabelHeight(): number { return Math.ceil((TYPE_SHELF_SELECTION_REMOVE.lineHeightFp as number) * this.fontScale()); }
+  private removeActionHeight(): number { return Math.max(READER_ACTION_MIN_TARGET, 22 + 6 + this.removeLabelHeight()); }
 
   private reconcileSelection(): void {
     this.selectedKeys = this.selectedKeys.filter((key: string): boolean => this.hasBookKey(key));
@@ -648,6 +653,6 @@ export struct BookshelfMultiSelectPage {
 
   private bottomInset(): number {
     this.readerWindowMetricsRevision;
-    return Math.max(12, readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics()));
+    return Math.max(12, readerStableInteractiveSafeBottom(ReaderWindowCoordinator.metrics()));
   }
 }

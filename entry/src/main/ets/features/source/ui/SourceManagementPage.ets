@@ -10,12 +10,12 @@ import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from 
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
-import { ReaderRectVp, readerInteractiveSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
+import { ReaderRectVp, readerInteractiveSafeTop, readerStableInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS, readerTransientTextObserver,
   type ReaderTransientTextObserver } from '../../../ui/feedback/ReaderTransientFeedback';
-import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
+import { consumeReaderControlKeyboardBack, readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerPageAreaLength, readerStandardPageSpec, READER_STANDARD_PAGE_CONTENT_GAP } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
@@ -220,12 +220,12 @@ export struct SourceManagementPage {
   @Prop @Watch('onBatchApplied') batchApplied: number = 0;
   @State private statusCounts: SourceV9Counts = { all: 0, enabled: 0, disabled: 0, abnormal: 0 };
   @State private hasReadableSources: boolean = false;
-  @State private moreMenuOpen: boolean = false;
+  @State @Watch('publishBackPreviewBlock') private moreMenuOpen: boolean = false;
   @State private moreAnchor: ReaderRectVp | undefined = undefined;
   private moreFocusRevision: number = 0;
-  @State private batchMode: boolean = false;
+  @State @Watch('publishBackPreviewBlock') private batchMode: boolean = false;
   @State private batchSourceIds: string[] = [];
-  @State private groupOpen: boolean = false;
+  @State @Watch('publishBackPreviewBlock') private groupOpen: boolean = false;
   @State private groupClosing: boolean = false;
   @State private groupSearchQuery: string = '';
   @State private groupSelectionId: string = '';
@@ -237,6 +237,8 @@ export struct SourceManagementPage {
   private temporaryBackIdentity: string = '';
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
+  onBackPreviewBlocked: (blocked: boolean) => void = (): void => {};
+  private lastBackPreviewBlocked: boolean = false;
   // 838 条书源时 @State 会为每个对象建立观察代理，重建一次就产生数百 MB 峰值。
   // 列表本身由 LazyForEach 数据源驱动，这里只保留普通引用并以计数触发重渲染。
   private projectedSources: BookSource[] = [];
@@ -399,6 +401,8 @@ export struct SourceManagementPage {
     this.footerInputs = '';
     this.retireGroupSelection();
     this.onTemporaryBackBridge(undefined, identity);
+    this.lastBackPreviewBlocked = false;
+    this.onBackPreviewBlocked(false);
   }
 
   private managementOpeningIsCurrent(): boolean {
@@ -428,6 +432,15 @@ export struct SourceManagementPage {
       return true;
     }
     return false;
+  }
+
+  private publishBackPreviewBlock(): void {
+    if (!this.mounted) return;
+    const blocked = this.groupOpen || this.moreMenuOpen || this.batchMode ||
+      readerControlKeyboardVisible(ReaderWindowCoordinator.metrics());
+    if (blocked === this.lastBackPreviewBlocked) return;
+    this.lastBackPreviewBlocked = blocked;
+    this.onBackPreviewBlocked(blocked);
   }
 
   private hideManagementKeyboard(identity: string): boolean {
@@ -1985,7 +1998,7 @@ export struct SourceManagementPage {
     // revision even when the parent returns to the same layout.
     return JSON.stringify([this.contentFrame().width, this.fontScale(), this.expandedLayout,
       metrics.windowRect.height, metrics.densityPixels,
-      readerInteractiveSafeTop(metrics), readerInteractiveSafeBottom(metrics)]);
+      readerInteractiveSafeTop(metrics), readerStableInteractiveSafeBottom(metrics)]);
   }
 
   private cancelScrollRestore(): void {
@@ -2886,6 +2899,7 @@ export struct SourceManagementPage {
 
   private onGeometryInputsChanged(): void {
     if (!this.mounted) return;
+    this.publishBackPreviewBlock();
     const metrics = ReaderWindowCoordinator.metrics();
     const headerInputs = JSON.stringify([this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width, metrics.systemFontScale,
       metrics.densityPixels, readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics),

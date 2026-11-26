@@ -70,6 +70,9 @@ export class ReaderWindowMetricsSnapshot {
   statusBarCutoutRect: ReaderRectVp;
   topLeftCorner: ReaderDisplayCornerVp;
   topRightCorner: ReaderDisplayCornerVp;
+  /** Last nonimmersive interactive bottom band for the current window geometry. */
+  stableSafeBottom: number;
+  stableVisualSafeBottom: number;
 
   constructor(
     windowRect: ReaderRectVp = new ReaderRectVp(),
@@ -89,6 +92,9 @@ export class ReaderWindowMetricsSnapshot {
     topLeftCorner: ReaderDisplayCornerVp = new ReaderDisplayCornerVp(),
     topRightCorner: ReaderDisplayCornerVp = new ReaderDisplayCornerVp(),
     keyboardArea: ReaderKeyboardAreaVp = new ReaderKeyboardAreaVp(),
+    stableSafeBottom: number = Math.max(finiteInset(systemInsets.bottom), finiteInset(cutoutInsets.bottom),
+      finiteInset(gestureInsets.bottom), finiteInset(navigationInsets.bottom)),
+    stableVisualSafeBottom: number = Math.max(finiteInset(systemInsets.bottom), finiteInset(cutoutInsets.bottom)),
   ) {
     this.windowRect = windowRect;
     this.globalRect = globalRect;
@@ -107,6 +113,8 @@ export class ReaderWindowMetricsSnapshot {
     this.statusBarCutoutRect = statusBarCutoutRect;
     this.topLeftCorner = topLeftCorner;
     this.topRightCorner = topRightCorner;
+    this.stableVisualSafeBottom = finiteInset(stableVisualSafeBottom);
+    this.stableSafeBottom = Math.max(this.stableVisualSafeBottom, finiteInset(stableSafeBottom));
   }
 }
 
@@ -214,6 +222,16 @@ export function readerInteractiveSafeBottom(
     finiteInset(metrics.navigationInsets.bottom),
     includeKeyboard ? finiteInset(metrics.keyboardInsets.bottom) : 0,
   );
+}
+
+export function readerStableVisualSafeBottom(metrics: ReaderWindowMetricsSnapshot): number {
+  return finiteInset(metrics.stableVisualSafeBottom);
+}
+
+/** The ordinary page band is available before system bars have visibly returned. */
+export function readerStableInteractiveSafeBottom(metrics: ReaderWindowMetricsSnapshot,
+  includeKeyboard: boolean = false): number {
+  return Math.max(finiteInset(metrics.stableSafeBottom), includeKeyboard ? finiteInset(metrics.keyboardInsets.bottom) : 0);
 }
 
 export function readerInteractiveSafeInsets(

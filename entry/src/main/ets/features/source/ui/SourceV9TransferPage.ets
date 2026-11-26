@@ -113,7 +113,6 @@ export struct SourceV9TransferPage {
   @State private paneX: number = 0;
   @State private paneY: number = 0;
   private headerHeight: number = APP_FLOATING_HEADER_BAR_HEIGHT;
-  private footerHeight: number = 0;
   private flow: SourceV9TransferOwner | undefined = undefined;
   private mounted: boolean = false;
   private readonly draftPaste: ReaderClipboardDraftPaste = new ReaderClipboardDraftPaste();
@@ -418,7 +417,7 @@ export struct SourceV9TransferPage {
     if (this.paneHeight > 0) {
       input.footerBottom = Math.max(input.footerBottom, this.paneHeight - this.visiblePaneHeight(metrics));
     }
-    input.footerHeight = this.pane === 'import' ? Math.max(this.footerHeight, this.footerButtonHeight() + TRANSFER_FOOTER_TOP) : 0;
+    input.footerHeight = this.pane === 'import' ? this.footerButtonHeight() + TRANSFER_FOOTER_TOP + 1 : 0;
     input.contentEndInset = input.footerHeight + input.footerBottom;
     this.geometry = resolveReaderPageGeometry(input);
   }
@@ -471,11 +470,6 @@ export struct SourceV9TransferPage {
           onHeaderHeightChange: (height: number): void => {
             if (height <= 0 || height === this.headerHeight) return;
             this.headerHeight = height;
-            this.refreshLayout();
-          },
-          onFooterHeightChange: (height: number): void => {
-            if (height === this.footerHeight) return;
-            this.footerHeight = height;
             this.refreshLayout();
           },
         });

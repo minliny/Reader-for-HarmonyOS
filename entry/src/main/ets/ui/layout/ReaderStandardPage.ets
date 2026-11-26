@@ -25,6 +25,7 @@ export struct ReaderStandardPage {
   @Prop @Watch('onLayoutInputsChanged') embeddedWide: boolean = false;
   @Prop @Watch('onLayoutInputsChanged') contentLeadingRail: number = 0;
   @Prop @Watch('onLayoutInputsChanged') contentEndInset: number = -1;
+  @Prop @Watch('onLayoutInputsChanged') initialFooterHeight: number = 0;
   @Prop scrollOwner: 'page' | 'native-list' = 'page';
   @Prop initialScrollY: number = 0;
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
@@ -77,7 +78,7 @@ export struct ReaderStandardPage {
       readerPageSafeLeft(metrics, originX, true), readerPageSafeRight(metrics, originX, this.viewportWidth, true),
       this.variant, this.floatingHeader]);
     const footerInputs = JSON.stringify([headerInputs, this.contentLeadingRail > 0,
-      readerStandardPageFooterBottom(this.variant, metrics)]);
+      this.initialFooterHeight, readerStandardPageFooterBottom(this.variant, metrics)]);
     if (headerInputs !== this.headerInputs) {
       this.headerInputs = headerInputs;
       this.measurementKey += 1;
@@ -101,7 +102,8 @@ export struct ReaderStandardPage {
   }
 
   private footerHeight(): number {
-    return this.contentLeadingRail > 0 ? 0 : this.measurements.readForGeneration('standard:footer', this.footerMeasurementKey, 0);
+    return this.contentLeadingRail > 0 ? 0 :
+      this.measurements.readForGeneration('standard:footer', this.footerMeasurementKey, this.initialFooterHeight);
   }
 
   private refreshGeometry(): void {

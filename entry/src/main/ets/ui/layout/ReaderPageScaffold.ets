@@ -38,12 +38,16 @@ export struct ReaderPageScaffold {
       ? this.footerMeasurement.id : '';
   }
   private requestFooterMeasurement(): void { this.footerMeasurement.request(this.footerMeasurementKey); }
+
+  private publishFooterMeasurement(height: number, presentedKey: number): void {
+    if (presentedKey !== this.footerMeasurementKey || !Number.isFinite(height) || height < 0) return;
+    // The initial empty slot can report before a declared footer has laid out.
+    if (height === 0 && this.geometry.footer.height > 0) return;
+    this.onFooterHeightChange(height, presentedKey);
+  }
+
   private footerAreaChangeHandler(presentedKey: number): (_old: Area, next: Area) => void {
-    return (_old: Area, next: Area): void => {
-      if (presentedKey !== this.footerMeasurementKey) return;
-      const height = readerPageAreaLength(next.height);
-      if (Number.isFinite(height) && height >= 0) this.onFooterHeightChange(height, presentedKey);
-    };
+    return (_old: Area, next: Area): void => this.publishFooterMeasurement(readerPageAreaLength(next.height), presentedKey);
   }
 
   build() {
@@ -72,7 +76,7 @@ export struct ReaderPageScaffold {
           .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion())
           .id(this.footerMeasurement.id)
           .onAppear((): void => this.footerMeasurement.mount(this.getUIContext(), this.footerMeasurementKey,
-            (height: number, key: number): void => this.onFooterHeightChange(height, key)))
+            (height: number, key: number): void => this.publishFooterMeasurement(height, key)))
           .onDisAppear((): void => this.footerMeasurement.unmount())
           .onAreaChange(this.footerAreaChangeHandler(this.footerMeasurementKey));
       }.width('100%').layoutGravity(LocalizedAlignment.BOTTOM).zIndex(20)

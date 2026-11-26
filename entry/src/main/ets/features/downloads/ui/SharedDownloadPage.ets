@@ -46,7 +46,7 @@ import {
 } from './DownloadTypography';
 import { TYPE_APP_ROW_LABEL, TYPE_DOWNLOAD_BODY, TYPE_SELECT_DEFAULT_VALUE } from '../../../ui/foundation/ReaderTypography';
 import { ReaderWindowCoordinator, ReaderWindowChromeStyle } from '../../../app/ReaderWindowCoordinator';
-import { ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot, readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot, readerStableInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import type { DownloadBookView, DownloadChapterView, SharedDownloadFilters, DownloadReadingTarget, DownloadStorageSummary, DownloadStoragePolicyView } from '../presentation/SharedDownloadProjection';
 import { filterDownloadBooks, describeDownloadReadingTarget, downloadChapterDetailLabel, downloadChapterBookTitle,
   downloadsProvenEmpty, formatDownloadStorageBytes, canCleanDownloadStorage, currentDownloadReadingChapterIndex } from '../presentation/SharedDownloadProjection';
@@ -1316,7 +1316,7 @@ export struct SharedDownloadPage {
   }
 
   private operationsBottomInset(): number {
-    const safe = readerInteractiveSafeBottom(this.currentMetrics());
+    const safe = readerStableInteractiveSafeBottom(this.currentMetrics());
     return this.sheet === 'book-actions' ? Math.max(20, safe) : safe;
   }
 
@@ -3010,7 +3010,7 @@ export struct SharedDownloadPage {
   private contentRightInset(): number {
     return sharedDownloadContentInsets(this.safeLeft(), this.safeRight()).right;
   }
-  private bottomInset(): number { return Math.max(DOWNLOAD_VISUAL.dockBottom, readerInteractiveSafeBottom(this.currentMetrics())); }
+  private bottomInset(): number { return Math.max(DOWNLOAD_VISUAL.dockBottom, readerStableInteractiveSafeBottom(this.currentMetrics())); }
   private pageViewportWidth(): number {
     return this.pageWidth > 0 ? this.pageWidth : this.currentMetrics().windowRect.width;
   }
@@ -3024,12 +3024,12 @@ export struct SharedDownloadPage {
   private sheetHasFooter(): boolean { return ['filter', 'sort', 'range', 'settings'].includes(this.sheet); }
   private sheetFooterBottomInset(): number {
     return Math.max(this.sheet === 'settings' ? DOWNLOAD_VISUAL.storageFooterBottom : DOWNLOAD_VISUAL.sheetFooterBottom,
-      readerInteractiveSafeBottom(this.currentMetrics()));
+      readerStableInteractiveSafeBottom(this.currentMetrics()));
   }
   private sheetBodyBottomInset(): number {
     if (this.sheet === 'settings') return 0;
     return this.sheetHasFooter() ? DOWNLOAD_VISUAL.sheetBodyBottom :
-      Math.max(DOWNLOAD_VISUAL.sheetBodyBottom, readerInteractiveSafeBottom(this.currentMetrics()));
+      Math.max(DOWNLOAD_VISUAL.sheetBodyBottom, readerStableInteractiveSafeBottom(this.currentMetrics()));
   }
   private selectionDockMinimumContentHeight(): number {
     const scale = this.fontScale();

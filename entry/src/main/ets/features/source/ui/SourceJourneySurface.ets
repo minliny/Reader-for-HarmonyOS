@@ -21,10 +21,16 @@ import type { BookSource, SourceCheckOutcome, SourceGroupCatalogData,
 import type { SourceV9CheckOptions } from '../application/SourceOrchestrator';
 import type { SourceV9ImportedReport } from '../application/SourceV9TransferState';
 import type { SourceV9ConfirmedImport } from '../application/SourceV9TransferOwner';
-import { sourceV9GroupRows, sourceV9ParentView, sourceV9Supports, type SourceV9ListAction,
-  type SourceV9View } from '../presentation/SourceManagementV9';
+import { sourceV9BlocksOuterBackPreview, sourceV9ForegroundPane, sourceV9GroupRows, sourceV9ParentView, sourceV9Supports,
+  type SourceV9ForegroundPane, type SourceV9ListAction, type SourceV9View } from '../presentation/SourceManagementV9';
 import type { SourceToolsSelection } from '../application/SourceToolsOrchestrator';
 import { EMPTY_SOURCE_JOURNEY, SourceJourneyPresentation, type SourceJourneySnapshot } from '../presentation/SourceJourneyPresentation';
+
+interface SourceJourneyPaneOpening {
+  readonly pane: SourceV9ForegroundPane;
+  readonly generation: number;
+  readonly importSearchAction?: () => void;
+}
 
 @Component
 export struct SourceJourneySurface {
@@ -41,6 +47,7 @@ export struct SourceJourneySurface {
   showingTools: boolean = false;
   isInputAllowed: (() => boolean) | undefined = undefined;
   onBack: () => void = (): void => {};
+  onBackPreviewBlocked: (blocked: boolean) => void = (): void => {};
   captureImportSearchAction: (() => (() => void) | undefined) | undefined = undefined;
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
@@ -48,26 +55,29 @@ export struct SourceJourneySurface {
   onShowDeleteAlert: (options: ReaderNativeAlertOptions, current: () => boolean) => void =
     (_options: ReaderNativeAlertOptions, _current: () => boolean): void => {};
   @State private view: SourceJourneySnapshot = EMPTY_SOURCE_JOURNEY;
-  @State private pane: SourceV9View = 'list';
+  @State @Watch('publishBackPreviewOwnership') private pane: SourceV9View = 'list';
+  @State private paneOpening: SourceJourneyPaneOpening | undefined = undefined;
   @State private catalog: SourceGroupCatalogData | undefined = undefined;
   @State private catalogError: string = '';
   @State private projectedRows: BookSource[] = [];
   @State private detailGroupId: string | undefined = undefined;
-  @State private moveSourceIds: string[] = [];
+  @State @Watch('publishBackPreviewOwnership') private moveSourceIds: string[] = [];
   @State private moveCatalogLoading: boolean = false;
   @State private moveCatalogError: boolean = false;
-  @State private deleteSourceIds: string[] = [];
+  @State @Watch('publishBackPreviewOwnership') private deleteSourceIds: string[] = [];
   @State private listDialogGeneration: number = 0;
   @State private paneRect: ReaderRectVp | undefined = undefined;
-  @State private checkSourceIds: string[] = [];
+  @State @Watch('publishBackPreviewOwnership') private checkSourceIds: string[] = [];
   @State private checkTitle: string = '';
   @State private checkBatch: boolean = false;
   @State private batchApplied: number = 0;
   @State private ungroupedBatchIds: string[] = [];
   private catalogGeneration: number = 0;
-  private importSearchAction: (() => void) | undefined = undefined;
   private listBack: (() => boolean) | undefined = undefined;
+  private listOwnsBackPreview: boolean = false;
   private paneBack: (() => boolean) | undefined = undefined;
+  private moveBack: (() => boolean) | undefined = undefined;
+  private paneGeneration: number = 0;
   private checkBack: (() => boolean) | undefined = undefined;
   private unsubscribe: (() => void) | undefined;
   private mounted: boolean = false;
@@ -85,6 +95,7 @@ export struct SourceJourneySurface {
     });
     if (!this.showingTools) {
       this.onTemporaryBackBridge((): boolean => this.consumeBack(), this.identity);
+      this.publishBackPreviewOwnership();
       void this.refreshCatalog();
     }
   }
@@ -93,7 +104,16 @@ export struct SourceJourneySurface {
     this.mounted = false;
     this.unsubscribe?.();
     this.unsubscribe = undefined;
-    if (!this.showingTools) this.onTemporaryBackBridge(undefined, this.identity);
+    if (!this.showingTools) {
+      this.onTemporaryBackBridge(undefined, this.identity);
+      this.onBackPreviewBlocked(false);
+    }
+  }
+
+  private publishBackPreviewOwnership(): void {
+    if (!this.mounted || this.showingTools) return;
+    this.onBackPreviewBlocked(sourceV9BlocksOuterBackPreview(this.pane,
+      this.listOwnsBackPreview || this.checkSourceIds.length > 0 || this.moveSourceIds.length > 0 || this.deleteSourceIds.length > 0));
   }
 
   private async refreshCatalog(): Promise<void> {
@@ -145,11 +165,12 @@ export struct SourceJourneySurface {
       this.chooseListDialog(this.listDialogGeneration, 'cancel');
       return true;
     }
-    if (this.paneBack?.() === true) return true;
     if (this.moveSourceIds.length > 0) {
+      if (this.moveBack?.() === true) return true;
       this.moveSourceIds = [];
       return true;
     }
+    if (this.paneBack?.() === true) return true;
     const parent = sourceV9ParentView(this.pane);
     if (parent !== undefined) {
       this.openPane(parent);
@@ -160,10 +181,16 @@ export struct SourceJourneySurface {
 
   private openPane(pane: SourceV9View): void {
     if (!this.managementInputIsCurrent()) return;
-    if (pane !== 'group-detail') this.detailGroupId = undefined;
-    if (pane === 'import') {
-      this.presentation.retireImportSearchAction(this.identity);
-      this.importSearchAction = this.captureImportSearchAction?.();
+    if (pane === 'groups') this.detailGroupId = undefined;
+    const scene = sourceV9ForegroundPane(pane);
+    if (scene !== this.paneOpening?.pane) {
+      let importSearchAction: (() => void) | undefined;
+      if (scene === 'import') {
+        this.presentation.retireImportSearchAction(this.identity);
+        importSearchAction = this.captureImportSearchAction?.();
+      }
+      this.paneBack = undefined;
+      this.paneOpening = scene === undefined ? undefined : { pane: scene, generation: ++this.paneGeneration, importSearchAction };
     }
     this.pane = pane;
     if (pane === 'groups' || pane === 'import') void this.refreshCatalog();
@@ -188,6 +215,7 @@ export struct SourceJourneySurface {
     else if (action === 'move') {
       if (ids.length === 0) return;
       this.listDialogGeneration += 1;
+      this.moveBack = undefined;
       this.moveCatalogError = false;
       this.moveCatalogLoading = true;
       this.moveSourceIds = ids.slice();
@@ -251,6 +279,20 @@ export struct SourceJourneySurface {
     return this.mounted && (this.isInputAllowed?.() ?? true) && this.presentation.tools(this.identity) !== undefined;
   }
 
+  private paneInputCurrent(opening: SourceJourneyPaneOpening): boolean {
+    return this.managementInputIsCurrent() && this.checkSourceIds.length === 0 &&
+      this.paneOpening?.generation === opening.generation;
+  }
+
+  private moveInputCurrent(generation: number): boolean {
+    return this.managementInputIsCurrent() && this.pane === 'list' && this.moveSourceIds.length > 0 &&
+      generation === this.listDialogGeneration;
+  }
+
+  private groupsInputCurrent(opening: SourceJourneyPaneOpening | undefined, moveGeneration: number): boolean {
+    return opening === undefined ? this.moveInputCurrent(moveGeneration) : this.paneInputCurrent(opening);
+  }
+
   build() {
     if (this.showingTools) {
       this.toolsPage();
@@ -263,26 +305,17 @@ export struct SourceJourneySurface {
   private managementJourney() {
     Stack({ alignContent: Alignment.TopStart }) {
       this.managementPage();
-      if (this.pane === 'import' || this.pane === 'subscriptions') {
-        SourceV9TransferPage({
-          pane: this.pane === 'import' ? 'import' : 'subscriptions', embeddedWide: this.embeddedWide,
-          modalHost: this.paneRect,
-          owner: this.presentation.runtime(this.identity),
-          isInputAllowed: (): boolean => this.managementInputIsCurrent(),
-          onTemporaryBackBridge: (handler: (() => boolean) | undefined): void => { this.paneBack = handler; },
-          onBack: (): void => this.openPane('list'),
-          onReadBack: (reports: SourceV9ImportedReport[], imported?: SourceV9ConfirmedImport): void => {
-            void this.presentation.readBackTransfer(this.identity, reports, imported,
-              imported === undefined ? undefined : this.importSearchAction);
-            void this.refreshCatalog();
-          },
-        }).transition(readerSceneTransition(this.paneRect?.width ?? 0, this.reduceMotion, true));
-      }
-      if (this.pane === 'groups' || this.pane === 'group-detail') {
-        Stack() { this.groupsPage(); }.width('100%').height('100%')
+      ForEach(this.paneOpening === undefined ? [] : [this.paneOpening], (opening: SourceJourneyPaneOpening): void => {
+        Stack({ alignContent: Alignment.TopStart }) {
+          if (opening.pane === 'groups') this.groupsPage(opening, -1);
+          else this.transferPage(opening);
+        }.width('100%').height('100%')
           .transition(readerSceneTransition(this.paneRect?.width ?? 0, this.reduceMotion, true));
-      } else if (this.pane === 'list' && this.moveSourceIds.length > 0 && !this.moveCatalogDialogVisible()) {
-        this.groupsPage();
+      }, (opening: SourceJourneyPaneOpening): string => `${opening.pane}:${opening.generation}`);
+      if (this.pane === 'list' && this.moveSourceIds.length > 0 && !this.moveCatalogDialogVisible()) {
+        ForEach([this.listDialogGeneration], (generation: number): void => {
+          this.groupsPage(undefined, generation);
+        }, (generation: number): string => generation.toString());
       }
       if (this.listDialogVisible()) {
         ForEach([this.listDialogGeneration], (generation: number): void => {
@@ -360,46 +393,72 @@ export struct SourceJourneySurface {
   }
 
   @Builder
-  private groupsPage() {
+  private transferPage(opening: SourceJourneyPaneOpening) {
+    SourceV9TransferPage({
+      pane: opening.pane === 'import' ? 'import' : 'subscriptions', embeddedWide: this.embeddedWide,
+      modalHost: this.paneRect, owner: this.presentation.runtime(this.identity),
+      isInputAllowed: (): boolean => this.paneInputCurrent(opening),
+      onTemporaryBackBridge: (handler: (() => boolean) | undefined): void => {
+        if (this.paneOpening?.generation === opening.generation) this.paneBack = handler;
+      },
+      onBack: (): void => { if (this.paneInputCurrent(opening)) this.openPane('list'); },
+      onReadBack: (reports: SourceV9ImportedReport[], imported?: SourceV9ConfirmedImport): void => {
+        void this.presentation.readBackTransfer(this.identity, reports, imported,
+          imported === undefined ? undefined : opening.importSearchAction);
+        void this.refreshCatalog();
+      },
+    });
+  }
+
+  @Builder
+  private groupsPage(opening: SourceJourneyPaneOpening | undefined, moveGeneration: number) {
     SourceV9GroupsPage({
-      catalog: this.catalog, sources: this.projectedRows, detailGroupId: this.detailGroupId,
+      catalog: this.catalog, sources: this.projectedRows, detailGroupId: opening === undefined ? undefined : this.detailGroupId,
       modalHost: this.paneRect,
       catalogError: this.catalogError, onRetryCatalog: (): void => {
-        if (this.managementInputIsCurrent()) void this.refreshCatalog();
+        if (this.groupsInputCurrent(opening, moveGeneration)) void this.refreshCatalog();
       },
-      embeddedWide: this.embeddedWide, moveOnly: this.pane === 'list', moveSourceIds: this.moveSourceIds,
+      embeddedWide: this.embeddedWide, moveOnly: opening === undefined,
+      moveSourceIds: opening === undefined ? this.moveSourceIds : [],
       inputEnabled: this.inputEnabled && this.checkSourceIds.length === 0,
-      isInputAllowed: (): boolean => this.managementInputIsCurrent() && this.checkSourceIds.length === 0,
-      onBack: (): void => { this.consumeBack(); },
+      isInputAllowed: (): boolean => this.groupsInputCurrent(opening, moveGeneration),
+      onBack: (): void => { if (this.groupsInputCurrent(opening, moveGeneration)) this.consumeBack(); },
       onOpenGroup: (groupId: string): void => {
-        if (this.managementInputIsCurrent()) {
+        if (this.groupsInputCurrent(opening, moveGeneration)) {
           this.detailGroupId = groupId;
           this.openPane('group-detail');
         }
       },
       onCloseMove: (applied?: boolean): void => {
+        if (!this.moveInputCurrent(moveGeneration)) return;
         this.moveSourceIds = [];
         if (applied === true) this.batchApplied += 1;
       },
       operation: this.view.operation, statusKind: this.view.statusKind, statusMessage: this.view.statusMessage,
       onReconcile: (generation: number): void => {
-        if (this.managementInputIsCurrent()) this.presentation.management(this.identity)?.reconcile(generation, this.identity);
+        if (this.groupsInputCurrent(opening, moveGeneration)) this.presentation.management(this.identity)?.reconcile(generation, this.identity);
       },
       onContinueOriginal: (generation: number): void => {
-        if (this.managementInputIsCurrent()) this.presentation.management(this.identity)?.continueOriginal(generation, this.identity);
+        if (this.groupsInputCurrent(opening, moveGeneration)) this.presentation.management(this.identity)?.continueOriginal(generation, this.identity);
       },
       onMutate: (params: SourceGroupMutateParams): Promise<void> => this.mutateGroup(params),
       onToggle: (ids: string[], enabled: boolean): void => {
-        if (this.managementInputIsCurrent())
+        if (this.groupsInputCurrent(opening, moveGeneration))
           this.presentation.management(this.identity)?.toggleSources(ids, enabled, this.identity);
       },
-      onCheck: (ids: string[], group?: boolean): void => this.openCheck(ids, group === true ? '整组检测' : '书源检测报告', group === true),
+      onCheck: (ids: string[], group?: boolean): void => {
+        if (this.groupsInputCurrent(opening, moveGeneration))
+          this.openCheck(ids, group === true ? '整组检测' : '书源检测报告', group === true);
+      },
       onBatchUngrouped: (ids: string[]): void => {
-        if (!this.managementInputIsCurrent()) return;
+        if (!this.groupsInputCurrent(opening, moveGeneration)) return;
         this.ungroupedBatchIds = ids.slice();
         this.openPane('list');
       },
-      onTemporaryBackBridge: (handler: (() => boolean) | undefined): void => { this.paneBack = handler; },
+      onTemporaryBackBridge: (handler: (() => boolean) | undefined): void => {
+        if (opening !== undefined && this.paneOpening?.generation === opening.generation) this.paneBack = handler;
+        if (opening === undefined && moveGeneration === this.listDialogGeneration) this.moveBack = handler;
+      },
     });
   }
 
@@ -413,6 +472,10 @@ export struct SourceJourneySurface {
       isOpeningCurrent: (): boolean => this.presentation.isManagementCurrent(this.identity),
       isInputAllowed: (): boolean => this.managementInputIsCurrent() && this.listIsInteractive(),
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, _identity: string): void => { this.listBack = handler; },
+      onBackPreviewBlocked: (blocked: boolean): void => {
+        this.listOwnsBackPreview = blocked;
+        this.publishBackPreviewOwnership();
+      },
       sources: this.projectedRows, catalogGroupNames: this.catalogGroupNames(), ungroupedBatchIds: this.ungroupedBatchIds, batchApplied: this.batchApplied,
       initialViewState: this.presentation.initialManagementViewState(this.identity),
       operation: this.view.operation,

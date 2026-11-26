@@ -38,7 +38,8 @@ import { FrameCallback } from '@kit.ArkUI';
 import { ReaderWindowCoordinator, ReaderWindowChromeStyle, ReaderWindowPolicy } from '../../../app/ReaderWindowCoordinator';
 import { ReaderThemeHost } from '../../../app/ReaderThemeHost';
 import { diagnosticCodeOf } from '../../../app/LogPrivacy';
-import { readerInteractiveSafeInsets, type ReaderInsetsVp } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerInteractiveSafeInsets, readerStableInteractiveSafeBottom,
+  type ReaderInsetsVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { mangaUserError } from '../presentation/MangaUserError';
 import type { ReaderSettingsGateway } from '../../reading/application/ReaderSettingsGateway';
 import type { ReadingGatewayRuntime } from '../../reading/application/ReadingGatewayRuntime';
@@ -2423,6 +2424,7 @@ export struct MangaReadingSurface {
     // geometry's measured status band for interactive overlays, never Canvas.
     if (this.controlsPresentedForWindow() || this.chapterEnd || this.windowChromeOverlayActive) {
       insets.top = Math.max(insets.top, metrics.statusBarRect.top + metrics.statusBarRect.height);
+      insets.bottom = readerStableInteractiveSafeBottom(metrics);
     }
     return insets;
   }

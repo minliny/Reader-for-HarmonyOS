@@ -23,7 +23,7 @@ export interface ReaderReadingEntryActionPorts {
   shelfBooks: () => ShelfBook[];
   removalPending: () => boolean;
   advance: () => number;
-  show: (route: ReaderRoute) => void;
+  show: (route: ReaderRoute, motion?: 'pop') => void;
   bindReader: () => void;
   restoreReaderReturn: (context: ReaderReturnContext | undefined) => boolean;
   entryPorts: (owner: ReaderRuntimeOwner) => ReadingEntryPorts;
@@ -235,7 +235,7 @@ export class ReaderReadingEntryActions {
   private startReading(owner: ReaderRuntimeOwner, chapterIndex: number | undefined, proof?: ReaderDirectoryTargetProof,
     mangaOfflineChapterId?: string): void {
     const entry = this.ports.entry();
-    this.navigation.returns.restoreReaderBehindDetail(this.ports.restoreReaderReturn);
+    const returningBehindDetail = this.navigation.returns.restoreReaderBehindDetail(this.ports.restoreReaderReturn);
     const shelfEntry = this.shelfPreparing && this.shelfEntryNavigation === this.navigation.snapshot().generation;
     if (!shelfEntry) {
       entry.beginReaderPresentation();
@@ -247,7 +247,7 @@ export class ReaderReadingEntryActions {
     this.navigation.prepareReaderDestination('reading');
     // The reader can mount while its catalog or first chapter is still loading.
     entry.beginReading(owner, chapterIndex, proof, mangaOfflineChapterId);
-    this.ports.show('reading');
+    this.ports.show('reading', returningBehindDetail ? 'pop' : undefined);
     this.ports.bindReader();
     this.shelfPreparing = false;
     if (shelfEntry) this.startup.shelfPhase('reader-mount-request', generation);

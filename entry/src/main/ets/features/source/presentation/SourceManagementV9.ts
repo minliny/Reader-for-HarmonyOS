@@ -3,6 +3,7 @@ import { httpUrlHostname } from '../../../platform/network/HttpTransportPolicy.t
 
 
 export type SourceV9View = 'list' | 'import' | 'subscriptions' | 'groups' | 'group-detail' | 'login';
+export type SourceV9ForegroundPane = 'import' | 'subscriptions' | 'groups';
 export type SourceV9ReportTone = 'unverified' | 'partial' | 'content' | 'earlyFailure' | 'deepFailure';
 export type SourceV9ListAction =
   'subscriptions' | 'groups' | 'detect' | 'move' | 'delete' | 'export' | 'enable' | 'disable';
@@ -42,6 +43,17 @@ export interface SourceV9Projection {
 export function sourceV9ParentView(view: SourceV9View): SourceV9View | undefined {
   if (view === 'list') return undefined;
   return view === 'group-detail' ? 'groups' : 'list';
+}
+
+/** Group detail belongs to the retained group scene. Login uses the platform host. */
+export function sourceV9ForegroundPane(view: SourceV9View): SourceV9ForegroundPane | undefined {
+  if (view === 'groups' || view === 'group-detail') return 'groups';
+  if (view === 'import' || view === 'subscriptions') return view;
+  return undefined;
+}
+
+export function sourceV9BlocksOuterBackPreview(view: SourceV9View, temporaryInput: boolean): boolean {
+  return view !== 'list' || temporaryInput;
 }
 
 export function sourceV9Supports(source: BookSource): boolean {

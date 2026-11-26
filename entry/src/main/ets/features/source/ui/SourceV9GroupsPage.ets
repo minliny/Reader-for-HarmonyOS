@@ -14,7 +14,7 @@ import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
 import { readerAppColor, type ReaderAppColorRole } from '../../../ui/foundation/ReaderThemeRegistry';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
-import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { readerSceneTransition } from '../../../app/navigation/ReaderRouteMotion';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerReadableFontScale } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
@@ -597,25 +597,14 @@ export struct SourceV9GroupsPage {
       } else if (this.detailGroupId === undefined) {
         Column() {
           this.groupList();
-        }.width('100%').layoutWeight(1).transition(this.groupTransition(false));
+        }.width('100%').layoutWeight(1).transition(readerSceneTransition(12, this.reduceMotion, true, true));
       } else {
         Column() {
           this.groupDetail();
-        }.width('100%').layoutWeight(1).transition(this.groupTransition(true));
+        }.width('100%').layoutWeight(1).transition(readerSceneTransition(12, this.reduceMotion, true));
       }
     }.width('100%').height('100%').padding({ left: geometry.content.frame.left, right: geometry.content.frame.right,
       top: geometry.content.startInset, bottom: geometry.content.endInset });
-  }
-
-  private groupTransition(detail: boolean): TransitionEffect {
-    if (this.reduceMotion) {
-      return TransitionEffect.OPACITY.animation(readerMotionAnimateParam('app.navigation.push', true));
-    }
-    return TransitionEffect.asymmetric(
-      TransitionEffect.OPACITY.combine(TransitionEffect.translate({ x: detail ? 12 : -12 }))
-        .animation(readerMotionAnimateParam(detail ? 'app.navigation.push' : 'app.navigation.pop', false)),
-      TransitionEffect.OPACITY.combine(TransitionEffect.translate({ x: detail ? 12 : -12 }))
-        .animation(readerMotionAnimateParam(detail ? 'app.navigation.pop' : 'app.navigation.push', false)));
   }
 
   private feedbackHeight(): number {
