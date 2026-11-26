@@ -1,0 +1,165 @@
+import type { UIContext } from '@ohos.arkui.UIContext';
+import type { AnimatorResult } from '@ohos.animator';
+import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
+import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
+import type { ReaderSessionLaunchController, ReaderSessionLaunchTransaction } from './ReaderSessionLaunchController';
+import type { ReaderControlCapsuleVerification } from './ReaderControlCapsuleVerification';
+import { ReaderUIFrameCallback } from './ReaderUIFrameCallback';
+
+import type { ReaderSessionLaunchViewHost } from './ReaderSessionLaunchViewHost';
+
+const SESSION_LAUNCH_CALLBACK_GRACE_MS = 250;
+
+/** Drives the reader's native frame/exit work with the existing transaction
+ * controller. The page publishes the view state and owns control handoff. */
+export class ReaderSessionLaunchEffects {
+  private sessionLaunchFramePending: boolean = false;
+  private pendingSessionLaunchGeneration: number = 0;
+  private sessionLaunchExitGeneration: number = 0;
+  private sessionLaunchExitAnimator: AnimatorResult | undefined = undefined;
+  private sessionLaunchDeadlineTimer: number = -1;
+  private readonly controller: ReaderSessionLaunchController;
+  private readonly verification: ReaderControlCapsuleVerification;
+  private readonly host: ReaderSessionLaunchViewHost;
+
+  constructor(controller: ReaderSessionLaunchController, verification: ReaderControlCapsuleVerification,
+    host: ReaderSessionLaunchViewHost) {
+    this.controller = controller;
+    this.verification = verification;
+    this.host = host;
+  }
+
+  invalidateExit(): void { this.sessionLaunchExitGeneration += 1; }
+
+  retireFrame(): void { this.sessionLaunchFramePending = false; }
+
+  cancelExitAnimator(): void {
+    const animator = this.sessionLaunchExitAnimator;
+    this.sessionLaunchExitAnimator = undefined;
+    animator?.cancel();
+  }
+
+  clearDeadline(): void {
+    if (this.sessionLaunchDeadlineTimer >= 0) clearTimeout(this.sessionLaunchDeadlineTimer);
+    this.sessionLaunchDeadlineTimer = -1;
+  }
+
+  armDeadline(durationMs: number, action: () => void): void {
+    this.clearDeadline();
+    this.sessionLaunchDeadlineTimer = setTimeout(action, durationMs + SESSION_LAUNCH_CALLBACK_GRACE_MS);
+  }
+
+  scheduleFrame(generation: number): void {
+    if ((this.sessionLaunchFramePending && this.pendingSessionLaunchGeneration === generation) ||
+      !this.controller.isCurrent(generation) || this.host.read()?.sample.finished) return;
+    this.sessionLaunchFramePending = true;
+    this.pendingSessionLaunchGeneration = generation;
+    const queuedMs = this.verification.queuedFrameTime(generation);
+    this.host.context().postFrameCallback(new ReaderUIFrameCallback((frameTimeNs: number): void => {
+      const enteredMs = queuedMs === undefined ? undefined : readerMotionNowMs();
+      if (this.pendingSessionLaunchGeneration !== generation) return;
+      this.sessionLaunchFramePending = false;
+      if (!this.host.ready() || !this.controller.isCurrent(generation)) return;
+      if (!this.host.layoutCurrent()) {
+        this.host.retireForLayout(); return;
+      }
+      const previous = this.host.read();
+      const tick = readerMotionNowMs();
+      const next = this.controller.advance(generation, tick);
+      if (next === undefined) return;
+      if (previous !== undefined && this.host.observing()) {
+        this.verification.read(this.host.context(), previous, frameTimeNs, queuedMs, enteredMs, tick);
+      }
+      this.host.publish(next);
+      this.verification.update(next, tick, previous);
+      if (previous?.sample.settled !== true && next.sample.settled && this.host.observing()) {
+        const endpointQueuedMs = this.verification.queuedFrameTime(generation);
+        this.host.context().postFrameCallback(new ReaderUIFrameCallback((endpointNs: number): void => {
+          const endpointEnteredMs = endpointQueuedMs === undefined ? undefined : readerMotionNowMs();
+          const current = this.host.read();
+          if (current?.generation !== generation || current.ownership !== 'stage') return;
+          this.verification.read(this.host.context(), current, endpointNs,
+            endpointQueuedMs, endpointEnteredMs);
+          this.verification.finish(generation, 'visual-settled');
+        }));
+      }
+      if (!previous?.sample.settled && next.sample.settled) this.host.drainPageTurn();
+      if (previous?.sample.controlsPresented && !next.sample.controlsPresented) {
+        this.host.hideControl();
+        this.verification.ownerState('panel-hidden', next);
+      }
+      if (previous?.sample.controlsPresented !== next.sample.controlsPresented || next.sample.finished) {
+        this.host.updateWindow();
+      }
+      if (!next.sample.finished) this.scheduleFrame(generation);
+    }));
+  }
+
+  fadeExit(generation: number): void {
+    const exit = ++this.sessionLaunchExitGeneration;
+    const launch = this.host.read();
+    const viewportRevision = this.host.viewportRevision();
+    const ownsExit = (): boolean => exit === this.sessionLaunchExitGeneration &&
+      this.host.read()?.generation === generation;
+    const canObserveFade = (): boolean => this.host.ready() &&
+      this.host.viewportRevision() === viewportRevision && ownsExit() &&
+      this.host.read()?.ownership === 'exitPending';
+    const reducedMotion = this.host.reducedMotion();
+    const ui = this.host.ready() ? this.host.context() : undefined;
+    const observingFade = !reducedMotion && ui !== undefined && launch?.generation === generation && canObserveFade() &&
+      this.verification.beginHandoffFade(ui, launch);
+    const finish = (): void => {
+      if (!ownsExit()) return;
+      const released = this.controller.finishExit(generation);
+      if (released && ui !== undefined && observingFade && canObserveFade()) {
+        this.verification.finishHandoffFade(ui, generation);
+      }
+      this.host.finish(released ? this.controller.snapshot() : undefined);
+    };
+    if (ui === undefined) { finish(); return; }
+    const parameters = reducedMotion ? readerMotionReducedFadeParam(finish) :
+      motionAnimateParam('reader.session.capsule.exit', finish);
+    this.armDeadline(parameters.duration ?? 0, finish);
+    if (reducedMotion) this.host.finalizeFooter();
+    const applyExit = (): void => {
+      this.host.setStageOpacity(0);
+      if (!reducedMotion) this.host.finalizeFooter();
+    };
+    if (!reducedMotion && launch?.cancelReason === 'openControl' && parameters.duration !== undefined) {
+      // Render the exit curve on the still-mounted capsule while the restored
+      // controls own input. Each opacity is written to the actual stage.
+      try {
+        const animator = ui.createAnimator({
+          duration: parameters.duration, easing: 'ease-out', delay: 0, fill: 'forwards',
+          direction: 'normal', iterations: 1, begin: this.host.stageOpacity(), end: 0,
+        });
+        this.sessionLaunchExitAnimator = animator;
+        animator.onFrame = (value: number): void => {
+          if (this.sessionLaunchExitAnimator === animator && ownsExit()) this.host.setStageOpacity(value);
+        };
+        animator.onFinish = (): void => {
+          if (this.sessionLaunchExitAnimator !== animator || !ownsExit()) return;
+          this.sessionLaunchExitAnimator = undefined;
+          applyExit();
+          ui.postFrameCallback(new ReaderUIFrameCallback((): void => finish()));
+        };
+        animator.play();
+      } catch (_) {
+        this.sessionLaunchExitAnimator = undefined;
+        ui.animateTo(parameters, applyExit);
+      }
+    } else {
+      ui.animateTo(parameters, applyExit);
+    }
+    if (observingFade && canObserveFade()) {
+      const context = ui;
+      const observeFrame = (frameTimeNs: number): void => {
+        if (canObserveFade() && this.verification.readHandoffFade(context, generation, frameTimeNs)) {
+          context.postFrameCallback(new ReaderUIFrameCallback(observeFrame));
+        }
+      };
+      context.postFrameCallback(new ReaderUIFrameCallback(observeFrame));
+    }
+  }
+}

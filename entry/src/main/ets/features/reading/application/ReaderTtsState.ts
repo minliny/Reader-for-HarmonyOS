@@ -80,8 +80,38 @@ export function normalizeReaderTtsRate(rate: number): number {
   return Math.round(clamped * READER_TTS_RATE_STEP_SCALE) / READER_TTS_RATE_STEP_SCALE;
 }
 
+export function isReaderTtsSupportedPlaybackRate(rate: number): boolean {
+  return Number.isFinite(rate) && rate >= READER_TTS_RATE_MIN && rate <= READER_TTS_RATE_MAX &&
+    Math.abs(rate * READER_TTS_RATE_STEP_SCALE - Math.round(rate * READER_TTS_RATE_STEP_SCALE)) <= 1e-9;
+}
+
+export function readerTtsSupportedPlaybackRates(): number[] {
+  const rates: number[] = [];
+  const first = Math.round(READER_TTS_RATE_MIN * READER_TTS_RATE_STEP_SCALE);
+  const last = Math.round(READER_TTS_RATE_MAX * READER_TTS_RATE_STEP_SCALE);
+  for (let step = first; step <= last; step += 1) rates.push(step / READER_TTS_RATE_STEP_SCALE);
+  return rates;
+}
+
 export function readerTtsRateLabel(rate: number): string {
   return `${normalizeReaderTtsRate(rate).toFixed(2)}x`;
+}
+
+/** Core queue APIs still take a coarse rate. The durable percentage keeps
+ * the product's five-point rate precision across a restart. */
+export function readerTtsCoreRateForMultiplier(rate: number): number {
+  return Math.max(1, Math.min(10, Math.round(rate * 5)));
+}
+
+export function readerTtsRatePercentForMultiplier(rate: number): number {
+  return Math.max(50, Math.min(200, Math.round(rate * 20) * 5));
+}
+
+export function readerTtsMultiplierForConfig(coreRate: number, ratePercent?: number): number {
+  if (ratePercent !== undefined && Number.isSafeInteger(ratePercent) && ratePercent >= 50 && ratePercent <= 200) {
+    return ratePercent / 100;
+  }
+  return Math.max(READER_TTS_RATE_MIN, Math.min(READER_TTS_RATE_MAX, coreRate / 5));
 }
 
 export function setReaderTtsAvailability(state: ReaderTtsState, available: boolean): ReaderTtsState {
@@ -432,8 +462,7 @@ function assertScalarRange(start: number, end: number): void {
 }
 
 function assertSpeechRate(rate: number): void {
-  if (!Number.isFinite(rate) || rate < READER_TTS_RATE_MIN || rate > READER_TTS_RATE_MAX ||
-    Math.abs(rate * READER_TTS_RATE_STEP_SCALE - Math.round(rate * READER_TTS_RATE_STEP_SCALE)) > 1e-9) {
+  if (!isReaderTtsSupportedPlaybackRate(rate)) {
     throw new Error('Reader TTS rate must be between 0.5 and 2.0');
   }
 }

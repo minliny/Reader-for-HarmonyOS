@@ -63,7 +63,6 @@ export interface ReaderLibraryJourneyPorts {
   reading: () => ReadingEntryPresentation;
   readingActions: () => ReaderReadingEntryActions;
   shelfBooks: () => ShelfBook[];
-  loadLocalBook: (bookId: string) => Promise<ShelfBook | undefined>;
   sourceName: (sourceId: string) => string;
   failure: (title: string, message: string) => void;
   feedback: (message: string, current: () => boolean) => void;
@@ -306,13 +305,14 @@ export class ReaderLibraryJourney {
     if (!this.ports.scope().inputAllowed) return;
     const search = this.ports.search();
     this.ports.search().selectResult(book, variants, this.ports.shelfBooks(), {
-      beginLocalRead: (): (() => boolean) => {
+      beginShelfRead: (): (() => boolean) => {
         const owner = this.ports.scope().owner;
         const generation = this.ports.advance();
         const mounting = this.ports.scope().mounting, host = this.ports.search().host;
         return (): boolean => this.ports.scope().inputAllowed && this.isCurrentSearch(generation, owner, mounting, host);
       },
-      loadLocal: this.ports.loadLocalBook,
+      loadShelfBook: (sourceId: string, bookId: string): Promise<ShelfBook | undefined> =>
+        this.ports.shelfHost().loadShelfBook(sourceId, bookId),
       refreshMembership: this.ports.refreshMembership,
       failure: this.ports.failure,
       sourceName: this.ports.sourceName,

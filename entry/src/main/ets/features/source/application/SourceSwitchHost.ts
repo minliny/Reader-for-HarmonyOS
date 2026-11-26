@@ -14,7 +14,7 @@ import { remoteReadingFailureKindOf } from '../../reading/application/RemoteCont
 import type { RemoteReadingIdentity } from '../../reading/application/RemoteReadingContract';
 import type { BookAcquisitionChange } from '../../reading/application/BookAcquisitionCoordinator';
 import type { SourceSwitchPanelState } from '../presentation/SourceSwitchPresentationState';
-import { buildSourceSwitchCommitParams, sourceSwitchCandidateKey, sourceSwitchIsAlternative, SourceSwitchGateway,
+import { buildSourceSwitchCommitParams, retainSourceSwitchSearchTiming, sourceSwitchCandidateKey, sourceSwitchIsAlternative, SourceSwitchGateway,
   type PendingSourceSwitch, type SourceSwitchCandidate, type SourceSwitchCommitOutcome, type SourceSwitchSweepProgress,
   type SourceSwitchProbeQuery, type SourceSwitchDiscoveryOutcome } from './SourceSwitchGateway';
 import type { SourceSwitchTransactionProjection } from './SourceSwitchGateway';
@@ -52,7 +52,7 @@ export interface SourceSwitchSnapshot {
   write?: SourceSwitchWriteFact;
 }
 export type SourceSwitchEffect =
-  | { kind: 'previewReady'; seed: RemoteReadingBookSeed; session: RemoteReadingSession; candidate: SourceSwitchCandidate }
+  | { kind: 'previewReady'; seed: RemoteReadingBookSeed; session: RemoteReadingSession; candidate: SourceSwitchCandidate; shelfSnapshot: ShelfBook | undefined }
   | { kind: 'targetReady'; book: ShelfBook; session: RemoteReadingSession; chapterIndex: number }
   | { kind: 'restoredForNextChoice'; book: ShelfBook }
   | { kind: 'rollbackReady'; book: ShelfBook }
@@ -157,6 +157,14 @@ export class SourceSwitchHost {
     await new MangaAdmissionGateway(this.runtime).verify(session, current);
     if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
     return session;
+  }
+
+  async readPreviewShelf(session: RemoteReadingSession, current: () => boolean): Promise<ShelfBook | undefined> {
+    const book = await this.shelf.loadShelfBook(session.identity.sourceId, session.identity.bookId, current);
+    if (book !== undefined && book.contentKind !== (session.contentKind ?? 'text')) {
+      throw new Error('书籍类型与书架记录不一致，请重新打开书籍。');
+    }
+    return book;
   }
 
   /** One finite feature owner survives Index remounts for this exact Runtime.
@@ -364,7 +372,9 @@ export class SourceSwitchHost {
         if (!admitted()) return;
         if (!this.sameIdentity(session.identity, seed)) throw new Error('换源返回了其他书籍的阅读会话');
         this.gateway.assertAcquiredBook(candidate, session, context.query);
-        this.hide(); this.deliver({ kind: 'previewReady', seed, session, candidate });
+        const shelfSnapshot = await this.readPreviewShelf(session, admitted);
+        if (!admitted()) return;
+        this.hide(); this.deliver({ kind: 'previewReady', seed, session, candidate, shelfSnapshot });
       } catch (error) { if (admitted()) this.acquisitionFailed(candidate, this.publicFailure(error)); }
       finally {
         if (this.previewPreparation === preparation) {
@@ -666,12 +676,16 @@ export class SourceSwitchHost {
     let context: SourceSwitchContext = initialContext;
     const generation = ++this.generation, current = (): boolean => this.admitted(generation) && this.context === context;
     this.stopDiscovery();
+    this.gateway.retainPreviousSearchTimings();
     const immediateKnown = (context.readKnownCandidates?.() ?? context.knownCandidates)
       .filter((candidate): boolean => this.gateway.admitsCandidate(candidate, context.query));
     if (!force && immediateKnown.length > 0) this.snapshot = { ...this.snapshot,
       state: { kind: 'candidates', candidates: immediateKnown, refreshing: false } };
-    if (force && this.snapshot.state.kind === 'candidates') this.snapshot = { ...this.snapshot,
-      state: { ...this.snapshot.state, refreshing: true } };
+    if (force && this.snapshot.state.kind === 'candidates') {
+      const retained = this.snapshot.state.candidates.map(retainSourceSwitchSearchTiming);
+      this.snapshot = { ...this.snapshot, state: { ...this.snapshot.state, candidates: retained, refreshing: true,
+        allowCachedLatency: false } };
+    }
     this.publish();
     const knownCandidates = (): SourceSwitchCandidate[] => context.readKnownCandidates?.() ?? context.knownCandidates;
     let initialKnown = knownCandidates().filter((candidate): boolean => this.gateway.admitsCandidate(candidate, context.query));
@@ -682,7 +696,7 @@ export class SourceSwitchHost {
     if (force && previous.length > 0) this.snapshot = { ...this.snapshot,
       state: { kind: 'candidates', candidates: previous, refreshing: true } };
     this.publish();
-    let projecting = true, again = false, reset = false, identityReady = false;
+    let projecting = true, again = false, reset = false, identityReady = false, allowCachedLatency = false;
     const dirty = new Map<string, RemoteReadingIdentity>();
     const refreshProjection = (change: BookAcquisitionChange): void => {
       if (!current()) return;
@@ -700,7 +714,7 @@ export class SourceSwitchHost {
         if (candidates.length > 0) {
           const state = this.snapshot.state;
           const refreshing = state.kind === 'discovering' || state.kind === 'candidates' && state.refreshing === true;
-          this.snapshot = { ...this.snapshot, state: { kind: 'candidates', candidates, refreshing,
+          this.snapshot = { ...this.snapshot, state: { kind: 'candidates', candidates, refreshing, allowCachedLatency,
             sweep: state.kind === 'discovering' || state.kind === 'candidates' ? state.sweep : undefined } };
         }
         else if (this.snapshot.state.kind !== 'candidates' || this.snapshot.state.refreshing !== true) {
@@ -740,14 +754,15 @@ export class SourceSwitchHost {
       // A cached current binding is only context, so continue searching for
       // alternatives. Once an alternate is cached, its relation projection is
       // already selectable and remains the terminal first paint.
-      const outcome: SourceSwitchDiscoveryOutcome = cached.some(sourceSwitchIsAlternative) ?
+      allowCachedLatency = cached.some(sourceSwitchIsAlternative);
+      const outcome: SourceSwitchDiscoveryOutcome = allowCachedLatency ?
         { kind: 'sources' as const, candidates: cached } :
         await this.gateway.refreshCandidates(context.query, current,
           publishProgress, force ? previous : (cached.length > 0 ? cached : initialKnown), force);
       if (!current()) return;
       this.snapshot = { ...this.snapshot, state: outcome.kind === 'noSources' || outcome.candidates.length === 0
         ? (outcome.incompleteSourceCount ? { kind: 'discoveryError', message: '部分书源未能确认后续结果，请重试或调整书源。' } : { kind: 'empty' }) :
-          { kind: 'candidates', candidates: outcome.candidates, refreshing: false,
+          { kind: 'candidates', candidates: outcome.candidates, refreshing: false, allowCachedLatency,
             refreshError: outcome.incompleteSourceCount ? '部分书源未能确认后续结果，请重试或调整书源。' : undefined } };
       this.publish();
     } catch (error) {

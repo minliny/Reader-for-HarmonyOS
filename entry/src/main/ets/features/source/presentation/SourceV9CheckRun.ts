@@ -16,13 +16,26 @@ export function recordSourceV9Check(rows: SourceV9CheckRow[], result: SourceV9Ch
   return next;
 }
 
+/** Batch checks are network bound; a small worker pool keeps dead hosts from serialising the batch. */
+export const SOURCE_V9_BATCH_CHECK_CONCURRENCY = 8;
+
 export async function runSourceV9Checks(sources: BookSource[], current: () => boolean,
   check: (source: BookSource) => Promise<SourceV9CheckRow>,
-  publish: (result: SourceV9CheckRow) => void): Promise<void> {
-  for (const source of sources) {
-    if (!current()) return;
-    const result = await check(source);
-    if (!current()) return;
-    publish(result);
-  }
+  publish: (result: SourceV9CheckRow) => void, concurrency: number = 1): Promise<void> {
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < sources.length) {
+      if (!current()) return;
+      const source = sources[next];
+      next += 1;
+      const result = await check(source);
+      if (!current()) return;
+      publish(result);
+    }
+  };
+  const limit = Number.isFinite(concurrency) ? Math.max(1, Math.floor(concurrency)) : 1;
+  const width = Math.min(limit, sources.length);
+  const workers: Promise<void>[] = [];
+  for (let index = 0; index < width; index += 1) workers.push(worker());
+  await Promise.all(workers);
 }

@@ -23,16 +23,20 @@ import {
 import {
   TOK_BORDER_W,
 } from '../foundation/ReaderTokens';
-import { readerSearchControlHeight, readerSearchControlVisualHeight, SEARCH_CONTROL_CLEAR_END_INSET,
-  SEARCH_CONTROL_CLEAR_ICON_SIZE, SEARCH_CONTROL_CLEAR_SLOT, SEARCH_CONTROL_MIN_TARGET } from '../foundation/ReaderSearchControlGeometry';
+import { readerCompactSearchHeight, readerSearchControlHeight, readerSearchControlVisualHeight,
+  SEARCH_BOOK_PANEL_ICON_SIZE, SEARCH_CAPSULE_HEIGHT, SEARCH_CAPSULE_HORIZONTAL_INSET, SEARCH_CAPSULE_ICON_GAP,
+  SEARCH_CONTROL_CLEAR_ICON_SIZE, SEARCH_CONTROL_CLEAR_SLOT,
+  SEARCH_CONTROL_COMPACT_CLEAR_END_INSET, SEARCH_CONTROL_COMPACT_CLEAR_SLOT,
+  SEARCH_CONTROL_MIN_TARGET } from '../foundation/ReaderSearchControlGeometry';
 import { SOURCE_GROUP_SELECT_ARROW_TARGET, SOURCE_GROUP_SELECT_TEXT_INSET } from '../foundation/ReaderSelectGeometry';
 
 export type ReaderSearchFieldVariant =
   | 'bookPanel'
+  | 'pageForm'
   | 'sourceManagement'
   | 'sourceGroup'
   | 'readerDirectory'
-  | 'rssPassive';
+  | 'rss';
 
 export type ReaderSearchFieldMode = 'submit' | 'live' | 'passive';
 
@@ -51,8 +55,8 @@ export interface ReaderSearchEditorObservation {
  *
  * It owns icon/input/placeholder/caret/clear/IME semantics. Back, submit,
  * sorting and paging controls stay with their page because those are workflow
- * actions, not properties of an input field. A typed variant selects one
- * audited visual contract; callers cannot compose contradictory boolean flags.
+ * actions, not properties of an input field. The readerDirectory variant also
+ * owns restoration of the reader's native editor across panel transitions.
  */
 class ReaderSearchInputTarget implements AttributeModifier<TextInputAttribute> {
   private variant: ReaderSearchFieldVariant;
@@ -75,16 +79,9 @@ class ReaderSearchInputTarget implements AttributeModifier<TextInputAttribute> {
     this.geometryChanged = geometryChanged;
   }
   applyNormalAttribute(instance: TextInputAttribute): void {
-    if (this.variant === 'sourceManagement' || this.variant === 'sourceGroup')
-      instance.responseRegion(readerActionTouchRegion('100%', this.height));
-    if (this.variant === 'readerDirectory') {
-      const targetHeight = Math.max(44, this.height);
-      instance.responseRegion({ x: 0, y: (this.height - targetHeight) / 2, width: '100%', height: targetHeight });
-    }
-    if (this.variant === 'sourceManagement' || this.variant === 'sourceGroup' || this.variant === 'readerDirectory') {
-      instance.minFontScale(1);
-      instance.maxFontScale(this.fontScale);
-    }
+    instance.responseRegion(readerActionTouchRegion('100%', this.height));
+    instance.minFontScale(1);
+    instance.maxFontScale(this.fontScale);
     // The system picker can return focus to the source query without a user tap.
     // Only an explicit editing action may show the keyboard for this field.
     if (this.variant === 'sourceManagement' || this.variant === 'sourceGroup') instance.enableKeyboardOnFocus(false);
@@ -121,15 +118,14 @@ export struct ReaderSearchField {
   @Prop expandedLayout: boolean = false;
   @Prop clearable: boolean = false;
   @Prop clearAccessibilityLabel: string = '';
-  @Prop catalogChrome: boolean = false;
+  @Prop readingPalette: boolean = false;
+  @Prop colorScheme: string = '';
   @Prop bookPanelClearId: string = '';
   @Prop bookKeyboardOnFocus: boolean = true;
   @Prop submitEnabled: boolean = true;
   @Prop focusOnAppear: boolean = false;
   @Prop naturalFieldHeightVp: number = 0;
   @Prop naturalInputHeightVp: number = 0;
-  /** Border-box width supplied by the passive RSS field's existing frame owner. */
-  @Prop fieldWidthVp: number = 0;
   @Prop @Watch('onDirectoryIdentityChanged') directoryFocusId: string = '';
   editingFocusId: string = '';
   @Prop @Watch('onDirectoryFocusRequest') directoryFocusAllowed: boolean = false;
@@ -156,6 +152,7 @@ export struct ReaderSearchField {
   editingHost: ReaderEditingVisibility | undefined = undefined;
   editingCurrent: (() => boolean) | undefined = undefined;
   onBookClear: (() => void) | undefined = undefined;
+  onClear: (() => void) | undefined = undefined;
   bookPanelFrameId: string = '';
   observeBookEditor: ((event: ReaderSearchEditorEvent, facts: ReaderSearchEditorObservation) => void) | undefined;
   private observedBookLength: number = -1;
@@ -541,9 +538,8 @@ export struct ReaderSearchField {
 
   @Builder
   private bookEditorLane() {
-    // The shared library bar already owns the leading search/back action.
-    // Its bookPanel input starts at the field inset, without an icon slot.
-    Row({ space: 0 }) {
+    Row() {
+      this.magnifier();
       TextInput({ placeholder: this.placeholder, text: this.text, controller: this.bookInputController })
         .id('reader-book-search-input')
         // This gates programmatic focus. Native TextInput taps still open the keyboard.
@@ -556,6 +552,7 @@ export struct ReaderSearchField {
         })
         .layoutWeight(1)
         .height(this.inputHeight())
+        .responseRegion(readerActionTouchRegion('100%', this.inputHeight()))
         .padding(0)
         // The outer field owns its rounded outline. Native TextInput clips
         // its caret to its own default radius even with a clear background;
@@ -570,10 +567,10 @@ export struct ReaderSearchField {
         .minFontScale(Math.min(1, this.bookFontScale()))
         .maxFontScale(Math.max(1, this.bookFontScale()))
         .maxLines(1)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+        .fontColor(this.inputColor())
         .nativeInputBackground()
-        .caretColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .placeholderColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        .caretColor(this.caretColor())
+        .placeholderColor(this.placeholderColor())
         .placeholderFont({
           size: this.bookTextStyle().fontSizeFp,
           family: this.bookTextStyle().fontFamily,
@@ -601,94 +598,91 @@ export struct ReaderSearchField {
     .width('100%')
     .height(this.fieldHeight())
     .padding({ left: this.horizontalPadding(), right: this.clearable && this.text.length > 0 ?
-      SEARCH_CONTROL_CLEAR_END_INSET : this.horizontalPadding() })
+      SEARCH_CONTROL_COMPACT_CLEAR_END_INSET : this.horizontalPadding() })
     .alignItems(VerticalAlign.Center);
   }
 
   @Builder
   private autoLineHeightField(inputFocusId: string = this.directoryFocusId ?? '') {
-    Stack({ alignContent: Alignment.Center }) {
-      if (this.variant === 'readerDirectory') {
-        Row().width('100%').height(this.fieldHeight())
-          .nativeFieldBackground()
-          .border({ width: this.fieldBorderWidth(), color: this.fieldBorderColor() })
-          .borderRadius(this.cornerRadius())
-          .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+    Row() {
+      if (this.variant !== 'sourceGroup') {
+        this.magnifier();
       }
-      Row({ space: this.iconGap() }) {
-        if (this.variant !== 'sourceGroup') {
-          Image(this.searchIcon())
-            .width(this.iconSize())
-            .height(this.iconSize());
-        }
-        TextInput({ placeholder: this.placeholder, text: this.text, controller: this.directoryInputController })
-          .onClick((): void => {
-            if (this.variant === 'sourceManagement' || this.variant === 'sourceGroup') this.requestSourceManagementEditing();
-            else if (this.variant === 'readerDirectory') this.requestDirectoryEditing(inputFocusId);
-          })
-          .onKeyPreIme((event: KeyEvent): boolean => this.onDirectoryInputKey(inputFocusId, event))
-          .layoutWeight(1)
-          .height(this.inputHeight())
-          .attributeModifier(new ReaderSearchInputTarget(this.variant, this.inputHeight(),
-            this.sourceV9Chrome ? Math.min(this.directoryFontScale(),
-              this.inputHeight() / (TYPE_SEARCH_SOURCE_INPUT.lineHeightFp as number)) : this.directoryFontScale(),
-            this.directoryFocusAllowed ? inputFocusId : '',
-            (focused: boolean): void => this.onDirectoryInputFocus(inputFocusId, focused),
-            (area: Area): void => this.onDirectoryInputArea(inputFocusId, area), this.directoryKeyboardOnFocus,
-            (): void => this.editingTarget.changed()))
-          .id(this.editingNativeId())
-          .onEditChange((editing: boolean): void => this.editingTarget.edit(editing))
-          .onTextSelectionChange((): void => this.editingTarget.changed())
-          .onContentScroll((): void => this.editingTarget.changed())
-          .padding(0)
-          .borderRadius(0)
-          .fontFamily(this.textStyle().fontFamily)
-          .fontWeight(this.textStyle().fontWeight)
-          .fontSize(this.textStyle().fontSizeFp)
-          .fontFeature('"tnum" 1')
-          .lineHeight(this.textStyle().lineHeightFp as number)
-          .halfLeading(true)
-          .maxLines(1)
-          .fontColor(this.inputColor())
-          .nativeInputBackground()
-          .caretColor(this.caretColor())
-          .placeholderColor(this.placeholderColor())
-          .placeholderFont({
-            size: this.textStyle().fontSizeFp,
-            family: this.textStyle().fontFamily,
-          })
-          .accessibilityText(this.resolvedAccessibilityLabel())
-          .onChange((value: string): void => this.changeText(value))
-          .enterKeyType(EnterKeyType.Search)
-          .onSubmit((_enterKey: EnterKeyType): void => this.submit());
-        if (this.autoClearButtonVisible()) {
-          this.clearButton();
-        }
+      TextInput({ placeholder: this.placeholder, text: this.text, controller: this.directoryInputController })
+        .onClick((): void => {
+          if (this.variant === 'sourceManagement' || this.variant === 'sourceGroup') this.requestSourceManagementEditing();
+          else if (this.variant === 'readerDirectory') this.requestDirectoryEditing(inputFocusId);
+        })
+        .onKeyPreIme((event: KeyEvent): boolean => this.onDirectoryInputKey(inputFocusId, event))
+        .layoutWeight(1)
+        .height(this.inputHeight())
+        .attributeModifier(new ReaderSearchInputTarget(this.variant, this.inputHeight(), this.inputFontScale(),
+          this.directoryFocusAllowed ? inputFocusId : '',
+          (focused: boolean): void => this.onDirectoryInputFocus(inputFocusId, focused),
+          (area: Area): void => this.onDirectoryInputArea(inputFocusId, area), this.directoryKeyboardOnFocus,
+          (): void => this.editingTarget.changed()))
+        .id(this.editingNativeId())
+        .onEditChange((editing: boolean): void => this.editingTarget.edit(editing))
+        .onTextSelectionChange((): void => this.editingTarget.changed())
+        .onContentScroll((): void => this.editingTarget.changed())
+        .padding(0)
+        .borderRadius(0)
+        .fontFamily(this.textStyle().fontFamily)
+        .fontWeight(this.textStyle().fontWeight)
+        .fontSize(this.textStyle().fontSizeFp)
+        .fontFeature('"tnum" 1')
+        .lineHeight(this.textStyle().lineHeightFp as number)
+        .halfLeading(true)
+        .maxLines(1)
+        .fontColor(this.inputColor())
+        .nativeInputBackground()
+        .caretColor(this.caretColor())
+        .placeholderColor(this.placeholderColor())
+        .placeholderFont({
+          size: this.textStyle().fontSizeFp,
+          family: this.textStyle().fontFamily,
+        })
+        .accessibilityText(this.resolvedAccessibilityLabel())
+        .onChange((value: string): void => this.changeText(value))
+        .enterKeyType(EnterKeyType.Search)
+        .onSubmit((_enterKey: EnterKeyType): void => this.submit());
+      if (this.autoClearButtonVisible()) {
+        this.clearButton();
       }
-      .width('100%')
-      .height(this.variant === 'readerDirectory' ? Math.max(44, this.fieldHeight()) : this.fieldHeight())
-      .padding({ left: this.horizontalPadding(), right: this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_ARROW_TARGET :
-        (this.autoClearButtonVisible() ? SEARCH_CONTROL_CLEAR_END_INSET : this.horizontalPadding()) })
-      .backgroundColor(this.variant === 'readerDirectory' ? Color.Transparent : this.fieldBackgroundColor())
-      .border({ width: this.catalogChrome ? 0 : this.fieldBorderWidth(), color: this.fieldBorderColor() })
-      .borderRadius(this.cornerRadius())
-      .alignItems(VerticalAlign.Center);
-    }.width('100%').height(this.variant === 'readerDirectory' ? Math.max(44, this.fieldHeight()) : this.fieldHeight());
+    }
+    .width('100%')
+    .height(this.fieldHeight())
+    .padding({ left: this.horizontalPadding(), right: this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_ARROW_TARGET :
+      (this.autoClearButtonVisible() ? SEARCH_CONTROL_COMPACT_CLEAR_END_INSET : this.horizontalPadding()) })
+    .nativeFieldBackground()
+    .border({ width: this.fieldBorderWidth(), color: this.fieldBorderColor() })
+    .borderRadius(this.cornerRadius())
+    .clip(false)
+    .alignItems(VerticalAlign.Center);
+  }
+
+  @Builder
+  private magnifier() {
+    Image(this.searchIcon()).width(this.iconSize()).height(this.iconSize())
+      .margin({ right: this.iconGap() })
+      .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
   }
 
   @Builder
   private clearButton() {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
+      Image(this.effectiveScheme() === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
         .width(SEARCH_CONTROL_CLEAR_ICON_SIZE).height(SEARCH_CONTROL_CLEAR_ICON_SIZE)
         .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
-    }.width(SEARCH_CONTROL_CLEAR_SLOT).height(this.sourceV9Chrome ? 40 : SEARCH_CONTROL_MIN_TARGET).padding({ left: 10 })
-      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme,
-        SEARCH_CONTROL_CLEAR_SLOT / 2, SEARCH_CONTROL_CLEAR_SLOT / 2, this.editingCurrent?.() !== false))
+    }.width(this.clearSlotWidth()).height(this.clearSlotWidth()).padding(0)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.effectiveScheme(),
+        this.clearSlotWidth() / 2, this.clearSlotWidth() / 2, this.editingCurrent?.() !== false))
       .responseRegion({
         // The adjacent group chevron keeps its whole 44vp target.
-        x: this.variant === 'sourceGroup' ? SEARCH_CONTROL_CLEAR_SLOT - SEARCH_CONTROL_MIN_TARGET : -SEARCH_CONTROL_CLEAR_END_INSET,
-        y: this.sourceV9Chrome ? -2 : 0, width: SEARCH_CONTROL_MIN_TARGET, height: SEARCH_CONTROL_MIN_TARGET,
+        x: this.clearSlotWidth() - SEARCH_CONTROL_MIN_TARGET +
+          (this.variant === 'sourceGroup' ? 0 : SEARCH_CONTROL_COMPACT_CLEAR_END_INSET),
+        y: (this.clearSlotWidth() - SEARCH_CONTROL_MIN_TARGET) / 2,
+        width: SEARCH_CONTROL_MIN_TARGET, height: SEARCH_CONTROL_MIN_TARGET,
       })
       .id(this.isBookField() ? this.bookPanelClearId : '')
       .focusOnTouch(false)
@@ -696,23 +690,25 @@ export struct ReaderSearchField {
       .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText(this.resolvedClearAccessibilityLabel())
       .onClick((): void => {
         if (this.isBookField()) this.clearBookInput();
-        else if (this.editingCurrent?.() !== false) this.changeText('');
+        else if (this.editingCurrent?.() !== false) {
+          if (this.onClear !== undefined) this.onClear();
+          else this.changeText('');
+        }
       });
   }
 
   @Builder
   private passiveField() {
-    Row({ space: this.iconGap() }) {
-      Image(this.searchIcon())
-        .width(this.iconSize())
-        .height(this.iconSize());
+    Row() {
+      this.magnifier();
       Text(this.placeholder)
         .layoutWeight(1)
         .fontFamily(TYPE_SEARCH_RSS_HINT.fontFamily)
         .fontWeight(TYPE_SEARCH_RSS_HINT.fontWeight)
         .fontSize(TYPE_SEARCH_RSS_HINT.fontSizeFp)
         .lineHeight(TYPE_SEARCH_RSS_HINT.lineHeightFp ?? Math.round(TYPE_SEARCH_RSS_HINT.fontSizeFp * 1.5)).halfLeading(true)
-        .fontColor(readerAppColor('app.search.passiveText', this.appThemeScheme))
+        .minFontScale(1).maxFontScale(this.directoryFontScale())
+        .fontColor(this.placeholderColor())
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
@@ -734,9 +730,9 @@ export struct ReaderSearchField {
   }
 
   private textStyle(): ReaderTextStyle {
-    if (this.variant === 'rssPassive') return TYPE_SEARCH_RSS_HINT;
+    if (this.variant === 'rss') return TYPE_SEARCH_RSS_HINT;
     if (this.variant === 'sourceGroup') return TYPE_SEARCH_SOURCE_GROUP_INPUT;
-    if (this.variant === 'sourceManagement') {
+    if (this.variant === 'sourceManagement' || this.variant === 'pageForm') {
       return TYPE_SEARCH_SOURCE_INPUT;
     }
     if (this.variant === 'readerDirectory') {
@@ -746,10 +742,11 @@ export struct ReaderSearchField {
   }
 
   private searchIcon(): Resource {
-    if (this.variant === 'readerDirectory') {
-      return (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_input_search_theme_night') : $r('app.media.reader_directory_input_search'));
+    if (this.readingPalette) {
+      return this.effectiveScheme() === 'night' ?
+        $r('app.media.reader_directory_input_search_theme_night') : $r('app.media.reader_directory_input_search');
     }
-    return (this.appThemeScheme === 'night' ? $r('app.media.search_mag_theme_night') : $r('app.media.search_mag'));
+    return this.effectiveScheme() === 'night' ? $r('app.media.search_mag_theme_night') : $r('app.media.search_mag');
   }
 
   private isBookField(): boolean {
@@ -758,107 +755,93 @@ export struct ReaderSearchField {
 
   private fieldHeight(): number {
     if (this.variant === 'bookPanel') return readerSearchControlHeight(this.bookFontScale());
-    if (this.variant === 'rssPassive') {
-      return readerScaledControlHeight(44, TYPE_SEARCH_RSS_HINT.lineHeightFp ?? TYPE_SEARCH_RSS_HINT.fontSizeFp * 1.5,
-        this.directoryFontScale());
-    }
     if (this.variant === 'sourceGroup') return this.sourceV9Chrome ?
       Math.max(40, this.naturalFieldHeightVp) : Math.max(SEARCH_CONTROL_MIN_TARGET, this.naturalFieldHeightVp);
-    if (this.variant === 'sourceManagement') {
-      if (this.sourceV9Chrome) return 40;
+    if (this.variant === 'sourceManagement' && !this.sourceV9Chrome) {
       return readerScaledControlHeight(44, TYPE_SEARCH_SOURCE_INPUT.lineHeightFp ??
         TYPE_SEARCH_SOURCE_INPUT.fontSizeFp * 1.5, this.directoryFontScale());
     }
-    if (this.variant === 'readerDirectory') {
-      return Math.max(readerScaledControlHeight(32, 24, this.directoryFontScale()),
-        Number.isFinite(this.naturalFieldHeightVp) ? this.naturalFieldHeightVp : 0);
-    }
-    return 44;
+    return Math.max(readerCompactSearchHeight(this.formChrome() ? 40 : SEARCH_CAPSULE_HEIGHT,
+      this.inputLineHeight(), this.directoryFontScale()),
+      Number.isFinite(this.naturalFieldHeightVp) ? this.naturalFieldHeightVp : 0);
   }
 
   private inputHeight(): number {
-    if (this.isBookField()) {
-      return this.fieldHeight();
-    }
-    if (this.variant === 'sourceManagement') {
-      return Math.max(this.sourceV9Chrome ? 0 : 44, this.fieldHeight() - this.fieldBorderWidth() * 2);
-    }
+    if (this.isBookField()) return readerSearchControlVisualHeight(this.bookFontScale());
+    if (this.variant === 'sourceGroup') return this.fieldHeight();
     if (this.variant === 'readerDirectory') {
       return Number.isFinite(this.naturalInputHeightVp) && this.naturalInputHeightVp > 0 ?
         this.naturalInputHeightVp : this.fieldHeight() - this.fieldBorderWidth() * 2;
     }
-    return this.fieldHeight();
+    return this.fieldHeight() - this.fieldBorderWidth() * 2;
+  }
+
+  private inputLineHeight(): number {
+    const style = this.textStyle();
+    return style.lineHeightFp ?? style.fontSizeFp * 1.5;
+  }
+
+  private inputFontScale(): number {
+    return Math.max(1, Math.min(this.directoryFontScale(), this.inputHeight() / this.inputLineHeight()));
+  }
+
+  private clearSlotWidth(): number {
+    return this.variant === 'sourceGroup' ? SEARCH_CONTROL_CLEAR_SLOT : SEARCH_CONTROL_COMPACT_CLEAR_SLOT;
+  }
+
+  private formChrome(): boolean {
+    return this.sourceV9Chrome || this.variant === 'pageForm';
   }
 
   private iconSize(): number {
-    return 16;
+    if (this.variant === 'bookPanel') return SEARCH_BOOK_PANEL_ICON_SIZE;
+    if (this.readingPalette) return 14;
+    return this.formChrome() || this.variant === 'sourceManagement' ? 16 : 15;
   }
 
   private iconGap(): number {
-    if (this.variant === 'bookPanel') return 7;
-    if (this.variant === 'readerDirectory') {
-      return 5;
-    }
     if (this.variant === 'sourceGroup') return 0;
-    if (this.variant === 'rssPassive') {
-      return 10;
-    }
-    return 8;
+    if (this.readingPalette) return 6;
+    return this.formChrome() || this.variant === 'sourceManagement' ? 8 : SEARCH_CAPSULE_ICON_GAP;
   }
 
   private horizontalPadding(): number {
     if (this.variant === 'sourceGroup') return SOURCE_GROUP_SELECT_TEXT_INSET;
-    if (this.variant === 'bookPanel') return 14;
-    if (this.variant === 'readerDirectory') {
-      return 9;
-    }
-    if (this.variant === 'rssPassive') {
-      return 15;
-    }
-    return 12;
+    return this.readingPalette ? 10 : SEARCH_CAPSULE_HORIZONTAL_INSET;
   }
 
   private fieldBackgroundColor(): string {
-    return readerAppColor(this.sourceV9Chrome ? 'app.sourceUi.field' : 'TOK_SURFACE_FIELD', this.appThemeScheme);
+    return readerAppColor(this.readingPalette ? 'app.surface.readerInput' :
+      this.formChrome() ? 'app.sourceUi.field' : 'TOK_SURFACE_FIELD', this.effectiveScheme());
   }
 
   private fieldBorderWidth(): number {
-    if (this.catalogChrome) return 1;
-    return this.variant === 'sourceManagement' || this.variant === 'rssPassive' || this.isBookField() ? TOK_BORDER_W : 0;
+    return this.variant === 'sourceGroup' ? 0 : TOK_BORDER_W;
   }
 
   private fieldBorderColor(): string {
-    if (this.sourceV9Chrome) return readerAppColor('TOK_LINE_STRONG', this.appThemeScheme);
-    if (this.catalogChrome) return readerAppColor('TOK_LINE', this.appThemeScheme);
-    return this.variant === 'sourceManagement' ? readerAppColor('app.border.searchField', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme);
+    return readerAppColor(this.readingPalette ? 'app.border.readerConfig' :
+      this.formChrome() ? 'TOK_LINE_STRONG' : 'TOK_LINE', this.effectiveScheme());
   }
 
   private cornerRadius(): number {
-    if (this.sourceV9Chrome) return 10;
-    if (this.variant === 'rssPassive') return Math.min(Math.max(0, this.fieldWidthVp), this.fieldHeight()) / 2;
-    return this.fieldHeight() / 2;
+    return this.formChrome() ? 10 : this.fieldHeight() / 2;
+  }
+
+  private effectiveScheme(): string {
+    return this.colorScheme.length > 0 ? this.colorScheme : this.appThemeScheme;
   }
 
   private inputColor(): string {
-    return this.variant === 'sourceManagement' || this.variant === 'sourceGroup' ?
-      readerAppColor('TOK_INK', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme);
+    return readerAppColor(this.readingPalette ? 'TOK_READ_INK' : 'TOK_INK', this.effectiveScheme());
   }
 
   private caretColor(): string {
-    if (this.variant === 'sourceManagement' || this.variant === 'sourceGroup') {
-      return readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme);
-    }
-    return readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme);
+    return readerAppColor(this.readingPalette ? 'TOK_READ_PRIMARY' : 'TOK_PRIMARY_DARK', this.effectiveScheme());
   }
 
   private placeholderColor(): string {
-    if (this.variant === 'sourceManagement' || this.variant === 'sourceGroup') {
-      return readerAppColor('TOK_MUTED', this.appThemeScheme);
-    }
-    if (this.variant === 'readerDirectory') {
-      return readerAppColor('app.search.placeholder', this.appThemeScheme);
-    }
-    return readerAppColor('TOK_READ_MUTED', this.appThemeScheme);
+    return readerAppColor(this.readingPalette ? 'TOK_READ_MUTED' : 'TOK_MUTED', this.effectiveScheme());
   }
 
   private resolvedAccessibilityLabel(): string {
@@ -874,7 +857,8 @@ export struct ReaderSearchField {
     if (this.isBookField()) return '清空搜索内容';
     if (this.variant === 'sourceManagement') return '清空书源搜索';
     if (this.variant === 'sourceGroup') return '清空分组搜索';
-    if (this.variant === 'rssPassive') return '清空订阅搜索';
+    if (this.variant === 'rss') return '清空订阅搜索';
+    if (this.variant === 'pageForm') return '清空搜索内容';
     return '清空章节搜索';
   }
 

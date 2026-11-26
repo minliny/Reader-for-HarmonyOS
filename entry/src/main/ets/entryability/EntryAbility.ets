@@ -8,6 +8,10 @@ import { LocalConfigurationReset } from '../features/settings/application/LocalC
 import { ReaderThemeHost } from '../app/ReaderThemeHost';
 import { ReaderNavigationAppearancePreferences } from '../app/ReaderNavigationAppearancePreferences';
 import { ReaderControlPlacementPreferences } from '../app/ReaderControlPlacementPreferences';
+import { ReaderSmartGesturePreferences } from '../app/ReaderSmartGesturePreferences';
+import { HarmonySmartGestureHost } from '../platform/interaction/HarmonySmartGestureHost';
+import { readerSystemMigrationIncludesOriginals } from '../app/ReaderSystemMigrationPreferences';
+import { readerSystemMigrationNeedsRecovery, resumeReaderSystemMigration } from '../backup/ReaderSystemMigrationStartup';
 import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, Want } from '@kit.AbilityKit';
 import contextConstant from '@ohos.app.ability.contextConstant';
 import fileIo from '@ohos.file.fs';
@@ -42,6 +46,7 @@ import { bindReaderNamedPublicStorage, buildReaderPublicFixtureDirectory, isRead
 import { prepareReaderPublicLongBook, prepareReaderPublicScrolledBooks } from '../app/diagnostics/ReaderPublicLongBook';
 import { prepareReaderPublicSingleSource } from '../app/diagnostics/ReaderPublicSingleSource';
 import { prepareReaderPublicSourceRecipe } from '../app/diagnostics/ReaderPublicSourceRecipe';
+import { prepareReaderVmJourneyFixture } from '../app/diagnostics/ReaderVmJourneyFixture';
 import { readerPublicSearchHttpFixtureMode } from '../app/diagnostics/ReaderPublicSearchHttpFixture';
 import { CookieSessionStore } from '../platform/network/CookieSessionStore';
 import { ArkWebExecutor } from '../platform/network/ArkWebExecutor';
@@ -96,6 +101,9 @@ export default class EntryAbility extends UIAbility {
       return;
     }
     ReaderUIVerificationProbe.configure(DEBUG === true && BUILD_MODE_NAME === 'debug', this.publicFixture?.id);
+    if (DEBUG && BUILD_MODE_NAME === 'debug' && (this.publicFixture !== undefined || want.parameters?.readerLayoutInvariants === true)) {
+      AppStorage.setOrCreate<boolean>('readerLayoutInvariantAutomation', true);
+    }
     installMangaAtomicPayloadReader();
     const trace = ReaderStartupTrace.install(readerMotionNowMs, (sample: ReaderStartupSample): void => {
       hilog.info(DOMAIN, 'Reader', 'READER_STARTUP %{public}s', JSON.stringify(sample));
@@ -155,7 +163,15 @@ export default class EntryAbility extends UIAbility {
         parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : parameters?.readerMangaOfflineProbe) : undefined,
       mangaSelectionMode, this.publicFixture);
     this.runtimeOwner = owner;
+    ReaderSmartGesturePreferences.attach(this.context);
     ReaderNavigationAppearancePreferences.attach(this.context);
+    const appContext = this.context.getApplicationContext();
+    AppStorage.setOrCreate('readerSystemMigrationOriginals', false);
+    void readerSystemMigrationIncludesOriginals(appContext).then((value): void => {
+      if (this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner)) {
+        AppStorage.setOrCreate('readerSystemMigrationOriginals', value);
+      }
+    }).catch((): void => {});
     if (DEBUG === true && BUILD_MODE_NAME === 'debug' && parameters?.readerCapacityTrace === true) {
       this.capacityProbe = ReaderCapacityProbe.create(DEBUG, BUILD_MODE_NAME, parameters?.readerCapacityTrace,
         async (method: string, params: JsonObject, options: ReaderCapacityQueryOptions): Promise<JsonObject> => (await owner.request(method, params, options)).data,
@@ -166,26 +182,52 @@ export default class EntryAbility extends UIAbility {
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader', 'Theme restoration failed: %{private}s', error.message);
       });
+    const coreReady = trace.measure('startup.core', (): Promise<void> => owner.start());
+    const sync = new SyncGateway(owner);
+    const systemMigrationReady = Promise.all([coreReady, this.themeReady]).then(async (): Promise<void> => {
+      const current = (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner);
+      if (!current()) return;
+      try {
+        await trace.measure('startup.sync-recovery', (): Promise<boolean> => sync.recoverInterruptedRestore());
+        if (!current()) return;
+        await trace.measure('startup.configuration-recovery', (): Promise<boolean> => LocalConfigurationReset.recover(owner));
+      } catch (error) {
+        if (this.publicFixture === undefined && current()) {
+          const pending = await readerSystemMigrationNeedsRecovery(appContext.filesDir);
+          if (pending && current()) AppStorage.setOrCreate('readerSystemMigrationState', 'interrupted');
+        }
+        const failure = error instanceof Error ? error : new Error(errorMessageOf(error));
+        throw failure;
+      }
+      if (this.publicFixture !== undefined || !current()) return;
+      const state = await resumeReaderSystemMigration(appContext.filesDir, owner, current);
+      if (current()) AppStorage.setOrCreate('readerSystemMigrationState', state);
+    });
     void ReaderControlPlacementPreferences.install(this.context,
       (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner)).catch((): void => {});
-    const sync = new SyncGateway(owner);
     ReaderThemeHost.setRecoveryBarrier(async (): Promise<void> => {
       await Promise.all([this.themeReady, this.bookshelfModeReady, owner.start()]);
       if (this.runtimeOwner !== owner) throw new Error('CONFIGURATION_OWNER_CHANGED');
       await sync.recoverInterruptedRestore();
       await LocalConfigurationReset.recover(owner);
     });
-    const coreReady = trace.measure('startup.core', (): Promise<void> => owner.start());
     const fixture = this.publicFixture;
     const requiresFixtureSeed = fixture !== undefined && isReaderNamedPublicFixture(fixture.id);
-    let dataReady = coreReady;
+    let dataReady = systemMigrationReady;
     if (fixture?.id === 'empty-sources' && want.parameters?.readerPublicFixtureBook === 'long-directory') {
-      dataReady = coreReady.then(async (): Promise<void> => {
+      dataReady = systemMigrationReady.then(async (): Promise<void> => {
+        if (this.runtimeOwner !== owner || !ReaderRuntimeOwner.isCurrent(owner)) return;
         await prepareReaderPublicLongBook(owner, fixture);
         hilog.info(DOMAIN, 'Reader', 'Public UI fixture long-directory book verified');
       });
     } else if (fixture !== undefined && requiresFixtureSeed) {
-      dataReady = coreReady.then(async (): Promise<void> => {
+      dataReady = systemMigrationReady.then(async (): Promise<void> => {
+        if (this.runtimeOwner !== owner || !ReaderRuntimeOwner.isCurrent(owner)) return;
+        if (fixture.id === 'vm-journeys') {
+          await prepareReaderVmJourneyFixture(owner, fixture);
+          hilog.info(DOMAIN, 'ReaderVmJourney', 'Public UI fixture VM journeys verified');
+          return;
+        }
         if (fixture.id === 'search-detail-scroll-corpus') {
           await prepareReaderPublicScrolledBooks(owner, fixture);
           hilog.info(DOMAIN, 'Reader', 'Public UI fixture empty Source and eight scroll books verified');
@@ -201,9 +243,6 @@ export default class EntryAbility extends UIAbility {
     this.recoveryReady = Promise.all([this.themeReady, this.bookshelfModeReady, dataReady])
       .then(async (): Promise<void> => {
         if (this.runtimeOwner === owner) {
-          await trace.measure('startup.sync-recovery', (): Promise<boolean> => sync.recoverInterruptedRestore());
-          await trace.measure('startup.configuration-recovery', (): Promise<boolean> => LocalConfigurationReset.recover(owner));
-          if (this.runtimeOwner !== owner) return;
           // Reader-only fonts can prepare after confirmed recovery without
           // withholding the bookshelf. The reader still checks the native
           // receipt before it admits text layout.
@@ -523,12 +562,16 @@ export default class EntryAbility extends UIAbility {
     this.startupContent = undefined;
     ReaderThemeHost.detach();
     ReaderNavigationAppearancePreferences.detach();
+    const owner = this.runtimeOwner;
+    if (owner !== undefined && ReaderRuntimeOwner.isCurrent(owner)) {
+      HarmonySmartGestureHost.detachCurrent();
+      ReaderSmartGesturePreferences.detach();
+    }
     this.windowStageGeneration += 1;
     this.activeWindowStage = undefined;
     ReaderWindowCoordinator.destroyWindow();
     AppStorage.setOrCreate('readerAppForeground', false);
     ReaderDocumentPickerActivity.setForeground(false);
-    const owner = this.runtimeOwner;
     ReaderSystemFileOpenHost.detach(owner);
     this.runtimeOwner = undefined;
     owner?.release().catch((error: Error): void => {

@@ -22,6 +22,7 @@ export type ReaderTtsHostEvent =
   | { type: 'interruption'; action: 'pause' | 'resume' | 'stop' | 'duck' | 'unduck' }
   | { type: 'deviceChange'; action: 'continue' | 'stop' }
   | { type: 'mediaControl'; action: 'play' | 'pause' | 'stop' | 'next' | 'previous' }
+  | { type: 'mediaRate'; rate: number }
   | { type: 'backgroundLeaseRevoked' };
 
 export type ReaderTtsHostProbe = {
@@ -47,7 +48,7 @@ export interface ReaderTtsHost {
   /** Optional one-slice lookahead; implementations must bound and cancel it. */
   prefetchNext?(request: ReaderTtsHostSpeakRequest): void;
   stop(): Promise<void>;
-  publishPlaybackState(state: 'preparing' | 'playing' | 'paused' | 'completed' | 'stopped' | 'error'): void;
+  publishPlaybackState(state: 'preparing' | 'playing' | 'paused' | 'completed' | 'stopped' | 'error', rate?: number): void;
   /** Optional policy gate for the platform continuous-task lease. */
   setBackgroundPlaybackEnabled?(enabled: boolean): void;
 }

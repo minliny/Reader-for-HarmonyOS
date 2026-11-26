@@ -16,7 +16,8 @@ const PREVIEW_END_TIMEOUT_MS = 1000;
 
 type ReaderRouteSurfaceMotion = ReaderRouteMotionKind | 'none';
 export type ReaderRouteSurfaceKey = ReaderRoute |
-  'settings-home' | 'settings-general' | 'settings-about' | 'settings-developer' | 'settings-message-preview';
+  'settings-home' | 'settings-general' | 'settings-backup' | 'settings-about' | 'settings-licenses' |
+  'settings-developer' | 'settings-message-preview';
 
 interface ReaderRoutePaint {
   from: string;
@@ -54,6 +55,8 @@ export struct ReaderRouteStackSurface {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @Prop @Watch('onRouteChanged') route: ReaderRouteSurfaceKey = 'settings';
   @Prop surfaceId: string = '';
+  // The outer route applies its own inset. Nested settings stacks are already inside that content.
+  @Prop extendsToWindowTop: boolean = false;
   @Prop initialRoot: ReaderRouteSurfaceKey | undefined = undefined;
   @Prop @Watch('onRouteChanged') routeMotion: ReaderRouteSurfaceMotion = 'none';
   @Prop @Watch('onEdgeAvailabilityChanged') reduceMotion: boolean = false;
@@ -70,6 +73,7 @@ export struct ReaderRouteStackSurface {
   @State private tabProgress: number = 1;
   @State private hasDestination: boolean = false;
   @State private paint: ReaderRoutePaint | undefined = undefined;
+  @State private pendingPushLane: string | undefined = undefined;
   @State private progress: number = 1;
   private mounted: boolean = false;
   private routeUpdate: number = 0;
@@ -78,6 +82,7 @@ export struct ReaderRouteStackSurface {
   private pendingTabResetFrom: string | undefined = undefined;
   private activeRouteAnimation: ReaderRouteAnimation | undefined = undefined;
   private routeEndTimer: number = -1;
+  private pendingPushTimer: number = -1;
   private preview: ReaderRouteBackPreview | undefined = undefined;
   private readerCoverStartGeneration: number | undefined = undefined;
   private readerCoverSettled: boolean = false;
@@ -93,6 +98,7 @@ export struct ReaderRouteStackSurface {
 
   aboutToDisappear(): void {
     this.mounted = false;
+    this.setPendingPushLane(undefined);
     this.routeUpdate += 1;
     this.resolvePreview('cancel');
     const preview = this.preview;
@@ -135,6 +141,9 @@ export struct ReaderRouteStackSurface {
 
   private reconcile(): void {
     this.retireStaleReaderCover();
+    if (this.pendingPushLane !== undefined && (this.routeMotion === 'none' || this.route !== this.pendingPushLane)) {
+      this.setPendingPushLane(undefined);
+    }
     const preview = this.preview;
     if (preview !== undefined) {
       if (preview.requested && this.route === preview.to) this.resolvePreview('commit');
@@ -167,11 +176,7 @@ export struct ReaderRouteStackSurface {
       const param: ReaderCoverPath = { readerCoverGeneration: cover };
       if (animate) {
         this.readerCoverStartGeneration = cover;
-        this.armRouteDeadline(NATIVE_START_TIMEOUT_MS, (): void => {
-          this.readerCoverStartGeneration = undefined;
-          this.settleReaderCover(cover);
-          this.onRouteChanged();
-        });
+        this.setPendingPushLane(this.route, cover);
       }
       this.pathStack.pushPath({ name: this.route, param }, animate);
       if (!animate) this.settleReaderCover(cover);
@@ -200,6 +205,7 @@ export struct ReaderRouteStackSurface {
     } else if (names.includes(this.route)) {
       this.pathStack.popToName(this.route, animate);
     } else {
+      if (animate) this.setPendingPushLane(this.route);
       this.pathStack.pushPath({ name: this.route }, animate);
     }
     this.hasDestination = this.pathStack.size() > 0;
@@ -265,6 +271,24 @@ export struct ReaderRouteStackSurface {
     this.routeEndTimer = -1;
   }
 
+  // ArkUI can mount the destination before it supplies the native transition proxy.
+  private setPendingPushLane(lane: string | undefined, cover?: number): void {
+    if (this.pendingPushTimer >= 0) clearTimeout(this.pendingPushTimer);
+    this.pendingPushTimer = -1;
+    this.pendingPushLane = lane;
+    if (lane !== undefined) {
+      this.pendingPushTimer = setTimeout((): void => {
+        this.pendingPushTimer = -1;
+        this.pendingPushLane = undefined;
+        if (cover !== undefined && this.readerCoverStartGeneration === cover) {
+          this.readerCoverStartGeneration = undefined;
+          this.settleReaderCover(cover);
+          this.onRouteChanged();
+        }
+      }, NATIVE_START_TIMEOUT_MS);
+    }
+  }
+
   private armRouteDeadline(delay: number, expire: () => void): void {
     this.clearRouteDeadline();
     this.routeEndTimer = setTimeout((): void => {
@@ -287,8 +311,8 @@ export struct ReaderRouteStackSurface {
   private retireStaleReaderCover(): void {
     const generation = this.readerCoverStartGeneration;
     if (generation !== undefined && !this.readerCoverCanAnimate(generation)) {
+      this.setPendingPushLane(undefined);
       this.readerCoverStartGeneration = undefined;
-      this.clearRouteDeadline();
     }
     const animation = this.activeRouteAnimation;
     if (animation?.readerCoverGeneration !== undefined && !this.readerCoverCanAnimate(animation.readerCoverGeneration))
@@ -323,6 +347,7 @@ export struct ReaderRouteStackSurface {
 
   private completeRouteAnimation(animation: ReaderRouteAnimation, preview?: ReaderRouteBackPreview): void {
     if (!this.mounted || this.activeRouteAnimation !== animation) return;
+    this.setPendingPushLane(undefined);
     this.clearRouteDeadline();
     this.activeRouteAnimation = undefined;
     this.paint = undefined;
@@ -386,6 +411,7 @@ export struct ReaderRouteStackSurface {
         }
         this.paint = { from: from.name ?? ROOT_LANE, to: to.name ?? ROOT_LANE, motion, fade,
           fadeOutgoing: nativePop || motion === 'pop' };
+        this.setPendingPushLane(undefined);
         this.progress = 0;
         const finish = (): void => {
           if (preview === undefined && this.activeRouteAnimation === animation) this.settleAnimation(animation, true);
@@ -435,8 +461,9 @@ export struct ReaderRouteStackSurface {
 
   private laneX(lane: string): number {
     const paint = this.paint;
-    if (paint === undefined || paint.fade) return 0;
     const width = Math.max(0, this.viewportWidth);
+    if (paint === undefined) return this.pendingPushLane === lane ? width : 0;
+    if (paint.fade) return 0;
     if (paint.motion === 'pop') {
       if (lane === paint.from) return width * this.progress;
       if (lane === paint.to) return -width * READER_ROUTE_PARENT_PARALLAX * (1 - this.progress);
@@ -457,6 +484,7 @@ export struct ReaderRouteStackSurface {
 
   private laneOpacity(lane: string): number {
     const paint = this.paint;
+    if (paint === undefined && this.pendingPushLane === lane && this.reduceMotion) return 0;
     if (paint?.fade !== true) return 1;
     if (paint.fadeOutgoing) return lane === paint.from ? 1 - this.progress : 1;
     return lane === paint.to ? this.progress : 1;
@@ -486,6 +514,7 @@ export struct ReaderRouteStackSurface {
       this.preview !== undefined || this.activeRouteAnimation !== undefined) return;
     const names = this.pathStack.getAllPathName();
     if (names[names.length - 1] !== this.route) return;
+    this.setPendingPushLane(undefined);
     const target = names.length < 2 ? this.rootRoute : names[names.length - 2] as ReaderRouteSurfaceKey;
     this.preview = { from: this.route, to: target, width: this.viewportWidth, progress: 0, requested: false };
     this.updatePreview(offset);
@@ -579,6 +608,8 @@ export struct ReaderRouteStackSurface {
     }
     .backgroundColor(Color.Transparent)
     .hideTitleBar(true)
+    .hideToolBar(true)
+    .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], this.extendsToWindowTop ? [LayoutSafeAreaEdge.TOP] : [])
     .onBackPressed((): boolean => this.destinationBack(name as ReaderRouteSurfaceKey));
   }
 
@@ -599,6 +630,8 @@ export struct ReaderRouteStackSurface {
       }
       .mode(NavigationMode.Stack)
       .hideTitleBar(true)
+      .hideToolBar(true)
+      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], this.extendsToWindowTop ? [LayoutSafeAreaEdge.TOP] : [])
       .navDestination(this.destination)
       .customNavContentTransition((from: NavContentInfo, to: NavContentInfo, operation: NavigationOperation): NavigationAnimatedTransition =>
         this.nativeTransition(from, to, operation))

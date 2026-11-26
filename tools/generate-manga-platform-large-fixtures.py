@@ -1,6 +1,6 @@
 from pathlib import Path
 from PIL import Image, ImageDraw
-import hashlib, json, struct, zlib
+import hashlib, json, struct
 ROOT=Path(__file__).resolve().parents[1]
 root=ROOT/'entry/src/main/resources/rawfile/manga-platform-probe-v1'
 root.mkdir(parents=True,exist_ok=True)
@@ -27,9 +27,6 @@ rois=[]
 for name,y,position in [('first',0,0),('middle',16384,0.5),('last',31744,1)]:
     crop=im.crop((0,y,width,y+1024)).convert('RGBA')
     pixels=crop.tobytes()
-    oracle=ROOT/'tools/fixtures/manga-platform-large'
-    oracle.mkdir(parents=True,exist_ok=True)
-    (oracle/(name+'.rgba.deflate')).write_bytes(zlib.compress(pixels,9))
     samples=[{'x':x,'y':local_y,'rgba':list(crop.getpixel((x,local_y)))} for x,local_y in [(128,8),(128,128),(512,128),(896,128),(512,512),(512,896)]]
     rois.append(dict(id=name,position=position,regionY=y,width=width,height=1024,rgbaBytes=len(pixels),sha256=hashlib.sha256(pixels).hexdigest(),samples=samples))
 control=root/'control-long-1024x2048.png'
@@ -49,4 +46,4 @@ export interface MangaPlatformLargeRegion { id: string; position: number; region
 export interface MangaPlatformLargeFixture { id: string; file: string; sha256: string; width: number; height: number; orientation: number; rois: MangaPlatformLargeRegion[]; }
 export const MANGA_PLATFORM_LARGE_FIXTURE: MangaPlatformLargeFixture = """+json.dumps(dict(id='large-long',file=manifest['file'],sha256=manifest['sha256'],width=width,height=height,orientation=1,rois=[{k:r[k] for k in region_keys} for r in rois]),indent=2)+';\n'
 large_ts += 'export const MANGA_PLATFORM_LARGE_CONTROL: MangaPlatformLargeFixture = '+json.dumps(dict(id='large-control',file=control.name,sha256=manifest['control']['sha256'],width=1024,height=2048,orientation=1,rois=[{k:rois[0][k] for k in region_keys}]),indent=2)+';\n'
-(ROOT/'entry/src/main/ets/app/MangaPlatformLargeFixture.ts').write_text(large_ts, encoding='utf-8')
+(ROOT/'tools/diagnostics/retired-arkts/app/MangaPlatformLargeFixture.ts').write_text(large_ts, encoding='utf-8')

@@ -12,6 +12,8 @@
 | SVG、图标与字体 | Radix `1.3.2` 的 MIT 及 Lucide 图标的 ISC 有固定来源记录。Inter 4.1、Noto、LXGW 1.522、Zhuque 0.212、Sarasa 1.0.41 随包登记 OFL，衍生 Noto UI／漫画字体保留来源并使用独立内部名称。 | 确认最终 HAP 随分发提供图标归属及许可。复核字体派生物和保留字体名。逐项确认产品图标及批准的设计导出资源可随发行分发。 [OFL 正文](https://openfontlicense.org/open-font-license-official-text/) |
 | 账户、联网与密钥 | 产品 L0 入口继续读取已有 book source 和系统接口。自备 WebDAV 配置留在 `extended` 开发入口，凭据由现有系统安全存储管理。本轮外观、窗口及排版工作沿用系统能力和本机偏好。 | 复查发行版网络权限、能力门控及实际产物中可读配置。正式签名材料留在私有配置，发布材料仅保留非秘密的身份与产物摘要。 |
 
+Phase 0 已将当前源码的 `oss-reuse-NOTICE.txt` 改为 `cssparser 0.36.0` 和 `selectors 0.36.1`，并更新配套来源链接。上表保留 Wave 3 的原检查发现。最终发行仍需核对实际包内声明和 MPL 对应源码的获取方式。
+
 依赖依据为 Core [Cargo.lock](../../../Reader-Core/Cargo.lock)、[libmobi 集成说明](../../../Reader-Core/third_party/libmobi-0.12/READER_INTEGRATION.md) 与 [Core 许可清单](../../../Reader-Core/third_party/oss-reuse-licenses/manifest.json)。Host 的配对依据为 [OHPM 锁](../../entry/oh-package-lock.json5)、[HAP 必带资源](../../scripts/lib/hap-required-resources.json)、[图标来源](../MANGA_SHEET_ICON_LICENSE.md) 与 [字体来源](../../entry/src/main/resources/rawfile/FONT-SOURCES.txt)。
 
 Wave 2 签名 HAP 中登记的 32 项字体和许可资源已按 manifest 逐项复核。书架、Radix 漫画和 Lucide 下载图标的点名来源检查通过。全目录检查发现四个在 Wave 2 基线已跟踪的 SVG 缺少登记，分别为阅读控制栏小箭头和设置导航图标的日夜版本。公开发行前补核原始出处及分发权。

@@ -1,5 +1,6 @@
 import { typeNode, LengthMetrics } from '@ohos.arkui.node';
 import { UIContext } from '@ohos.arkui.UIContext';
+import deviceInfo from '@ohos.deviceInfo';
 
 // The chapter heading is part of the reading layout contract. Keep its size
 // beside native shaping so rendering and pagination cannot drift apart when
@@ -17,6 +18,7 @@ export interface ReaderNativeTextStyle {
   alignment: TextAlign;
   breakAll: boolean;
   bookBody?: boolean;
+  punctuationOverflow?: boolean;
   indentVp?: number;
   direction?: Direction;
   extraLineSpacingVp?: number;
@@ -26,16 +28,21 @@ export interface ReaderNativeTextStyle {
 // Ink is deliberately absent: changing theme must not invalidate geometry.
 const nativeTextGeometry: WeakMap<typeNode.Text, string> = new WeakMap();
 const nativeTextContent: WeakMap<typeNode.Text, string> = new WeakMap();
+const nativeTextPunctuationOverhang: WeakMap<typeNode.Text, number> = new WeakMap();
 export function readerNativeTextGeometryKey(style: ReaderNativeTextStyle): string {
   return JSON.stringify([style.widthVp, style.fontFamily, style.fontSize, style.fontWeight,
     style.lineHeight, style.letterSpacing, style.alignment, style.breakAll,
-    style.bookBody === true, style.indentVp ?? 0, style.direction ?? null, style.extraLineSpacingVp ?? 0]);
+    style.bookBody === true, style.indentVp ?? 0, style.direction ?? null, style.extraLineSpacingVp ?? 0,
+    style.bookBody === true && style.punctuationOverflow === true]);
 }
 export function readerNativeTextNodeGeometry(node: typeNode.Text): string | undefined {
   return nativeTextGeometry.get(node);
 }
 export function readerNativeTextNodeContent(node: typeNode.Text): string | undefined {
   return nativeTextContent.get(node);
+}
+export function readerNativeTextPunctuationOverhang(node: typeNode.Text): number {
+  return nativeTextPunctuationOverhang.get(node) ?? 0;
 }
 
 /** Bounded platform adapter. Text shaping remains entirely in ArkUI, using
@@ -62,6 +69,18 @@ export class ReaderNativeTextMeasurement {
         attribute.enableAutoSpacing?.(true);
         attribute.fallbackLineSpacing?.(true);
         attribute.compressLeadingPunctuation?.(true);
+        if (style.punctuationOverflow === true) {
+          if (deviceInfo.distributionOSApiVersion >= 260000) {
+            if (deviceInfo.apiAvailable('26.0.0') && attribute.punctuationOverflow !== undefined) {
+              const emPx = context.fp2px(style.fontSize);
+              if (Number.isFinite(emPx) && emPx > 0) {
+                attribute.punctuationOverflow(true);
+                node.commonAttribute.clip(false);
+                nativeTextPunctuationOverhang.set(node, emPx);
+              }
+            }
+          }
+        }
       }
       if (style.breakAll) node.attribute.wordBreak(WordBreak.BREAK_ALL);
       if (style.indentVp !== undefined) node.attribute.textIndent(style.indentVp);

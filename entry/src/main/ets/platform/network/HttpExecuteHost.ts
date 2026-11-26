@@ -12,6 +12,7 @@ import {
   httpUrlHostname,
   isCrossOriginSensitiveHeader,
   isPrivateNetworkTarget,
+  isWebDavLanAddress,
   mergeCookieHeader,
   normalizeCharsetLabel,
   redirectMethodDecision,
@@ -21,6 +22,9 @@ import {
 
 const LOG_DOMAIN = 0x5244;
 const DEFAULT_CONNECT_TIMEOUT_MS = 30000;
+/** Source checks (L2-L5 diagnostics) fail fast on dead hosts instead of holding a batch slot. */
+const SOURCE_CHECK_HTTP_DEADLINE_MS = 15000;
+const SOURCE_CHECK_CONNECT_TIMEOUT_MS = 8000;
 const DEFAULT_READ_TIMEOUT_MS = 60000;
 const MAX_RETRY_BACKOFF_MILLIS = 3000;
 const MAX_RETRY_ATTEMPTS = 5;
@@ -58,6 +62,7 @@ export interface HttpBytesResponse {
 interface BinaryResponseSink {
   maxBytes: number;
   response?: HttpBytesResponse;
+  exactBytes?: boolean;
 }
 
 /** Optional Core-owned sink for a host.request response body. */
@@ -71,11 +76,13 @@ type DeadlineState = {
   binarySink?: BinaryResponseSink;
   responseMaxBytes?: number;
   deadlineAt: number;
+  connectTimeoutMs?: number;
   cookieGeneration?: number;
   /** Restrict this request and every redirect hop to HTTPS. */
   httpsOnly?: boolean;
   /** Do not carry credential-bearing URL query values to another origin. */
   sameOriginRedirectsOnly?: boolean;
+  webDavOrigin?: boolean;
   cancelled: boolean;
   failureReason?: string;
   activeRequest: http.HttpRequest | null;
@@ -185,7 +192,7 @@ class SourceHttpTransportError extends Error {
  * Wire contract (`HostHttpRequest`, camelCase): url, method, headers,
  * body (Raw=string | Form={fields:[[k,v]]} | Multipart={fields,files}),
  * charset (request-body encoding), followRedirects, maxRedirects, retry,
- * usePlatformCookieJar, session, diagnostic (opaque recorder context), and
+ * usePlatformCookieJar, session, diagnostic (source check tracing), and
  * the optional Host-only `httpsOnly` and `sameOriginRedirectsOnly` redirect
  * policies.
  *
@@ -219,8 +226,9 @@ export class HttpExecuteHost {
   private readonly activeByRequestId = new Map<number, DeadlineState>();
   private readonly sourceDiagnosticsByRequestId = new Map<number, SourceHttpDiagnosticRecord[]>();
 
-  async execute(params: JsonObject, requestId?: number, isCancelled?: () => boolean): Promise<JsonObject> {
-    return this.executeRequest(params, requestId, isCancelled);
+  async execute(params: JsonObject, requestId?: number, isCancelled?: () => boolean,
+    sourceCheck: boolean = false): Promise<JsonObject> {
+    return this.executeRequest(params, requestId, isCancelled, sourceCheck);
   }
 
   /** Host-only text/document consumers can set a transport limit before decoding. */
@@ -229,7 +237,7 @@ export class HttpExecuteHost {
     if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_RESPONSE_BYTES) {
       throw new Error('http.execute: invalid response limit');
     }
-    return this.executeRequest(params, requestId, isCancelled, undefined, undefined, maxBytes);
+    return this.executeRequest(params, requestId, isCancelled, false, undefined, undefined, maxBytes);
   }
 
   /** Execute a Core host request and stream binary response bytes into its asset store. */
@@ -239,8 +247,9 @@ export class HttpExecuteHost {
     operationId: number,
     bridge: ReaderCoreAssetBridge,
     isCancelled?: () => boolean,
+    sourceCheck: boolean = false,
   ): Promise<JsonObject> {
-    return this.executeRequest(params, requestId, isCancelled, undefined, {
+    return this.executeRequest(params, requestId, isCancelled, sourceCheck, undefined, {
       bridge, requestId, operationId,
     });
   }
@@ -251,8 +260,33 @@ export class HttpExecuteHost {
       throw new Error('http.execute: invalid binary response limit');
     }
     const sink: BinaryResponseSink = { maxBytes };
-    await this.executeRequest(params, requestId, isCancelled, sink);
+    await this.executeRequest(params, requestId, isCancelled, false, sink);
     if (sink.response === undefined) throw new Error('http.execute: missing binary response');
+    return sink.response;
+  }
+
+  /** The saved endpoint is supplied by the WebDAV Host, never by source descriptors. */
+  async executeWebDav(endpoint: string, params: JsonObject, maxBytes: number,
+    isCancelled?: () => boolean): Promise<HttpBytesResponse> {
+    const request = params['url'];
+    if (typeof request !== 'string' || typeof params['method'] !== 'string' ||
+      !['GET', 'PUT', 'DELETE', 'MKCOL', 'PROPFIND'].includes(params['method']) ||
+      !Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_RESPONSE_BYTES) {
+      throw new Error('http.execute: invalid WebDAV request');
+    }
+    const base = url.URL.parseURL(endpoint);
+    const target = url.URL.parseURL(request);
+    if (base.protocol !== 'https:' || base.username.length > 0 || base.password.length > 0 ||
+      base.search.length > 0 || base.hash.length > 0 || target.protocol !== 'https:' || !this.sameOrigin(endpoint, request) ||
+      target.username.length > 0 || target.password.length > 0 || target.search.length > 0 || target.hash.length > 0) {
+      throw new Error('http.execute: WebDAV target fell outside the configured HTTPS origin');
+    }
+    const headers = this.parseHeaders(params['headers']);
+    if (this.headerValue(headers, 'host') !== null) throw new Error('http.execute: WebDAV does not accept a Host override');
+    const sink: BinaryResponseSink = { maxBytes, exactBytes: true };
+    await this.executeRequest({ ...params, headers, httpsOnly: true, sameOriginRedirectsOnly: true, followRedirects: false },
+      undefined, isCancelled, false, sink, undefined, undefined, true);
+    if (sink.response === undefined) throw new Error('http.execute: missing WebDAV response');
     return sink.response;
   }
 
@@ -260,9 +294,11 @@ export class HttpExecuteHost {
     params: JsonObject,
     requestId?: number,
     isCancelled?: () => boolean,
+    sourceCheck: boolean = false,
     binarySink?: BinaryResponseSink,
     assetSink?: HttpAssetSink,
     responseMaxBytes?: number,
+    webDavOrigin: boolean = false,
   ): Promise<JsonObject> {
     const inputUrl = params['url'];
     if (typeof inputUrl !== 'string' || inputUrl.trim().length === 0) {
@@ -301,8 +337,8 @@ export class HttpExecuteHost {
     if (useCookieJar && sessionId === null) {
       throw new Error('http.execute: platform cookie jar requires opaque session.id');
     }
-    // `diagnostic` is recorder-only context. The Host request `requestId`
-    // argument remains the sole operation key for host.complete / host.error.
+    // The registry owns the command identity. Legacy descriptors without matching L2–L5
+    // recorder metadata keep their original transport budget.
     const diagnostic = this.parseSourceDiagnostic(params['diagnostic']);
     const diagnosticStartedAt = Date.now();
     const requestedTimeout = params['timeoutMs'];
@@ -310,12 +346,16 @@ export class HttpExecuteHost {
       !Number.isSafeInteger(requestedTimeout) || requestedTimeout <= 0)) {
       throw new Error('http.execute: timeoutMs must be a positive integer');
     }
+    const useCheckBudget = sourceCheck && diagnostic !== undefined && diagnostic.requestId === requestId;
+    const effectiveDeadlineMs = useCheckBudget ? Math.min(TOTAL_DEADLINE_MS, SOURCE_CHECK_HTTP_DEADLINE_MS) : TOTAL_DEADLINE_MS;
     const deadline = this.createDeadline(typeof requestedTimeout === 'number' ?
-      Math.min(TOTAL_DEADLINE_MS, requestedTimeout) : TOTAL_DEADLINE_MS);
+      Math.min(effectiveDeadlineMs, requestedTimeout) : effectiveDeadlineMs);
+    if (useCheckBudget) deadline.connectTimeoutMs = SOURCE_CHECK_CONNECT_TIMEOUT_MS;
     deadline.binarySink = binarySink;
     deadline.responseMaxBytes = responseMaxBytes;
     deadline.httpsOnly = httpsOnly === true;
     deadline.sameOriginRedirectsOnly = sameOriginRedirectsOnly === true;
+    deadline.webDavOrigin = webDavOrigin;
     if (sessionId !== null) {
       deadline.cookieGeneration = CookieSessionStore.instance.sessionGeneration(sessionId);
     }
@@ -522,7 +562,7 @@ export class HttpExecuteHost {
     let rejectDeadline: (reason?: Error) => void = (): void => undefined;
     const expired = new Promise<JsonObject>((
       _resolve: (value: JsonObject) => void,
-      reject: (reason?: Error) => void,
+      reject: (reason?: Error) => void
     ): void => {
       rejectDeadline = reject;
     });
@@ -595,7 +635,7 @@ export class HttpExecuteHost {
   ): Promise<JsonObject> {
     this.assertWithinDeadline(deadline);
     this.requireHttpsIfNeeded(url, deadline);
-    this.rejectPrivateNetworkUrl(url);
+    this.rejectPrivateNetworkUrl(url, deadline.webDavOrigin === true);
     this.assertWithinDeadline(deadline);
     return this.requestWithPolicy(url, method, headers, body, requestCharset, maxRedirects, retry, deadline, sessionId, assetSink);
   }
@@ -763,12 +803,13 @@ export class HttpExecuteHost {
     deadline: DeadlineState,
   ): Promise<HopResponse> {
     const hostname = httpUrlHostname(requestUrl);
-    if (hostname === undefined || isPrivateNetworkTarget(hostname)) {
+    const webDavOrigin = deadline.webDavOrigin === true;
+    if (hostname === undefined || (isPrivateNetworkTarget(hostname) && !(webDavOrigin && isWebDavLanAddress(hostname)))) {
       throw new Error('url targets a private, loopback, link-local or invalid address and is not allowed');
     }
     this.assertWithinDeadline(deadline);
     if (hostname.includes(':') || /^[0-9.]+$/.test(hostname)) {
-      const target = await this.raceDeadline(prepareNetworkTarget(requestUrl), deadline);
+      const target = await this.raceDeadline(prepareNetworkTarget(requestUrl, webDavOrigin), deadline);
       this.assertWithinDeadline(deadline);
       return this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, target.route, target.systemProxy);
     }
@@ -796,7 +837,7 @@ export class HttpExecuteHost {
       // Read-only native DNS/proxy getters may fail to settle during a network
       // transition. Cancellation must release this lease; their late result
       // cannot install a pin or send a retired request.
-      const admitted = await this.raceDeadline(prepareNetworkTarget(requestUrl), deadline);
+      const admitted = await this.raceDeadline(prepareNetworkTarget(requestUrl, webDavOrigin), deadline);
       this.assertWithinDeadline(deadline);
       if (admitted.route === 'systemProxy') {
         return await this.raceDeadline(this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, admitted.route, admitted.systemProxy), deadline);
@@ -883,7 +924,7 @@ export class HttpExecuteHost {
         usingProxy: route === 'systemProxy' ? systemProxy : false,
         maxLimit: deadline.responseMaxBytes ?? deadline.binarySink?.maxBytes ?? MAX_RESPONSE_BYTES,
         // Clamp every per-request timeout to the remaining deadline budget.
-        connectTimeout: Math.min(DEFAULT_CONNECT_TIMEOUT_MS, remaining),
+        connectTimeout: Math.min(deadline.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS, remaining),
         readTimeout: Math.min(DEFAULT_READ_TIMEOUT_MS, remaining),
         // The REDIRECTION interceptor stops before each automatic hop. A
         // positive platform limit is still required; zero is surfaced by
@@ -941,6 +982,13 @@ export class HttpExecuteHost {
         throw new Error(`http.execute: declared response exceeds ${maxResponseBytes} byte limit`);
       }
       stage = 'response.bytes';
+      const missingResult = response.result === undefined || response.result === null;
+      // DAV methods can acknowledge the state with status and headers alone.
+      // GET/PROPFIND success must still provide the selected representation.
+      const emptyWebDavResponse = deadline.webDavOrigin === true &&
+        (declaredLength === null || /^0+$/.test(declaredLength.trim())) &&
+        (response.responseCode >= 400 || method.wireMethod === 'PUT' ||
+          method.wireMethod === 'MKCOL' || method.wireMethod === 'DELETE');
       let bytes: Uint8Array;
       if (response.result instanceof ArrayBuffer) {
         bytes = new Uint8Array(response.result);
@@ -951,17 +999,16 @@ export class HttpExecuteHost {
         bytes = new Uint8Array(0);
       } else if (response.result === '' ||
         ((method.wireMethod === 'HEAD' || response.responseCode === 204 || response.responseCode === 205 ||
-          response.responseCode === 304) && (response.result === undefined || response.result === null))) {
-        // Empty strings have an exact zero-byte representation. Missing data
-        // is valid only when HTTP semantics forbid content (RFC 9110 sections
-        // 6.4.1 and 15.3.6); HEAD/304 Content-Length may describe a GET body.
-        // A normal 200 with missing bytes or nonempty decoded text still fails.
+          response.responseCode === 304 || emptyWebDavResponse) && missingResult)) {
+        // Empty strings have an exact zero-byte representation. HEAD/304
+        // Content-Length may describe a GET body. A 200 GET or a nonempty
+        // decoded string still needs the original ArrayBuffer.
         bytes = new Uint8Array(0);
       } else {
         const status = Number.isInteger(response.responseCode) && response.responseCode >= 100 &&
           response.responseCode <= 599 ? response.responseCode : 0;
         const resultType = response.result === null ? 'null' : typeof response.result;
-        if (status >= 400 && (response.result === undefined || response.result === null)) {
+        if (status >= 400 && missingResult) {
           // A bodyless source rejection is already a known HTTP failure.
           // Preserve that status; neither invent success content nor blame
           // byte conversion for a 403/404/5xx response with no representation.
@@ -1015,7 +1062,7 @@ export class HttpExecuteHost {
     let responseCharset = 'utf-8';
     let decoded = '';
     if (binarySink !== undefined) {
-      if (!binaryBody && response.bytes.length > 0) {
+      if (!binaryBody && binarySink.exactBytes !== true && response.bytes.length > 0) {
         throw new Error('http.execute: binary consumer requires a binary content type');
       }
       binarySink.response = { status: response.status, headers: response.headers, bytes: response.bytes, finalUrl };
@@ -1262,9 +1309,9 @@ export class HttpExecuteHost {
   /** Literal targets are checked at entry and before following a redirect.
    * DNS and the selected system route are validated together in singleHop.
    */
-  private rejectPrivateNetworkUrl(requestUrl: string): void {
+  private rejectPrivateNetworkUrl(requestUrl: string, webDavOrigin: boolean = false): void {
     const hostname = url.URL.parseURL(requestUrl).hostname.replace(/^\[/, '').replace(/\]$/, '').toLowerCase();
-    if (isPrivateNetworkTarget(hostname)) {
+    if (isPrivateNetworkTarget(hostname) && !(webDavOrigin && isWebDavLanAddress(hostname))) {
       throw new Error('http.execute: url targets a private, loopback, or link-local address and is not allowed');
     }
   }

@@ -1,17 +1,33 @@
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync, lstatSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, lstatSync, renameSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { digest, gateInputs, validateGateReceipt } from '../../../Reader-Core/scripts/lib/gate-receipt.mjs';
 import { CORE_GATE_STAGES } from '../../../Reader-Core/scripts/lib/core-gate-stages.mjs';
 
 const configPath = fileURLToPath(new URL('./hap-required-resources.json', import.meta.url));
-export function requiredHapResources(repo) {
+
+export function publishVerifiedHapRun(staging, published, assertInputs, recoveryMarker) {
+  assertInputs();
+  renameSync(staging, published);
+  // The rename commits publication. A retained marker requires recovery on the next incremental build.
+  if (recoveryMarker) {
+    try { rmSync(recoveryMarker, { force: true }); }
+    catch (error) { return error; }
+  }
+}
+
+export function requiredHapResources(repo, { precomputedRecords } = {}) {
   const config = JSON.parse(readFileSync(configPath, 'utf8'));
   if (config.schemaVersion !== 1 || !config.paths.length || new Set(config.paths).size !== config.paths.length) throw new Error('Invalid required HAP resources');
   return config.paths.map(path => {
     if (path.startsWith('/') || path.split('/').some(p => !p || p === '..' || p === '.')) throw new Error('Invalid required resource path');
     const sourcePath = `entry/src/main/resources/rawfile/${path}`, file = resolve(repo, sourcePath);
-    if (!lstatSync(file).isFile()) throw new Error(`Missing required HAP resource: ${sourcePath}`);
+    const stat = lstatSync(file);
+    if (!stat.isFile()) throw new Error(`Missing required HAP resource: ${sourcePath}`);
+    const known = precomputedRecords?.get(sourcePath);
+    if (known?.type === 'file' && known.bytes === stat.size && /^[0-9a-f]{64}$/.test(known.sha256)) {
+      return { path: `resources/rawfile/${path}`, sourcePath, bytes: known.bytes, sha256: known.sha256 };
+    }
     const bytes = readFileSync(file);
     return { path: `resources/rawfile/${path}`, sourcePath, bytes: bytes.length, sha256: digest(bytes) };
   });

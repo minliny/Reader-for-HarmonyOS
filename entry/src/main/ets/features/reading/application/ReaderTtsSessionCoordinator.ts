@@ -1,9 +1,12 @@
+import type { ReaderTtsPlaybackCoordinator } from './ReaderTtsPlaybackOwner';
 import type { ReaderTtsHost, ReaderTtsHostEvent, ReaderTtsNativeSpeakPoint } from './ReaderTtsHostContract.ts';
 import { diagnosticCodeOf } from '../../../app/LogPrivacy.ts';
 import { ReaderStartupTrace, type ReaderTtsCapsuleTiming } from '../../../app/ReaderStartupTrace.ts';
 import { errorMessageOf } from '../../../app/ErrorMessage.ts';
 import {
   createReaderTtsState,
+  readerTtsCoreRateForMultiplier,
+  isReaderTtsSupportedPlaybackRate,
   type ReaderTtsContentVersion,
   type ReaderTtsPauseReason,
   type ReaderTtsSessionIdentity,
@@ -39,6 +42,8 @@ export type ReaderTtsCoordinatorOptions = {
   startCallbackTimeoutMs?: number;
   /** Admit a native resume while the current reading session owns a resumable queue. */
   admitHostResume?: (origin: ReaderTtsHostResumeOrigin) => boolean;
+  /** Reuse the current reading owner's rate and preference transaction. */
+  onMediaRate?: (rate: number) => void;
 };
 
 type StartWaiter = { generation: number; resolve: (started: boolean) => void };
@@ -172,7 +177,7 @@ function createHostTtsTransportState(): HostTtsTransportState {
  * Serial bridge between Core's queue and the actual Harmony system engine.
  * Every public intent and every Host callback enters one operation tail.
  */
-export class ReaderTtsSessionCoordinator {
+export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator {
   private readonly gateway: ReaderTtsCoordinatorGateway;
   private readonly host: ReaderTtsHost;
   private readonly progressCommit: (progress: ReaderTtsProgressCommit) => Promise<void>;
@@ -212,6 +217,7 @@ export class ReaderTtsSessionCoordinator {
   private readonly ownerToken: string;
   private readonly startCallbackTimeoutMs: number;
   private readonly admitHostResume: ((origin: ReaderTtsHostResumeOrigin) => boolean) | undefined;
+  private readonly onMediaRate: ((rate: number) => void) | undefined;
   private readonly startWaiters: StartWaiter[] = [];
   private startConfirmedRequestId: string | undefined = undefined;
   private startWatchdogHandle: number = -1;
@@ -234,6 +240,7 @@ export class ReaderTtsSessionCoordinator {
     this.ownerToken = `tts-coordinator-${++READER_TTS_COORDINATOR_SEQ}`;
     this.startCallbackTimeoutMs = options?.startCallbackTimeoutMs ?? DEFAULT_START_CALLBACK_TIMEOUT_MS;
     this.admitHostResume = options?.admitHostResume;
+    this.onMediaRate = options?.onMediaRate;
     this.host.setEventListener((event: ReaderTtsHostEvent): void => {
       this.routeHostEvent(event);
     }, this.ownerToken);
@@ -268,6 +275,15 @@ export class ReaderTtsSessionCoordinator {
       else if (event.action === 'stop') this.voidLogged(this.stop('user'), 'mediaControl.stop');
       else if (event.action === 'next') this.voidLogged(this.next(), 'mediaControl.next');
       else this.voidLogged(this.previous(), 'mediaControl.previous');
+      return;
+    }
+    if (event.type === 'mediaRate') {
+      const active = this.active;
+      if (active !== undefined && active.plan !== undefined && this.isSessionCurrent(active.identity) &&
+        audition === undefined && isReaderTtsSupportedPlaybackRate(event.rate)) {
+        if (this.onMediaRate !== undefined) this.onMediaRate(event.rate);
+        else this.voidLogged(this.setRate(event.rate), 'mediaControl.rate');
+      }
       return;
     }
     if (event.type === 'interruption') {
@@ -746,7 +762,7 @@ export class ReaderTtsSessionCoordinator {
         const hostStopError = await hostStopTask;
         if (hostStopError !== undefined) throw hostStopError;
         if (!current()) return;
-        const accepted = await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(rate));
+        const accepted = await this.gateway.setRate(active.input.chapter, readerTtsCoreRateForMultiplier(rate));
         this.rememberCoreSnapshot(active, accepted);
         if (!current()) return;
         const paused = priorState.status === 'paused' || priorState.status === 'interrupted';
@@ -765,7 +781,7 @@ export class ReaderTtsSessionCoordinator {
         // Core may have accepted the mutation before the transport reported
         // an error. Restore the old value before exposing the failure.
         try {
-          const restoredSnapshot = await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(priorRate));
+          const restoredSnapshot = await this.gateway.setRate(active.input.chapter, readerTtsCoreRateForMultiplier(priorRate));
           this.rememberCoreSnapshot(active, restoredSnapshot);
         } catch (_) {
           restored = false;
@@ -1093,7 +1109,7 @@ export class ReaderTtsSessionCoordinator {
       if (!this.isSessionCurrent(identity)) return;
       const ratedSnapshot = await this.gateway.setRate(
         active.input.chapter,
-        this.coreRateForMultiplier(active.input.rate ?? 1),
+        readerTtsCoreRateForMultiplier(active.input.rate ?? 1),
       );
       if (!this.isSessionCurrent(identity)) return;
       this.applyCoreSnapshot(ratedSnapshot);
@@ -1376,7 +1392,7 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private async handleHostEvent(event: ReaderTtsHostEvent): Promise<void> {
-    if (event.type === 'mediaControl' || event.type === 'interruption' || event.type === 'deviceChange' ||
+    if (event.type === 'mediaControl' || event.type === 'mediaRate' || event.type === 'interruption' || event.type === 'deviceChange' ||
       event.type === 'backgroundLeaseRevoked') {
       return;
     }
@@ -1569,7 +1585,7 @@ export class ReaderTtsSessionCoordinator {
       if (!current()) return;
       const ratedSnapshot = await this.gateway.setRate(
         next.chapter,
-        this.coreRateForMultiplier(active.input.rate ?? 1),
+        readerTtsCoreRateForMultiplier(active.input.rate ?? 1),
       );
       this.rememberCoreSnapshot(active, ratedSnapshot);
       if (!current()) return;
@@ -1761,7 +1777,7 @@ export class ReaderTtsSessionCoordinator {
       snapshot = await this.gateway.play(plan, index);
       this.rememberCoreSnapshot(active, snapshot);
       if (!current()) return undefined;
-      snapshot = await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(active.input.rate ?? 1));
+      snapshot = await this.gateway.setRate(active.input.chapter, readerTtsCoreRateForMultiplier(active.input.rate ?? 1));
       this.rememberCoreSnapshot(active, snapshot);
     } else if (forceSeek || snapshot.currentSliceIndex !== index) {
       snapshot = await this.gateway.seek(active.input.chapter, index);
@@ -1835,7 +1851,7 @@ export class ReaderTtsSessionCoordinator {
       snapshot.state === 'paused' ? 'paused' :
         snapshot.state === 'completed' ? 'completed' :
           snapshot.state === 'stopped' && errorMessage !== undefined ? 'error' : 'stopped';
-    this.host.publishPlaybackState(published);
+    this.host.publishPlaybackState(published, this.state.rate);
   }
 
   /** Core has drained this chapter, but the UI lease must remain active until
@@ -1981,10 +1997,6 @@ export class ReaderTtsSessionCoordinator {
     this.timerGeneration += 1;
     if (this.timerGeneration >= Number.MAX_SAFE_INTEGER) this.timerGeneration = 1;
     this.transport = { ...this.transport, timerDeadlineMs: undefined };
-  }
-
-  private coreRateForMultiplier(rate: number): number {
-    return Math.max(1, Math.min(10, Math.round(rate * 5)));
   }
 
   private setState(state: ReaderTtsState): void {

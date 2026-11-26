@@ -1,4 +1,5 @@
 import type { ShelfBook } from '../../../app/ReaderCoreGateway';
+import { bookContentKindLabel } from '../../../app/library/BookCoverDisplay.ts';
 import { MangaBookPresentation } from '../../manga/presentation/MangaBookPresentation.ts';
 
 export type ShelfProgressVariant = 'list-status' | 'grid-caption';
@@ -15,9 +16,14 @@ export class ShelfBookPresentation {
       if (kind.toLowerCase() === 'local' || kind.toLowerCase() === 'txt') return '本地 TXT';
       return kind.length > 0 ? `本地 ${kind.toUpperCase()}` : '本地书';
     }
+    return this.remoteSourceName(book) || '书源名称暂不可用';
+  }
+
+  static remoteSourceName(book: ShelfBook): string {
+    if (book.sourceId === 'local') return '';
     const name = book.sourceName?.trim() ?? '';
-    return name.length > 0 && name !== book.sourceId.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)
-      ? name : '书源名称暂不可用';
+    return name !== book.sourceId.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(name) &&
+      !/^www\./i.test(name) && !/^\.{0,2}[/\\]/.test(name) ? name : '';
   }
 
   static latestChapter(book: ShelfBook): string {
@@ -62,7 +68,7 @@ export class ShelfBookPresentation {
     } else if (value === 0) {
       if (this.listReadingPosition(book) === UNREAD_POSITION) return '未读';
       const basisPoints = book.readProgress;
-      if (basisPoints === undefined || !Number.isFinite(basisPoints) || basisPoints < 0) return '*%';
+      if (basisPoints === undefined || !Number.isFinite(basisPoints) || basisPoints < 0) return '进度未知';
     }
     return this.percentLabel(value);
   }
@@ -99,8 +105,7 @@ export class ShelfBookPresentation {
   }
 
   static contentLabel(book: ShelfBook | undefined): string {
-    if (book === undefined) return '';
-    return book.contentKind === 'manga' ? '漫画' : book.contentKind === 'audio' ? '有声' : '小说';
+    return book === undefined ? '' : bookContentKindLabel(book.sourceId, book.contentKind);
   }
 
   static originLabel(book: ShelfBook): string {

@@ -4,9 +4,12 @@ import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback'
 import { readerPressPointer } from '../../../ui/foundation/ReaderPressMotion';
 import { TYPE_READER_SESSION_COUNTDOWN, TYPE_READER_SESSION_LABEL } from '../../../ui/foundation/ReaderTypography';
 import type { ReaderSessionCapsuleState, ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
+import { readerSessionCapsuleColor } from './ReaderSessionCapsulePaint';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
 import { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } from './ReaderPageChromeLayout';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
+import { applyReaderImmersiveMaterial, defaultNavigationPreferences, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 
 const AUTO_PAGE_CAPSULE_MIN_WIDTH = 96;
 const TTS_CAPSULE_MIN_WIDTH = 94;
@@ -87,21 +90,32 @@ export class ReaderSessionCapsuleFrame implements AttributeModifier<CommonAttrib
   private readonly shadow: string;
   private readonly density: number;
   private readonly pressed: boolean;
+  private readonly material: ReaderSurfaceMaterialDecision | undefined;
 
-  constructor(scheme: string, surface: string, border: string, shadow: string, density: number = 1, pressed: boolean = false) {
+  constructor(scheme: string, surface: string, border: string, shadow: string, density: number = 1, pressed: boolean = false,
+    material?: ReaderSurfaceMaterialDecision) {
     this.scheme = scheme;
     this.surface = surface;
     this.border = border;
     this.shadow = shadow;
     this.density = density;
     this.pressed = pressed;
+    this.material = material;
   }
 
   applyNormalAttribute(instance: CommonAttribute): void {
-    const fill = this.surface.length > 0 ? this.surface : readerAppColor('TOK_READ_SURFACE', this.scheme);
+    if (this.material?.native === true) {
+      instance.backgroundEffect(undefined).backgroundColor(Color.Transparent)
+        .border({ width: 0, color: Color.Transparent }).borderRadius(READER_SESSION_CAPSULE_RADIUS)
+        .shadow(undefined);
+      applyReaderImmersiveMaterial(instance, this.material);
+      return;
+    }
+    const fill = readerSessionCapsuleColor('surface', this.scheme, this.surface);
+    applyReaderImmersiveMaterial(instance, undefined);
     new ReaderPressFeedback(fill, this.scheme, READER_SESSION_CAPSULE_RADIUS,
       READER_SESSION_CAPSULE_RADIUS, true, this.pressed).applyNormalAttribute(instance);
-    instance.border({ width: 1, color: this.border.length > 0 ? this.border : readerAppColor('TOK_LINE', this.scheme) })
+    instance.border({ width: 1, color: readerSessionCapsuleColor('border', this.scheme, this.border) })
       .shadow({ radius: READER_SESSION_CAPSULE_SHADOW.radius * this.density,
         color: this.shadow.length > 0 ? this.shadow : readerAppColor('app.shadow.menu', this.scheme),
         offsetX: 0, offsetY: READER_SESSION_CAPSULE_SHADOW.offsetY * this.density });
@@ -159,15 +173,15 @@ export struct ReaderSessionCapsuleLeading {
   }
 
   private effectiveTextColor(): string {
-    return this.textColor.length > 0 ? this.textColor : readerAppColor('TOK_READ_INK', this.themeScheme);
+    return readerSessionCapsuleColor('ink', this.themeScheme, this.textColor);
   }
 
   private effectivePrimaryColor(): string {
-    return this.primaryColor.length > 0 ? this.primaryColor : readerAppColor('TOK_READ_PRIMARY', this.themeScheme);
+    return readerSessionCapsuleColor('primary', this.themeScheme, this.primaryColor);
   }
 
   private effectiveOnPrimaryColor(): string {
-    return this.onPrimaryColor.length > 0 ? this.onPrimaryColor : readerAppColor('app.control.onPrimary', this.themeScheme);
+    return readerSessionCapsuleColor('onPrimary', this.themeScheme, this.onPrimaryColor);
   }
 }
 
@@ -188,7 +202,7 @@ export struct ReaderSessionCapsulePause {
         (this.themeScheme === 'night' ? $r('app.media.reader_session_play_theme_night') : $r('app.media.reader_session_play')))
         .width(8).height(8);
     }
-    .width(16).height(16).backgroundColor(this.primaryColor.length > 0 ? this.primaryColor : readerAppColor('TOK_READ_PRIMARY', this.themeScheme)).borderRadius(8)
+    .width(16).height(16).backgroundColor(readerSessionCapsuleColor('primary', this.themeScheme, this.primaryColor)).borderRadius(8)
     .hitTestBehavior(HitTestMode.None);
   }
 }
@@ -205,6 +219,9 @@ export function readerSessionCapsuleAccessibility(
 @Component
 export struct ReaderSessionCapsule {
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @Prop type: ReaderSessionCapsuleType = 'autoPage';
   @Prop sessionState: ReaderSessionCapsuleState = 'playing';
   @Prop desiredPlaying: boolean = true;
@@ -236,18 +253,19 @@ export struct ReaderSessionCapsule {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Stack({ alignContent: Alignment.TopStart }) {
       ReaderSessionCapsuleLeading({
-        type: this.type, countdown: this.countdown, textColor: this.effectiveTextColor(),
-        primaryColor: this.effectivePrimaryColor(), onPrimaryColor: this.effectiveOnPrimaryColor(),
+        type: this.type, countdown: this.countdown, textColor: this.textColor,
+        primaryColor: this.primaryColor, onPrimaryColor: this.onPrimaryColor,
         themeScheme: this.themeScheme, capsuleWidth: this.finalWidth(), capsuleHeight: this.metrics().paintHeight,
         labelWidth: this.metrics().labelWidth, labelHeight: this.metrics().labelHeight, countdownSize: this.metrics().countdownSize,
       });
       ReaderSessionCapsulePause({ sessionState: this.sessionState, themeScheme: this.themeScheme, desiredPlaying: this.desiredPlaying,
-        primaryColor: this.effectivePrimaryColor(), onPrimaryColor: this.effectiveOnPrimaryColor() })
+        primaryColor: this.primaryColor, onPrimaryColor: this.onPrimaryColor })
         .position({ x: this.finalWidth() - 20, y: (this.metrics().paintHeight - 16) / 2 });
     }
     .width(this.finalWidth()).height(this.metrics().paintHeight)
     .attributeModifier(new ReaderSessionCapsuleFrame(this.themeScheme, this.surfaceColor, this.surfaceBorderColor, this.shadowColor,
-      this.metricsRevision < 0 ? 1 : readerWindowMetrics().densityPixels, this.interactionEnabled && this.pressPointer >= 0))
+      this.metricsRevision < 0 ? 1 : readerWindowMetrics().densityPixels, this.interactionEnabled && this.pressPointer >= 0,
+      readerSurfaceMaterialDecision('sessionCapsule', this.navigationPreferences, this.themeScheme, this.systemScheme)))
     .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }
     .padding(0)
@@ -282,17 +300,6 @@ export struct ReaderSessionCapsule {
     return this.metricsCache.resolve(this.getUIContext(), this.type, this.fontScale, this.metricsRevision);
   }
 
-  private effectiveTextColor(): string {
-    return this.textColor.length > 0 ? this.textColor : readerAppColor('TOK_READ_INK', this.themeScheme);
-  }
-
-  private effectivePrimaryColor(): string {
-    return this.primaryColor.length > 0 ? this.primaryColor : readerAppColor('TOK_READ_PRIMARY', this.themeScheme);
-  }
-
-  private effectiveOnPrimaryColor(): string {
-    return this.onPrimaryColor.length > 0 ? this.onPrimaryColor : readerAppColor('app.control.onPrimary', this.themeScheme);
-  }
   private numericLength(value: Length): number {
     const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number.parseFloat(value) : 0;
     return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;

@@ -100,7 +100,8 @@ export struct RetainedReaderScene {
         onLoadMangaDownloadActions: this.directoryActions.loadMangaActions,
         onMangaDownloadAction: this.directoryActions.performMangaAction,
         chapterStartBookmarkCreationEnabled: true,
-        sourceSwitchVisible: this.source.visible, sourceSwitchPresented: this.source.isSurfacePresented(),
+        // Observe the attachment directly, including the last exit callback after visible has changed.
+        sourceSwitchVisible: this.source.visible, sourceSwitchPresented: this.source.surfaceAttached || this.source.visible,
         sourceSwitchSurface: this.source, sourceSwitchCovered: this.manga.selectionVisible, sourceSwitchState: this.source.state,
         allowCancelSourceSwitchWhilePreparing: this.manga.canCancelPreparation() ||
           this.source.host()?.canCancelPreparation(this.source.scopeId) === true,

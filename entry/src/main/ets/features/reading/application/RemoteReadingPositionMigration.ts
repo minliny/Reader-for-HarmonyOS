@@ -15,6 +15,30 @@ export interface RemoteReadingPositionScope {
   bodyVersion: string;
   processingVersion: string;
 }
+
+/** Project the proof for one requested reader anchor. The gateway validates its wire representation. */
+export function createRequestedRemoteReadingPositionContext(
+  sourceId: string,
+  bookId: string,
+  chapterIndex: number,
+  offset: number,
+  scope: RemoteReadingPositionScope | undefined,
+  directoryTargetProof?: ReaderDirectoryTargetProof,
+): RemoteReadingPositionContext | undefined {
+  if (directoryTargetProof !== undefined &&
+    (directoryTargetProof.sourceId !== sourceId || directoryTargetProof.bookId !== bookId)) {
+    throw new Error('DIRECTORY_SCOPE_CHANGED');
+  }
+  if (scope === undefined) return directoryTargetProof === undefined ? undefined : { anchors: [], directoryTargetProof };
+  if (scope.sourceId !== sourceId || scope.bookId !== bookId || scope.chapterIndex !== chapterIndex) {
+    throw new Error('READING_POSITION_SCOPE_MISMATCH');
+  }
+  const context: RemoteReadingPositionContext = { bodyVersion: scope.bodyVersion, processingVersion: scope.processingVersion,
+    anchors: [{ id: 'requested', offset }] };
+  if (directoryTargetProof !== undefined) context.directoryTargetProof = directoryTargetProof;
+  return context;
+}
+
 export interface RemoteReadingMappedAnchor { id: string; previousOffset: number; offset: number; }
 export interface RemoteReadingMigratedProgress {
   sourceId: string;

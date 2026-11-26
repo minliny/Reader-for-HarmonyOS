@@ -38,6 +38,20 @@ export function readerScaledBarHeight(
   return Math.ceil(Math.max(finiteNonNegative(baseHeight), contentHeight));
 }
 
+/** A retained bookshelf/search header animates its content box inside the panel borders. */
+export function readerLibraryHeaderContentHeight(
+  bookshelfBarHeight: number,
+  bookshelfTitleLineHeight: number,
+  fontScale: number,
+  borderWidth: number,
+  searchBarHeight?: number,
+  searchProgress: number = 0,
+): number {
+  const idle = readerScaledBarHeight(bookshelfBarHeight - 2 * borderWidth, bookshelfTitleLineHeight, fontScale, 0);
+  if (searchBarHeight === undefined) return idle;
+  return idle + (searchBarHeight - idle) * searchProgress;
+}
+
 /** Measured page height already reflects platform resize; fall back to the window. */
 export function readerAvailableWindowHeight(
   metrics: ReaderWindowMetricsSnapshot,

@@ -121,6 +121,10 @@ export interface ReadingGatewayRuntime {
   tryAcquireMangaPreparedImage?(sessionId: number, scope: MangaDisplaySessionScope, resourceRef: string,
     mangaPosition: number, isCurrent: () => boolean): ReadingGatewayImage | undefined;
 
+  /** Exact encoded page from the existing resource owner for user-initiated Save As. */
+  readMangaImageForSave?(identity: ReadingGatewayImageCacheIdentity, sourceRuleVersion: string,
+    allowNetwork: boolean, current: () => boolean): Promise<Uint8Array | undefined>;
+
   prefetchReadingImage?(
     identity: ReadingGatewayImageCacheIdentity,
     isCurrent?: () => boolean,

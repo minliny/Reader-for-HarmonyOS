@@ -21,6 +21,13 @@ export interface SharedDownloadTarget {
   expectedChapters?: SharedDownloadExpectedChapter[];
 }
 export interface SharedDownloadAcceptance { key: string; accepted: boolean; alreadyRunning: boolean; requestedChapters: number; }
+/** The target was rejected before download state or content was changed. */
+export class SharedDownloadAdmissionError extends Error {}
+
+const LOCAL_IMPORT_DOWNLOAD_MESSAGE = '本地导入内容由书籍导入管理，不支持网络下载';
+const UNCONFIRMED_DOWNLOAD_KIND_MESSAGE = '下载内容类型需要重新确认';
+const UNSUPPORTED_DOWNLOAD_KIND_MESSAGE = '当前下载页尚未支持此类内容';
+
 /** Queue/content control and its final durable state have succeeded. A caller
  * may acknowledge that operation while presenting this separate read error. */
 export class SharedDownloadProjectionRefreshError extends Error {
@@ -202,10 +209,9 @@ export class SharedDownloadCoordinator {
   }
 
   async submitBook(book: ShelfBook, indexes?: number[], expectedChapters?: SharedDownloadExpectedChapter[]): Promise<SharedDownloadAcceptance> {
+    this.assertDownloadBookAdmission(book);
     await this.runtime.waitForDownloadStorageIdle?.();
     await this.restore(); this.assertCurrent();
-    if (book.sourceId === 'local') throw new Error('本地书籍无需网络下载');
-    if (book.contentKind === 'audio') throw new Error('下载内容类型需要重新确认');
     const key = this.key(book.sourceId, book.bookId);
     return this.serialized(key, async (): Promise<SharedDownloadAcceptance> => {
       const existing = this.intents.get(key);
@@ -220,6 +226,7 @@ export class SharedDownloadCoordinator {
 
   async operate(action: SharedDownloadAction, target: SharedDownloadTarget): Promise<SharedDownloadAcceptance | undefined> {
     if (action === 'download') return this.submitBook(target.book, target.chapterIndexes, target.expectedChapters);
+    this.assertDownloadBookAdmission(target.book);
     await this.runtime.waitForDownloadStorageIdle?.();
     await this.restore(); this.assertCurrent();
     const key = this.key(target.book.sourceId, target.book.bookId);
@@ -317,6 +324,7 @@ export class SharedDownloadCoordinator {
       if (intent.status === 'queued') this.start(intent);
       return action === 'resume' ? { key, accepted: true, alreadyRunning: false, requestedChapters: selected.length } : undefined;
     }).catch(async (error): Promise<SharedDownloadAcceptance | undefined> => {
+      if (error instanceof SharedDownloadAdmissionError) throw error;
       this.controlDiagnostic(action, stage, lastConfirmed, error);
       const intent = this.intents.get(key);
       if (lastConfirmed === 'state-persisted' && stage === 'projection-refresh') {
@@ -357,7 +365,7 @@ export class SharedDownloadCoordinator {
   private async accept(session: RemoteReadingSession, indexes?: number[], suppliedBook?: ShelfBook): Promise<SharedDownloadAcceptance> {
     this.assertCurrent();
     if (session.identity.sourceId === 'local') throw new Error('本地书籍无需网络下载');
-    if (session.contentKind !== 'text' && session.contentKind !== 'manga') throw new Error('下载内容类型需要重新确认');
+    if (session.contentKind !== 'text' && session.contentKind !== 'manga') throw new Error(UNCONFIRMED_DOWNLOAD_KIND_MESSAGE);
     const key = this.key(session.identity.sourceId, session.identity.bookId);
     const requested = this.selected(session, indexes);
     if (requested.length === 0) throw new Error('本书暂无可下载章节');
@@ -488,11 +496,21 @@ export class SharedDownloadCoordinator {
     }
   }
 
+  private assertDownloadBookAdmission(book: ShelfBook): void {
+    if (book.sourceId === 'local') throw new SharedDownloadAdmissionError(LOCAL_IMPORT_DOWNLOAD_MESSAGE);
+    this.assertDownloadKind(book.contentKind);
+  }
+
+  private assertDownloadKind(kind?: 'text' | 'manga' | 'audio'): void {
+    if (kind !== undefined && kind !== 'text' && kind !== 'manga')
+      throw new SharedDownloadAdmissionError(UNSUPPORTED_DOWNLOAD_KIND_MESSAGE);
+  }
+
   private async resolve(book: ShelfBook, original?: RemoteReadingSession): Promise<RemoteReadingSession> {
     this.assertCurrent();
-    if (book.sourceId === 'local') throw new Error('本地导入内容由书籍导入管理，不支持网络下载');
+    this.assertDownloadBookAdmission(book);
     const contentKind = book.contentKind ?? original?.contentKind ?? await this.readLegacyContentKind(book.sourceId);
-    if (contentKind !== 'text' && contentKind !== 'manga') throw new Error('下载内容类型需要重新确认');
+    if (contentKind !== 'text' && contentKind !== 'manga') throw new SharedDownloadAdmissionError(UNSUPPORTED_DOWNLOAD_KIND_MESSAGE);
     const gateway = new RemoteReadingFlowGateway(this.runtime);
     const seed = { ...book, contentKind, detailUrl: original?.detailUrl ?? book.bookId,
       sourceVersion: original?.sourceVersion, searchVariables: original?.continuationVariables ?? [] };
@@ -502,7 +520,8 @@ export class SharedDownloadCoordinator {
       this.assertCurrent();
       session = await gateway.openSession(seed, { allowMangaCatalog: contentKind === 'manga', isCurrent: (): boolean => this.current() });
     }
-    if (session.contentKind !== undefined && session.contentKind !== contentKind) throw new Error('下载内容类型需要重新确认');
+    this.assertDownloadKind(session.contentKind);
+    if (session.contentKind !== undefined && session.contentKind !== contentKind) throw new Error(UNCONFIRMED_DOWNLOAD_KIND_MESSAGE);
     // The legacy cached-catalog response can omit media kind. Carry forward
     // the proven shelf/source classification with the exact catalog identity.
     return { ...session, contentKind };
@@ -512,23 +531,23 @@ export class SharedDownloadCoordinator {
     const result = await this.runtime.request('source.list', { sourceId }, { shouldCancel: (): boolean => !this.current() });
     this.assertCurrent();
     const sources = result.data['sources'];
-    if (!Array.isArray(sources) || sources.length !== 1) throw new Error('下载内容类型需要重新确认');
+    if (!Array.isArray(sources) || sources.length !== 1) throw new Error(UNCONFIRMED_DOWNLOAD_KIND_MESSAGE);
     const source = sources[0];
     if (source === null || typeof source !== 'object' || Array.isArray(source) || source['sourceId'] !== sourceId)
-      throw new Error('下载内容类型需要重新确认');
+      throw new Error(UNCONFIRMED_DOWNLOAD_KIND_MESSAGE);
     const rules = source['bookSource'];
     if (rules === null || typeof rules !== 'object' || Array.isArray(rules))
-      throw new Error('下载内容类型需要重新确认');
+      throw new Error(UNCONFIRMED_DOWNLOAD_KIND_MESSAGE);
     const declared = rules['bookSourceType'];
     if (typeof declared !== 'number' && (typeof declared !== 'string' || declared.trim().length === 0))
-      throw new Error('下载内容类型需要重新确认');
+      throw new Error(UNCONFIRMED_DOWNLOAD_KIND_MESSAGE);
     const category = classifyReaderSource({ sourceId, bookSourceType: declared,
       name: typeof source['name'] === 'string' ? source['name'] : undefined,
       baseUrl: typeof source['baseUrl'] === 'string' ? source['baseUrl'] : undefined,
       group: typeof rules['bookSourceGroup'] === 'string' ? rules['bookSourceGroup'] : undefined });
     if (category === 'novel') return 'text';
     if (category === 'comic') return 'manga';
-    throw new Error('下载内容类型需要重新确认');
+    throw new SharedDownloadAdmissionError(UNSUPPORTED_DOWNLOAD_KIND_MESSAGE);
   }
 
   private async rebind(intent: SharedDownloadIntent, fresh: RemoteReadingSession, ownExecution?: SharedDownloadExecution): Promise<void> {
@@ -823,6 +842,7 @@ export class SharedDownloadCoordinator {
     return work;
   }
   private async failSubmission(key: string, error: Error): Promise<never> {
+    if (error instanceof SharedDownloadAdmissionError) throw error;
     const intent = this.intents.get(key);
     if (intent !== undefined && this.current() && (intent.status === 'queued' || intent.status === 'downloading')) {
       const execution = this.executions.get(key); if (execution !== undefined) execution.valid = false;

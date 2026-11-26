@@ -1,3 +1,5 @@
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { LengthMetrics } from '@kit.ArkUI';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
@@ -78,6 +80,8 @@ class GroupSourceData implements IDataSource {
 
 @Component
 export struct SourceV9GroupsPage {
+  @StorageProp('readerNavigationAppearancePreferences')
+  private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') private windowRevision: number = 0;
@@ -860,7 +864,10 @@ export struct SourceV9GroupsPage {
   @Builder
   private groupDialog() {
     Stack({ alignContent: Alignment.Center }) {
-      Rect().width('100%').height('100%').fill(this.color('app.scrim.warmModal'))
+      Stack().width('100%').height('100%')
+        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+          this.color('app.scrim.warmModal')))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no').onClick((): void => { this.consumeBack(); });
       Column() {
         Scroll() {

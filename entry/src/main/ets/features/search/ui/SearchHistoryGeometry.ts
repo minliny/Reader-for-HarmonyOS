@@ -9,6 +9,7 @@ export class SearchHistoryGeometry {
   readonly gap: number = SEARCH_HISTORY_GAP;
   readonly headingGap: number;
   readonly headingHeight: number;
+  readonly fontScale: number;
   readonly buttonHeight: number;
   readonly feedbackHeight: number;
   readonly rows: number;
@@ -24,13 +25,14 @@ export class SearchHistoryGeometry {
     expandedLayout: boolean, status: string = '', measuredFeedbackHeight: number = 0,
     innerInsetOverride: number | undefined = undefined) {
     const scale = Number.isFinite(fontScale) ? Math.max(1, fontScale) : 1;
+    this.fontScale = scale;
     this.innerInset = innerInsetOverride !== undefined && Number.isFinite(innerInsetOverride) ?
       Math.max(0, innerInsetOverride) : expandedLayout ? 20 : 13;
     this.contentWidth = Math.max(0, panelWidth - this.innerInset * 2);
-    const heading = Math.max(SEARCH_CONTROL_MIN_TARGET, Math.ceil(34 + 18 * (scale - 1)));
-    this.headingVisible = viewportHeight >= 8 + heading + 10 + 12;
-    this.topInset = this.headingVisible ? 8 : 0;
-    this.bottomInset = this.headingVisible ? 12 : 0;
+    const heading = Math.ceil(24 * scale);
+    this.headingVisible = viewportHeight >= 12 + heading + 10 + 14;
+    this.topInset = this.headingVisible ? 12 : 0;
+    this.bottomInset = this.headingVisible ? 14 : 0;
     this.headingHeight = this.headingVisible ? heading : 0;
     this.headingGap = this.headingVisible ? 10 : 0;
     this.buttonHeight = searchHistoryButtonHeight(scale);
@@ -135,8 +137,9 @@ export function projectSearchHistoryPanel(history: string[], geometry: SearchHis
   }
   const rowPitch = geometry.buttonHeight + geometry.gap;
   const foldedBody = geometry.rows * rowPitch - geometry.gap;
-  const toggleInHeading = geometry.bodyHeight < foldedBody + rowPitch;
-  const footer = toggleInHeading ? 0 : rowPitch;
+  const footerHeight = geometry.headingHeight + geometry.headingGap;
+  const toggleInHeading = geometry.bodyHeight < foldedBody + footerHeight;
+  const footer = toggleInHeading ? 0 : footerHeight;
   const bodyBudget = geometry.bodyHeight - footer;
   const rows = expanded ? projectSearchHistoryRows(history, geometry, measureControlWidth, history.length) :
     candidate.slice(0, geometry.rows);

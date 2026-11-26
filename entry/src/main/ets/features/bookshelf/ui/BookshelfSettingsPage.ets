@@ -1,7 +1,6 @@
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
-import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from '../application/BookshelfViewModeHost';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderRecoveryGroup } from '../../../ui/feedback/ReaderRecoveryGroup';
@@ -15,7 +14,6 @@ import { ReaderSegmentedControl, READER_APP_THEME_SEGMENT_WIDTH } from '../../..
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
 import { CategorySection } from '../../settings/ui/CategorySection';
 import { WebDavCredentialStore } from '../../sync/application/WebDavCredentialStore';
-import { LocalRecoveryPanel } from './LocalRecoveryPanel';
 
 /** Persistent bookshelf preferences, shared by More and the settings route. */
 import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../application/BookshelfViewMode';
@@ -24,7 +22,6 @@ import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../application/B
 export struct BookshelfSettingsPage {
   @Prop embeddedWide: boolean = false;
   @StorageLink('readerAppForeground') private appForeground: boolean = true;
-  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
 
   @StorageLink('readerBookshelfViewMode') private mode: string = DEFAULT_BOOKSHELF_VIEW;
@@ -95,6 +92,11 @@ export struct BookshelfSettingsPage {
   private userInputIsCurrent(): boolean {
     return this.mounted && (this.isInputAllowed?.() ?? true);
   }
+
+  private updateAutoCheck(value: boolean, identity: string): void {
+    if (this.userInputIsCurrent() && identity === this.preferenceControlIdentity() && !this.settingsPending() &&
+      this.operation.receipt?.facts.fact !== 'refreshing') this.onAutoCheckUpdate(value);
+  }
   @Builder
   private pendingRecovery() {
     ReaderRecoveryGroup({ content: (): void => { this.pendingRecoveryItems(); } });
@@ -162,7 +164,6 @@ export struct BookshelfSettingsPage {
     ReaderStandardPage({
       embeddedWide: this.embeddedWide,
       floatingHeader: true,
-      editingHost: this.editingHost,
       variant: 'settings',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
@@ -180,32 +181,6 @@ export struct BookshelfSettingsPage {
   @Builder
   private pageContent() {
     CategorySection({ title: '书架偏好' }) {
-      if (this.operation.readFacts?.hasValue === false && !this.settingsPending()) {
-        ReaderPageState({ title: this.operation.readFacts?.fact === 'loading' || this.operation.readFacts?.fact === 'refreshing' ? '正在读取书架设置…' :
-            this.operation.readFacts?.fact === 'failed' || this.operation.readFacts?.fact === 'refreshFailed' ? '书架设置读取失败' :
-            this.operation.readFacts?.fact === 'cancelled' ? '书架设置读取已取消' :
-            this.operation.readFacts?.fact === 'blocked' ? '书架设置暂不可用' : '书架设置尚未读取',
-          message: this.operation.readFacts?.fact === 'loading' || this.operation.readFacts?.fact === 'refreshing' ? '' : this.operation.readFacts?.message ?? '',
-          loading: this.operation.readFacts?.fact === 'loading' || this.operation.readFacts?.fact === 'refreshing',
-          actionLabel: this.operation.readFacts?.canRetry === true ? '重试' : '',
-          onAction: (): void => {
-            if (this.userInputIsCurrent()) this.onReconcile(this.operation.readFacts?.generation ?? 0, this.navigationGeneration);
-          } });
-      } else {
-        ForEach([this.preferenceControlIdentity()], (identity: string): void => {
-          ReaderFormRow({ label: '自动检查更新', kind: 'standard',
-            secondaryText: '自动检查书架中书籍的最新章节' }) {
-            ReaderToggle({ specId: 'bookshelf-update-toggle', value: this.autoCheckUpdate,
-              inputIdentity: identity, accessibilityLabel: '自动检查更新', actionEnabled: !this.settingsPending(),
-              isBusy: this.operation.receipt?.facts.fact === 'refreshing',
-              onToggle: (enabled: boolean): void => {
-                if (this.userInputIsCurrent() && identity === this.preferenceControlIdentity() && !this.settingsPending() &&
-                  this.operation.receipt?.facts.fact !== 'refreshing') this.onAutoCheckUpdate(enabled);
-              },
-            });
-          }
-        }, (identity: string): string => identity);
-      }
       if (this.viewModeSnapshot.canonical !== undefined || this.modePending()) {
         ForEach([this.preferenceControlIdentity()], (identity: string): void => {
           ReaderFormRow({ label: '显示方式', kind: 'standard', contentMinWidth: READER_APP_THEME_SEGMENT_WIDTH }) {
@@ -229,10 +204,32 @@ export struct BookshelfSettingsPage {
           actionLabel: this.viewModeRecovery().canRetry ? '重试' : '',
           onAction: (): void => this.retryMode(this.viewModeRecovery().generation) });
       }
-
+      if (this.operation.readFacts?.hasValue === false && !this.settingsPending()) {
+        ReaderPageState({ title: this.operation.readFacts?.fact === 'loading' || this.operation.readFacts?.fact === 'refreshing' ? '正在读取书架设置…' :
+            this.operation.readFacts?.fact === 'failed' || this.operation.readFacts?.fact === 'refreshFailed' ? '书架设置读取失败' :
+            this.operation.readFacts?.fact === 'cancelled' ? '书架设置读取已取消' :
+            this.operation.readFacts?.fact === 'blocked' ? '书架设置暂不可用' : '书架设置尚未读取',
+          message: this.operation.readFacts?.fact === 'loading' || this.operation.readFacts?.fact === 'refreshing' ? '' : this.operation.readFacts?.message ?? '',
+          loading: this.operation.readFacts?.fact === 'loading' || this.operation.readFacts?.fact === 'refreshing',
+          actionLabel: this.operation.readFacts?.canRetry === true ? '重试' : '',
+          onAction: (): void => {
+            if (this.userInputIsCurrent()) this.onReconcile(this.operation.readFacts?.generation ?? 0, this.navigationGeneration);
+          } });
+      } else {
+        ForEach([this.preferenceControlIdentity()], (identity: string): void => {
+          ReaderFormRow({ label: '自动检查书架更新', kind: 'standard',
+            secondaryText: '自动检查书架中书籍的最新章节', actionEnabled: !this.settingsPending(),
+            isBusy: this.operation.receipt?.facts.fact === 'refreshing',
+            onLabelAction: (): void => this.updateAutoCheck(!this.autoCheckUpdate, identity) }) {
+            ReaderToggle({ specId: 'bookshelf-update-toggle', value: this.autoCheckUpdate,
+              inputIdentity: identity, accessibilityLabel: '自动检查书架更新', actionEnabled: !this.settingsPending(),
+              isBusy: this.operation.receipt?.facts.fact === 'refreshing',
+              onToggle: (enabled: boolean): void => this.updateAutoCheck(enabled, identity),
+            });
+          }
+        }, (identity: string): string => identity);
+      }
     }
-    LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration, editingHost: this.editingHost,
-      isInputAllowed: (): boolean => this.userInputIsCurrent() });
   }
 
   private viewModeRecovery(): ReaderRecoveryView {

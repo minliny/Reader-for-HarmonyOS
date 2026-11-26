@@ -1,5 +1,7 @@
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import type { SourceSwitchPresentation } from '../presentation/SourceSwitchPresentation';
 import { ColorMetrics } from '@kit.ArkUI';
 import { SOURCE_SWITCH_VISUAL } from './SourceSwitchVisual';
@@ -10,7 +12,8 @@ import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../..
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
-import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
+import { SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
+import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
@@ -32,13 +35,14 @@ import { NoCoverCover } from '../../../ui/patterns/NoCoverCover';
 import { sourceSwitchCandidateKey, sourceSwitchSourceCount } from '../application/SourceSwitchGateway';
 import type { SourceSwitchCandidate, SourceSwitchSweepProgress } from '../application/SourceSwitchGateway';
 import { SourceSwitchProgress } from './SourceSwitchProgress';
-import { sourceSwitchNovelChapter, sourceSwitchNovelLatency, sourceSwitchNovelDrawerHeight,
+import { sourceSwitchNovelChapter, sourceSwitchNovelLatency, sourceSwitchSearchLatency, sourceSwitchNovelDrawerHeight,
   sourceSwitchNovelRowHeight, sourceSwitchNovelCompact, sourceSwitchNovelScale, sourceSwitchNovelBookHeight,
   sourceSwitchNovelHeadingHeight, sourceSwitchNovelDiscoveryHeight, sourceSwitchNovelDiscoveryToolbarHeight,
-  sourceSwitchNovelDiscoveryCompact, sourceSwitchNovelDiscoveryPrefixVisible, sourceSwitchNovelDiscoveryActionWidth,
+  SOURCE_SWITCH_DISCOVERY_ACTION, sourceSwitchNovelDiscoveryCompact, sourceSwitchNovelDiscoveryPrefixVisible, sourceSwitchNovelDiscoveryActionWidth,
   sourceSwitchNovelDiscoveryActionVisibleHeight, sourceSwitchNovelDiscoveryActionHitHeight,
   sourceSwitchNovelColumnHeight, sourceSwitchNovelFooterHeight, sourceSwitchNovelTimingWidth,
-  sourceSwitchCandidateMatches, sourceSwitchOrderByChapter } from './SourceSwitchNovelPresentation';
+  SOURCE_SWITCH_FILTER_GAP, sourceSwitchNovelFilterHeight, sourceSwitchNovelFilterRowHeight,
+  sourceSwitchCandidateMatches, sourceSwitchOrderByChapter, sourceSwitchOrderByLatency } from './SourceSwitchNovelPresentation';
 import type { SourceSwitchPanelState } from '../presentation/SourceSwitchPresentationState';
 
 class SourceSwitchLayoutFrame extends ReaderPostLayoutFrame {}
@@ -114,26 +118,47 @@ struct SourceSwitchNovelRow {
   @ObjectLink @Watch('rowChanged') row: SourceSwitchCandidateRow;
   @State private candidate: SourceSwitchCandidate = this.row.candidate;
   @Prop @Watch('pressAdmissionChanged') rowEnabled: boolean = true;
+  @Prop @Watch('pressAdmissionChanged') listScrolling: boolean = false;
   @Prop selected: boolean = false;
-  @State private pressPointer: number = -1;
+  @State private pressed: boolean = false;
+  private readonly delayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    if (key.length === 0) this.pressed = false;
+    else readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressed = true; });
+  });
+  private retired: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop rowHeight: number = SOURCE_SWITCH_VISUAL.rowHeight;
   @Prop timingColumnWidth: number = SOURCE_SWITCH_VISUAL.timingColumnWidth;
+  @Prop allowCachedLatency: boolean = false;
   onSelect: () => void = (): void => {};
   onPress: () => void = (): void => {};
 
   // Keep the approved text carriers unchanged. Native ObjectLink delivers
   // every immutable gateway snapshot into this row's existing text actors.
-  private rowChanged(): void { this.candidate = this.row.candidate; this.pressAdmissionChanged(); }
-  private pressAdmissionChanged(): void { if (!this.rowEnabled || this.candidate.isCurrent === true) this.pressPointer = -1; }
-  aboutToDisappear(): void { this.pressPointer = -1; }
-  private rowTouch(event: TouchEvent): void {
-    const previous = this.pressPointer;
-    const next = readerPressPointer(event, previous, this.rowEnabled && this.row.candidate.isCurrent !== true);
-    if (next === previous) return;
-    readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressPointer = next; });
-    if (previous < 0 && next >= 0) this.onPress();
+  private rowChanged(): void {
+    if (this.candidate.sourceId !== this.row.candidate.sourceId || this.candidate.bookUrl !== this.row.candidate.bookUrl) {
+      this.cancelRowPress();
+    }
+    this.candidate = this.row.candidate;
+    this.pressAdmissionChanged();
   }
+
+  private pressAdmissionChanged(): void {
+    if (!this.rowEnabled || this.listScrolling || this.candidate.isCurrent === true) this.cancelRowPress();
+  }
+
+  aboutToAppear(): void { this.retired = false; }
+  aboutToDisappear(): void { this.retired = true; this.cancelRowPress(); }
+
+  private cancelRowPress(): void { this.delayedPress.cancel(); }
+
+  private rowTouch(event: TouchEvent): void {
+    const candidate = this.row.candidate;
+    const enabled = !this.retired && this.rowEnabled && candidate.isCurrent !== true;
+    if (this.delayedPress.observe(event, sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl),
+      enabled, !this.listScrolling)) this.onPress();
+  }
+
   private dividerColor(): ResourceColor {
     const color = ColorMetrics.resourceColor(readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme));
     return ColorMetrics.rgba(color.red, color.green, color.blue, color.alpha / 255 * SOURCE_SWITCH_VISUAL.rowDividerOpacity).color;
@@ -151,10 +176,9 @@ struct SourceSwitchNovelRow {
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.alignItems(HorizontalAlign.Start).layoutWeight(1);
-      if (this.candidate.latencyKind === 'search' && this.candidate.latencyMs !== undefined &&
-        Number.isFinite(this.candidate.latencyMs) && this.candidate.latencyMs >= 0) {
+      if (sourceSwitchSearchLatency(this.candidate, this.allowCachedLatency) !== undefined) {
         Flex({ direction: FlexDirection.Row, justifyContent: FlexAlign.End, alignItems: ItemAlign.Baseline }) {
-          Text(`${Math.round(this.candidate.latencyMs)}`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontFamily)
+          Text(`${Math.round(this.candidate.latencyMs as number)}`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontFamily)
             .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontSizeFp)
             .lineHeight(TYPE_SOURCE_SWITCH_NOVEL_LATENCY.lineHeightFp).halfLeading(true).fontFeature('"tnum" 1')
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -173,16 +197,18 @@ struct SourceSwitchNovelRow {
     }.width('100%').height(this.rowHeight).padding({ top: SOURCE_SWITCH_VISUAL.rowPaddingY, bottom: SOURCE_SWITCH_VISUAL.rowPaddingY,
       right: SOURCE_SWITCH_VISUAL.scrollbarWidth + 5 })
       .backgroundColor(readerPressSurface(this.selected ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent,
-        this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
-      .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
-      .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
+        this.appThemeScheme, this.pressed, this.reduceMotion))
+      .scale(readerPressScale(this.pressed, this.reduceMotion))
+      .opacity(readerPressOpacity(this.pressed, this.reduceMotion))
       .border({ width: { bottom: SOURCE_SWITCH_VISUAL.rowDividerWidth }, color: this.dividerColor() });
     }.width('100%').height(this.rowHeight)
       .enabled(this.rowEnabled && this.candidate.isCurrent !== true).accessibilityGroup(true)
-      .accessibilityText(`${this.candidate.sourceName || this.candidate.sourceId}，${sourceSwitchNovelChapter(this.candidate)}，搜索用时 ${sourceSwitchNovelLatency(this.candidate)}`)
+      .accessibilityText(`${this.candidate.sourceName || this.candidate.sourceId}，${sourceSwitchNovelChapter(this.candidate)}，` +
+        (this.candidate.latencyFromCache === true && !this.allowCachedLatency ? '本轮未测' :
+          `搜索用时 ${sourceSwitchNovelLatency(this.candidate, this.allowCachedLatency)}`))
       .onTouch((event: TouchEvent): void => this.rowTouch(event))
       .onClick((): void => {
-        if (this.rowEnabled && this.row.candidate.isCurrent !== true) this.onSelect();
+        if (!this.retired && this.rowEnabled && this.row.candidate.isCurrent !== true) this.onSelect();
       });
   }
 }
@@ -242,7 +268,7 @@ export struct SourceSwitchWindow {
   private wasRefreshing: boolean = false;
   private mounted: boolean = false;
   private touching: boolean = false;
-  private scrolling: boolean = false;
+  @State private scrolling: boolean = false;
   private heldKey: string = '';
   private firstVisibleIndex: number = 0;
   private firstVisibleListIndex: number = 0;
@@ -305,7 +331,12 @@ export struct SourceSwitchWindow {
     const query = filter.trim();
     const matching = query.length === 0 ? candidates :
       candidates.filter((candidate: SourceSwitchCandidate): boolean => sourceSwitchCandidateMatches(candidate, query));
-    return this.latestFirst ? sourceSwitchOrderByChapter(matching) : matching;
+    return this.latestFirst ? sourceSwitchOrderByChapter(matching, this.cachedLatencyAllowed()) :
+      sourceSwitchOrderByLatency(matching, this.cachedLatencyAllowed());
+  }
+
+  private cachedLatencyAllowed(): boolean {
+    return this.state.kind === 'candidates' && this.state.allowCachedLatency === true;
   }
   private publishCandidates(candidates: SourceSwitchCandidate[]): void {
     this.displayedCandidates = candidates;
@@ -323,9 +354,9 @@ export struct SourceSwitchWindow {
     this.publishCandidates(this.presentationCandidates(this.latestCandidates, value));
   }
 
-  private toggleOrder(): void {
-    if (!this.filterInputCurrent()) return;
-    this.latestFirst = !this.latestFirst;
+  private chooseOrder(latestFirst: boolean): void {
+    if (!this.filterInputCurrent() || latestFirst === this.latestFirst) return;
+    this.latestFirst = latestFirst;
     this.queueReorder();
   }
 
@@ -368,8 +399,7 @@ export struct SourceSwitchWindow {
     this.latestCandidates = this.state.candidates.filter((candidate: SourceSwitchCandidate): boolean => candidate.isCurrent !== true);
     for (const candidate of this.latestCandidates) {
       const key = this.candidateKey(candidate);
-      const latency = candidate.latencyMs;
-      if (candidate.latencyKind === 'search' && latency !== undefined && Number.isFinite(latency) && latency >= 0) {
+      if (sourceSwitchSearchLatency(candidate) !== undefined) {
         this.pendingSearchKeys.delete(key);
       }
     }
@@ -511,19 +541,6 @@ export struct SourceSwitchWindow {
     else if (this.state.kind === 'candidates') this.onRefresh();
     else this.onRetry();
   }
-  private statusText(): string {
-    const count = sourceSwitchSourceCount(this.latestCandidates);
-    if (this.isSweeping()) return this.contentKind === 'manga' ? `正在查找 · 已发现 ${count} 个` : `正在查找 · 已找到 ${count} 个书源`;
-    if (this.busy()) return '正在切换书源…';
-    if (this.state.kind === 'success') return '已切换书源';
-    if (this.state.kind === 'failure') return this.requiresReconciliation() ?
-      (this.state.confirmation === 'undispatched' ? '换源待核对' : '换源结果未确认') : '换源失败';
-    if (this.state.kind === 'discoveryError' || this.state.kind === 'candidates' && (this.state.refreshError?.trim().length ?? 0) > 0) return '查找失败';
-    if ((this.state.kind === 'candidates' || this.state.kind === 'empty') && this.state.stopped === true) {
-      return this.contentKind === 'manga' ? `已停止 · 已发现 ${count} 个` : `已停止 · 已找到 ${count} 个书源`;
-    }
-    return this.contentKind === 'manga' ? `查找完成 · 已发现 ${count} 个` : `查找结束 · 已找到 ${count} 个书源`;
-  }
   private errorText(): string {
     if (this.state.kind === 'discoveryError' || this.state.kind === 'failure') return this.state.message;
     return this.state.kind === 'candidates' ? this.state.refreshError ?? '' : '';
@@ -608,7 +625,8 @@ export struct SourceSwitchWindow {
           ListItem() {
             SourceSwitchNovelRow({ row: row, rowHeight: this.rowHeight(), timingColumnWidth: this.timingWidth(),
               rowEnabled: this.state.kind === 'candidates' && !this.busy(), reduceMotion: this.reduceMotion,
-              selected: this.selectedKey === row.key,
+              allowCachedLatency: this.cachedLatencyAllowed(),
+              selected: this.selectedKey === row.key, listScrolling: this.scrolling,
               onPress: (): void => { this.heldKey = row.key; },
               onSelect: (): void => this.selectCandidate(row.key) });
           }.width('100%').height(this.rowHeight());
@@ -691,9 +709,10 @@ export struct SourceSwitchWindow {
       SOURCE_SWITCH_VISUAL.gripHeight + SOURCE_SWITCH_VISUAL.gripMarginTop + SOURCE_SWITCH_VISUAL.gripMarginBottom;
   }
   @State private measuredSearchAndSortHeight: number = 0;
+  private filterRowHeight(): number { return sourceSwitchNovelFilterRowHeight(this.novelFontScale()); }
   private searchAndSortHeight(): number {
     return this.measuredSearchAndSortHeight > 0 ? this.measuredSearchAndSortHeight :
-      90 + (this.isSweeping() && this.sweepProgress() !== undefined ? 24 : 0);
+      sourceSwitchNovelFilterHeight(this.novelFontScale(), this.isSweeping() && this.sweepProgress() !== undefined);
   }
   private fixedDrawerHeaderHeight(): number {
     if (this.flowChrome()) return this.searchAndSortHeight();
@@ -780,6 +799,9 @@ export struct SourceSwitchWindow {
         .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme,
           SOURCE_SWITCH_VISUAL.closeRadius, SOURCE_SWITCH_VISUAL.closeRadius, this.canClose()))
         .id(`reader-source-close:${scope}:${attachment}:${variant}`)
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD && this.showing
+          ? { role: 'key-control', id: 'source-switch-close', modalControl: true,
+            busy: this.state.kind === 'switching' } as LayoutInvariantTag : undefined)
         .accessibilityText('关闭更换书源').enabled(this.canClose()).onClick((): void => this.requestClose())
         .onAppear((): void => this.focusDrawerActor(attachment, scope, variant, true));
     }.width('100%').height(this.headingHeight());
@@ -833,13 +855,13 @@ export struct SourceSwitchWindow {
       Column() {
         Flex({ direction: FlexDirection.Row, alignItems: ItemAlign.Baseline }) {
           if (this.discoveryPrefixVisible()) {
-            Text('已找到').fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontFamily)
+            Text(this.discoveryCountLabel()).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontFamily)
               .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontWeight)
               .fontSize(this.narrowWindow() ? TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW.fontSizeFp : TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontSizeFp)
               .lineHeight(this.narrowWindow() ? TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW.lineHeightFp : TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.lineHeightFp).halfLeading(true)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).flexShrink(0).maxLines(1);
           }
-          Text(`${this.totalCandidateCount()}`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontFamily)
+          Text(`${this.discoveryCandidateCount()}`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontFamily)
             .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontSizeFp)
             .lineHeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.lineHeightFp).halfLeading(true).fontFeature('"tnum" 1')
             .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).flexShrink(0)
@@ -855,7 +877,8 @@ export struct SourceSwitchWindow {
           .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE.fontSizeFp)
           .lineHeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE.lineHeightFp).halfLeading(true)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.alignItems(HorizontalAlign.Start).layoutWeight(1).accessibilityGroup(true).accessibilityText(this.statusText());
+      }.alignItems(HorizontalAlign.Start).layoutWeight(1).accessibilityGroup(true)
+        .accessibilityText(`${this.novelDiscoveryPhase()} · ${this.discoveryCountLabel()} ${this.discoveryCandidateCount()} 个书源`);
     }.width('100%').height(this.discoveryToolbarHeight()).margin({ bottom: SOURCE_SWITCH_VISUAL.discoveryBottomGap });
   }
 
@@ -868,7 +891,7 @@ export struct SourceSwitchWindow {
             Image(this.appThemeScheme === 'night' ? $r('app.media.settings_gen_refresh_theme_night') : $r('app.media.settings_gen_refresh'))
               .width(SOURCE_SWITCH_VISUAL.discoveryActionIconSize).height(SOURCE_SWITCH_VISUAL.discoveryActionIconSize).accessibilityLevel('no');
           }
-          Text(this.isSweeping() ? '停止' : '重查').fontFamily(this.compactDiscoveryAction() ? TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT.fontFamily : TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontFamily)
+          Text(this.isSweeping() ? SOURCE_SWITCH_DISCOVERY_ACTION.stopLabel : SOURCE_SWITCH_DISCOVERY_ACTION.refreshLabel).fontFamily(this.compactDiscoveryAction() ? TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT.fontFamily : TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontFamily)
             .fontWeight(this.compactDiscoveryAction() ? TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT.fontWeight : TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontWeight)
             .fontSize(this.compactDiscoveryAction() ? TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT.fontSizeFp : TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontSizeFp)
             .lineHeight(this.compactDiscoveryAction() ? TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT.lineHeightFp : TYPE_SOURCE_SWITCH_NOVEL_ACTION.lineHeightFp).halfLeading(true)
@@ -891,25 +914,25 @@ export struct SourceSwitchWindow {
 
   @Builder
   private searchAndSort() {
-    Column({ space: 2 }) {
+    Column({ space: SOURCE_SWITCH_FILTER_GAP }) {
       if (this.isSweeping() && this.sweepProgress() !== undefined) this.sweepBar();
-      Row({ space: 4 }) {
+      Row({ space: 8 }) {
         Column() {
           ReaderSearchField({ variant: 'readerDirectory', mode: 'live', text: this.filterText,
-            placeholder: '筛选书源名或最新章节…', clearAccessibilityLabel: '清空书源筛选',
+            naturalFieldHeightVp: this.filterRowHeight(),
+            placeholder: this.novelFontScale() >= 1.75 ? '筛选…' :
+              this.narrowWindow() ? '书源名或章节' : '筛选书源名或最新章节…',
+            accessibilityLabel: '筛选书源名或最新章节', clearAccessibilityLabel: '清空书源筛选',
             editingFocusId: `reader-source-filter:${this.surfaceScope}:${this.surfaceAttachment}`,
             editingCurrent: (): boolean => this.filterInputCurrent(),
             onTextChange: (value: string): void => this.updateFilter(value) });
         }.layoutWeight(1);
-        this.filterButton('定位当前', false, this.currentSourceId.length > 0, (): void => this.locateCurrentSource());
+        this.locateButton();
       }.width('100%');
       Row() {
-        Text(`已发现 ${sourceSwitchSourceCount(this.displayedCandidates)} 个候选书源`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontFamily).fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontWeight).fontSize(11)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).fontFeature('"tnum" 1')
-          .layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-        this.filterButton(this.latestFirst ? '最新章优先' : '延迟优先', true, true, (): void => this.toggleOrder());
-      }.width('100%');
-    }.width('100%').onAreaChange((_before: Area, after: Area): void => {
+        this.sortSegment();
+      }.width('100%').justifyContent(FlexAlign.End);
+    }.width('100%').padding({ top: SOURCE_SWITCH_FILTER_GAP }).onAreaChange((_before: Area, after: Area): void => {
       const height = Number(after.height);
       if (Number.isFinite(height) && height > 0) this.measuredSearchAndSortHeight = height;
     });
@@ -926,7 +949,10 @@ export struct SourceSwitchWindow {
     }.width('100%').alignItems(HorizontalAlign.End);
   }
 
-  private totalCandidateCount(): number {
+  private discoveryCountLabel(): string { return this.filterText.trim().length > 0 ? '匹配' : '已找到'; }
+
+  private discoveryCandidateCount(): number {
+    if (this.filterText.trim().length > 0) return sourceSwitchSourceCount(this.displayedCandidates);
     const candidates = this.state.kind === 'candidates' ?
       this.state.candidates.filter((candidate: SourceSwitchCandidate): boolean => candidate.isCurrent !== true) : this.latestCandidates;
     return sourceSwitchSourceCount(candidates);
@@ -943,31 +969,67 @@ export struct SourceSwitchWindow {
     readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.filterPressedAction = next < 0 ? '' : key; });
   }
 
+  /** Two explicit sort choices; the active one is filled, the other stays muted. */
   @Builder
-  private filterButton(label: string, sort: boolean, enabled: boolean, action: () => void) {
+  private sortSegment() {
+    Row({ space: 2 }) {
+      this.sortOption('延迟优先', false);
+      this.sortOption('最新章优先', true);
+    }.padding({ left: 2, right: 2 }).constraintSize({ minHeight: 44 }).flexShrink(1).borderRadius(22)
+      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+      .opacity(this.filterInputCurrent() ? 1 : .45)
+      .accessibilityGroup(false);
+  }
+
+  @Builder
+  private sortOption(label: string, latestFirst: boolean) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Row({ space: 4 }) {
-        Text(label).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontFamily)
+      Text(label).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_SWITCH_NOVEL_ACTION.lineHeightFp).halfLeading(true)
+        .fontColor(readerAppColor(this.latestFirst === latestFirst ? 'TOK_GREEN' : 'TOK_MUTED', this.appThemeScheme))
+        .maxLines(2).textAlign(TextAlign.Center).padding({ top: 6, bottom: 6, left: 10, right: 10 }).borderRadius(16)
+        .backgroundColor(readerPressSurface(this.latestFirst === latestFirst ?
+          readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent,
+          this.appThemeScheme, this.filterPressedAction === this.sortPressKey(latestFirst), this.reduceMotion))
+        .scale(readerPressScale(this.filterPressedAction === this.sortPressKey(latestFirst), this.reduceMotion))
+        .opacity(readerPressOpacity(this.filterPressedAction === this.sortPressKey(latestFirst), this.reduceMotion))
+        .border({ width: this.latestFirst === latestFirst ? 1 : 0, color: readerAppColor('TOK_PRIMARY_BORDER', this.appThemeScheme) })
+        .accessibilityLevel('no');
+    }.padding(0).constraintSize({ minWidth: 44, minHeight: 44 }).flexShrink(1).backgroundColor(Color.Transparent)
+      .enabled(this.filterInputCurrent())
+      .accessibilityText(`排序：${label}`).accessibilitySelected(this.latestFirst === latestFirst)
+      .onTouch((event: TouchEvent): void => this.observeFilterPress(event, this.sortPressKey(latestFirst), this.filterInputCurrent()))
+      .onClick((): void => this.chooseOrder(latestFirst));
+  }
+
+  private sortPressKey(latestFirst: boolean): string { return latestFirst ? 'latest' : 'latency'; }
+
+  @Builder
+  private locateButton() {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Row() {
+        Text('定位当前').fontFamily(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontFamily)
           .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontSizeFp)
           .lineHeight(TYPE_SOURCE_SWITCH_NOVEL_ACTION.lineHeightFp as number).halfLeading(true)
-          .fontColor(readerAppColor(sort && this.latestFirst ? 'TOK_GREEN' : 'TOK_INK', this.appThemeScheme))
-          .maxLines(1);
-        if (sort) {
-          Image(this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_primary_theme_night') :
-            $r('app.media.reader_chevron_down_primary')).width(12).height(12).accessibilityLevel('no');
-        }
-      }.padding({ left: 10, right: 10 }).height(32).borderRadius(16)
-        .backgroundColor(readerPressSurface(readerAppColor(sort && this.latestFirst ? 'TOK_PRIMARY_SOFT' : 'TOK_CARD_BG',
-          this.appThemeScheme), this.appThemeScheme, this.filterPressedAction === (sort ? 'sort' : 'locate'), this.reduceMotion))
-        .border({ width: 1, color: readerAppColor(sort && this.latestFirst ? 'TOK_PRIMARY_BORDER' : 'TOK_LINE', this.appThemeScheme) })
-        .scale(readerPressScale(this.filterPressedAction === (sort ? 'sort' : 'locate'), this.reduceMotion))
-        .opacity(readerPressOpacity(this.filterPressedAction === (sort ? 'sort' : 'locate'), this.reduceMotion))
+          .minFontScale(Math.min(1, this.novelFontScale())).maxFontScale(Math.max(1, this.novelFontScale()))
+          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)).maxLines(1);
+      }.padding({ left: 10, right: 10 }).height(this.filterRowHeight()).borderRadius(this.filterRowHeight() / 2)
+        .backgroundColor(readerPressSurface(readerAppColor('TOK_CARD_BG', this.appThemeScheme),
+          this.appThemeScheme, this.filterPressedAction === 'locate', this.reduceMotion))
+        .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+        .scale(readerPressScale(this.filterPressedAction === 'locate', this.reduceMotion))
+        .opacity(readerPressOpacity(this.filterPressedAction === 'locate', this.reduceMotion))
         .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
-    }.padding(0).height(44).constraintSize({ minWidth: 44 }).backgroundColor(Color.Transparent)
-      .enabled(enabled && this.filterInputCurrent()).accessibilityText(label)
-      .opacity(enabled ? 1 : .45)
-      .onTouch((event: TouchEvent): void => this.observeFilterPress(event, sort ? 'sort' : 'locate', enabled && this.filterInputCurrent()))
-      .onClick((): void => { if (enabled && this.filterInputCurrent()) action(); });
+    }.padding(0).height(this.filterRowHeight()).constraintSize({ minWidth: SEARCH_CONTROL_MIN_TARGET })
+      .responseRegion({ x: 0, y: Math.min(0, (this.filterRowHeight() - SEARCH_CONTROL_MIN_TARGET) / 2), width: '100%',
+        height: Math.max(SEARCH_CONTROL_MIN_TARGET, this.filterRowHeight()) })
+      .backgroundColor(Color.Transparent)
+      .enabled(this.currentSourceId.length > 0 && this.filterInputCurrent()).accessibilityText('定位当前')
+      .opacity(this.currentSourceId.length > 0 ? 1 : .45)
+      .onTouch((event: TouchEvent): void => this.observeFilterPress(event, 'locate', this.currentSourceId.length > 0 && this.filterInputCurrent()))
+      .onClick((): void => this.locateCurrentSource());
   }
 
   @Builder
@@ -1039,7 +1101,8 @@ export struct SourceSwitchWindow {
         TransitionEffect.move(this.sideDrawer() ? TransitionEdge.END : TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.open')),
         TransitionEffect.move(this.sideDrawer() ? TransitionEdge.END : TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.close'))),
         (transitionIn: boolean): void => this.surface?.surfaceTransitionFinished(attachment, scope, part, transitionIn))
-      .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scope, part));
+      .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scope, part))
+      .onDisAppear((): void => this.surface?.surfacePartDisappeared(attachment, scope, part));
   }
   @Builder
   private novelSwitching(part: string, attachment: number, scope: number, variant: number) {
@@ -1051,19 +1114,18 @@ export struct SourceSwitchWindow {
       onCancel: (): void => { if (this.state.kind === 'switching') this.requestClose(); } })
       .transition(TransitionEffect.OPACITY.animation(this.reduceMotion ? readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.close')),
         (transitionIn: boolean): void => this.surface?.surfaceTransitionFinished(attachment, scope, part, transitionIn))
-      .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scope, part));
+      .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scope, part))
+      .onDisAppear((): void => this.surface?.surfacePartDisappeared(attachment, scope, part));
   }
   build() {
     Stack({ alignContent: this.sideDrawer() ? Alignment.End : Alignment.Bottom }) {
-      if (this.showing && this.novelFontsReady) {
-        ForEach([this.surfaceVariant], (variant: number): void => {
-          if (this.state.kind === 'switching') {
-            this.novelSwitching(`progress:${variant}`, this.surfaceAttachment, this.surfaceScope, variant);
-          } else {
-            this.novelDrawer(`drawer:${variant}`, this.surfaceAttachment, this.surfaceScope);
-          }
-        }, (variant: number): string => variant.toString());
-      }
+      ForEach(this.showing && this.novelFontsReady ? [this.surfaceVariant] : [], (variant: number): void => {
+        if (this.state.kind === 'switching') {
+          this.novelSwitching(`progress:${variant}`, this.surfaceAttachment, this.surfaceScope, variant);
+        } else {
+          this.novelDrawer(`drawer:${variant}`, this.surfaceAttachment, this.surfaceScope);
+        }
+      }, (variant: number): string => variant.toString());
     }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
       .onAreaChange((_old: Area, area: Area): void => {
         const height = Number(area.height);

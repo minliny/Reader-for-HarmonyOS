@@ -1,0 +1,312 @@
+{
+  "bookshelf": {
+    "full": {
+      "books": [
+        {
+          "addedAt": 1,
+          "author": "Author",
+          "bookId": "book",
+          "chapterCount": 2,
+          "contentKind": "manga",
+          "readProgress": 0,
+          "sortIndex": 0,
+          "sourceId": "source",
+          "sourceName": "Manga",
+          "title": "Book"
+        },
+        {
+          "addedAt": 40,
+          "author": "Fixture author",
+          "bookId": "fixture-local-txt",
+          "chapterCount": 4,
+          "contentKind": "text",
+          "currentChapterIndex": 0,
+          "currentChapterTitle": "序章",
+          "intro": "Fixture synopsis",
+          "lastReadAt": 50,
+          "readingPosition": {
+            "bodyVersion": "f5ea84f2e3e932d794aad3a68d3c2da5f170402fb5db3d0f06ff263b1339706f",
+            "chapterIndex": 0,
+            "chapterOffset": 1,
+            "processingVersion": "c0c147394b686309713be98a95a21fd61702cb3ce8d4bf28db41f6438bea9771",
+            "updatedAt": 50
+          },
+          "sortIndex": 0,
+          "sourceId": "local",
+          "sourceName": "本地书籍",
+          "title": "Fixture local TXT"
+        },
+        {
+          "addedAt": 30,
+          "author": "Fixture author",
+          "bookId": "https://books.example.test/fixture-novel",
+          "contentKind": "text",
+          "intro": "Fixture synopsis",
+          "readProgress": 0,
+          "sortIndex": 0,
+          "sourceId": "fixture-edition",
+          "sourceName": "书源名称暂不可用",
+          "title": "Fixture novel"
+        },
+        {
+          "addedAt": 20,
+          "author": "Fixture author",
+          "bookId": "https://books.example.test/fixture-novel",
+          "contentKind": "text",
+          "intro": "Fixture synopsis",
+          "readProgress": 0,
+          "sortIndex": 0,
+          "sourceId": "fixture-saved",
+          "sourceName": "书源名称暂不可用",
+          "title": "Fixture novel"
+        }
+      ],
+      "total": 4
+    },
+    "membership": {
+      "books": [
+        {
+          "addedAt": 0,
+          "author": "Author",
+          "bookId": "book",
+          "contentKind": "manga",
+          "sortIndex": 0,
+          "sourceId": "source",
+          "sourceName": "",
+          "title": "Book"
+        },
+        {
+          "addedAt": 0,
+          "author": "Fixture author",
+          "bookId": "fixture-local-txt",
+          "contentKind": "text",
+          "sortIndex": 0,
+          "sourceId": "local",
+          "sourceName": "",
+          "title": "Fixture local TXT"
+        },
+        {
+          "addedAt": 0,
+          "author": "Fixture author",
+          "bookId": "https://books.example.test/fixture-novel",
+          "contentKind": "text",
+          "sortIndex": 0,
+          "sourceId": "fixture-edition",
+          "sourceName": "",
+          "title": "Fixture novel"
+        },
+        {
+          "addedAt": 0,
+          "author": "Fixture author",
+          "bookId": "https://books.example.test/fixture-novel",
+          "contentKind": "text",
+          "sortIndex": 0,
+          "sourceId": "fixture-saved",
+          "sourceName": "",
+          "title": "Fixture novel"
+        }
+      ],
+      "changed": false,
+      "offset": 0,
+      "projectionRevision": "057373b55e198146e585dafbe8a9a2f2ae668da598bbc89284eac5fb8516d8ed/00000000000000000000000000000001:14",
+      "total": 4,
+      "unfilteredOnlineTotal": 3,
+      "unfilteredTotal": 4
+    },
+    "row": {
+      "books": [
+        {
+          "addedAt": 1,
+          "author": "Author",
+          "bookId": "book",
+          "chapterCount": 2,
+          "contentKind": "manga",
+          "readProgress": 0,
+          "sortIndex": 0,
+          "sourceId": "source",
+          "sourceName": "Manga",
+          "title": "Book"
+        },
+        {
+          "addedAt": 40,
+          "author": "Fixture author",
+          "bookId": "fixture-local-txt",
+          "chapterCount": 4,
+          "contentKind": "text",
+          "currentChapterIndex": 0,
+          "currentChapterTitle": "序章",
+          "lastReadAt": 50,
+          "readingPosition": {
+            "bodyVersion": "f5ea84f2e3e932d794aad3a68d3c2da5f170402fb5db3d0f06ff263b1339706f",
+            "chapterIndex": 0,
+            "chapterOffset": 1,
+            "processingVersion": "c0c147394b686309713be98a95a21fd61702cb3ce8d4bf28db41f6438bea9771",
+            "updatedAt": 50
+          },
+          "sortIndex": 0,
+          "sourceId": "local",
+          "sourceName": "本地书籍",
+          "title": "Fixture local TXT"
+        },
+        {
+          "addedAt": 30,
+          "author": "Fixture author",
+          "bookId": "https://books.example.test/fixture-novel",
+          "contentKind": "text",
+          "readProgress": 0,
+          "sortIndex": 0,
+          "sourceId": "fixture-edition",
+          "sourceName": "书源名称暂不可用",
+          "title": "Fixture novel"
+        },
+        {
+          "addedAt": 20,
+          "author": "Fixture author",
+          "bookId": "https://books.example.test/fixture-novel",
+          "contentKind": "text",
+          "readProgress": 0,
+          "sortIndex": 0,
+          "sourceId": "fixture-saved",
+          "sourceName": "书源名称暂不可用",
+          "title": "Fixture novel"
+        }
+      ],
+      "changed": false,
+      "offset": 0,
+      "projectionRevision": "8f18a5560ce88652a75052559b2947508d438adcb60f350ede8c28dbb02fbadd/00000000000000000000000000000001:14",
+      "total": 4,
+      "unfilteredOnlineTotal": 3,
+      "unfilteredTotal": 4
+    }
+  },
+  "schemaVersion": 1,
+  "search": {
+    "responses": [
+      {
+        "books": [
+          {
+            "author": "Fixture author",
+            "bookId": "https://books.example.test/fixture-novel",
+            "title": "Fixture novel"
+          }
+        ],
+        "contentKind": "text",
+        "sourceId": "fixture-primary",
+        "sourceVersion": "3e837a2f673c0df978c1d3d0d4c1d1ffba8b63a6de21e60670fb6a1e2bcc25ae"
+      },
+      {
+        "books": [
+          {
+            "author": "Fixture author",
+            "bookId": "https://books.example.test/fixture-novel",
+            "title": "Fixture novel"
+          }
+        ],
+        "contentKind": "text",
+        "sourceId": "fixture-saved",
+        "sourceVersion": "a78f40ccbd5edef66483cdfd6e9030f126960a720aff39fa014a471387cf524a"
+      },
+      {
+        "books": [
+          {
+            "author": "Fixture author",
+            "bookId": "https://books.example.test/fixture-novel",
+            "title": "Fixture novel"
+          }
+        ],
+        "contentKind": "text",
+        "sourceId": "fixture-edition",
+        "sourceVersion": "48ff532de82bb0a0d5423ed50bfc1b6ec899b0fa7a4340b41bbed69a1ca84da8"
+      }
+    ]
+  },
+  "sourceSwitch": {
+    "commit": {
+      "book": {
+        "addedAt": 10,
+        "author": "New source author",
+        "bookId": "book-new",
+        "coverUrl": "https://covers.test/new.jpg",
+        "group": "Reading",
+        "intro": "new intro",
+        "kind": "fantasy",
+        "lastChapter": "Chapter 120",
+        "lastReadAt": 300,
+        "sortIndex": 17,
+        "sourceId": "source-new",
+        "title": "New source title"
+      },
+      "matchedChapter": {
+        "chapterId": "new-1",
+        "chapterTitle": "Chapter Two",
+        "chapterUrl": "https://new.test/1",
+        "order": 1
+      },
+      "phase": "pending",
+      "progress": {
+        "bookId": "book-new",
+        "chapterIndex": 1,
+        "chapterOffset": 0,
+        "chapterProgress": 0.0,
+        "deviceId": "device-a",
+        "sourceId": "source-new",
+        "updatedAt": 300
+      },
+      "strategy": "exactTitleMatch",
+      "transactionId": "00000010-0000-4000-8000-000000000000/1"
+    },
+    "rollback": {
+      "changed": true,
+      "phase": "rolledBack",
+      "reinstatedTargetBook": {
+        "addedAt": 20,
+        "author": "Previously shelved target author",
+        "bookId": "book-new",
+        "coverUrl": "https://covers.test/book-new.jpg",
+        "group": "Reading",
+        "intro": "Previously shelved target intro",
+        "kind": "novel",
+        "lastChapter": "Chapter 99",
+        "lastReadAt": 150,
+        "sortIndex": 17,
+        "sourceId": "source-new",
+        "title": "Previously shelved target"
+      },
+      "reinstatedTargetProgress": {
+        "bookId": "book-new",
+        "chapterIndex": 8,
+        "chapterOffset": 88,
+        "chapterProgress": 0.6,
+        "deviceId": "device-a",
+        "locationRevision": "revision-150",
+        "sourceId": "source-new",
+        "updatedAt": 150
+      },
+      "restoredBook": {
+        "addedAt": 10,
+        "author": "Old source title author",
+        "bookId": "book-old",
+        "coverUrl": "https://covers.test/book-old.jpg",
+        "group": "Reading",
+        "intro": "Old source title intro",
+        "kind": "novel",
+        "lastChapter": "Chapter 99",
+        "lastReadAt": 200,
+        "sortIndex": 17,
+        "sourceId": "source-old",
+        "title": "Old source title"
+      },
+      "restoredProgress": {
+        "bookId": "book-old",
+        "chapterIndex": 4,
+        "chapterOffset": 88,
+        "chapterProgress": 0.6,
+        "deviceId": "device-a",
+        "locationRevision": "revision-200",
+        "sourceId": "source-old",
+        "updatedAt": 200
+      },
+      "transactionId": "00000010-0000-4000-8000-000000000000/1"
+    }
+  }
+}

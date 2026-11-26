@@ -1,3 +1,5 @@
+import { DIRECTORY_TOOL_TARGET } from '../presentation/ReaderFullDirectoryBudget';
+
 /** One control-directory allocation. The shell still owns motion and height;
  * these local viewports reveal the existing unscaled toolbar/footer actors. */
 export interface ReaderControlDirectoryGeometry {
@@ -31,26 +33,26 @@ export interface ReaderControlDirectoryMeasuredGeometry {
 }
 
 export function resolveReaderControlDirectoryGeometry(progress: number, tab: string,
-  availableHeight: number, tabHeight: number, queryGrowth: number,
+  availableHeight: number, tabHeight: number,
   rowHeight: number, measured?: ReaderControlDirectoryMeasuredGeometry,
   fallbackToolbarHeight?: number): ReaderControlDirectoryGeometry {
   const p = Number.isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0;
   const height = Number.isFinite(availableHeight) ? Math.max(0, availableHeight) : 0;
   const actualTabHeight = Number.isFinite(tabHeight) ? Math.max(0, tabHeight) : 31 + 5 * p;
   const tabGrowth = actualTabHeight - (31 + 5 * p);
-  const query = Number.isFinite(queryGrowth) ? Math.max(0, queryGrowth) : 0;
   const row = Number.isFinite(rowHeight) ? Math.max(0, rowHeight) : 32 + 8 * p;
   const bookmarks = tab === 'bookmarks';
   const tabQuickTop = bookmarks ? 12 : 13;
   const tabTop = tabQuickTop + (6 - tabQuickTop) * p;
   const tabBottom = tabTop + actualTabHeight;
   const toolbarTop = 61 - 18 * p + tabGrowth;
-  const toolbarHeight = measured === undefined ? Math.max(52 + query,
+  const toolbarHeight = measured === undefined ? Math.max(DIRECTORY_TOOL_TARGET + 2,
     Number.isFinite(fallbackToolbarHeight) ? fallbackToolbarHeight as number : 0) : Math.max(0, measured.toolbarHeight);
   const toolbarViewportHeight = Math.min(toolbarHeight * p, Math.max(0, height - toolbarTop));
   const quickListTop = bookmarks ? 47 : 48;
-  const nominalListTop = measured === undefined ? quickListTop + (99 - quickListTop) * p + query * p +
-    tabGrowth + Math.max(0, toolbarHeight - 52 - query) * p : Math.max(tabBottom, measured.listTop);
+  const fullListTop = 47 + toolbarHeight;
+  const nominalListTop = measured === undefined ? quickListTop + (fullListTop - quickListTop) * p + tabGrowth :
+    Math.max(tabBottom, measured.listTop);
   const listTop = Math.min(height, nominalListTop);
   // The current-chapter summary is informational. Give it only space left
   // after one whole row; shortage is explicit even when no summary remains.

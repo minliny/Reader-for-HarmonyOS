@@ -26,6 +26,7 @@ import type { MangaOfflineNetworkProbe } from './MangaOfflineNetworkProbe';
 import { buildReaderPublicFixtureDirectory, type ReaderPublicFixtureScope } from './diagnostics/ReaderPublicFixtureScope';
 import { admitReaderPublicSearchHttpFixtureRequest, readerPublicSearchHttpFixtureMode,
   type ReaderPublicSearchHttpFixture } from './diagnostics/ReaderPublicSearchHttpFixture';
+import { readerVmJourneyImageDataUri, readerVmJourneyResponse } from './diagnostics/ReaderVmJourneyData';
 import { READER_LOCAL_BOOK_PICKER_FILTER, isReaderLocalBookFileName } from './ReaderLocalBookFormatAdmission';
 
 type SnapshotEncoding = 'value' | 'valueBase64';
@@ -203,15 +204,18 @@ export class ReaderHostRegistry {
     await CookieSessionStore.instance.clearSession(sourceId);
   }
 
-  private readonly sourceCheckStages = new Map<number, (stage: string) => void>();
+  private readonly sourceChecks = new Map<number, { onStage?: (stage: string) => void }>();
 
-  observeSourceCheckStages(requestId: number, observe: (stage: string) => void): () => void {
-    this.sourceCheckStages.set(requestId, observe);
-    return (): void => { this.sourceCheckStages.delete(requestId); };
+  registerSourceCheck(requestId: number, onStage?: (stage: string) => void): () => void {
+    const check = { onStage };
+    this.sourceChecks.set(requestId, check);
+    return (): void => {
+      if (this.sourceChecks.get(requestId) === check) this.sourceChecks.delete(requestId);
+    };
   }
 
   private publishSourceCheckStage(event: ReaderCoreHostRequestEvent): void {
-    const observe = this.sourceCheckStages.get(event.requestId);
+    const observe = this.sourceChecks.get(event.requestId)?.onStage;
     const raw = event.params['diagnostic'];
     if (observe === undefined || raw === null || typeof raw !== 'object' || Array.isArray(raw)) return;
     const diagnostic = raw as JsonObject;
@@ -260,15 +264,20 @@ export class ReaderHostRegistry {
     });
     router.register('http.execute', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
       this.publishSourceCheckStage(event);
+      const sourceCheck = this.sourceChecks.has(event.requestId);
       if (this.fixtureDirectory !== undefined) {
         const fixture = this.publicSearchHttpFixture;
         const current = this.publicSearchHttpIsCurrent;
+        if (fixture === 'vm-journeys') {
+          const response = current?.() === true ? readerVmJourneyResponse(event.params) : undefined;
+          return response === undefined ? Promise.reject(new Error('PUBLIC_FIXTURE_NETWORK_DISABLED')) : Promise.resolve(response);
+        }
         const request = fixture !== undefined && current?.() === true ?
           admitReaderPublicSearchHttpFixtureRequest(fixture, event.params) : undefined;
         if (request === undefined || current === undefined) {
           return Promise.reject(new Error('PUBLIC_FIXTURE_NETWORK_DISABLED'));
         }
-        return HttpExecuteHost.instance.execute(request, event.requestId, (): boolean => !current());
+        return HttpExecuteHost.instance.execute(request, event.requestId, (): boolean => !current(), sourceCheck);
       }
       this.mangaOfflineProbe?.beforeCoreHttp(event.requestId);
       if (this.responseAssetBridge !== undefined && event.params['responseAsset'] === true) {
@@ -277,9 +286,10 @@ export class ReaderHostRegistry {
           event.requestId,
           event.operationId,
           this.responseAssetBridge,
+          undefined, sourceCheck,
         );
       }
-      return HttpExecuteHost.instance.execute(event.params, event.requestId);
+      return HttpExecuteHost.instance.execute(event.params, event.requestId, undefined, sourceCheck);
     }, (event: ReaderCoreHostRequestEvent): void => {
       HttpExecuteHost.instance.cancel(event.requestId);
     });
@@ -289,6 +299,11 @@ export class ReaderHostRegistry {
       const transport: MangaImageDecodeTransport = {
         graphics: MangaImageGraphicsHost.instance,
         fetch: (params: JsonObject, current: () => boolean, maxBytes: number): Promise<Uint8Array> => {
+          if (this.publicSearchHttpFixture === 'vm-journeys') {
+            const fixtureImage = this.publicSearchHttpIsCurrent?.() === true ? readerVmJourneyImageDataUri(params) : undefined;
+            return fixtureImage === undefined ? Promise.reject(new Error('PUBLIC_FIXTURE_NETWORK_DISABLED')) :
+              Promise.resolve(ReadingBodyImageHost.instance.readDataUriBytes(fixtureImage, current, maxBytes));
+          }
           const dataUri = params['dataUri'];
           if (typeof dataUri === 'string') return Promise.resolve(ReadingBodyImageHost.instance.readDataUriBytes(dataUri, current, maxBytes));
           return ReadingBodyImageHost.instance.fetchRequestBytes(params, current, maxBytes,
@@ -381,14 +396,14 @@ export class ReaderHostRegistry {
   }
 
   /** Same bounded read/hash/private staging as the picker, using the OS URI grant. */
-  async prepareSystemLocalBookInput(uri: string): Promise<LocalBookPreparation> {
+  async prepareSystemLocalBookInput(uri: string, admitFileName?: (fileName: string) => boolean): Promise<LocalBookPreparation> {
     let fileName = '未命名文件';
     try {
       if (uri.length > 8192 || !uri.startsWith('file://') || /[\u0000\r\n]/.test(uri)) {
         throw new Error('Selected document URI is invalid');
       }
       fileName = this.requireSelectedFileName(uri);
-      if (!isReaderLocalBookFileName(fileName)) {
+      if (!isReaderLocalBookFileName(fileName) || admitFileName?.(fileName) === false) {
         return { state: 'failed', fileName,
           failure: { code: 'unsupportedFormat', message: '暂不支持此文件格式，请选择其他电子书文件' } };
       }
@@ -420,7 +435,7 @@ export class ReaderHostRegistry {
    * `source.import` semantics remain in the source feature gateway / Rust Core.
    */
   async selectBookSourceJson(): Promise<BookSourceJsonSelection | undefined> {
-    return this.selectBoundedJsonDocument('Legado 书源 JSON');
+    return this.selectBoundedJsonDocument('Legado 书源 JSON', '.json,.txt');
   }
 
   /** Select one Core-owned portable rule bundle; Host only transports bytes. */
@@ -478,9 +493,9 @@ export class ReaderHostRegistry {
     return { fileName: 'online.json', text };
   }
 
-  private async selectBoundedJsonDocument(label: string): Promise<BookSourceJsonSelection | undefined> {
+  private async selectBoundedJsonDocument(label: string, suffixes: string = '.json'): Promise<BookSourceJsonSelection | undefined> {
     const options = new picker.DocumentSelectOptions();
-    options.fileSuffixFilters = [`${label}|.json`];
+    options.fileSuffixFilters = [`${label}|${suffixes}`];
     options.maxSelectNumber = 1;
 
     const pickerActivity = ReaderDocumentPickerActivity.begin();

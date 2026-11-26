@@ -3,9 +3,53 @@ import { uniformTypeDescriptor } from '@kit.ArkData';
 import { url } from '@kit.ArkTS';
 import { fileIo, fileUri } from '@kit.CoreFileKit';
 import { systemShare } from '@kit.ShareKit';
-import type { ReaderShareFile, ReaderShareRecord, SystemSharePort, SystemShareResult } from '../../features/reading/application/ReaderShareActions';
+import type { ReaderShareFile, ReaderShareImage, ReaderShareRecord, SystemSharePort, SystemShareResult } from '../../features/reading/application/ReaderShareActions';
 
 const SHARE_COPY_TTL_SECONDS = 24 * 60 * 60;
+const SHARE_DISMISS_SETTLE_MS = 250;
+export const READER_QUOTE_CARD_MAX_BYTES = 8 * 1024 * 1024;
+
+interface ReaderPreparedBookShare {
+  directory: string;
+  data: systemShare.SharedRecord;
+}
+
+export function readerShareCachePath(context: common.UIAbilityContext): string {
+  return `${context.getApplicationContext().cacheDir}/reader-share`;
+}
+
+export async function removeReaderShareCopy(directory: string): Promise<void> {
+  try { await fileIo.rmdir(directory); } catch (_) { /* The app cache can also be evicted by the OS. */ }
+}
+
+export async function createReaderShareCopy(context: common.UIAbilityContext,
+  kind: 'book' | 'quote', current: () => boolean): Promise<string | undefined> {
+  const cache = readerShareCachePath(context);
+  let cacheExists = false;
+  try {
+    cacheExists = await fileIo.access(cache);
+  } catch (error) {
+    const code = (error as { code?: number | string } | undefined)?.code;
+    if (code !== 13900002 && code !== 'ENOENT') throw error;
+  }
+  if (!cacheExists) await fileIo.mkdir(cache, true);
+  if (!(await fileIo.lstat(cache)).isDirectory()) return undefined;
+  try {
+    const expiresBefore = Date.now() / 1000 - SHARE_COPY_TTL_SECONDS;
+    for (const name of await fileIo.listFile(cache)) {
+      if (!/^(book|quote)-[a-zA-Z0-9]{6}$/.test(name)) continue;
+      const directory = `${cache}/${name}`;
+      try {
+        const stat = await fileIo.lstat(directory);
+        if (stat.isDirectory() && stat.mtime < expiresBefore) await removeReaderShareCopy(directory);
+      } catch (error) {
+        const code = (error as { code?: number | string } | undefined)?.code;
+        if (code !== 13900002 && code !== 'ENOENT') throw error;
+      }
+    }
+  } catch (_) { /* Cache eviction cannot prevent a new explicit share. */ }
+  return current() ? fileIo.mkdtemp(`${cache}/${kind}-XXXXXX`) : undefined;
+}
 
 export class ReaderSystemShareHost implements SystemSharePort {
   private readonly context: () => common.UIAbilityContext | undefined;
@@ -38,28 +82,52 @@ export class ReaderSystemShareHost implements SystemSharePort {
     if (!current() || !canIUse('SystemCapability.Collaboration.SystemShare')) return 'unavailable';
     const context = this.context();
     if (context === undefined) return 'unavailable';
-    let data: systemShare.SharedRecord;
     if (record.kind === 'file') {
-      const checked = await this.originalFile(record, context, current);
+      const prepared = await this.originalFile(record, context, current);
+      if (prepared === undefined) return current() ? 'unsafe' : 'dismissed';
+      let result: SystemShareResult = 'unavailable';
+      try {
+        if (!current()) return 'dismissed';
+        result = await this.present(context, prepared.data, true);
+        return result;
+      } finally {
+        if (result !== 'shown') await removeReaderShareCopy(prepared.directory);
+      }
+    }
+    if (record.kind === 'image') {
+      const checked = await this.quoteImage(record, context);
       if (!current()) return 'dismissed';
       if (checked === undefined) return 'unsafe';
-      data = checked;
-    } else {
-      const utd = record.kind === 'link' ? uniformTypeDescriptor.UniformDataType.HYPERLINK :
-        uniformTypeDescriptor.UniformDataType.PLAIN_TEXT;
-      data = { utd, content: record.text, title: record.title, description: record.description };
+      return this.present(context, checked, true);
     }
+    const utd = record.kind === 'link' ? uniformTypeDescriptor.UniformDataType.HYPERLINK :
+      uniformTypeDescriptor.UniformDataType.PLAIN_TEXT;
+    return this.present(context, { utd, content: record.text, title: record.title, description: record.description }, false);
+  }
+
+  private present(context: common.UIAbilityContext, data: systemShare.SharedRecord,
+    hasStagedFile: boolean): Promise<SystemShareResult> {
     const controller = new systemShare.ShareController(new systemShare.SharedData(data));
     return new Promise<SystemShareResult>((resolve): void => {
       let finished = false;
+      let dismissTimer: number | undefined;
       const finish = (result: SystemShareResult): void => {
         if (finished) return;
         finished = true;
+        if (dismissTimer !== undefined) clearTimeout(dismissTimer);
         try { controller.off('dismiss', dismiss); } catch (_) { /* The OS may have already released the panel. */ }
         try { controller.off('shareCompleted', complete); } catch (_) { /* The OS may have already released the panel. */ }
         resolve(result);
       };
-      const dismiss = (): void => finish('dismissed');
+      const dismiss = (): void => {
+        if (!hasStagedFile) {
+          finish('dismissed');
+        } else if (dismissTimer === undefined) {
+          // Completion can follow the generic panel-close event. Keep the URI
+          // available while the two callbacks from the same interaction settle.
+          dismissTimer = setTimeout((): void => finish('dismissed'), SHARE_DISMISS_SETTLE_MS);
+        }
+      };
       const complete = (_result: systemShare.ShareOperationResult): void => finish('shown');
       try {
         controller.on('dismiss', dismiss);
@@ -72,8 +140,20 @@ export class ReaderSystemShareHost implements SystemSharePort {
     });
   }
 
+  private async quoteImage(record: ReaderShareImage, context: common.UIAbilityContext):
+    Promise<systemShare.SharedRecord | undefined> {
+    const cache = readerShareCachePath(context);
+    const suffix = record.path.slice(cache.length);
+    if (!record.path.startsWith(cache) || !/^\/quote-[a-zA-Z0-9]{6}\/quote\.png$/.test(suffix)) return undefined;
+    const directory = record.path.slice(0, record.path.lastIndexOf('/'));
+    if (!(await fileIo.lstat(cache)).isDirectory() || !(await fileIo.lstat(directory)).isDirectory()) return undefined;
+    const file = await fileIo.lstat(record.path);
+    if (!file.isFile() || file.size <= 0 || file.size > READER_QUOTE_CARD_MAX_BYTES) return undefined;
+    return { utd: uniformTypeDescriptor.UniformDataType.PNG, uri: fileUri.getUriFromPath(record.path), title: record.title };
+  }
+
   private async originalFile(record: ReaderShareFile, context: common.UIAbilityContext,
-    current: () => boolean): Promise<systemShare.SharedRecord | undefined> {
+    current: () => boolean): Promise<ReaderPreparedBookShare | undefined> {
     if (!/^[0-9a-f]{64}$/.test(record.hash) || !/^\.(txt|epub|mobi|azw|azw3)$/.test(record.extension)) return undefined;
     const importDir = `${context.filesDir}/reader-import`;
     const booksDir = `${importDir}/books`;
@@ -84,19 +164,8 @@ export class ReaderSystemShareHost implements SystemSharePort {
       !(await fileIo.lstat(record.path)).isFile() || !current()) return undefined;
     // Publish a temporary copy with the book format extension. The private
     // archive is never granted to the receiving app or changed by its actions.
-    const cache = `${context.getApplicationContext().cacheDir}/reader-share`;
-    let cacheExists = false;
-    try {
-      cacheExists = await fileIo.access(cache);
-    } catch (error) {
-      const code = (error as { code?: number | string } | undefined)?.code;
-      if (code !== 13900002 && code !== 'ENOENT') throw error;
-    }
-    if (!cacheExists) await fileIo.mkdir(cache, true);
-    if (!(await fileIo.lstat(cache)).isDirectory()) return undefined;
-    await this.removeExpiredCopies(cache);
-    if (!current()) return undefined;
-    const directory = await fileIo.mkdtemp(`${cache}/book-XXXXXX`);
+    const directory = await createReaderShareCopy(context, 'book', current);
+    if (directory === undefined) return undefined;
     const title = Array.from(record.title.replace(/[\/\\:*?"<>|\u0000-\u001f\u007f]/g, '_').trim())
       .slice(0, 50).join('');
     const stem = title.length === 0 || title === '.' || title === '..' ? '书籍' : title;
@@ -105,37 +174,16 @@ export class ReaderSystemShareHost implements SystemSharePort {
     try {
       await fileIo.copyFile(record.path, copy);
       if (!current()) {
-        await this.removeCopy(directory);
+        await removeReaderShareCopy(directory);
         return undefined;
       }
       const type = uniformTypeDescriptor.getUniformDataTypeByFilenameExtension(record.extension);
       const utd = type.length > 0 && !type.startsWith('flex.') ? type : uniformTypeDescriptor.UniformDataType.FILE;
-      return { utd, uri: fileUri.getUriFromPath(copy), title: record.title };
+      return { directory, data: { utd, uri: fileUri.getUriFromPath(copy), title: record.title } };
     } catch (error) {
-      await this.removeCopy(directory);
+      await removeReaderShareCopy(directory);
       throw error;
     }
   }
 
-  private async removeExpiredCopies(cache: string): Promise<void> {
-    try {
-      const expiresBefore = Date.now() / 1000 - SHARE_COPY_TTL_SECONDS;
-      for (const name of await fileIo.listFile(cache)) {
-        if (!/^book-[a-zA-Z0-9]{6}$/.test(name)) continue;
-        const directory = `${cache}/${name}`;
-        try {
-          const stat = await fileIo.lstat(directory);
-          if (stat.isDirectory() && stat.mtime < expiresBefore) await this.removeCopy(directory);
-        } catch (error) {
-          const code = (error as { code?: number | string } | undefined)?.code;
-          // The OS or another share may remove this entry after listing it.
-          if (code !== 13900002 && code !== 'ENOENT') throw error;
-        }
-      }
-    } catch (_) { /* Cache eviction cannot prevent a new explicit share. */ }
-  }
-
-  private async removeCopy(directory: string): Promise<void> {
-    try { await fileIo.rmdir(directory); } catch (_) { /* The app cache can also be evicted by the OS. */ }
-  }
 }

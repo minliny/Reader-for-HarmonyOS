@@ -397,7 +397,6 @@ export interface ReaderFormFieldInsets {
   top: number;
   bottom: number;
 }
-const CONTENT_SEARCH_INSETS: ReaderFormFieldInsets = { left: 2, right: 2, top: 0, bottom: 0 };
 export interface ReaderFormFieldSpec {
   text: ReaderTextStyle | ReaderInheritedTextStyle | undefined;
   height: number;
@@ -432,10 +431,10 @@ const FIELDS: Record<ReaderFormFieldSpecId, ReaderFormFieldSpec> = {
   'tts-manager-value': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, caretRole: undefined, placeholderStyle: TYPE_FORM_BODY_INPUT, allPadding: undefined, multiline: false, numberInput: false, text: TYPE_FORM_BODY_INPUT, height: 44, radius: 10, horizontalPadding: 12,
     textRole: 'TOK_READ_INK', surfaceRole: 'app.surface.readerInput',
     placeholderRole: 'app.reader.placeholder', hasBorder: true, borderRole: 'app.border.readerConfig', borderWidth: 0.5 },
-  'reader-content-search': { width: undefined, nativeLayoutWeight: 1, nativeInsets: CONTENT_SEARCH_INSETS, transparentSurface: true,
+  'reader-content-search': { width: undefined, nativeLayoutWeight: 1, nativeInsets: undefined, transparentSurface: true,
     text: TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, placeholderStyle: TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_PLACEHOLDER,
-    height: 14, radius: 0, horizontalPadding: undefined, allPadding: undefined, textRole: 'TOK_READ_INK', surfaceRole: undefined,
-    caretRole: 'TOK_READ_INK', placeholderRole: 'TOK_READ_MUTED', hasBorder: false, borderRole: 'TOK_LINE', borderWidth: TOK_BORDER_W, multiline: false, numberInput: false },
+    height: 14, radius: 0, horizontalPadding: undefined, allPadding: 0, textRole: 'TOK_READ_INK', surfaceRole: undefined,
+    caretRole: 'TOK_READ_PRIMARY', placeholderRole: 'TOK_READ_MUTED', hasBorder: false, borderRole: 'TOK_LINE', borderWidth: TOK_BORDER_W, multiline: false, numberInput: false },
   'shelf-native': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, borderRole: 'TOK_LINE_STRONG', borderWidth: TOK_BORDER_W, caretRole: undefined, placeholderStyle: TYPE_FORM_BODY_INPUT, text: TYPE_FORM_BODY_INPUT, height: 44, radius: 10, horizontalPadding: 12,
     textRole: 'TOK_INK', surfaceRole: 'TOK_SURFACE_FIELD', placeholderRole: 'TOK_MUTED', allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
   'shelf-order': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, borderRole: 'TOK_LINE_STRONG', borderWidth: TOK_BORDER_W, caretRole: undefined, placeholderStyle: TYPE_FORM_BODY_INPUT, text: TYPE_FORM_BODY_INPUT, height: 44, radius: 10, horizontalPadding: 12,

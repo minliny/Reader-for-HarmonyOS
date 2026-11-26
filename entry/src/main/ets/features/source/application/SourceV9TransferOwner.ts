@@ -7,8 +7,8 @@ import { RulesManagementGateway, type ManagedRuleSubscription, type RuleSourceCh
   type RuleSubscriptionDraft, type RuleSubscriptionType } from '../../settings/application/RulesManagementGateway';
 import { SourceGateway, type BookSource, type SourceCheckOutcome, type SourceGroupMembership, type SourceGroupRecord, type SourceGroupedImportOutcome, type SourceGroupedImportPlan, type SourceGroupedImportPreview, type SourceImportCandidate, type SourceImportFailure, type SourceImportGroupTarget, type SourceGroupedImportRow } from './SourceGateway';
 import { applyV9ImportReport, assignV9ImportSelection, buildV9ImportRows, chooseV9ImportRow,
-  resetV9ImportChecks, runV9CandidateChecks, sourceV9CanonicalDocument, sourceV9ChangesToApply, sourceV9ImportedReports, sourceV9ReplaceRuleComparable,
-  sourceV9Levels, sourceV9SelectedImportRows, type SourceV9Change, type SourceV9Depth, type SourceV9GroupStrategy,
+  resetV9ImportChecks, retireV9CheckReport, runV9CandidateChecks, sourceV9CanonicalDocument, sourceV9ChangesToApply, sourceV9ImportedReports, sourceV9ReplaceRuleComparable,
+  sourceV9Levels, sourceV9SelectedImportRows, SOURCE_V9_IMPORT_CHECK_CONCURRENCY, type SourceV9Change, type SourceV9Depth, type SourceV9GroupStrategy,
   type SourceV9ImportedReport, type SourceV9ImportOrigin, type SourceV9ImportRow, type SourceV9Mode } from './SourceV9TransferState';
 
 export interface SourceV9ImportDraft {
@@ -98,6 +98,7 @@ export interface SourceV9TransferSnapshot {
   busy: boolean;
   runningCheck: boolean;
   completedChecks: number;
+  activeChecks: number;
   totalChecks: number;
   checkFailures: number;
   checkingName: string;
@@ -116,7 +117,7 @@ interface SourceV9RuleRow { id: number; body: JsonObject; }
 
 export const EMPTY_SOURCE_V9_TRANSFER: SourceV9TransferSnapshot = {
   importStep: 1, fileName: '', rows: [], groups: [], knownSourceIds: [], subscriptions: [], reviews: [],
-  busy: false, runningCheck: false, completedChecks: 0, totalChecks: 0, checkFailures: 0,
+  busy: false, runningCheck: false, completedChecks: 0, activeChecks: 0, totalChecks: 0, checkFailures: 0,
   checkingName: '', checkingStage: '', unavailableChecks: 0, checkSupported: false, checkIssue: '', error: '', writePending: false, pendingGeneration: 0, canContinueOriginal: false, status: '',
 };
 
@@ -282,20 +283,22 @@ export class SourceV9TransferOwner {
   stopChecks(): void {
     this.checkEpoch++;
     if (this.snapshot.runningCheck) {
-      this.patch({ runningCheck: false, checkingName: '', checkingStage: '', status: '检测已停止，已完成的报告已保留' });
+      this.patch({ runningCheck: false, activeChecks: 0, checkingName: '', checkingStage: '', status: '检测已停止，已完成的报告已保留' });
     }
   }
 
   checkImport(options: SourceV9CheckOptions): Promise<void> {
     const selected = sourceV9SelectedImportRows(this.snapshot.rows);
-    return this.check(selected, options, (item: SourceImportCandidate): JsonObject => item.bookSource,
+    return this.check(selected, options, (): Partial<SourceV9TransferSnapshot> => ({
+      rows: this.snapshot.rows.map(retireV9CheckReport),
+    }), (item: SourceImportCandidate): JsonObject => item.bookSource,
       (item: SourceImportCandidate): string => item.name,
       (item: SourceImportCandidate, result: SourceCheckOutcome): void => {
         this.patch({ rows: applyV9ImportReport(this.snapshot.rows, item.index, result, Date.now()) });
       });
   }
 
-  private async check<T>(items: T[], options: SourceV9CheckOptions,
+  private async check<T>(items: T[], options: SourceV9CheckOptions, retirePrevious: () => Partial<SourceV9TransferSnapshot>,
     raw: (item: T) => JsonObject, label: (item: T) => string,
     accept: (item: T, report: SourceCheckOutcome) => void): Promise<void> {
     if (!this.canStart() || items.length === 0) return;
@@ -306,23 +309,41 @@ export class SourceV9TransferOwner {
     const generation = this.generation;
     const epoch = ++this.checkEpoch;
     const current = (): boolean => this.current(generation) && this.checkEpoch === epoch;
-    this.patch({ runningCheck: true, checkIssue: '', error: '', status: '', completedChecks: 0,
-      totalChecks: items.length, checkFailures: 0, unavailableChecks: 0, checkingName: '', checkingStage: '' });
+    const active: T[] = [];
+    const activeLabel = (): string => {
+      if (active.length === 0) return '';
+      const first = label(active[0]);
+      return active.length === 1 ? first : `${first} 等 ${active.length} 个`;
+    };
+    const settle = (item: T): void => {
+      const index = active.indexOf(item);
+      if (index >= 0) active.splice(index, 1);
+    };
+    this.patch({ ...retirePrevious(), runningCheck: true, checkIssue: '', error: '', status: '', completedChecks: 0,
+      totalChecks: items.length, activeChecks: 0, checkFailures: 0, unavailableChecks: 0, checkingName: '', checkingStage: '' });
     await runV9CandidateChecks(items, current, async (item: T): Promise<SourceCheckOutcome> => {
       const reports = await this.gateway.checkEphemeralSources([raw(item)], current, options.keyword,
         options.mode, sourceV9Levels(options.depth), undefined, (stage: string): void => {
-          if (current()) this.patch({ checkingStage: stage });
+          if (items.length === 1 && current()) this.patch({ checkingStage: stage });
         });
       if (reports.length !== 1) throw new Error('Core 返回的临时检测报告数量不匹配');
       return reports[0];
-    }, (item: T): void => this.patch({ checkingName: label(item), checkingStage: '' }),
+    }, (item: T): void => {
+      active.push(item);
+      this.patch({ activeChecks: active.length, checkingName: activeLabel(), checkingStage: '' });
+    },
     (item: T, report: SourceCheckOutcome): void => {
+      settle(item);
       accept(item, report);
-      this.patch({ completedChecks: this.snapshot.completedChecks + 1,
+      if (!current()) return;
+      this.patch({ completedChecks: this.snapshot.completedChecks + 1, activeChecks: active.length, checkingName: activeLabel(),
         checkFailures: this.snapshot.checkFailures + (report.available ? 0 : 1) });
-    }, (_item: T): void => this.patch({ completedChecks: this.snapshot.completedChecks + 1,
-      unavailableChecks: this.snapshot.unavailableChecks + 1, checkIssue: '部分书源未取得 Core 检测报告' }));
-    if (current()) this.patch({ runningCheck: false, checkingName: '', checkingStage: '' });
+    }, (item: T): void => {
+      settle(item);
+      this.patch({ completedChecks: this.snapshot.completedChecks + 1, activeChecks: active.length, checkingName: activeLabel(),
+        unavailableChecks: this.snapshot.unavailableChecks + 1, checkIssue: '部分书源未取得 Core 检测报告' });
+    }, SOURCE_V9_IMPORT_CHECK_CONCURRENCY);
+    if (current()) this.patch({ runningCheck: false, activeChecks: 0, checkingName: '', checkingStage: '' });
   }
 
   importSelected(save: SourceV9ImportSave): Promise<void> {
@@ -644,11 +665,15 @@ export class SourceV9TransferOwner {
       rows.push(...review.rows.filter((row: SourceV9Change): boolean =>
         row.candidate !== undefined && row.kind !== 'removedRemote' && row.kind !== 'unchanged' && row.kind !== 'localOnly'));
     }
-    return this.check(rows, options, (row: SourceV9Change): JsonObject => row.candidate as JsonObject,
+    return this.check(rows, options, (): Partial<SourceV9TransferSnapshot> => ({
+      reviews: this.snapshot.reviews.map((review: SourceV9SubscriptionReview): SourceV9SubscriptionReview => ({
+        ...review, rows: review.rows.map(retireV9CheckReport),
+      })),
+    }), (row: SourceV9Change): JsonObject => row.candidate as JsonObject,
       (row: SourceV9Change): string => row.name,
       (row: SourceV9Change, report: SourceCheckOutcome): void =>
         this.updateReviewRow(row.key, (current: SourceV9Change): SourceV9Change =>
-          ({ ...current, report, observedAtMs: Date.now(), selected: current.selected && report.available })));
+          ({ ...current, report, previousReport: undefined, observedAtMs: Date.now(), selected: current.selected && report.available })));
   }
 
   applyReviews(): Promise<void> {

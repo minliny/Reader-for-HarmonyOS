@@ -134,6 +134,8 @@ export class ReaderReadingLayoutSnapshot {
   pageChromeVisualSafeLeft: number;
   pageChromeInteractiveSafeRight: number;
   pageChromeInteractiveSafeBottom: number;
+  /** Hidden navigation bar: body and capsule reserve only the visual safe edge, not the gesture strip. */
+  readonly hideNavigationBar: boolean;
   pageChromeStatusMetrics: ReaderWindowMetricsSnapshot | undefined;
   readonly pageChromeFooterHeight: number;
   readonly facingChapterWidth: number;
@@ -157,6 +159,7 @@ export class ReaderReadingLayoutSnapshot {
     pageChromeStatusMetrics?: ReaderWindowMetricsSnapshot,
     facingChapterWidth: number = 0,
     pageChromeFooterHeight: number = READER_PAGE_CHROME_FOOTER_HEIGHT,
+    hideNavigationBar: boolean = false,
   ) {
     this.widthClass = widthClass;
     this.viewportWidth = viewportWidth;
@@ -176,6 +179,7 @@ export class ReaderReadingLayoutSnapshot {
     this.pageChromeVisualSafeLeft = pageChromeVisualSafeLeft;
     this.pageChromeInteractiveSafeRight = pageChromeInteractiveSafeRight;
     this.pageChromeInteractiveSafeBottom = pageChromeInteractiveSafeBottom;
+    this.hideNavigationBar = hideNavigationBar;
     this.pageChromeStatusMetrics = pageChromeStatusMetrics;
     this.pageChromeFooterHeight = pageChromeFooterHeight;
     this.facingChapterWidth = facingChapterWidth;
@@ -200,6 +204,27 @@ export class ReaderReadingLayoutSnapshot {
     const titleTrack = measuredTitleHeight > 0 ? measuredTitleHeight + this.titleToBodySpacingVp : 0;
     return Math.max(1, this.viewportHeight - this.contentTop - this.contentBottom - titleTrack);
   }
+}
+
+export function createReaderWindowMetricsLayoutKey(
+  layout: ReaderReadingLayoutSnapshot,
+  extendIntoCutout: boolean,
+  hideNavigationBar: boolean,
+): string {
+  return [
+    layout.widthClass,
+    layout.viewportWidth,
+    layout.viewportHeight,
+    layout.contentTop,
+    layout.contentRight,
+    layout.contentBottom,
+    layout.contentLeft,
+    layout.facingChapterWidth,
+    layout.titleTrackHeightVp,
+    layout.systemFontScale,
+    extendIntoCutout,
+    hideNavigationBar === true,
+  ].join('|');
 }
 
 export type ReaderControlContentModule = 'home' | 'directory' | 'search' | 'tts' | 'autoPage' |
@@ -341,6 +366,7 @@ export function resolveReaderReadingLayout(
   widePageLayout?: ReaderWidePageLayout,
   pageMarginOffset: number = 0,
   measuredFooterPaintHeightVp: number = READER_PAGE_CHROME_FOOTER_HEIGHT,
+  hideNavigationBar: boolean = false,
 ): ReaderReadingLayoutSnapshot {
   const widthClass = readerWidthClass(viewportWidth, expandedHint);
   const profile = new ReaderDesignProfile(widthClass === 'expanded');
@@ -408,14 +434,16 @@ export function resolveReaderReadingLayout(
     Math.max(profile.contentTop, contentTop);
   const persistentBottom = widthClass === 'compact' && width < height && Number.isFinite(measuredPersistentBottomVp) ?
     Math.max(0, measuredPersistentBottomVp) : 0;
-  const safeBottom = readerInteractiveSafeBottom(metrics);
+  const visualBottom = readerVisualSafeBottom(metrics);
+  const interactiveBottom = readerInteractiveSafeBottom(metrics);
+  const safeBottom = hideNavigationBar ? visualBottom : interactiveBottom;
   const footerHeight = Number.isFinite(measuredFooterPaintHeightVp) ?
     Math.max(READER_PAGE_CHROME_FOOTER_HEIGHT, measuredFooterPaintHeightVp) : READER_PAGE_CHROME_FOOTER_HEIGHT;
   // Pay only the upper extension of the centered capsule target. Reserve it
   // even while idle so playback never repaginates the current chapter.
   const footerGap = Math.max(READER_PAGE_CHROME_BODY_BOTTOM_GAP_VP,
     Math.ceil((READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT - footerHeight) / 2));
-  const contentBottom = readerPageChromeBottomInset(safeBottom) + footerHeight + footerGap;
+  const contentBottom = readerPageChromeBottomInset(safeBottom, hideNavigationBar) + footerHeight + footerGap;
   const systemFontScale = metrics.systemFontScale > 0 ? metrics.systemFontScale : 1;
   return new ReaderReadingLayoutSnapshot(
     widthClass,
@@ -428,14 +456,15 @@ export function resolveReaderReadingLayout(
     systemFontScale,
     informationTop,
     readerVisualSafeRight(metrics),
-    readerVisualSafeBottom(metrics),
+    visualBottom,
     readerVisualSafeLeft(metrics),
     readerInteractiveSafeRight(metrics),
-    safeBottom,
+    interactiveBottom,
     informationLaneHeight,
     metrics,
     facingChapterWidth,
     footerHeight,
+    hideNavigationBar,
   );
 }
 

@@ -3,6 +3,7 @@ import preferences from '@ohos.data.preferences';
 import { readerHostPreferencesName } from './diagnostics/ReaderPublicFixtureScope';
 import {
   normalizeReaderNavigationPreferences, type ReaderNavigationPreferenceChange, type ReaderNavigationPreferences,
+  type ReaderNavigationPreferencesSnapshot,
 } from './HarmonyCapabilityPolicy';
 
 export const NAVIGATION_APPEARANCE_STORAGE_KEY = 'readerNavigationAppearancePreferences';
@@ -89,7 +90,7 @@ export class ReaderNavigationAppearancePreferences {
         const current = await this.read(store);
         this.current(generation);
         next = normalizeReaderNavigationPreferences({ override: pending.change.override ?? current.override,
-          reduceTransparency: pending.change.reduceTransparency ?? current.reduceTransparency });
+          renderMode: pending.change.renderMode ?? current.renderMode });
         pending.snapshot = next;
       }
       this.current(generation);
@@ -120,9 +121,9 @@ export class ReaderNavigationAppearancePreferences {
 
   private static async read(store: preferences.Preferences): Promise<ReaderNavigationPreferences> {
     const raw = await store.get(SNAPSHOT_KEY, '');
-    let decoded: ReaderNavigationPreferences | undefined;
+    let decoded: ReaderNavigationPreferencesSnapshot | undefined;
     if (typeof raw === 'string' && raw.length > 0) {
-      try { decoded = JSON.parse(raw) as ReaderNavigationPreferences; } catch (_) {}
+      try { decoded = JSON.parse(raw) as ReaderNavigationPreferencesSnapshot; } catch (_) {}
     }
     return normalizeReaderNavigationPreferences(decoded);
   }

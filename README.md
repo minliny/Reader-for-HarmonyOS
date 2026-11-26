@@ -51,7 +51,8 @@ Reader 采用“共享 Rust Core + 各平台原生 Host/UI”架构：
 │           ├── ui/            # 公共组件、布局、主题与反馈框架
 │           └── pages/         # 页面入口与结构验证夹具
 ├── scripts/                   # DevEco 构建、不可变 HAP 流水线、工具链检测与 CI 脚本
-├── tools/                     # 仓内契约检查与辅助测试工具
+├── tests/                     # Host 纯 TypeScript 分域测试与 Core RPC 样例镜像
+├── tools/                     # HAP 辅助工具、HDC 租约与原生采集
 └── docs/                      # 版本身份、CI、消息框架、UI 参考与准发布核验文档
 ```
 
@@ -63,7 +64,7 @@ Reader 采用“共享 Rust Core + 各平台原生 Host/UI”架构：
   - Node.js `22.23.3`、Java（用于签名/验签工具）、Rust `1.97.1`（`aarch64-unknown-linux-ohos`）
   - 相邻检出的 `Reader-Core` 源码目录（闭源私有仓库，需具备访问权限）
   - 本地调试签名配置（存放于 `.gitignore` 忽略的 `.reader-local/signing/`，不纳入 Git）
-- **仅查看源码或运行仓内 Node 契约检查**：只需 Node.js 22+，无需私有 Core 或签名材料。
+- **查看源码和运行 Host 分域测试**：使用 Node.js 22+ 与仓内 Core RPC 样例镜像。
 
 ### 常用命令
 
@@ -87,9 +88,10 @@ node scripts/hap-pipeline.mjs build --class iteration
 node scripts/hap-pipeline.mjs identity --channel DEV --abi arm64-v8a
 ```
 
-列出可用本地检查（默认只输出清单，不隐式运行全量测试）：
+查看可用测试域并运行 Host 全套。
 ```bash
-node scripts/check-local.mjs
+node scripts/test-host.mjs --help
+node scripts/test-host.mjs --all
 ```
 
 更完整的环境变量、跨平台工具路径发现与部署说明见 [`scripts/README.md`](scripts/README.md)；应用版本与包内构建身份规则见 [`docs/build-version-identity.md`](docs/build-version-identity.md)。
@@ -97,10 +99,10 @@ node scripts/check-local.mjs
 ## CI 与验证
 
 - **HarmonyOS CI**（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)）：
-  - `push` / `pull_request` 自动运行受影响范围的 Host 快速检查；
-  - 合入 `main`、仓内 PR、手动触发或定时任务会使用锁定 SDK 容器镜像（`api23` / `api24` / `api26r`）执行 Native 编译与无签名 HAP 验证（不涉及华为账号、签名私钥或设备部署）。
-- **Host Explicit Checks**（[`.github/workflows/contracts.yml`](.github/workflows/contracts.yml)）：
-  - 手动触发（`workflow_dispatch`），按需点名运行指定契约测试与源码卫生检查。
+  - `push` / `pull_request` 根据所变更的领域运行 Host 测试，并扫描新增的仿真和源码布局检查。
+  - 受信任任务核对锁定 Core 与 Host 的样例字节。API 26 构建无签名 HAP，API 23 和 API 24 按手动选择执行 Core Native 编译。
+- **Host Explicit Checks**（[`.github/workflows/contracts.yml`](.github/workflows/contracts.yml)）支持手动选择单个 Host 测试域或全套。
+- 运行期布局和输入恢复通过远程 VM 的七条原生旅程验证，入口为 `node scripts/vm-journeys.mjs --help`。
 
 更多说明见 [`docs/ci.md`](docs/ci.md)。
 

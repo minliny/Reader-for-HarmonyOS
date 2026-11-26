@@ -6,11 +6,14 @@ export class ReaderActionAccessibility implements AttributeModifier<CommonAttrib
   private selected: boolean;
   private action: boolean;
   private feedback: AttributeModifier<CommonAttribute> | undefined;
+  private extra: AttributeModifier<CommonAttribute> | undefined;
   private target: 'custom' | 'nativeButton';
   constructor(label: string, enabled: boolean = true, selected: boolean = false, action: boolean = true,
-    feedback: AttributeModifier<CommonAttribute> | undefined = undefined, target: 'custom' | 'nativeButton' = 'custom') {
+    feedback: AttributeModifier<CommonAttribute> | undefined = undefined, target: 'custom' | 'nativeButton' = 'custom',
+    extra: AttributeModifier<CommonAttribute> | undefined = undefined) {
     this.label = label; this.enabled = enabled; this.selected = selected; this.action = action; this.feedback = feedback;
     this.target = target;
+    this.extra = extra;
   }
 
   applyPressedAttribute(instance: CommonAttribute): void { this.feedback?.applyPressedAttribute?.(instance); }
@@ -27,6 +30,7 @@ export class ReaderActionAccessibility implements AttributeModifier<CommonAttrib
     // explicit focusable override can strand its custom-content scope.
     if (this.target === 'custom') instance.focusable(this.enabled);
     instance.enabled(this.enabled);
+    this.extra?.applyNormalAttribute?.(instance);
   }
 }
 

@@ -8,6 +8,7 @@ import { READER_SESSION_CAPSULE_RADIUS, ReaderSessionCapsuleFrame, ReaderSession
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
 import { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } from './ReaderPageChromeLayout';
+import type { ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 
 /**
  * Persistent launch and playback actors. Parent owns positioning, lifecycle and clock.
@@ -24,6 +25,7 @@ export struct ReaderSessionLaunchStage {
   @Prop countdown: number = 8;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop fontScale: number = 1;
+  @Prop material: ReaderSurfaceMaterialDecision | undefined = undefined;
   @Prop surfaceColor: string = '';
   @Prop surfaceBorderColor: string = '';
   @Prop sourceSurfaceColor: string = '';
@@ -74,7 +76,8 @@ export struct ReaderSessionLaunchStage {
         .id('reader-session-launch-surface')
         .width('100%').height('100%')
         .attributeModifier(new ReaderSessionCapsuleFrame(this.themeScheme, this.surfaceColor, this.surfaceBorderColor, this.shadowColor,
-          this.paintDensity(), this.interactionEnabled && this.sample.pauseOpacity > 0 && this.pressPointer >= 0))
+          this.paintDensity(), this.interactionEnabled && this.sample.pauseOpacity > 0 && this.pressPointer >= 0,
+          this.sample.canonicalSurfaceOpacity > 0 ? this.material : undefined))
         .opacity(this.sample.canonicalSurfaceOpacity).hitTestBehavior(HitTestMode.None);
 
       // SourceRegion owns its surface; the single content actor retains uniform scale.
@@ -107,8 +110,8 @@ export struct ReaderSessionLaunchStage {
       // CapsuleContent reveal clip and CapsuleTransitionContent leading row.
       Stack({ alignContent: Alignment.TopStart }) {
         ReaderSessionCapsuleLeading({ type: this.sample.type, countdown: this.countdown,
-          textColor: this.effectiveTextColor(), primaryColor: this.effectivePrimaryColor(),
-          onPrimaryColor: this.effectiveOnPrimaryColor(), themeScheme: this.themeScheme, capsuleWidth: this.sample.capsuleWidth,
+          textColor: this.textColor, primaryColor: this.primaryColor,
+          onPrimaryColor: this.onPrimaryColor, themeScheme: this.themeScheme, capsuleWidth: this.sample.capsuleWidth,
           capsuleHeight: this.sample.capsuleHeight, labelWidth: this.metrics().labelWidth,
           labelHeight: this.metrics().labelHeight, countdownSize: this.metrics().countdownSize })
           .translate({ x: this.sample.leadingOffsetX }).opacity(this.sample.leadingOpacity);
@@ -116,7 +119,7 @@ export struct ReaderSessionLaunchStage {
 
       // The pause control keeps its own position throughout the reveal.
       ReaderSessionCapsulePause({ sessionState: this.sessionState, themeScheme: this.themeScheme, desiredPlaying: this.desiredPlaying,
-        primaryColor: this.effectivePrimaryColor(), onPrimaryColor: this.effectiveOnPrimaryColor() })
+        primaryColor: this.primaryColor, onPrimaryColor: this.onPrimaryColor })
         .position({ x: this.sample.pauseX, y: (this.sample.proxyHeight - 16) / 2 }).opacity(this.sample.pauseOpacity);
     }
     .id('reader-session-launch-proxy')
@@ -160,15 +163,4 @@ export struct ReaderSessionLaunchStage {
     return this.sourceBorderColor.length > 0 ? this.sourceBorderColor : readerAppColor('TOK_LINE_STRONG', this.themeScheme);
   }
 
-  private effectiveTextColor(): string {
-    return this.textColor.length > 0 ? this.textColor : readerAppColor('TOK_READ_INK', this.themeScheme);
-  }
-
-  private effectivePrimaryColor(): string {
-    return this.primaryColor.length > 0 ? this.primaryColor : readerAppColor('TOK_READ_PRIMARY', this.themeScheme);
-  }
-
-  private effectiveOnPrimaryColor(): string {
-    return this.onPrimaryColor.length > 0 ? this.onPrimaryColor : readerAppColor('app.control.onPrimary', this.themeScheme);
-  }
 }

@@ -170,6 +170,39 @@ export function readerBookmarkLoadState(entries: LocalReadingTocEntry[]): Reader
   return 'ready';
 }
 
+/** Project quotes for the current chapter without changing the admitted records. */
+export function projectReaderChapterBookmarkExcerpts(
+  entries: LocalReadingTocEntry[],
+  chapterIndex: number,
+  matchesChapter: (mark: LocalReadingBookmark) => boolean,
+  excerptFor: (mark: LocalReadingBookmark) => string | undefined,
+): LocalReadingTocEntry[] {
+  const entry = entries.find((candidate: LocalReadingTocEntry): boolean => candidate.index === chapterIndex);
+  if (entry?.bookmarks === undefined) return entries;
+  let changed = false;
+  const bookmarks = entry.bookmarks.map((mark: LocalReadingBookmark): LocalReadingBookmark => {
+    if (!matchesChapter(mark)) {
+      if (mark.positionScope === undefined) return mark;
+      changed = true;
+      // A parent projection can still carry a proof from the previous body.
+      // Keep the stored quote without reusing its offset as a current coordinate.
+      return { time: mark.time, chapterIndex: mark.chapterIndex, chapterOffset: mark.chapterOffset,
+        chapterTitle: mark.chapterTitle, content: mark.content, bookText: mark.bookText, positionScope: undefined };
+    }
+    if ((mark.bookText ?? '').length > 0) return mark;
+    const excerpt = excerptFor(mark);
+    if (excerpt === undefined) return mark;
+    changed = true;
+    return { time: mark.time, chapterIndex: mark.chapterIndex, chapterOffset: mark.chapterOffset,
+      chapterTitle: mark.chapterTitle, content: mark.content, bookText: excerpt, positionScope: mark.positionScope };
+  });
+  if (!changed) return entries;
+  const hydrated: LocalReadingTocEntry = { index: entry.index, title: entry.title, level: entry.level,
+    displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
+    downloadState: entry.downloadState, navigable: entry.navigable, bookmarks };
+  return entries.map((candidate: LocalReadingTocEntry): LocalReadingTocEntry => candidate === entry ? hydrated : candidate);
+}
+
 const BOOKMARK_EXCERPT_MAX_SCALARS = 48;
 
 export function readerBookmarkExcerpt(content: string, maxScalars: number = BOOKMARK_EXCERPT_MAX_SCALARS): string {
@@ -314,4 +347,63 @@ export function readerBookmarkRowsFromRecords(
     rows.push(readerBookmarkRowFromRecord(record, chapterScalarLengths));
   }
   return rows;
+}
+
+export interface ReaderControlBookmarkReadIntent {
+  isCurrent(): boolean;
+  load(isCurrent: () => boolean): Promise<void>;
+  failed(error: Error): void;
+}
+
+/** Directory opens and content refreshes share one observation generation.
+ * The parent reader index remains the only writer of canonical bookmark rows. */
+export class ReaderControlBookmarkRead {
+  private generation: number = 0;
+  private pending: boolean = false;
+  private noticeKey: string = '';
+
+  isPending(): boolean { return this.pending; }
+
+  open(capture: (ownsGeneration: () => boolean) => ReaderControlBookmarkReadIntent, clearFailure: () => void): void {
+    const generation = ++this.generation;
+    const intent = capture((): boolean => generation === this.generation);
+    clearFailure();
+    this.pending = true;
+    this.queue(intent, generation);
+  }
+
+  refresh(capture: (ownsGeneration: () => boolean) => ReaderControlBookmarkReadIntent, clearFailure: () => void): void {
+    const generation = ++this.generation;
+    const intent = capture((): boolean => generation === this.generation);
+    this.pending = true;
+    clearFailure();
+    this.queue(intent, generation);
+  }
+
+  clearNotice(): void { this.noticeKey = ''; }
+
+  admitNotice(key: string): boolean {
+    if (this.noticeKey === key) return false;
+    this.noticeKey = key;
+    return true;
+  }
+
+  private queue(intent: ReaderControlBookmarkReadIntent, generation: number): void {
+    const isCurrent = (): boolean => intent.isCurrent();
+    void Promise.resolve().then((): Promise<void> => {
+      if (!isCurrent()) return Promise.resolve();
+      return intent.load(isCurrent);
+    }).catch((error: Error): void => {
+      if (isCurrent()) intent.failed(error);
+    }).finally((): void => {
+      if (generation === this.generation) this.pending = false;
+    });
+  }
+}
+
+/** A newer complete projection supersedes failure of an older list observation. */
+export function readerBookmarkReadFailureSuperseded(message: string, started: LocalReadingTocEntry[],
+  current: LocalReadingTocEntry[]): boolean {
+  return message.length === 0 && current !== started &&
+    !current.some((entry: LocalReadingTocEntry): boolean => entry.bookmarks === undefined);
 }

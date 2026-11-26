@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { basename } from 'node:path';
 import { crc32 } from 'node:zlib';
 import { assertAppVersion } from '../../scripts/lib/app-build-identity.mjs';
 
@@ -43,28 +42,7 @@ export function candidateIdentity(manifest, deployment, snapshot) {
   };
 }
 
-export function captureRecord(session, reference, bytes, primitive, { first = 0, last = session.length } = {}) {
-  const matches = [];
-  for (let index = first + 2; index < last; index++) {
-    const integrity = session[index];
-    if (integrity.event === 'capture-integrity' &&
-      basename(integrity.path) === basename(reference.path) &&
-      integrity.sha256 === reference.sha256 && integrity.bytes === bytes.length) matches.push(index);
-  }
-  requireEvidence(matches.length === 1, `Expected one matching device capture: ${reference.path}`);
-  const entry = matches[0];
-  const transfer = session[entry - 1];
-  const remote = transfer.args?.[2];
-  requireEvidence(transfer.ok === true && transfer.args?.slice(0, 2).join(' ') === 'file recv' &&
-    typeof remote === 'string' && basename(remote) === basename(reference.path) &&
-    transfer.args[3] === session[entry].path, `No matching native readback: ${reference.path}`);
-  const captures = session.slice(first, entry - 1).flatMap((record, index) =>
-    record.ok === true && record.args?.join(' ') === `shell uitest ${primitive} -p ${remote}` ? [index + first] : []);
-  requireEvidence(captures.length === 1, `Expected one successful native ${primitive} for ${reference.path}`);
-  return { bytes, entry, capture: captures[0] };
-}
-
-/** Checks capture structure and checksums before replay reads the image extent. */
+/** Checks native PNG structure and checksums before accepting screenshot bytes. */
 export function inspectNativePng(bytes) {
   requireEvidence(bytes.length >= 33 && bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a' &&
     bytes.readUInt32BE(8) === 13 && bytes.toString('ascii', 12, 16) === 'IHDR',
@@ -96,12 +74,6 @@ export function inspectNativePng(bytes) {
   }
   throw new EvidenceError('Native screenshot has no complete PNG end');
 }
-
-export function pngSize(bytes) {
-  const { width, height } = inspectNativePng(bytes);
-  return { width, height };
-}
-
 
 export function nativeBounds(value) {
   return typeof value === 'string' ? /^\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]$/u.exec(value)?.slice(1).map(Number) : undefined;

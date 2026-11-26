@@ -2,15 +2,16 @@
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { portableSpawnSync, resolveHarmonyTool, windowsBatchCommand } from './lib/harmony-toolchain.mjs';
 import { privateWindowsAcl } from './lib/private-file.cjs';
-import { nativeInputPaths, requireAcceptanceInputs } from './hap-pipeline.mjs';
+import { findBuiltHaps, nativeInputPaths, requireAcceptanceInputs } from './hap-pipeline.mjs';
 
 const root = realpathSync(mkdtempSync(join(tmpdir(), 'reader-toolchain-portability-')));
 const put = (path, bytes = '') => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, bytes); return path; };
 const env = { PATH: '', READER_DEVECO_HOME: join(root, 'Studio With Spaces') };
+const scripts = dirname(fileURLToPath(import.meta.url));
 try {
   const sdk = join(env.READER_DEVECO_HOME, 'sdk/default/openharmony');
   mkdirSync(join(sdk, 'ets/build-tools/ets-loader'), { recursive: true });
@@ -34,6 +35,24 @@ try {
   assert.equal(resolveHarmonyTool('sdkHome', { env: { PATH: '' }, cwd: project }), sdk);
   const nodeCli = put(join(root, 'echo.mjs'), 'console.log(JSON.stringify(process.argv.slice(2)))');
   assert.deepEqual(JSON.parse(portableSpawnSync(nodeCli, ['path with spaces', 'a&b'], { encoding: 'utf8' }).stdout), ['path with spaces', 'a&b']);
+  const devEcoBuild = (...args) => portableSpawnSync(process.execPath, [join(scripts, 'deveco-build.mjs'), ...args], {
+    env: { ...process.env, READER_NODE: process.execPath, HVIGORW: nodeCli }, encoding: 'utf8',
+  });
+  const receivedHvigorArgs = (...args) => {
+    const result = devEcoBuild(...args);
+    assert.equal(result.status, 0, result.stderr);
+    return JSON.parse(result.stdout);
+  };
+  const debugModule = ['--mode', 'module', '-p', 'module=entry@default', '-p', 'product=default',
+    '-p', 'requiredDeviceType=phone', '-p', 'buildMode=debug'];
+  const incrementalFlags = ['--analyze=normal', '--parallel', '--incremental', '--daemon'];
+  assert.deepEqual(receivedHvigorArgs('--compile-only'), [...debugModule, 'default@CompileArkTS', ...incrementalFlags]);
+  assert.deepEqual(receivedHvigorArgs(), [...debugModule, 'assembleHap', ...incrementalFlags]);
+  assert.deepEqual(receivedHvigorArgs('tasks', '--no-daemon'), ['tasks', '--no-daemon']);
+  const mixedTasks = devEcoBuild('--compile-only', 'assembleHap');
+  assert.equal(mixedTasks.status, 1);
+  assert.equal(mixedTasks.stdout, '');
+  assert.match(mixedTasks.stderr, /--compile-only must be used on its own/);
   assert.equal(windowsBatchCommand('C:\\Program Files (x86)\\ohpm.cmd', ['--cache', 'D:\\build cache', '']),
     '"C:\\Program Files (x86)\\ohpm.cmd" "--cache" "D:\\build cache" ""');
   assert.throws(() => windowsBatchCommand('ohpm.cmd', ['name & command']), /shell syntax/);
@@ -52,13 +71,33 @@ try {
   const external = join(root, 'external cargo outputs');
   const redirected = nativeInputPaths(core, { CARGO_TARGET_DIR: external });
   assert.equal(redirected.identity, join(external, 'harmony-napi/arm64-v8a/core-build-identity.json'));
+  assert.equal(nativeInputPaths(core, { CARGO_TARGET_DIR: external, READER_HARMONY_CORE_PROFILE: 'smoke' }).identity,
+    join(external, 'harmony-napi/arm64-v8a/smoke/core-build-identity.json'));
   assert.throws(() => requireAcceptanceInputs(core, { CARGO_TARGET_DIR: external }), /acceptance input missing/);
   for (const path of Object.values(redirected)) put(path, 'current external output');
   assert.deepEqual(requireAcceptanceInputs(core, { CARGO_TARGET_DIR: external }), redirected);
   assert.equal(nativeInputPaths(core, { CARGO_TARGET_DIR: '../relative-cache' }).identity,
     join(root, 'relative-cache/harmony-napi/arm64-v8a/core-build-identity.json'));
-  const repository = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-  const pipeline = readFileSync(join(repository, 'scripts/hap-pipeline.mjs'), 'utf8');
+  const pipelineEntry = join(scripts, 'hap-pipeline.mjs');
+  const invalidAcceptance = (...args) => portableSpawnSync(process.execPath,
+    [pipelineEntry, 'build', '--class', 'acceptance', ...args], {
+      env: { ...process.env, READER_HARMONY_ABI: 'arm64-v8a', READER_HARMONY_CORE_PROFILE: 'release' }, encoding: 'utf8',
+    });
+  const incrementalAcceptance = invalidAcceptance('--incremental');
+  assert.equal(incrementalAcceptance.status, 2);
+  assert.match(incrementalAcceptance.stderr, /--incremental.*--class iteration/);
+  const smokeAcceptance = invalidAcceptance('--core-profile', 'smoke');
+  assert.equal(smokeAcceptance.status, 2);
+  assert.match(smokeAcceptance.stderr, /acceptance.*release|release.*acceptance/i);
+  const hapOutputs = join(root, 'hap-outputs');
+  put(join(hapOutputs, 'entry-default-signed.hap'));
+  put(join(hapOutputs, 'entry-default-unsigned.hap'));
+  assert.deepEqual(findBuiltHaps(hapOutputs, 'local', 'iteration'), ['entry-default-signed.hap']);
+  assert.deepEqual(findBuiltHaps(hapOutputs, 'local', 'acceptance'), ['entry-default-signed.hap', 'entry-default-unsigned.hap']);
+  rmSync(join(hapOutputs, 'entry-default-unsigned.hap'));
+  assert.deepEqual(findBuiltHaps(hapOutputs, 'local', 'iteration'), ['entry-default-signed.hap']);
+  assert.throws(() => findBuiltHaps(hapOutputs, 'local', 'acceptance'), /did not produce the unsigned HAP/);
+  const pipeline = readFileSync(pipelineEntry, 'utf8');
   assert.equal(/\/Applications\/|\/usr\/bin\/|run\('rsync'/.test(pipeline.replace(/^#!.*\n/, '')), false);
-  console.log('HarmonyOS toolchain portability: PASS (configured paths, Windows extensions, SDK layout, Node CLI, private ACL policy).');
+  console.log('HarmonyOS toolchain portability: PASS (tool discovery, CLI routing, private ACL policy, acceptance arguments).');
 } finally { rmSync(root, { recursive: true, force: true }); }

@@ -1,3 +1,5 @@
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
@@ -29,6 +31,7 @@ import {
 import { BookshelfSectionHeader } from './BookshelfSectionHeader';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
 import { ShelfBookPresentation } from '../presentation/ShelfBookPresentation';
+import { BookshelfInputAdmission } from '../presentation/BookshelfInputAdmission';
 import { MangaBookPresentation } from '../../manga/presentation/MangaBookPresentation';
 import { BookshelfViewState, type BookshelfDetailReturnFocus } from '../presentation/BookshelfViewState';
 import { bookshelfContinueCardFrame, BookshelfContinueCardFrame } from './BookshelfContinueCardSpec';
@@ -95,6 +98,27 @@ import {
 } from './BookshelfGridSpec';
 
 import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../application/BookshelfViewMode';
+import { bookshelfFileDropTypes, type BookshelfFileDrop } from '../application/BookshelfFileDrop';
+import { dispatchBookshelfFileDrop, showBookshelfFileDropFeedback } from './BookshelfFileDropEvent';
+
+@Builder
+export function bookshelfFileDropHint(topInset: number, scheme: string) {
+  Row() {
+    Text('松开以导入书籍')
+      .fontFamily(TYPE_SECTION_HEADING.fontFamily)
+      .fontWeight(TYPE_SECTION_HEADING.fontWeight)
+      .fontSize(TYPE_SECTION_HEADING.fontSizeFp)
+      .fontColor(readerAppColor('TOK_PRIMARY_TEXT', scheme))
+      .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING, top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
+      .backgroundColor(readerAppColor('TOK_PAPER', scheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_PRIMARY_BORDER', scheme) })
+      .borderRadius(TOK_RADIUS_MD);
+  }
+  .width('100%')
+  .padding({ top: topInset + TOK_SPACE_MD })
+  .justifyContent(FlexAlign.Center)
+  .hitTestBehavior(HitTestMode.None);
+}
 
 class BookshelfMotionFrameCallback extends FrameCallback {
   private readonly callback: () => void;
@@ -216,12 +240,16 @@ export struct BookshelfPage {
   @Prop @Watch('onScrollToTopRequested') scrollToTopToken: number = 0;
   @Prop @Watch('onShelfPresentationChanged') navigationGeneration: number = 0;
   @Prop @Watch('modeFeedback') feedbackEnabled: boolean = true;
+  @Prop @Watch('resetFileDropHover') fileDropEnabled: boolean = false;
+  @State private fileDropHover: boolean = false;
   @Prop unfilteredOnlineBooks: boolean = false;
   onNextPageRequested: (navigation?: number) => void = (): void => {};
   onPreviousPageRequested: (navigation?: number) => void = (): void => {};
   onFilterRequested: (readingState: string, sourceKind: string, contentKind?: string, navigation?: number) => void = (_readingState: string, _sourceKind: string): void => {};
   onEmptySearch: (navigation: number) => void = (_navigation: number): void => {};
   onEmptyImport: (navigation: number, focusTarget: string) => void = (_navigation: number, _focusTarget: string): void => {};
+  onFilesDropped: (drop: BookshelfFileDrop, navigation: number) => boolean =
+    (_drop: BookshelfFileDrop, _navigation: number): boolean => false;
   @Prop @Watch('onContinueReadingChanged') continueReading: ShelfBook | undefined;
   /** Keep the shelf slot stable when the IME leaves no room to cover the card. */
   @Prop continueCardSuppressed: boolean = false;
@@ -265,6 +293,9 @@ export struct BookshelfPage {
   private continueCardPublishedRect: ReaderSurfaceRect | undefined = undefined;
   @State private viewModeError: string = '';
   private mounted: boolean = false;
+  private readonly shelfInput: BookshelfInputAdmission = new BookshelfInputAdmission(
+    (): number => this.navigationGeneration,
+    (navigation: number): boolean => this.mounted && this.isCurrentShelfInput(navigation));
   private projectionQueued: boolean = false;
   private filterPublicationQueued: boolean = false;
   private projectionGeneration: number = 0;
@@ -389,6 +420,7 @@ export struct BookshelfPage {
   }
 
   aboutToDisappear(): void {
+    this.resetFileDropHover();
     this.resetShelfPress();
     this.listTextFontGeneration += 1;
     this.transientFeedback.reset();
@@ -422,10 +454,30 @@ export struct BookshelfPage {
     this.bookshelfTabContent();
   }
 
+  private resetFileDropHover(): void { this.fileDropHover = false; }
+
+  private fileDropCurrent(): boolean {
+    return this.fileDropEnabled && this.actionSheetId.length === 0 &&
+      this.isCurrentShelfInput(this.navigationGeneration);
+  }
+
+  private onFileDrag(event: DragEvent): void {
+    this.fileDropHover = showBookshelfFileDropFeedback(event, this.fileDropCurrent());
+  }
+
+  private onFileDrop(event: DragEvent): void {
+    this.resetFileDropHover();
+    dispatchBookshelfFileDrop(event, this.fileDropCurrent(), this.reduceMotion,
+      (drop: BookshelfFileDrop): boolean => this.onFilesDropped(drop, this.navigationGeneration));
+  }
+
   @Builder
   private bookshelfTabContent() {
     Stack({ alignContent: Alignment.TopStart }) {
       this.shelfPane();
+      if (this.fileDropHover && this.fileDropEnabled && this.actionSheetId.length === 0) {
+        bookshelfFileDropHint(this.headerBottom, this.appThemeScheme);
+      }
       if (this.viewModePending()) {
         Column() {
           ForEach([this.navigationGeneration], (navigation: number): void => {
@@ -444,6 +496,11 @@ export struct BookshelfPage {
     }
     .width('100%')
     .height('100%')
+    .allowDrop(this.fileDropEnabled ? bookshelfFileDropTypes() : null)
+    .onDragEnter((event: DragEvent): void => this.onFileDrag(event))
+    .onDragMove((event: DragEvent): void => this.onFileDrag(event))
+    .onDragLeave((): void => this.resetFileDropHover())
+    .onDrop((event: DragEvent): void => this.onFileDrop(event))
     .onAreaChange((_old: Area, area: Area): void => this.recordShelfPane(area));
   }
 
@@ -611,9 +668,7 @@ export struct BookshelfPage {
   }
 
   private continueBookProgressLabel(book: ShelfBook | undefined): string {
-    if (book !== undefined && book.contentKind === 'manga' && ShelfBookPresentation.progress(book) === '*%') return '*%';
-    const progress = this.continueBookProgress(book);
-    return progress > 0 && progress < 1 ? '<1%' : `${Math.floor(progress)}%`;
+    return book === undefined ? '' : ShelfBookPresentation.listProgress(book);
   }
 
   @Builder
@@ -648,6 +703,9 @@ export struct BookshelfPage {
   private continueReadingCard(bookProvider: () => ShelfBook | undefined, expandedLayout: boolean) {
     Column({ space: 6 }) {
       Text('继续阅读').width('100%')
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+          ? { role: 'scroll-content', id: 'shelf-continue-heading', scope: 'bookshelf', active: !this.headerScrolled,
+            expectedContentGapVp: bookshelfHeaderSpec().contentGap } as LayoutInvariantTag : undefined)
         .fontFamily(TYPE_SHELF_CONTINUE_LABEL.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_LABEL.fontWeight)
         .fontSize(TYPE_SHELF_CONTINUE_LABEL.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_LABEL.lineHeightFp as number)
         .letterSpacing(TYPE_SHELF_CONTINUE_LABEL.letterSpacingFp as number)
@@ -684,7 +742,7 @@ export struct BookshelfPage {
         .opacity(readerPressOpacity(this.shelfPressed('continue'), this.reduceMotion));
       }.width(this.continueCardFrame(expandedLayout).width).alignSelf(ItemAlign.Center)
         .id(this.continueCardRectId())
-        .onAreaChange(this.continueCardAreaHandler())
+        .onAreaChange((): void => this.scheduleContinueCardMeasurement())
         .onTouch((event: TouchEvent): void => this.observeShelfPress(event, 'continue', !this.continueCardSuppressed))
         .onClick(this.bookSelectionHandler(bookProvider, true));
     }.width(this.shelfContentWidth(expandedLayout)).alignItems(HorizontalAlign.Start)
@@ -738,7 +796,10 @@ export struct BookshelfPage {
               onCover: this.viewModeAction('cover', navigation),
               onList: this.viewModeAction('list', navigation),
               onFilter: (): void => this.setFilterExpanded(!this.filterRowVisible, navigation),
-            });
+            }).customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' &&
+              READER_LAYOUT_DEBUG_BUILD && this.continueReading === undefined
+              ? { role: 'scroll-content', id: 'shelf-section', scope: 'bookshelf', active: !this.headerScrolled,
+                expectedContentGapVp: bookshelfHeaderSpec().contentGap } as LayoutInvariantTag : undefined);
           }, (navigation: number): string => `shelf-section:${navigation}`);
 
           ForEach([this.navigationGeneration], (navigation: number): void => {
@@ -854,6 +915,7 @@ export struct BookshelfPage {
   }
 
   private restoreShelfViewport(): void {
+    const navigation = this.navigationGeneration;
     const generation = ++this.viewportRestoreGeneration;
     const key = this.viewState.anchorKey;
     const itemY = this.viewState.anchorItemY;
@@ -865,7 +927,7 @@ export struct BookshelfPage {
       offset + this.shelfContentStartInset() > bookshelfHeaderSpec().scrollThreshold));
     this.viewportRestored = false;
     this.getUIContext().postFrameCallback(new BookshelfMotionFrameCallback((): void => {
-      if (!this.mounted || generation !== this.viewportRestoreGeneration) return;
+      if (!this.isShelfPresentationCurrent(navigation) || generation !== this.viewportRestoreGeneration) return;
       let anchor = -1;
       for (let index = 0; index < this.rowDataSource.totalCount(); index += 1) {
         if (this.rowDataSource.getData(index).some((book: ShelfBook): boolean =>
@@ -889,7 +951,7 @@ export struct BookshelfPage {
       this.firstVisibleItem = item;
       this.shelfScroller.scrollToIndex(item, false, ScrollAlign.START);
       this.getUIContext().postFrameCallback(new BookshelfMotionFrameCallback((): void => {
-        if (!this.mounted || generation !== this.viewportRestoreGeneration) return;
+        if (!this.isShelfPresentationCurrent(navigation) || generation !== this.viewportRestoreGeneration) return;
         try { this.shelfScroller.scrollBy(0, this.shelfScroller.getItemRect(item).y - itemY); }
         catch (_error) { /* A concurrent removal may discard the saved anchor. */ }
         this.viewportRestored = true;
@@ -1038,6 +1100,7 @@ export struct BookshelfPage {
         .borderRadius(999).scale(readerPressScale(this.shelfPressed(`filter:${dimension}:${value}`), this.reduceMotion))
         .opacity(readerPressOpacity(this.shelfPressed(`filter:${dimension}:${value}`), this.reduceMotion));
     }.padding(0).backgroundColor(Color.Transparent)
+      .id(`reader-bookshelf-filter-${dimension}-${value}`)
       .margin({ right: TOK_SPACE_XS / 2, bottom: TOK_SPACE_XS / 2 })
       .constraintSize({ maxWidth: 160, minWidth: 44, minHeight: 44 })
       .attributeModifier(new ReaderActionAccessibility(`${dimension === 'content' ? '内容类型' : '来源'}：${label}`, true, this.isFilterSelected(dimension, value), true, undefined, 'nativeButton'))
@@ -1335,11 +1398,11 @@ export struct BookshelfPage {
 
 
 
-  private presentBookActionSheet(book: ShelfBook, focusTarget?: string): void {
-    if (!this.mounted || !this.isCurrentShelfInput(this.navigationGeneration) || this.actionBook !== undefined ||
+  private presentBookActionSheet(book: ShelfBook, navigation: number, focusTarget: string): void {
+    if (!this.shelfInput.isCurrent(navigation) || this.actionBook !== undefined ||
       this.currentVisibleBook(book) === undefined) return;
     this.actionSheetId = `bookshelf-action:${++this.actionSheetRevision}`;
-    this.actionSheetNavigation = this.navigationGeneration;
+    this.actionSheetNavigation = navigation;
     this.actionSheetFocusTarget = focusTarget;
     this.pendingBookAction = undefined;
     this.actionBook = book;
@@ -1404,7 +1467,7 @@ export struct BookshelfPage {
     try {
       const context = this.getUIContext();
       context.postFrameCallback(new BookshelfBookActionFocusFrame((): void => {
-        if (!this.isShelfPresentationCurrent(navigation) || !this.isCurrentShelfInput(navigation) ||
+        if (!this.shelfInput.isCurrent(navigation) ||
           this.actionSheetRevision !== revision || this.bookActionFocusRevision !== focusRevision || this.actionBook !== undefined ||
           (viewport !== undefined && (!this.viewportRestored || viewport !== this.viewportRestoreGeneration))) return;
         const focus = context.getFocusController();
@@ -1430,7 +1493,7 @@ export struct BookshelfPage {
     const focusTarget = this.actionSheetFocusTarget;
     this.pendingBookAction = (): void => {
       const current = this.currentVisibleBook(book);
-      if (current !== undefined && this.isShelfPresentationCurrent(navigation) && this.isCurrentShelfInput(navigation))
+      if (current !== undefined && this.shelfInput.isCurrent(navigation))
         action(current, navigation, focusTarget);
     };
     // The keyed presentation and selected book remain owned until the exit.
@@ -1601,12 +1664,21 @@ export struct BookshelfPage {
   }
 
   private onShelfPresentationChanged(): void {
+    if (!this.mounted) return;
+    this.resetFileDropHover();
     this.resetShelfPress();
     // Props update the retained page; revoke only its temporary Sheet.
     this.dismissBookActionSheet(this.actionSheetId, this.actionBook);
+    this.cancelBookActionFocus();
+    this.detailReturnFocus = this.takeDetailReturnFocus(this.navigationGeneration);
     this.headerScrollPublishedNavigation = -1;
+    if (!this.viewportRestored) {
+      this.restoreShelfViewport();
+      return;
+    }
     this.publishVisibleReadingBooks();
     this.scheduleContinueCardMeasurement();
+    this.restoreDetailReturnFocus(this.viewportRestoreGeneration);
   }
 
   private continueCardBookKey(): string {
@@ -1627,15 +1699,6 @@ export struct BookshelfPage {
     if (!this.mounted) return;
     if (this.continueCardBookKey() !== this.continueCardPublishedKey) this.publishContinueCardRect(undefined);
     this.scheduleContinueCardMeasurement();
-  }
-
-  private continueCardAreaHandler(): (_old: Area, _area: Area) => void {
-    const navigation = this.navigationGeneration;
-    const key = this.continueCardBookKey();
-    return (_old: Area, _area: Area): void => {
-      if (!this.isShelfPresentationCurrent(navigation) || key !== this.continueCardBookKey()) return;
-      this.scheduleContinueCardMeasurement();
-    };
   }
 
   private publishContinueCardRect(rect: ReaderSurfaceRect | undefined): void {
@@ -1738,9 +1801,9 @@ export struct BookshelfPage {
   }
 
   private bookSelectionHandler(provider: () => ShelfBook | undefined, continuing: boolean = false): () => void {
-    const navigation = this.navigationGeneration;
     return (): void => {
-      if (!this.isShelfPresentationCurrent(navigation) || !this.isCurrentShelfInput(navigation) || this.actionBook !== undefined) return;
+      const navigation = this.shelfInput.begin();
+      if (navigation === undefined || this.actionBook !== undefined) return;
       const snapshot = provider();
       const book = snapshot === undefined || continuing ? snapshot : this.currentVisibleBook(snapshot);
       if (book === undefined) return;
@@ -1749,36 +1812,37 @@ export struct BookshelfPage {
     };
   }
 
-  private bookActionFocusKey(book: ShelfBook, listMore: boolean): string {
-    return `reader-shelf-book-action:${JSON.stringify([this.navigationGeneration, book.sourceId, book.bookId, listMore])}`;
+  private bookActionFocusKey(book: ShelfBook, listMore: boolean, navigation: number = this.navigationGeneration): string {
+    return `reader-shelf-book-action:${JSON.stringify([navigation, book.sourceId, book.bookId, listMore])}`;
   }
 
   private bookActionPresentationHandler(book: ShelfBook, listMore: boolean): () => void {
-    const navigation = this.navigationGeneration;
-    const focusTarget = this.bookActionFocusKey(book, listMore);
     return (): void => {
-      if (!this.isShelfPresentationCurrent(navigation)) return;
+      const navigation = this.shelfInput.begin();
+      if (navigation === undefined || (listMore && this.viewMode !== 'list')) return;
       // Retained cards keep their visual identity across group-only refreshes.
       // Resolve the action's current DTO instead of retaining its old group.
       const current = this.currentVisibleBook(book);
-      if (current !== undefined) this.presentBookActionSheet(current, focusTarget);
+      if (current !== undefined) {
+        this.presentBookActionSheet(current, navigation, this.bookActionFocusKey(current, listMore, navigation));
+      }
     };
   }
 
   private shelfPageHandler(previous: boolean): () => void {
-    const navigation = this.navigationGeneration;
     return (): void => {
-      if (!this.isShelfPresentationCurrent(navigation)) return;
+      const navigation = this.shelfInput.begin();
+      if (navigation === undefined) return;
       if (previous) this.onPreviousPageRequested(navigation); else this.onNextPageRequested(navigation);
     };
   }
 
   private shelfScrollHandler(): (start: number, end: number) => void {
-    const navigation = this.navigationGeneration;
     return (start: number, end: number): void => {
-      if (!this.isShelfPresentationCurrent(navigation)) return;
+      if (!this.mounted) return;
       if (Number.isFinite(end)) this.lastVisibleItem = end;
-      if (!this.viewportRestored) return;
+      const navigation = this.shelfInput.begin();
+      if (!this.viewportRestored || navigation === undefined) return;
       this.firstVisibleItem = start;
       this.saveShelfViewport(); this.publishVisibleReadingBooks();
       if (start <= this.shelfHeaderItems() + 4) this.onPreviousPageRequested(navigation);
@@ -1787,9 +1851,8 @@ export struct BookshelfPage {
   }
 
   private shelfViewportScrollHandler(): () => void {
-    const navigation = this.navigationGeneration;
     return (): void => {
-      if (!this.isShelfPresentationCurrent(navigation) || !this.viewportRestored) return;
+      if (!this.viewportRestored || this.shelfInput.begin() === undefined) return;
       this.saveShelfViewport();
       this.scheduleContinueCardMeasurement();
     };

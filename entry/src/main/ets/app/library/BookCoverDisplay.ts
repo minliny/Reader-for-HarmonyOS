@@ -4,3 +4,9 @@ export function bookCoverDisplayUrl(value: string | undefined): string | undefin
   const url = value?.trim();
   return url !== undefined && /^(https?:\/\/[^\s/]+(?:\/\S*)?|data:image\/(png|jpeg|bmp|webp);base64,\S+|file:\/\/\S+)$/.test(url) ? url : undefined;
 }
+
+export function bookContentKindLabel(sourceId: string, contentKind: string | undefined): string {
+  if (contentKind === 'manga') return '漫画';
+  if (contentKind === 'audio') return '有声';
+  return contentKind === 'text' || sourceId === 'local' ? '小说' : '';
+}

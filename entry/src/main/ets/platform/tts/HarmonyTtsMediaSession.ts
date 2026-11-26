@@ -1,7 +1,9 @@
 import common from '@ohos.app.ability.common';
+import deviceInfo from '@ohos.deviceInfo';
 import { avSession } from '@kit.AVSessionKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { type ReaderTtsHostEvent } from '../../features/reading/application/ReaderTtsHostContract';
+import { isReaderTtsSupportedPlaybackRate, readerTtsSupportedPlaybackRates } from '../../features/reading/application/ReaderTtsState';
 
 const LOG_DOMAIN = 0x5244;
 
@@ -11,7 +13,8 @@ export type ReaderTtsPublishedPlaybackState =
 export interface ReaderTtsMediaSessionBridge {
   setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined): void;
   activate(): Promise<void>;
-  publish(state: ReaderTtsPublishedPlaybackState): void;
+  publish(state: ReaderTtsPublishedPlaybackState, rate?: number): void;
+  setBackgroundPlaybackEnabled?(enabled: boolean): void;
   close(): Promise<void>;
 }
 
@@ -24,10 +27,14 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
   private closed: boolean = false;
   private initialized: boolean = false;
   private active: boolean = false;
+  private backgroundPlaybackEnabled: boolean = false;
+  private backgroundModePublished: boolean | undefined = undefined;
   // Retain exact unreleased native identities across a rebuilt runtime.
   // This is AVSession-specific retirement, never a business task/error bus.
   private static retiring: HarmonyTtsMediaSession[] = [];
   private static released: WeakSet<avSession.AVSession> = new WeakSet<avSession.AVSession>();
+  private static speedListeners: WeakMap<avSession.AVSession, (speed: number) => void> =
+    new WeakMap<avSession.AVSession, (speed: number) => void>();
   private static releaseTail: Promise<void> = Promise.resolve();
 
   constructor(context: common.UIAbilityContext) {
@@ -54,7 +61,7 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
 
   isActive(): boolean { return this.active && !this.closed; }
 
-  publish(state: ReaderTtsPublishedPlaybackState): void {
+  publish(state: ReaderTtsPublishedPlaybackState, rate?: number): void {
     if (this.closed) return;
     const task = this.operationTail.then(async (): Promise<void> => {
       if (this.closed) return;
@@ -62,7 +69,20 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
       if (!this.initialized && (state === 'stopped' || state === 'completed' || state === 'error')) return;
       const session = await this.ensureSession();
       if (this.closed) return;
-      await session.setAVPlaybackState({ state: this.toAvState(state) });
+      const playback: avSession.AVPlaybackState = { state: this.toAvState(state) };
+      if (HarmonyTtsMediaSession.speedListeners.has(session) &&
+        rate !== undefined && isReaderTtsSupportedPlaybackRate(rate)) playback.speed = rate;
+      await session.setAVPlaybackState(playback);
+    });
+    this.observe(task);
+  }
+
+  setBackgroundPlaybackEnabled(enabled: boolean): void {
+    if (this.closed || this.backgroundPlaybackEnabled === enabled) return;
+    this.backgroundPlaybackEnabled = enabled;
+    if (this.session === undefined) return;
+    const task = this.operationTail.then(async (): Promise<void> => {
+      if (!this.closed && this.initialized && this.session !== undefined) await this.publishBackgroundMode(this.session);
     });
     this.observe(task);
   }
@@ -95,6 +115,7 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
     if (this.closed) throw new Error('Reader TTS AVSession admission retired');
     const session = await avSession.createAVSession(this.context, 'ReaderTts', 'audio');
     this.session = session;
+    this.backgroundModePublished = undefined;
     if (this.closed) throw new Error('Reader TTS AVSession closed during initialization');
     try {
       // AVSession requires metadata for both the lock screen and headset commands.
@@ -106,6 +127,9 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
       session.on('stop', (): void => this.emit(session, 'stop'));
       session.on('playNext', (): void => this.emit(session, 'next'));
       session.on('playPrevious', (): void => this.emit(session, 'previous'));
+      await this.publishBackgroundMode(session);
+      if (!this.closed) await this.registerSpeedControl(session);
+      if (this.closed) throw new Error('Reader TTS AVSession closed during initialization');
       this.initialized = true;
       return session;
     } catch (error) {
@@ -120,6 +144,41 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
     }
   }
 
+  private async publishBackgroundMode(session: avSession.AVSession): Promise<void> {
+    const enabled = this.backgroundPlaybackEnabled;
+    if (this.backgroundModePublished === enabled) return;
+    try {
+      if (deviceInfo.distributionOSApiVersion >= 60101) {
+        await session.setBackgroundPlayMode(enabled ? avSession.BackgroundPlayMode.ENABLE_BACKGROUND_PLAY :
+          avSession.BackgroundPlayMode.DISABLE_BACKGROUND_PLAY);
+        this.backgroundModePublished = enabled;
+      }
+    } catch (error) {
+      this.logFailure('background playback mode', error as Error);
+    }
+  }
+
+  private async registerSpeedControl(session: avSession.AVSession): Promise<void> {
+    try {
+      if (deviceInfo.distributionOSApiVersion >= 260000) {
+        if (deviceInfo.apiAvailable('26.0.0')) {
+          await session.setSupportedPlaySpeeds(readerTtsSupportedPlaybackRates());
+          if (this.closed) return;
+          const listener = (rate: number): void => {
+            if (this.isActive() && this.session === session && isReaderTtsSupportedPlaybackRate(rate)) {
+              this.listener?.({ type: 'mediaRate', rate });
+            }
+          };
+          session.on('setSpeed', listener);
+          HarmonyTtsMediaSession.speedListeners.set(session, listener);
+          await session.setMediaCenterControlType(['playPrevious', 'playNext', 'setSpeed']);
+        }
+      }
+    } catch (error) {
+      this.logFailure('media speed control', error as Error);
+    }
+  }
+
   private static release(session: avSession.AVSession): Promise<void> {
     const task = HarmonyTtsMediaSession.releaseTail.then(async (): Promise<void> => {
       if (HarmonyTtsMediaSession.released.has(session)) return;
@@ -128,10 +187,15 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
       try { session.off('stop'); } catch (_) {}
       try { session.off('playNext'); } catch (_) {}
       try { session.off('playPrevious'); } catch (_) {}
+      const speedListener = HarmonyTtsMediaSession.speedListeners.get(session);
+      if (speedListener !== undefined) {
+        try { session.off('setSpeed', speedListener); } catch (_) {}
+      }
       try { await session.deactivate(); } catch (_) { /* Destroy supplies the authoritative receipt. */ }
       // The retired owner retains this exact identity until destroy succeeds.
       await session.destroy();
       HarmonyTtsMediaSession.released.add(session);
+      HarmonyTtsMediaSession.speedListeners.delete(session);
     });
     HarmonyTtsMediaSession.releaseTail = task.catch((): void => {});
     return task;

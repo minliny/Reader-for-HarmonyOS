@@ -3,6 +3,7 @@ import { motionAnimateParam, motionSpecGet, MotionSpecEntry } from './MotionSpec
 import { readerMotionValueDurationMs as collapseMotionDurationMs } from './ReaderMotionDurationPolicy';
 
 export const READER_REDUCE_MOTION_STORAGE_KEY: string = 'readerReduceMotion';
+export const READER_SYSTEM_REDUCE_MOTION_STORAGE_KEY: string = 'readerSystemReduceMotion';
 
 /** Single read of the persisted motion preference for non-Prop hosts. */
 export function readerReduceMotionFromStorage(): boolean {

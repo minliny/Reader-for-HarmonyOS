@@ -536,7 +536,10 @@ export class SourceOrchestrator {
     if (capture === undefined) return Promise.resolve(undefined);
     this.observeOfflineDetectAdmission(capture);
     const current = (): boolean => this.isCurrentSourceCheck(capture);
-    const run = this.operationChain.then(async (): Promise<SourceCheckOutcome | undefined> => {
+    // Checks wait for pending writes but do not join the write chain, so a batch can run in parallel.
+    // Each check revalidates the exact definition before applying its outcome.
+    const barrier = this.operationChain;
+    const run = barrier.then(async (): Promise<SourceCheckOutcome | undefined> => {
       if (!current()) return undefined;
       const definition = await this.validateSourceCheck(capture);
       if (!current() || definition === undefined) return undefined;
@@ -548,7 +551,6 @@ export class SourceOrchestrator {
     }).finally((): void => {
       if (this.checkingSourceIds.get(id) === capture) this.checkingSourceIds.delete(id);
     });
-    this.operationChain = run.then((): void => {}, (): void => {});
     return run;
   }
 

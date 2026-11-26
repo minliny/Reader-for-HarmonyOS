@@ -1,3 +1,4 @@
+import { ReaderPaperMaterial } from '../../../ui/foundation/ReaderPaperMaterial';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { readerControlTtsPlaybackLabel, readerControlTtsStatusLabel, readerControlTtsTwoDigits, readerControlTtsTimerSummary, readerControlTtsTimerCaption, readerControlTtsEngineLabel, readerControlTtsVoiceLabel, readerControlTtsSessionLabel, readerControlTtsMinimumFacts, measureReaderTtsMinimum, sampleReaderTtsTextMinimum, readerTtsTimerCardLayout, type ReaderTtsTimerCardLayout, type ReaderTtsMinimumFacts, type ReaderTtsMinimumProfile, type ReaderTtsTextMinimum } from './ReaderControlTtsMinimum';
@@ -58,6 +59,11 @@ type ReaderControlTtsSection = 'playback' | 'timer' | 'speed';
 type ReaderControlTtsField = 'voice' | 'engine' | 'language' | 'session' | 'failure';
 type ReaderControlTtsToggle = 'followHighlight' | 'pauseOnInterruption' | 'allowMixing' |
   'backgroundPlayback' | 'keepScreenOn';
+
+interface ReaderTtsSectionHeader {
+  title: string;
+  meta: string;
+}
 
 interface ReaderTtsConfigurationReturnFocus {
   identity: string;
@@ -222,6 +228,7 @@ export struct ReaderControlTtsContent {
     if (prepared === undefined || prepared.identity !== this.minimumIdentity || prepared.key !== this.minimumKey ||
       !readerControlModuleProfileMatches(prepared.moduleData, 'tts') || !readerControlModuleFactsMatch(prepared.facts, 'tts')) return;
     this.adoptedPrepared = prepared;
+    this.settlePendingRate();
     const adopted = `${prepared.identity}|${prepared.key}`;
     if (adopted === this.adoptedPreparedKey) return;
     this.adoptedPreparedKey = adopted;
@@ -287,7 +294,8 @@ export struct ReaderControlTtsContent {
   onSeek: (sliceIndex: number) => void = (_sliceIndex: number): void => {};
   onTimerChange: (minutes: number, seconds: number, mode?: ReaderTtsTimerMode) => void =
     (_minutes: number, _seconds: number, _mode?: ReaderTtsTimerMode): void => {};
-  onRateChange: (rate: number) => void = (_rate: number): void => {};
+  onRateChange: (rate: number, onDeclined?: () => void) => void =
+    (_rate: number, onDeclined?: () => void): void => { onDeclined?.(); };
   onFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onPauseOnInterruptionChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onAllowMixingChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
@@ -309,6 +317,8 @@ export struct ReaderControlTtsContent {
     (_kind: ReaderSessionMorphSourceKind, _left: number, _top: number, _width: number, _height: number): void => {};
   @State @Watch('onMinimumInputsChanged') private ratePreview: number = -1;
   private committedSliderRate: number = -1;
+  private rateInputGeneration: number = 0;
+  @State private pendingRate: number = -1;
   private committedSliderSeek: number = -1;
   @State private configField: ReaderTtsConfigField | 'manage' | '' = '';
   @State private configIdentity: string = '';
@@ -422,6 +432,7 @@ export struct ReaderControlTtsContent {
   }
   private onMinimumIdentityChanged(): void { this.publishMinimumMeasurer(); }
   private onMinimumInputsChanged(): void {
+    this.settlePendingRate();
     this.cachedProgress = -1;
     this.publishMinimumMeasurer();
   }
@@ -436,7 +447,7 @@ export struct ReaderControlTtsContent {
     this.getUIContext().postFrameCallback(new ReaderTtsConfigurationFocusFrame((): void => {
       if (!this.configMounted || this.sourceOnly !== 'none' || this.sourceDetached ||
         this.minimumIdentity !== identity || this.minimumKey !== key || this.selectedMinimum() === undefined ||
-        (this.form === 'quick' ? this.p() !== 0 : this.p() !== 1)) return;
+        (!this.fixedIsland && (this.form === 'quick' ? this.p() !== 0 : this.p() !== 1))) return;
       if (!this.measuredActorCurrent()) return;
       this.reportMorphActor();
     }));
@@ -487,8 +498,10 @@ export struct ReaderControlTtsContent {
     if (this.preparedMinimumRequired) this.onPreparedMinimumChanged();
   }
   aboutToDisappear(): void {
+    this.rateInputGeneration += 1;
     this.adoptedPrepared = undefined;
     this.adoptedPreparedKey = '';
+    this.pendingRate = -1;
 
     const identity = this.registeredMinimumIdentity;
     this.minimumMeasurer = undefined;
@@ -688,7 +701,9 @@ export struct ReaderControlTtsContent {
             this.fullViewportHeight, this.scrollMotion.fullScrollOffset)) : clips, density);
     });
   }
-  private sharedInput(): boolean { return this.currentInputEnabled() && (this.p() === 0 || this.p() === 1); }
+  private sharedInput(): boolean {
+    return this.currentInputEnabled() && (this.fixedIsland || this.p() === 0 || this.p() === 1);
+  }
   private playbackLabel(): string {
     return this.displayedFacts()?.playbackLabel ?? readerControlTtsPlaybackLabel(this.state);
   }
@@ -698,21 +713,23 @@ export struct ReaderControlTtsContent {
     return full ? 'reader-control-tts-playback' : 'reader-control-tts-viewport';
   }
   private actorMeasurementScope(): string {
-    const actor = this.frame().playback;
+    // The fixed island measures its own card independently of the legacy morph frame.
+    const actor = this.fixedIsland ? undefined : this.frame().playback;
     return JSON.stringify([this.minimumIdentity, this.readerWindowMetricsRevision, this.availableWidth,
-      this.availableHeight, this.fullViewportHeight, this.form, this.p(), actor.x, actor.y]);
+      this.availableHeight, this.fullViewportHeight, this.form, this.fixedIsland ? 0 : this.p(),
+      this.fixedIsland, actor?.x, actor?.y]);
   }
   private measuredActorCurrent(): boolean {
-    if (this.selectedMinimum() === undefined || (this.form === 'quick' ? this.p() !== 0 : this.p() !== 1)) return false;
+    if (this.selectedMinimum() === undefined ||
+      (!this.fixedIsland && (this.form === 'quick' ? this.p() !== 0 : this.p() !== 1))) return false;
     const full = this.form === 'full';
     const rect = full ? this.fullMeasurement : this.quickMeasurement;
     const scope = full ? this.fullMeasurementScope : this.quickMeasurementScope;
-    const actor = this.frame().playback;
-    const width = full ? actor.width : this.availableWidth;
-    const height = full ? actor.height : this.fixedIsland ? this.islandPlaybackHeight() : this.availableHeight;
-    return rect !== undefined && scope === this.actorMeasurementScope() && Number.isFinite(rect.width) &&
-      Number.isFinite(rect.height) && Number.isFinite(width) && Number.isFinite(height) &&
-      rect.width > 0 && rect.height > 0 && Math.abs(rect.width - width) < .1 && Math.abs(rect.height - height) < .1;
+    const width = full ? this.frame().playback.width : this.availableWidth;
+    const height = full ? this.frame().playback.height : this.fixedIsland ? this.islandPlaybackHeight() : this.availableHeight;
+    if (rect === undefined || scope !== this.actorMeasurementScope() || rect.width <= 0 || rect.height <= 0) return false;
+    const sizeError = Math.max(Math.abs(rect.width - width), Math.abs(rect.height - height));
+    return this.fixedIsland && !full ? sizeError <= 0.5 : sizeError < 0.1;
   }
   private measureActor(full: boolean, area: Area): void {
     if (this.sourceOnly !== 'none' || this.sourceDetached) return;
@@ -837,8 +854,9 @@ export struct ReaderControlTtsContent {
                   .fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
                 Slider({ value: this.displayState().sliceIndex ?? 0, min: 0,
                   max: this.displayState().totalSlices - 1, step: 1 })
+                  .attributeModifier(new ReaderPaperMaterial())
                   .width('100%').height(44).selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
-                  .accessibilityText('跳转朗读句子')
+                  .enabled(this.sharedInput()).accessibilityText('跳转朗读句子')
                   .onChange((value: number, mode: SliderChangeMode): void => this.changeSeekSlider(value, mode));
               }.width('100%').padding({ left: 10, right: 10, top: 8 })
                 .attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
@@ -942,9 +960,11 @@ export struct ReaderControlTtsContent {
   @Builder
   private islandRate() {
     Column() {
-      this.sectionHeader('语速', this.effectiveRate().toFixed(2) + '×');
+      this.sectionHeader({ title: '语速', meta: this.effectiveRate().toFixed(2) + '×' });
       Slider({ value: this.effectiveRate(), min: READER_TTS_RATE_MIN, max: READER_TTS_RATE_MAX, step: READER_TTS_RATE_STEP })
+        .attributeModifier(new ReaderPaperMaterial())
         .width('100%').height(44).selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
+        .enabled(this.sharedInput())
         .trackColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme))
         .accessibilityText('朗读语速').onChange((value: number, mode: SliderChangeMode): void => this.changeRateSlider(value, mode));
     }.width('100%').padding({ left: 6, right: 6 }).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
@@ -953,7 +973,7 @@ export struct ReaderControlTtsContent {
   @Builder
   private islandTimer() {
     Column() {
-      this.sectionHeader('定时停止', this.timerCaption());
+      this.sectionHeader({ title: '定时停止', meta: this.timerCaption() });
       Row({ space: 4 }) {
         this.islandTimerPreset('关闭', 0, this.displayTimerMode() === 'off');
         this.islandTimerPreset('15 分钟', 15, this.timerPresetSelected(15));
@@ -999,7 +1019,7 @@ export struct ReaderControlTtsContent {
   @Builder
   private islandAudio() {
     Column() {
-      this.sectionHeader('音频配置', this.currentVoiceLabel());
+      this.sectionHeader({ title: '音频配置', meta: this.currentVoiceLabel() });
       this.ttsClosedConfigRow('voice');
       this.ttsClosedConfigRow('engine');
       this.ttsClosedConfigRow('language');
@@ -1368,6 +1388,7 @@ export struct ReaderControlTtsContent {
         if (this.displayState().totalSlices > 1) {
           Slider({ value: this.displayState().sliceIndex ?? 0, min: 0, max: this.displayState().totalSlices - 1,
             step: 1, style: SliderStyle.OutSet, direction: Axis.Horizontal, reverse: false })
+            .attributeModifier(new ReaderPaperMaterial())
             .width(this.frame().playback.width - 32).height(44).position({ x: 16, y: this.textMinimum()?.seekY ?? 198 })
             .selectedColor(readerAppColor('TOK_TTS_TEAL', this.appScheme)).enabled(this.fullInput()).opacity(this.p())
             .accessibilityText('跳转朗读句子')
@@ -1658,6 +1679,9 @@ export struct ReaderControlTtsContent {
   }
   private chooseRatePreset(rate: number): void {
     if (!this.fullInput() || this.configField !== '') return;
+    this.rateInputGeneration += 1;
+    this.pendingRate = -1;
+    this.committedSliderRate = -1;
     this.ratePreview = -1;
     this.onRateChange(rate);
   }
@@ -1700,6 +1724,7 @@ export struct ReaderControlTtsContent {
           .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
         Slider({ value: this.effectiveRate(), min: READER_TTS_RATE_MIN, max: READER_TTS_RATE_MAX,
           step: READER_TTS_RATE_STEP, style: SliderStyle.OutSet, direction: Axis.Horizontal, reverse: false })
+          .attributeModifier(new ReaderPaperMaterial())
           .width(this.frame().speedTrack.width).height(44)
           .position({ x: this.frame().speedTrack.x, y: this.frame().speedTrack.y - 20 })
           .opacity(0.001).enabled(this.sharedInput()).accessibilityText('调整朗读语速')
@@ -1733,7 +1758,7 @@ export struct ReaderControlTtsContent {
   @Builder
   private detailSection() {
     Column({ space: 8 }) {
-      this.sectionHeader('播放配置', '即时生效');
+      this.sectionHeader({ title: '播放配置', meta: '即时生效' });
       Column({ space: 0 }) {
         this.voiceSelectorRow();
         this.toggleRow('followHighlight'); this.toggleRow('pauseOnInterruption'); this.toggleRow('allowMixing');
@@ -1756,7 +1781,7 @@ export struct ReaderControlTtsContent {
     }.width('100%').alignItems(HorizontalAlign.Start);
   }
   @Builder
-  private ttsConfigHeader() { this.sectionHeader('朗读引擎', ''); }
+  private ttsConfigHeader() { this.sectionHeader({ title: '朗读引擎', meta: '' }); }
 
   @Builder
   private ttsServiceTypeTabs() {
@@ -1814,11 +1839,12 @@ export struct ReaderControlTtsContent {
       .border({ width: { top: 0.5 }, color: readerAppColor('app.control.paint.2E9B8466', this.appScheme) });
   }
   @Builder
-  private sectionHeader(title: string, meta: string) {
+  // One object-literal parameter is passed by reference, so the live rate/timer/voice text re-renders.
+  private sectionHeader(header: ReaderTtsSectionHeader) {
     Row() {
-      Text(title).layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL.fontWeight)
+      Text(header.title).layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL.fontWeight)
         .fontSize(TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_TTS_INK', this.appScheme));
-      Text(meta).fontFamily(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META.fontSizeFp).fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme));
+      Text(header.meta).fontFamily(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META.fontSizeFp).fontColor(readerAppColor('TOK_TTS_MUTED', this.appScheme));
     }.width('100%').height(this.textMinimum()?.sectionHeader ?? 18).padding({ left: 3, right: 3 }).alignItems(VerticalAlign.Center);
   }
   @Builder
@@ -1980,19 +2006,40 @@ export struct ReaderControlTtsContent {
   }
 
   private effectiveRate(): number {
-    return this.ratePreview >= READER_TTS_RATE_MIN ? this.ratePreview : this.displayedFacts()?.viewRate ?? this.state.rate;
+    return this.ratePreview >= READER_TTS_RATE_MIN ? this.ratePreview :
+      this.pendingRate >= READER_TTS_RATE_MIN ? this.pendingRate : this.displayedFacts()?.viewRate ?? this.state.rate;
+  }
+
+  private settlePendingRate(): void {
+    // Prepared facts can still contain the drag preview before the playback owner accepts it.
+    if (this.pendingRate >= READER_TTS_RATE_MIN && Math.abs(this.state.rate - this.pendingRate) <= 0.001 &&
+      Math.abs((this.displayedFacts()?.viewRate ?? this.state.rate) - this.pendingRate) <= 0.001) this.pendingRate = -1;
   }
 
   private changeRateSlider(value: number, mode: SliderChangeMode): void {
     if (!this.sharedInput()) { this.ratePreview = -1; return; }
-    if (mode === SliderChangeMode.Begin) this.committedSliderRate = -1;
+    if (mode === SliderChangeMode.Begin) {
+      this.rateInputGeneration += 1;
+      this.committedSliderRate = -1;
+      this.pendingRate = -1;
+    }
     this.ratePreview = Math.round(value * READER_TTS_RATE_STEP_SCALE) / READER_TTS_RATE_STEP_SCALE;
     if (mode !== SliderChangeMode.End && mode !== SliderChangeMode.Click) return;
     const rate = this.ratePreview;
-    this.ratePreview = -1;
-    if (this.committedSliderRate === rate) return;
+    if (this.committedSliderRate === rate && (mode === SliderChangeMode.End ||
+      this.pendingRate === rate || this.state.rate === rate)) {
+      this.ratePreview = -1;
+      return;
+    }
     this.committedSliderRate = rate;
-    this.onRateChange(rate);
+    this.pendingRate = rate;
+    this.ratePreview = -1;
+    this.settlePendingRate();
+    const generation = ++this.rateInputGeneration;
+    this.onRateChange(rate, (): void => {
+      if (generation !== this.rateInputGeneration) return;
+      this.pendingRate = -1;
+    });
   }
 
   private changeSeekSlider(value: number, mode: SliderChangeMode): void {

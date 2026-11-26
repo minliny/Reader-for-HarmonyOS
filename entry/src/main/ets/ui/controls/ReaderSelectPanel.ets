@@ -1,5 +1,7 @@
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 import { FrameCallback } from '@kit.ArkUI';
 import type { AnimatorResult } from '@ohos.animator';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
@@ -48,6 +50,9 @@ class ReaderSelectParentFrame extends FrameCallback {
 @Component
 export struct ReaderSelectPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryChanged') private readerWindowMetricsRevision: number = 0;
 
   @Prop @Watch('onGeometryChanged') value: string = '';
@@ -274,6 +279,10 @@ export struct ReaderSelectPanel {
   @Builder
   private emptyMenuHeader() {}
 
+  private panelMaterial(): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision('popoverMenu', this.appearancePreferences, this.appThemeScheme, this.systemScheme);
+  }
+
   @Builder
   private panelBody() {
     Column({ space: 0 }) {
@@ -294,12 +303,14 @@ export struct ReaderSelectPanel {
     .height(this.panelHeight())
     .padding(this.variant === 'appearanceLibrary' ? 3 : 0)
     .zIndex(10)
-    .backgroundColor(this.menuHeaderHeight > 0 ? Color.Transparent : this.panelBackgroundColor())
-    .border({ width: this.menuHeaderHeight > 0 ? 0 : TOK_BORDER_W, color: this.panelBorderColor() })
+    .backgroundEffect(undefined)
+    .backgroundColor(this.panelMaterial().native || this.menuHeaderHeight > 0 ? Color.Transparent : this.panelBackgroundColor())
+    .border(this.panelMaterial().native ? { width: 0, color: Color.Transparent } :
+      { width: this.menuHeaderHeight > 0 ? 0 : TOK_BORDER_W, color: this.panelBorderColor() })
     .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : 14))
     .opacity(this.panelOpacity)
-    .shadow(this.variant === 'appearanceLibrary' ? this.appearanceShadow() :
-      readerSurfaceElevation(this.variant === 'sourceGroup' ? 'popover' : 'embedded', this.appThemeScheme))
+    .shadow(this.panelMaterial().native ? undefined : this.panelShadow())
+    .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial()))
     .clip(true).onAppear((): void => this.expandPanel());
   }
 
@@ -309,8 +320,9 @@ export struct ReaderSelectPanel {
       .id(`${this.selectionId}:frame`)
       .width('100%').height(this.searchablePaintHeight())
       .position({ x: 0, y: SOURCE_GROUP_SELECT_PAINT_INSET })
-      .backgroundColor(this.panelBackgroundColor())
-      .border({ width: TOK_BORDER_W, color: this.panelBorderColor() })
+      .backgroundColor(this.panelMaterial().native ? Color.Transparent : this.panelBackgroundColor())
+      .border(this.panelMaterial().native ? { width: 0, color: Color.Transparent } :
+        { width: TOK_BORDER_W, color: this.panelBorderColor() })
       .borderRadius(SOURCE_GROUP_SELECT_RADIUS)
       .hitTestBehavior(HitTestMode.None)
       .accessibilityLevel('no');
@@ -321,6 +333,11 @@ export struct ReaderSelectPanel {
     const shownBelowHeader = Math.max(0, height - this.menuHeaderHeight);
     const bottomInset = Math.max(0, SOURCE_GROUP_SELECT_PAINT_INSET - shownBelowHeader);
     return Math.max(0, height - SOURCE_GROUP_SELECT_PAINT_INSET - bottomInset);
+  }
+
+  private panelShadow(): ShadowOptions {
+    return this.variant === 'appearanceLibrary' ? this.appearanceShadow() :
+      readerSurfaceElevation(this.variant === 'sourceGroup' ? 'popover' : 'embedded', this.appThemeScheme);
   }
 
   @Builder

@@ -4,6 +4,8 @@ import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { TOK_BORDER_W, TOK_RADIUS_XL } from '../foundation/ReaderTokens';
 import type { ReaderRaisedShape } from '../layout/ReaderRaisedShape';
+import type { ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
+import { applyReaderImmersiveMaterial } from './ReaderSurfaceMaterial';
 
 export type ReaderPanelFrameId = 'reader' | 'reader-menu' | 'reader-card' | 'reader-full-card' | 'reader-soft-control' | 'floating-action-dock' |
   'reader-island-card' | 'reader-island-emphasis' |
@@ -17,26 +19,36 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
   private readonly scheme: string;
   private readonly side: boolean;
   private readonly raisedShape: ReaderRaisedShape | undefined;
-  constructor(id: ReaderPanelFrameId, scheme: string, side: boolean = false, raisedShape?: ReaderRaisedShape) {
+  private readonly material: ReaderSurfaceMaterialDecision | undefined;
+  constructor(id: ReaderPanelFrameId, scheme: string, side: boolean = false, raisedShape?: ReaderRaisedShape,
+    material?: ReaderSurfaceMaterialDecision) {
     this.id = id;
     this.scheme = scheme;
     this.side = side;
     this.raisedShape = raisedShape;
+    this.material = material;
   }
 
   applyNormalAttribute(instance: CommonAttribute): void {
     switch (this.id) {
       case 'floating-action-dock':
-        instance.backgroundColor(readerAppColor('app.surface.dock', this.scheme))
-          .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
-          .borderRadius(this.raisedShape?.radius ?? TOK_RADIUS_XL).clip(false)
-          .shadow(readerSurfaceElevation('raised', this.scheme));
+        this.applyMaterialPaint(instance, readerAppColor('app.surface.dock', this.scheme),
+          { width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) },
+          readerSurfaceElevation('raised', this.scheme));
+        instance
+          .borderRadius(this.raisedShape?.radius ?? TOK_RADIUS_XL).clip(false);
+        applyReaderImmersiveMaterial(instance, this.material);
         return;
       case 'reader':
+        this.applyMaterialPaint(instance, readerAppColor('TOK_READ_SURFACE', this.scheme),
+          { width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.scheme) });
+        instance.borderRadius(TOK_RADIUS_XL);
+        applyReaderImmersiveMaterial(instance, this.material);
+        return;
       case 'reader-menu':
         instance.backgroundColor(readerAppColor('TOK_READ_SURFACE', this.scheme))
           .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.scheme) })
-          .borderRadius(this.id === 'reader' ? TOK_RADIUS_XL : 12);
+          .borderRadius(12);
         return;
       case 'reader-card':
       case 'reader-full-card':
@@ -69,20 +81,39 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
     }
   }
 
+  private applyMaterialPaint(instance: CommonAttribute, background: ResourceColor, border?: BorderOptions,
+    shadow?: ShadowOptions): void {
+    if (this.material?.native) {
+      instance.backgroundEffect(undefined).backgroundColor(Color.Transparent)
+        .border({ width: 0, color: Color.Transparent }).shadow(undefined);
+    } else {
+      instance.backgroundColor(background).border(border);
+      if (shadow !== undefined) instance.shadow(shadow);
+    }
+  }
+
   private applyMangaFrame(instance: CommonAttribute): void {
     const surface = mangaDirectoryColor('surface', this.scheme);
     const line = mangaDirectoryColor('line', this.scheme);
-    instance.backgroundColor(surface);
     if (this.id === 'manga-directory-sheet') {
       const radius = this.side ? 0 : DIRECTORY_CHROME_VISUAL.quickSheetRadius;
-      instance.border(this.side ? { width: { left: 1 }, color: line } : undefined)
-        .borderRadius({ topLeft: radius, topRight: radius, bottomLeft: 0, bottomRight: 0 }).clip(true)
-        .shadow(this.side ? {
-          radius: 32 * readerWindowMetrics().densityPixels, color: readerAppColor('app.shadow.sheet', this.scheme),
-          offsetX: -14 * readerWindowMetrics().densityPixels, offsetY: 0,
-        } : readerSurfaceElevation('sheet', this.scheme));
+      const shadow: ShadowOptions = this.side ? {
+        radius: 32 * readerWindowMetrics().densityPixels, color: readerAppColor('app.shadow.sheet', this.scheme),
+        offsetX: -14 * readerWindowMetrics().densityPixels, offsetY: 0,
+      } : readerSurfaceElevation('sheet', this.scheme);
+      this.applyMaterialPaint(instance, surface, this.side ? { width: { left: 1 }, color: line } : undefined, shadow);
+      instance.borderRadius({ topLeft: radius, topRight: radius, bottomLeft: 0, bottomRight: 0 }).clip(true);
+      applyReaderImmersiveMaterial(instance, this.material);
       return;
     }
+    if (this.id === 'manga-dock') {
+      this.applyMaterialPaint(instance, surface, { width: TOK_BORDER_W, color: line },
+        readerSurfaceElevation('sheet', this.scheme));
+      instance.borderRadius(24).clip(true);
+      applyReaderImmersiveMaterial(instance, this.material);
+      return;
+    }
+    instance.backgroundColor(surface);
     if (this.id === 'manga-directory-rail') {
       instance.border({ width: { right: 1 }, color: line });
       return;
@@ -93,9 +124,6 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
     } else if (this.id === 'manga-toolbar') {
       instance.borderRadius(DIRECTORY_CHROME_VISUAL.headerRadius).clip(true)
         .shadow(readerSurfaceElevation('floating', this.scheme));
-    } else {
-      instance.borderRadius(24).clip(true)
-        .shadow(readerSurfaceElevation('sheet', this.scheme));
     }
   }
 }

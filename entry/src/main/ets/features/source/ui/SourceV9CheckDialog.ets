@@ -1,3 +1,5 @@
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
@@ -14,7 +16,8 @@ import type { BookSource, SourceCheckOutcome, SourceCheckReport, SourceCheckRepo
 import type { SourceV9CheckOptions } from '../application/SourceOrchestrator';
 import { sourceV9Levels, type SourceV9Depth, type SourceV9Mode } from '../application/SourceV9TransferState';
 import { sourceV9CheckStepText, sourceV9LatestReport, sourceV9DiagnosticTone, sourceV9ReportFill } from '../presentation/SourceManagementV9';
-import { recordSourceV9Check, runSourceV9Checks, type SourceV9CheckRow } from '../presentation/SourceV9CheckRun';
+import { recordSourceV9Check, runSourceV9Checks, SOURCE_V9_BATCH_CHECK_CONCURRENCY,
+  type SourceV9CheckRow } from '../presentation/SourceV9CheckRun';
 import { SourceV9SegmentedTrack, type SourceV9SegmentChoice } from './SourceV9Chrome';
 
 interface SourceV9CheckChoice {
@@ -42,6 +45,8 @@ const QUICK_WORDS: string[] = ['我的', '斗破', '海贼'];
 
 @Component
 export struct SourceV9CheckDialog {
+  @StorageProp('readerNavigationAppearancePreferences')
+  private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') private windowRevision: number = 0;
@@ -61,7 +66,8 @@ export struct SourceV9CheckDialog {
   @State private running: boolean = false;
   @State private stopped: boolean = false;
   @State private completed: number = 0;
-  @State private currentName: string = '';
+  @State private batchTotal: number = 0;
+  @State private activeSources: BookSource[] = [];
   @State private stage: string = '';
   @State private paneWidth: number = 0;
   @State private paneHeight: number = 0;
@@ -110,6 +116,7 @@ export struct SourceV9CheckDialog {
   private async start(): Promise<void> {
     if (this.running || !this.mounted || !this.inputEnabled) return;
     const single = this.singleSource();
+    if (this.drillId.length > 0 && single === undefined) return;
     const sources = single === undefined ? this.sources.slice() : [single];
     if (sources.length === 0) return;
     const generation = ++this.generation;
@@ -119,25 +126,31 @@ export struct SourceV9CheckDialog {
     this.stopped = false;
     this.completed = 0;
     this.runError = '';
-    if (single === undefined) this.rows = [];
+    if (single === undefined) {
+      this.rows = [];
+      this.batchTotal = sources.length;
+    }
+    this.activeSources = [];
+    const parallel = single === undefined && sources.length > 1;
     try {
       await runSourceV9Checks(sources, current, async (source: BookSource): Promise<SourceV9CheckRow> => {
-        this.currentName = source.name;
+        this.activeSources = this.activeSources.concat([source]);
         this.stage = '';
         try {
           const outcome = await this.onCheck(source.sourceId, options, current,
-            (stage: string): void => { if (current()) this.stage = stage; });
+            (stage: string): void => { if (current() && !parallel) this.stage = stage; });
           return outcome === undefined ? { source, error: '书源已变化或检测暂不可用' } : { source, outcome };
         } catch (error) { return { source, error: errorMessageOf(error) }; }
       }, (row: SourceV9CheckRow): void => {
+        this.activeSources = this.activeSources.filter((item: BookSource): boolean => item.sourceId !== row.source.sourceId);
         this.rows = recordSourceV9Check(this.rows, row);
         this.completed += 1;
         if (single !== undefined && row.error !== undefined) this.runError = row.error;
-      });
+      }, parallel ? SOURCE_V9_BATCH_CHECK_CONCURRENCY : 1);
     } finally {
       if (current()) {
         this.running = false;
-        this.currentName = '';
+        this.activeSources = [];
         this.stage = '';
       }
     }
@@ -147,7 +160,7 @@ export struct SourceV9CheckDialog {
     this.generation += 1;
     this.running = false;
     this.stopped = true;
-    this.currentName = '';
+    this.activeSources = [];
     this.stage = '';
   }
 
@@ -179,14 +192,16 @@ export struct SourceV9CheckDialog {
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
-      Column().width('100%').height('100%')
-        .backgroundColor(readerAppColor('app.scrim.modal', this.scheme))
+      Stack().width('100%').height('100%')
+        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+          readerAppColor('app.scrim.modal', this.scheme)))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no').onClick((): void => this.close());
       Column() {
         Scroll() {
           ReaderDialogSurface({
             specId: 'source-v9-check', containerWidthVp: this.paneWidth,
-            title: this.singleSource() === undefined ? this.title : '书源检测报告',
+            title: this.batch && this.drillId.length === 0 ? this.title : '书源检测报告',
             showCloseButton: true, closeEnabled: this.inputEnabled, onClose: (): void => this.close(),
             body: (): void => { this.body(); },
             actions: [
@@ -194,7 +209,8 @@ export struct SourceV9CheckDialog {
                 false, 'reader-source-v9-check-close'),
               new DialogActionView('run', this.running ? '停止检测' :
                 (this.rows.length > 0 || this.report(this.singleSource()) !== undefined) ? '重新检测' : '开始检测',
-              this.running ? 'danger' : 'primary', this.inputEnabled, false, 'reader-source-v9-check-run'),
+              this.running ? 'danger' : 'primary', this.inputEnabled && (this.running || (this.drillId.length > 0 ?
+                this.singleSource() !== undefined : this.sources.length > 0)), false, 'reader-source-v9-check-run'),
             ],
             onAction: (action: string): void => {
               if (action === 'back') this.close();
@@ -282,7 +298,9 @@ export struct SourceV9CheckDialog {
             currentFailure: this.outcome(this.singleSource())?.failureReason,
             activeStage: this.running ? this.stage : '' });
         }
-        else this.batchRows();
+        else if (this.drillId.length > 0 || !this.batch) {
+          ReaderPageState({ variant: 'inline', message: '此书源已不在当前列表', padded: false });
+        } else this.batchRows();
       }.width('100%').alignItems(HorizontalAlign.Start);
     }.width('100%').constraintSize({ maxHeight: this.bodyHeight() }).scrollBar(BarState.Auto)
       .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
@@ -320,15 +338,17 @@ export struct SourceV9CheckDialog {
   }
 
   private checkTotal(): number {
-    return this.singleSource() === undefined ? this.sources.length : 1;
+    return this.batch && this.drillId.length === 0 ? (this.batchTotal || this.sources.length) : 1;
   }
 
   private progressLabel(): string {
     const total = this.checkTotal();
     if (this.running) {
-      const source = this.currentName.length > 0 ? ' · ' + this.currentName : '';
+      const count = this.activeSources.length;
+      const source = count > 0 ? ' · ' + this.activeSources[0].name : '';
+      const others = count > 1 ? ` 等 ${count} 个` : '';
       const stage = this.stage.length > 0 ? ' · ' + this.stage : '';
-      return `检测中 ${Math.min(this.completed + 1, total)}/${total}${source}${stage}`;
+      return `检测中 ${this.completed + count}/${total}${source}${others}${stage}`;
     }
     return `${this.stopped ? '已停止检测' : '本轮检测结束'} · ${this.completed}/${total}`;
   }

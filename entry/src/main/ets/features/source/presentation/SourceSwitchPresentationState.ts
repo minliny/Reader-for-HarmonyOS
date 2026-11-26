@@ -16,6 +16,8 @@ export interface SourceSwitchCandidatesState {
   kind: 'candidates';
   candidates: SourceSwitchCandidate[];
   refreshing?: boolean;
+  /** A qualified cache-only opening can show retained version-bound search timings. */
+  allowCachedLatency?: boolean;
   sweep?: SourceSwitchSweepProgress;
   refreshError?: string;
   stopped?: boolean;

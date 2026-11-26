@@ -2,7 +2,7 @@
 Requires Pillow; no Reader production transform is imported or reproduced here.
 """
 from pathlib import Path
-import hashlib, json, shutil
+import hashlib, json
 from PIL import Image, ImageOps
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'entry/src/main/resources/rawfile/manga-platform-probe-v1'
@@ -28,10 +28,7 @@ for item in original['cases']:
         expectedSha256=put(pixels, expected), width=item['outputWidth'], height=item['outputHeight'],
         orientation=item['orientation'], lossy=name.endswith('.jpg'), previewWidth=preview_width, previewHeight=preview_height))
 graphics = ROOT / 'tools/fixtures/manga-graphics'
-with Image.open(graphics / 'input.png') as im:
-    (graphics / 'input-bgra.bin').write_bytes(im.convert('RGBA').tobytes('raw', 'BGRA'))
 pre_encoded = Image.frombytes('RGBA', (8, 103), (graphics / 'expected-rgba.bin').read_bytes()).tobytes('raw', 'BGRA')
-(graphics / 'expected-bgra.bin').write_bytes(pre_encoded)
 for name in ['input.png', 'plan.json', 'expected-rgba.bin']:
     put('graphics-' + name, (graphics / name).read_bytes())
 put('graphics-expected-bgra.bin', pre_encoded)
@@ -47,6 +44,6 @@ export interface MangaPlatformFixture {
   width: number; height: number; orientation: number; lossy: boolean; previewWidth: number; previewHeight: number;
 }
 export const MANGA_PLATFORM_FIXTURES: MangaPlatformFixture[] = '''
-(ROOT/'entry/src/main/ets/app/MangaPlatformFixtures.ts').write_text(prefix+json.dumps(cases,ensure_ascii=False,indent=2)+';\n'+
+(ROOT/'tools/diagnostics/retired-arkts/app/MangaPlatformFixtures.ts').write_text(prefix+json.dumps(cases,ensure_ascii=False,indent=2)+';\n'+
  'export interface MangaPlatformGraphicsFixture { file:string; sha256:string; planFile:string; planSha256:string; expectedFile:string; expectedSha256:string; preEncodedFile:string; preEncodedSha256:string; preEncodedPixelFormat:string; width:number; height:number; }\nexport const MANGA_PLATFORM_GRAPHICS: MangaPlatformGraphicsFixture = '+json.dumps(manifest['graphics'],indent=2)+';\n', encoding='utf-8')
 print(json.dumps(dict(cases=len(cases),files=len(list(OUT.iterdir())),bytes=sum(p.stat().st_size for p in OUT.iterdir()),generator=manifest['generator'])))

@@ -48,12 +48,6 @@
       "status": "retired-unreachable",
       "authority": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
       "rule": "The private hand-drawn legacy banner has been removed after its only references were obsolete tool probes. Production sourceList/statusAction/pendingRecovery use ReaderRecoveryAction, ReaderPageState and ReaderRecoveryNotice; onMessageChanged retains the transient adapter. Old tool samples now target those real producers; no business owner, write or retry policy is replaced."
-    },
-    {
-      "scope": "RulesManagementPage",
-      "status": "retained-unconsumed",
-      "authority": "entry/src/main/ets/features/settings/ui/RulesManagementPage.ets",
-      "rule": "No consumed current route/Host entry; no message integration or feature restoration is inferred from component source."
     }
   ],
   "entries": [
@@ -66,6 +60,17 @@
       "category": "自绘确认/输入的公共有限外框",
       "effectiveHost": "调用方当前 JSON 导入呈现及原 isBusy/内容状态；公共外框只承载当前输入和动作。",
       "retireRule": "外层导入呈现关闭/退场后失效；原导入 owner 持有写入、进度和取消规则。 外框只管理已认可的布局；外层呈现 owner 决定开关、取消和旧回调失效。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/app/composition/JsonImportDialog.ets#JsonImportDialog.pasteUrlDraft::shared.transient",
+      "file": "entry/src/main/ets/app/composition/JsonImportDialog.ets",
+      "owner": "JsonImportDialog",
+      "member": "pasteUrlDraft",
+      "family": "shared.transient",
+      "category": "用户主动粘贴的授权失败、无可粘贴文字或读取失败",
+      "effectiveHost": "仍可交互的当前 JSON 导入弹窗及 URL 草稿；仅由系统粘贴控件发起。",
+      "retireRule": "离开前台、关闭弹窗、编辑或提交草稿后忽略旧读取结果；退场重置短反馈。",
       "status": "registered-source-entry"
     },
     {
@@ -318,42 +323,41 @@
       "member": "processing",
       "family": "shared.page-state",
       "category": "本地恢复包操作状态",
-      "effectiveHost": "当前书架设置中的恢复包面板。展示核对、导出、隔离校验或恢复状态。",
+      "effectiveHost": "当前本地备份或扩展同步页的恢复包面板。展示核对、导出、隔离校验、恢复或回退状态。",
       "retireRule": "操作返回或面板代次退役即清除当前呈现，持久恢复由原 gateway 持有。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.requestRestore::native.alert",
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.dialogContent::shared.dialog-surface",
       "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
       "owner": "LocalRecoveryPanel",
-      "member": "requestRestore",
-      "family": "native.alert",
-      "category": "经 ReaderNativeAlertOwner 发起恢复确认",
-      "effectiveHost": "当前书架设置，隔离校验完成且预览、口令和动作仍属于当前代次。",
-      "retireRule": "原生回调由确认 lease 封装，退役拒绝旧按钮，恢复结果仍由 gateway 持有。",
-      "status": "registered-source-entry",
-      "bridge": "owned-alert-native-callback"
-    },
-    {
-      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.requestRestore::shared.alert-owner",
-      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
-      "owner": "LocalRecoveryPanel",
-      "member": "requestRestore",
-      "family": "shared.alert-owner",
-      "category": "本地恢复的明确确认",
-      "effectiveHost": "当前书架设置与已校验预览。",
-      "retireRule": "确认、取消或打开代次退役时结束 lease。确认动作提交恢复，完成状态由原业务回执确认。",
+      "member": "dialogContent",
+      "family": "shared.dialog-surface",
+      "category": "恢复包的口令录入以及导出、恢复和回退确认",
+      "effectiveHost": "当前本地备份页或扩展备份与同步页的恢复包面板，弹层票据、打开代次与预览决定可用动作。",
+      "retireRule": "取消或退场时清理本次口令输入。确认仅在弹层退场且原打开代次有效后交给网关，恢复和回退由原持久回执确认。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.resumeControl::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.resumeFields::shared.recovery-action",
       "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
       "owner": "LocalRecoveryPanel",
-      "member": "resumeControl",
+      "member": "resumeFields",
+      "family": "shared.recovery-action",
+      "category": "提交原口令继续中断的本地恢复或回退",
+      "effectiveHost": "当前本地备份页或扩展备份与同步页的恢复包面板，原 journal 确认有待续操作。",
+      "retireRule": "动作核对当前打开代次和原恢复资格后交给 gateway。退场清除口令草稿，原恢复状态仍可读取。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.resumeFields::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "resumeFields",
       "family": "shared.recovery-notice",
-      "category": "本地恢复中断后的继续入口",
-      "effectiveHost": "当前书架设置中的恢复包面板，恢复 journal 确认有待续操作。",
-      "retireRule": "继续动作核对当前打开代次并交给 gateway。退场只撤销本次交互与口令，原恢复状态可再次读取。",
+      "category": "本地恢复、回退或系统迁移中断状态",
+      "effectiveHost": "当前本地备份或扩展同步页的恢复包面板。原恢复日志或启动迁移状态提供待续事实。",
+      "retireRule": "系统迁移等待下次启动，不读取用户输入。退场撤销本次交互与口令，原持久状态继续归网关。",
       "status": "registered-source-entry"
     },
     {
@@ -362,8 +366,8 @@
       "owner": "LocalRecoveryPanel",
       "member": "showOutcome",
       "family": "shared.transient",
-      "category": "本地导出、恢复、取消与明确失败的短反馈",
-      "effectiveHost": "当前前景书架设置中的恢复包面板，绑定打开代次和当前动作。",
+      "category": "本地导出、恢复、回退、取消和明确失败的短反馈",
+      "effectiveHost": "当前前景本地备份页或扩展备份与同步页的恢复包面板，绑定打开代次和当前动作。",
       "retireRule": "打开代次退役及新动作重置当前发布。中断恢复由独立待续通知承载。",
       "status": "registered-source-entry"
     },
@@ -374,7 +378,7 @@
       "member": "statusReadFailed",
       "family": "shared.page-state",
       "category": "恢复 journal 状态无法读取",
-      "effectiveHost": "当前书架设置中的恢复包面板。",
+      "effectiveHost": "当前本地备份页或扩展备份与同步页的恢复包面板。",
       "retireRule": "重新读取成功或面板代次退役时清除，重试仅核对原恢复状态。",
       "status": "registered-source-entry"
     },
@@ -753,6 +757,17 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets#LocalBookDetail.saveOriginalBook::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+      "owner": "LocalBookDetail",
+      "member": "saveOriginalBook",
+      "family": "shared.transient",
+      "category": "原书另存完成或明确失败",
+      "effectiveHost": "当前仍可操作的书籍详情和已保留原书，沿用详情展示与书籍身份。",
+      "retireRule": "取消不发消息。详情退役后停止写入及反馈，失败保留原书。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.changeChineseConversionMode::shared.transient",
       "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
       "owner": "ReadingExperience",
@@ -841,21 +856,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.readerRecoveryItems::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "readerRecoveryItems",
-      "family": "shared.recovery-notice",
-      "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "Current mounted novel reader lifecycle/source/book and original presentation/generation. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added. Its bounded active Scroll uses Default to block sibling hit collection and stops ancestor touch propagation. It forwards the readonly bookmark recoveryAction to the shared Surface. Returned-attempt short feedback leaves an unknown original receipt unresolved. 当前阅读的恢复面板由更多→待处理事项显式展开，多个未决事项共享绘制且保留原身份。 当前书籍原离线清理在可用性读回成功后仍未确认时，也进入同一阅读恢复入口，离线pending归组，confirmed读回失败提供所属只读重读，明确任务结果沿专用宿主。 Appearance保存事实从同一Runtime共享ReaderAppearanceStore订阅；生命周期/source/book/chapter与原revision共同交接展示代次，busy/ready保持同一代。经更多→待处理事项进入既有有界RecoveryGroup，不增加正文inset。",
-      "retireRule": "Switching book, exit, background, temporary-layer coverage, controls display or a replaced presentation/generation retires old floating actions. The delegated surface also checks feedbackMounted and its caller lease. Canonical read success cannot confirm an original unknown write. Hiding feedback never cancels or confirms the intent. Back、正文操作或开控制只收起展示，原回执保持。 Appearance订阅退场只退投影，原saved回执与accepted snapshot继续由Store保留；当前前景/显示代次和源revision匹配才允许原Store.retrySave；只有实际最新revision保存ACK清除，warm读回不作ACK；busy仅由该原retry事实提供。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.readingFailureActions::shared.recovery-action",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "readingFailureActions",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingFailureSurface.ets#ReaderReadingFailureSurface.failureActions::shared.recovery-action",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingFailureSurface.ets",
+      "owner": "ReaderReadingFailureSurface",
+      "member": "failureActions",
       "family": "shared.recovery-action",
       "category": "阅读/换源失败恢复及设置/书源导航动作",
       "effectiveHost": "当前ReadingExperience生命周期与章节selection；换回原书源捕获待处理换源标识、scope和章节尝试代次，原恢复动作捕获readerRecoveryView.generation；普通retryReading仍走原reader准入。",
@@ -863,14 +867,25 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.readingFailureContent::shared.page-state",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "readingFailureContent",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingFailureSurface.ets#ReaderReadingFailureSurface.build::shared.page-state",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingFailureSurface.ets",
+      "owner": "ReaderReadingFailureSurface",
+      "member": "build",
       "family": "shared.page-state",
       "category": "当前正文不可用或换源失败",
       "effectiveHost": "当前文字阅读正文预算内的可滚动失败投影。换源进度保护原因来自原业务诊断，待处理目标的回滚资格来自原换源事务。",
       "retireRule": "正文恢复或当前会话退役后退出。换源失败的继续动作捕获原 scope，刷新及其他动作仍交回阅读 owner。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/reading/ui/ReaderRecoveryOverlay.ets#ReaderRecoveryOverlay.readerRecoveryItems::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderRecoveryOverlay.ets",
+      "owner": "ReaderRecoveryOverlay",
+      "member": "readerRecoveryItems",
+      "family": "shared.recovery-notice",
+      "category": "原操作待核对/待继续或明确结果的消息表面",
+      "effectiveHost": "ReaderRecoveryOverlay draws the mounted ReadingExperience’s lifecycle/source/book-scoped projections and calls its live input and identity checks before forwarding actions. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added. Its bounded active Scroll uses Default to block sibling hit collection and stops ancestor touch propagation. It forwards the readonly bookmark recoveryAction to the shared Surface. Returned-attempt short feedback leaves an unknown original receipt unresolved. 当前阅读的恢复面板由更多→待处理事项显式展开，多个未决事项共享绘制且保留原身份。 当前书籍原离线清理在可用性读回成功后仍未确认时，也进入同一阅读恢复入口，离线pending归组，confirmed读回失败提供所属只读重读，明确任务结果沿专用宿主。 Appearance保存事实从同一Runtime共享ReaderAppearanceStore订阅；生命周期/source/book/chapter与原revision共同交接展示代次，busy/ready保持同一代。经更多→待处理事项进入既有有界RecoveryGroup，不增加正文inset。",
+      "retireRule": "Switching book, exit, background, temporary-layer coverage, controls display or a replaced presentation/generation retires old floating actions. The delegated surface also checks feedbackMounted and its caller lease. Canonical read success cannot confirm an original unknown write. Hiding feedback never cancels or confirms the intent. Back、正文操作或开控制只收起展示，原回执保持。 Appearance订阅退场只退投影，原saved回执与accepted snapshot继续由Store保留；当前前景/显示代次和源revision匹配才允许原Store.retrySave；只有实际最新revision保存ACK清除，warm读回不作ACK；busy仅由该原retry事实提供。",
       "status": "registered-source-entry"
     },
     {
@@ -1176,8 +1191,8 @@
       "owner": "ReaderNativeParagraphView",
       "member": "shareSelection",
       "family": "shared.transient",
-      "category": "分享降级与指令明确失败短反馈",
-      "effectiveHost": "当前原生段落和原选区，绑定布局 epoch、前景输入准入及选区原文。",
+      "category": "文字或书摘图片分享降级与明确失败短反馈",
+      "effectiveHost": "当前原生段落和原选区，绑定布局 epoch、前景输入准入及选区原文；书摘图片使用当前阅读者的书籍与样式。",
       "retireRule": "段落重排或退场后抛弃旧回执；清理沿既有段落反馈退役。",
       "status": "registered-source-entry"
     },
@@ -1209,7 +1224,7 @@
       "owner": "ReaderReadingTextFragment",
       "member": "shareSelection",
       "family": "shared.transient",
-      "category": "分享降级与指令明确失败短反馈",
+      "category": "文字或书摘图片分享降级与明确失败短反馈",
       "effectiveHost": "当前已挂载正文片段，绑定片段生命周期、源文本和选区输入准入。",
       "retireRule": "失去选区输入或片段退场后拒收旧回执，沿现有反馈退役。",
       "status": "registered-source-entry"
@@ -1473,20 +1488,20 @@
       "owner": "RulesManagementPage",
       "member": "recoveryAction",
       "family": "shared.recovery-action",
-      "category": "保留规则实体页原规则恢复/列表读取动作",
-      "effectiveHost": "按现有retainedScopes.RulesManagementPage保留未开放；snapshot.ruleMutation/receipt/readFacts决定文案和recovery generation，不因Index有builder声明认定当前可达。",
-      "retireRule": "generation转交原onReconcile，写入/核对仍归规则owner；开放前验证Runtime/实体/原操作准入及未决写入不重放。",
-      "status": "retained-before-open"
+      "category": "规则与订阅页的原规则操作核对和列表读取",
+      "effectiveHost": "设置内的规则与订阅路由或宽屏右侧面板。当前 RulesManagementSurface 传递原打开身份，snapshot.ruleMutation、receipt 与 readFacts 提供恢复内容及代次。",
+      "retireRule": "退场或过期身份的动作不派发。有效代次交给原 onReconcile，规则 owner 持有写入、核对与重读。",
+      "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/settings/ui/NavigationAppearanceSettings.ets#NavigationAppearanceSettings.saveRecovery::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/settings/ui/NavigationAppearanceSettings.ets",
-      "owner": "NavigationAppearanceSettings",
-      "member": "saveRecovery",
-      "family": "shared.recovery-notice",
-      "category": "本机导航外观保存待确认",
-      "effectiveHost": "通用设置当前导航代次；只重试本机外观 owner 持有的原写入意图。",
-      "retireRule": "退场停止反馈和输入，原意图保留到本机写入确认或 Ability 退役。",
+      "id": "entry/src/main/ets/features/settings/ui/SettingsLicensesPage.ets#SettingsLicensesPage.pageContent::shared.page-state",
+      "file": "entry/src/main/ets/features/settings/ui/SettingsLicensesPage.ets",
+      "owner": "SettingsLicensesPage",
+      "member": "pageContent",
+      "family": "shared.page-state",
+      "category": "许可资源读取状态与重试",
+      "effectiveHost": "关于 Reader 打开的只读许可页，当前所选打包资源和读取代次限定加载与失败展示。",
+      "retireRule": "返回目录、退场或打开另一条目后，旧读取代次失效。重试读取当前资源。",
       "status": "registered-source-entry"
     },
     {
@@ -1573,9 +1588,9 @@
       "owner": "SettingsPage",
       "member": "showAboutFeedback",
       "family": "shared.transient",
-      "category": "普通完成/失败短反馈",
-      "effectiveHost": "当前已挂载且可输入的设置首页关于 Reader 子页；复制前及展示中检查 aboutPageId、isOpeningCurrent、runtime 和当前输入准入。",
-      "retireRule": "关于页返回、设置切换或退场清除 aboutPageId 并 reset 短反馈；旧代复制与短反馈失效，不涉及任何业务写入。",
+      "category": "复制构建信息与开发者入口解锁的短反馈",
+      "effectiveHost": "当前已挂载且可输入的关于 Reader 子页。复制、版本连击及反馈展示检查当前关于页身份与输入资格。",
+      "retireRule": "离开关于页或退场时重置短反馈和未完成的连击计数。旧打开身份的反馈失效。",
       "status": "registered-source-entry"
     },
     {
@@ -1585,8 +1600,8 @@
       "member": "showFeedbackToast",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
-      "effectiveHost": "当前已挂载设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。宽屏控制栏位置仅在当前通用设置打开身份和导航代次且保存未派发时沿用短反馈。",
-      "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
+      "effectiveHost": "当前已挂载设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。宽屏控制栏位置仅在当前通用设置打开身份和导航代次且保存未派发时沿用短反馈。 智慧手势失败反馈仅显示于当前通用设置，系统备份偏好失败反馈仅显示于当前本地备份页。",
+      "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。 切换设置子页或导航代次后，旧失败反馈失效。",
       "status": "registered-source-entry"
     },
     {
@@ -1683,9 +1698,9 @@
       "owner": "SourceV9CheckDialog",
       "member": "body",
       "family": "shared.page-state",
-      "category": "书源检测会话执行失败",
-      "effectiveHost": "当前正在呈现的检测会话内，在运行错误已发布时投影原执行失败。单项实际结果继续由检测列表展示。",
-      "retireRule": "新的检测执行、当前检测会话退出或退役时按当前运行状态撤销。",
+      "category": "书源检测会话执行失败与单源目标已移除的行内状态",
+      "effectiveHost": "当前有效书源检测弹窗的内容区展示执行失败。单源或批量下钻目标不在实时列表时，在同一区域显示「此书源已不在当前列表」，检测动作仍由当前检测会话控制。",
+      "retireRule": "新一轮检测清除原执行失败。目标重新可用或返回批量报告时撤下缺失提示。关闭弹窗或会话退役时撤下两种状态。",
       "status": "registered-source-entry"
     },
     {
@@ -1877,6 +1892,151 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.configNotice::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "configNotice",
+      "family": "shared.recovery-notice",
+      "category": "WebDAV 原配置保存待续办",
+      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板及原安全存储配置操作。",
+      "retireRule": "以确切写入 UUID 续办。缺安全暂存时只接受哈希匹配的原配置。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.requestArchiveRemoval::native.alert",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "requestArchiveRemoval",
+      "family": "native.alert",
+      "category": "明确确认删除所选旧备份",
+      "effectiveHost": "当前 WebDAV 列表的同一备份条目和确切清单快照。",
+      "retireRule": "当前列表、配置或面板退役后拒绝旧按钮。",
+      "status": "registered-source-entry",
+      "bridge": "owned-alert-native-callback"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.requestArchiveRemoval::shared.alert-owner",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "requestArchiveRemoval",
+      "family": "shared.alert-owner",
+      "category": "远端旧包删除确认",
+      "effectiveHost": "当前 WebDAV 面板分配的原生确认 lease。",
+      "retireRule": "确认只授权当前所选旧包，退页或换代失效。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.retirementNotice::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "retirementNotice",
+      "family": "shared.recovery-notice",
+      "category": "远端所选旧备份的数据清理待续办",
+      "effectiveHost": "当前安全配置代次和持久清理回执。",
+      "retireRule": "当前代次只能续办或退出确切的原清理回执。退出时仅移除已证实未动的日志，不确定或已开始的退役则持久保留回执；30 分钟读取保护由网关判定。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.deletionUnavailableNotice::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "deletionUnavailableNotice",
+      "family": "shared.recovery-notice",
+      "category": "WebDAV 未通过条件删除校验",
+      "effectiveHost": "当前 WebDAV 面板及其配置代次的删除能力。读取和恢复独立。",
+      "retireRule": "面板或配置换代撤下提示，按当前配置重新检查能力。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.pendingNotice::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "pendingNotice",
+      "family": "shared.recovery-notice",
+      "category": "原 WebDAV 发布待核对或已核对后的本机暂存待清理",
+      "effectiveHost": "当前扩展备份与同步页的 WebDAV 备份面板和安全配置代次，原包日志仍存在。",
+      "retireRule": "核对只继续同一密文。读回确认后持久确认清理状态，本机清理成功才移除日志。配置或页面退役后拒绝旧按钮。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.localJournalNotice::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "localJournalNotice",
+      "family": "shared.recovery-notice",
+      "category": "WebDAV 本机备份或删除日志暂不可读",
+      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板及其保存配置代次。只阻塞依赖该日志的写操作。",
+      "retireRule": "仅在当前面板代次重读原日志，由网关校验，保留已有日志。远端备份读取和恢复独立。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.localCleanupNotice::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "localCleanupNotice",
+      "family": "shared.recovery-notice",
+      "category": "WebDAV 本机暂存清理失败",
+      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板与保存配置代次。暂存清理结果独立于配置读取。",
+      "retireRule": "绑定面板打开代次及当前已提交配置。远端读取不取消本机清理，退页或配置变化停止旧回调。重试只处理已退役配置的本机暂存。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.processing::shared.page-state",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "processing",
+      "family": "shared.page-state",
+      "category": "书库备份配置读取与实际操作中",
+      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板当次读取、备份、隔离校验、退役退出或恢复。",
+      "retireRule": "当次操作结算或面板退役后移除，原备份及恢复日志继续由 gateway 持有。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.requestRestore::native.alert",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "requestRestore",
+      "family": "native.alert",
+      "category": "通过 ReaderNativeAlertOwner 明确确认替换阅读库",
+      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板与其隔离校验的原预览。",
+      "retireRule": "原生按钮与原预览、配置和当次确认 lease 绑定。",
+      "status": "registered-source-entry",
+      "bridge": "owned-alert-native-callback"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.requestRestore::shared.alert-owner",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "requestRestore",
+      "family": "shared.alert-owner",
+      "category": "覆盖当前阅读库前的确认",
+      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板和原预览。",
+      "retireRule": "确认、取消或面板退役后结束 lease。新配置不能应用旧预览。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.showMessage::shared.transient",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "showMessage",
+      "family": "shared.transient",
+      "category": "WebDAV 配置、备份校验和退役退出的结果短反馈",
+      "effectiveHost": "当前前景通用设置的 WebDAV 面板代次。",
+      "retireRule": "新动作、换页或前景变化阻止旧短反馈。持续的中断和待核对由原日志及对应入口保留。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.statusReadFailed::shared.page-state",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "statusReadFailed",
+      "family": "shared.page-state",
+      "category": "WebDAV 安全配置暂时无法读取",
+      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板，在没有可确认配置时展示读取失败。",
+      "retireRule": "重新读取或面板退役清除，重试仍只读取配置。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/sync/ui/SyncPage.ets#SyncPage.manualActionsSection::shared.page-state",
       "file": "entry/src/main/ets/features/sync/ui/SyncPage.ets",
       "owner": "SyncPage",
@@ -2043,61 +2203,6 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets#ReaderDownloadStructureFixture.fontPreparationState::shared.page-state",
-      "file": "entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets",
-      "owner": "ReaderDownloadStructureFixture",
-      "member": "fontPreparationState",
-      "family": "shared.page-state",
-      "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "DEBUG内部ReaderDownloadStructureFixture当前presentation、字体准备attempt与内存数据；页面状态消费本次真实字体准备结果。",
-      "retireRule": "退场或后继attempt使旧字体回调失效。重试只重新准备生产字体，不调用业务Host、导入、登录或文件导出。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/ReaderFrameworkGeometryStructureFixture.ets#ReaderFrameworkGeometryStructureFixture.build::shared.page-state",
-      "file": "entry/src/main/ets/pages/ReaderFrameworkGeometryStructureFixture.ets",
-      "owner": "ReaderFrameworkGeometryStructureFixture",
-      "member": "build",
-      "family": "shared.page-state",
-      "category": "框架几何诊断样本未就绪状态",
-      "effectiveHost": "当前内部框架几何诊断页在 debug 条件或字体就绪条件未满足时显示。",
-      "retireRule": "诊断页退场或样本就绪时移除该状态。无操作入口或业务结果。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/ReaderGroupRecoveryStructureFixture.ets#ReaderGroupRecoveryStructureFixture.build::shared.page-state",
-      "file": "entry/src/main/ets/pages/ReaderGroupRecoveryStructureFixture.ets",
-      "owner": "ReaderGroupRecoveryStructureFixture",
-      "member": "build",
-      "family": "shared.page-state",
-      "category": "分组恢复诊断样本未就绪状态",
-      "effectiveHost": "当前内存分组诊断页在 debug 条件或字体就绪条件未满足时显示。",
-      "retireRule": "诊断页退场或样本就绪时移除该状态。无操作入口或业务结果。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/ReaderPageStructureVerification.ets#ReaderPageStructureVerification.fontPreparationState::shared.page-state",
-      "file": "entry/src/main/ets/pages/ReaderPageStructureVerification.ets",
-      "owner": "ReaderPageStructureVerification",
-      "member": "fontPreparationState",
-      "family": "shared.page-state",
-      "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "DEBUG内部ReaderPageStructureVerification当前presentation、字体准备attempt与内存数据；页面状态消费本次真实字体准备结果。",
-      "retireRule": "退场或后继attempt使旧字体回调失效。重试只重新准备生产字体，不调用业务Host、导入、登录或文件导出。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets#ReaderSourceToolsStructureFixture.fontPreparationState::shared.page-state",
-      "file": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
-      "owner": "ReaderSourceToolsStructureFixture",
-      "member": "fontPreparationState",
-      "family": "shared.page-state",
-      "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "DEBUG内部ReaderSourceToolsStructureFixture当前presentation、字体准备attempt与内存数据；页面状态消费本次真实字体准备结果。",
-      "retireRule": "退场或后继attempt使旧字体回调失效。重试只重新准备生产字体，不调用业务Host、导入、登录或文件导出。",
-      "status": "registered-source-entry"
-    },
-    {
       "id": "entry/src/main/ets/pages/ReaderStartupRecovery.ets#ReaderStartupRecovery.build::shared.page-state",
       "file": "entry/src/main/ets/pages/ReaderStartupRecovery.ets",
       "owner": "ReaderStartupRecovery",
@@ -2164,6 +2269,17 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.savePageImage::shared.transient",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
+      "owner": "MangaReadingSurface",
+      "member": "savePageImage",
+      "family": "shared.transient",
+      "category": "当前页图片另存完成或明确失败",
+      "effectiveHost": "当前漫画、章节控制器及原可见逻辑页。由系统文档选择器与文件写入回执决定。",
+      "retireRule": "取消不发消息。页面或章节切换、原控制器退役后停止写入及反馈。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/source/ui/SourceV9TransferPage.ets#SourceV9TransferPage.acceptState::shared.transient",
       "file": "entry/src/main/ets/features/source/ui/SourceV9TransferPage.ets",
       "owner": "SourceV9TransferPage",
@@ -2227,6 +2343,17 @@
       "category": "导入读取、解析或保存时的内容状态",
       "effectiveHost": "当前导入步骤基于原读取和写入状态呈现。",
       "retireRule": "退场停止展示并忽略旧投影，待核对沿原操作恢复。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/source/ui/SourceV9TransferPage.ets#SourceV9TransferPage.onPasteDraft::shared.transient",
+      "file": "entry/src/main/ets/features/source/ui/SourceV9TransferPage.ets",
+      "owner": "SourceV9TransferPage",
+      "member": "onPasteDraft",
+      "family": "shared.transient",
+      "category": "用户主动粘贴的授权失败、无可粘贴文字或读取失败",
+      "effectiveHost": "当前有效的书源导入或订阅草稿；仅由系统粘贴控件发起。",
+      "retireRule": "切换来源、页面、草稿、前台状态或原导入阶段后忽略旧读取结果；退出重置短反馈。",
       "status": "registered-source-entry"
     },
     {

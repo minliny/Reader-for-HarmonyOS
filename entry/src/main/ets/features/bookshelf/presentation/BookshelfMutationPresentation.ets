@@ -7,6 +7,7 @@ import type { BookshelfProjectionSnapshot } from '../application/BookshelfProjec
 import type { BookshelfDataState, BookshelfFilter, BookshelfRemovalTarget,
   BookshelfRemoveBatchOutcome, BookshelfRemoveOutcome } from '../application/BookshelfFlowGateway';
 import { EMPTY_BOOKSHELF_OPERATION_SNAPSHOT, type BookshelfOperationSnapshot } from '../application/BookshelfOperationOwner';
+import type { BookshelfFileDrop } from '../application/BookshelfFileDrop';
 import { LOCAL_IMPORT_PRESENTATION_KEY } from './LocalImportPresentationOwner';
 import { ShelfBookPresentation } from './ShelfBookPresentation';
 
@@ -364,6 +365,27 @@ export class BookshelfMutationPresentation {
     const admitted = (): boolean => mayOpenPicker() && this.isCurrentImport(identity, navigation, owner);
     if (!admitted()) return;
     await this.scope.host().operations(owner).importFiles(this.scope.filter(), admitted);
+  }
+
+  importDroppedFiles(drop: BookshelfFileDrop, navigation: number): boolean {
+    const owner = this.scope.owner();
+    if (owner === undefined) return false;
+    const current = this.bookshelfAdmission(owner, navigation);
+    const admitted = (): boolean => current() && this.scope.pickerInputAllowed();
+    if (!admitted()) return false;
+    if (drop.failure !== undefined || drop.uris.length === 0) {
+      this.scope.feedback(drop.failure === 'tooManyFiles' ? '一次最多拖入 50 个文件，请分批导入' :
+        '没有可读取的本地文件，请重试或从系统文件中选择', admitted);
+      return false;
+    }
+    const operation = this.scope.host().operations(owner);
+    if (!operation.canMutate() || operation.current().importPresentation !== undefined) return false;
+    this.openImport();
+    const opening = operation.current();
+    if (opening.importPresentation?.state !== 'fileSelection') return false;
+    void operation.importFiles(this.scope.filter(),
+      (): boolean => admitted() && this.isCurrentImport(opening.importIdentity, navigation, owner), drop.uris);
+    return true;
   }
 
   dismissImport(identity: number, navigation: number): void {

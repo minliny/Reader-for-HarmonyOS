@@ -1,3 +1,5 @@
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { readerKeyboardViewport } from '../../../ui/layout/ReaderKeyboardGeometry';
@@ -25,6 +27,8 @@ import { PopupSurfaceSpec, resolvePopupSpec } from '../../../ui/surfaces/ReaderS
 /** Temporary choices/forms live in the viewport, never inside a clipped 48vp row. */
 @Component
 export struct ReaderTtsConfigOverlay {
+  @StorageProp('readerNavigationAppearancePreferences')
+  private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly editorScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   private readonly editorScroller: Scroller = new Scroller();
@@ -264,8 +268,9 @@ export struct ReaderTtsConfigOverlay {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Row().width('100%').height('100%')
-        .backgroundColor(this.manager ? readerAppColor('app.scrim.modal', this.appThemeScheme) : Color.Transparent)
+      Stack().width('100%').height('100%')
+        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
+          this.manager ? readerAppColor('app.scrim.modal', this.appThemeScheme) : Color.Transparent, false, this.manager))
         .onClick((): void => this.close());
       Column() {
       ReaderBoundedSurface({ specId: this.boundedSpecId(), surfaceWidth: this.manager ? '100%' : this.panelWidth(),

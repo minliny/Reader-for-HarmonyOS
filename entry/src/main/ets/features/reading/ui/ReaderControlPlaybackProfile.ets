@@ -49,8 +49,10 @@ export function readerControlPlaybackProfileMatches(receipt: ReaderControlPlayba
     receipt.identity !== identity || receipt.key !== key || receipt.metricsRevision !== metricsRevision ||
     !key.startsWith(`${identity}|`) || receipt.layout.minimumKey !== key || budget.key !== key ||
     receipt.widths.panelWidthVp !== receipt.layout.fullPanelWidth || receipt.bounds.width !== receipt.widths.panelWidthVp ||
-    receipt.bounds.fullHeight !== receipt.layout.fullPanelHeight || receipt.bounds.quickHeight !== receipt.layout.quickPanelHeight ||
-    receipt.bounds.bottomGap !== receipt.layout.dockBottomGap || receipt.bounds.quickHeight > receipt.bounds.fullHeight ||
+    receipt.bounds.fullHeight !== receipt.layout.fullPanelHeight ||
+    (receipt.layout.quickPanelHeight !== undefined && receipt.bounds.quickHeight !== receipt.layout.quickPanelHeight) ||
+    receipt.bounds.bottomGap !== receipt.layout.dockBottomGap || !Number.isFinite(receipt.bounds.quickHeight) ||
+    receipt.bounds.quickHeight <= 0 || receipt.bounds.quickHeight > receipt.bounds.fullHeight ||
     !Number.isFinite(receipt.quickContentHeightVp) || receipt.quickContentHeightVp < 0 ||
     !Number.isFinite(receipt.fullContentHeightVp) || receipt.fullContentHeightVp < 0 ||
     receipt.quickContentHeightVp !== budget.quickContentHeightVp || receipt.fullContentHeightVp !== budget.fullContentHeightVp ||

@@ -6,7 +6,7 @@ import {
   type ReaderAutoPageStopReason,
 } from './ReaderAutoPageState.ts';
 import {
-  createDefaultReaderAutoPageFullConfiguration, normalizeReaderAutoPageFullConfiguration,
+  createDefaultReaderAutoPageFullConfiguration, normalizeReaderAutoPageFullConfiguration, normalizeReaderAutoPageSpeedSeconds,
   readerAutoPageFullTimerDurationSeconds, setReaderAutoPageFullSpeed, setReaderAutoPageFullFollowHighlight,
   type ReaderAutoPageFullConfiguration,
 } from './ReaderAutoPageFullState.ts';
@@ -46,6 +46,16 @@ export class ReaderAutoPageCoordinator {
 
   snapshot(_revision: number = 0): Readonly<ReaderAutoPageState> { return this.state; }
   configurationAt(_revision: number = 0): Readonly<ReaderAutoPageFullConfiguration> { return this.configuration; }
+  /** Pick one text fragment at the current cadence within the caller's admitted viewport. */
+  highlightVisibleFragment<T>(visible: T[], hasText: (fragment: T) => boolean): T | undefined {
+    const textFragments = visible.filter(hasText);
+    if (textFragments.length === 0) return undefined;
+    const elapsed = Math.max(0, this.state.speedSeconds - this.state.remainingSeconds);
+    const ratio = Math.max(0, Math.min(1, elapsed / this.state.speedSeconds));
+    const index = Math.min(textFragments.length - 1, Math.floor(ratio * textFragments.length));
+    return textFragments[index];
+  }
+
   pendingStart(): boolean { return this.startPending; }
   beginStart(): number { this.cancelStart(); this.startPending = true; return this.startGeneration; }
   admitStart(generation: number): boolean {
@@ -88,12 +98,15 @@ export class ReaderAutoPageCoordinator {
     // before the old deadline. Retaining that deadline consumes paused time.
     this.clearPageTimer(); this.clearSessionTimer();
   }
-  setSpeed(speed: number): void {
-    const normalized = Math.max(2, Math.min(20, Math.round(speed)));
-    if (normalized === this.state.speedSeconds) return;
+  /** A no-op publishes no speed change, so the caller can retire its preview. */
+  setSpeed(speed: number): boolean {
+    if (!Number.isFinite(speed)) return false;
+    const normalized = normalizeReaderAutoPageSpeedSeconds(speed);
+    if (normalized === this.state.speedSeconds) return false;
     this.configuration = setReaderAutoPageFullSpeed(this.configuration, normalized);
     this.publish(setReaderAutoPageSpeed(this.state, normalized));
     if (this.state.status === 'running' && !this.state.awaitingPageCommit) this.armPageTimer(true);
+    return true;
   }
   setSessionTimer(minutes: number, seconds: number): void {
     if (this.state.status !== 'stopped') return;

@@ -1,4 +1,7 @@
 import { LengthMetrics } from '@kit.ArkUI';
+import { APP_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../application/RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import { RssPresentationProjection } from '../presentation/RssPresentationProjection';
@@ -22,14 +25,17 @@ import {
 import { MainTabShell } from '../../shell/MainTabShell';
 import { readerMainNavigationMode, readerMainRailLeading } from '../../shell/MainNavigationSpec';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
-import { readerPageAreaLength, readerPageContentStartInset } from '../../../ui/layout/ReaderPageShell';
+import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
+import { SEARCH_CAPSULE_HEIGHT } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import { StatusBadge, type ReaderStatusBadgeStatus } from '../../../ui/controls/StatusBadge';
 import { SurfaceHorizontalFrame } from '../../../ui/layout/SurfaceHorizontalGeometry';
 import {
+  ReaderRectVp,
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
 } from '../../../ui/foundation/ReaderWindowMetrics';
@@ -47,7 +53,8 @@ import {
 // Authored Day colors and opacity are retained in the shared App registry.
 // Figma 暂停源整行降透明度 62%
 const STATUS_PAUSED_OPACITY = 0.62;
-const RSS_FLOATING_HEADER_HEIGHT = readerPageContentStartInset() + 44 + 30 + TOK_SPACE_XS * 2;
+const RSS_STATUS_TABS_HEIGHT = 44;
+const RSS_FLOATING_HEADER_HEIGHT = APP_HEADER_BAR_HEIGHT + SEARCH_CAPSULE_HEIGHT + RSS_STATUS_TABS_HEIGHT + TOK_SPACE_XS * 2;
 
 /**
  * Figma-backed RSS page (`10 · Reference · RSS` `F2 · Canonical · RSS`).
@@ -93,15 +100,29 @@ export struct RssPage {
   @State private refreshPillShape: ReaderRaisedShape | undefined = undefined;
   @State private pillAppearanceRevision: number = 0;
   private pillMounted: boolean = false;
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
 
   aboutToAppear(): void {
     this.pillMounted = true;
     this.pillAppearanceRevision += 1;
     this.refreshPillShape = undefined;
     registerReaderFonts(this.getUIContext().getFont());
+    this.editingHost.mount({
+      current: (): boolean => this.pillMounted,
+      metrics: () => ReaderWindowCoordinator.metrics(),
+      viewport: (): ReaderRectVp => {
+        const window = ReaderWindowCoordinator.metrics().windowRect;
+        return new ReaderRectVp(0, 0, window.width, window.height);
+      },
+      // The header is fixed. The native editor scrolls its own query to the caret.
+      scroll: (_delta: number): void => {},
+    });
   }
 
-  aboutToDisappear(): void { this.pillMounted = false; }
+  aboutToDisappear(): void {
+    this.pillMounted = false;
+    this.editingHost.unmount();
+  }
 
   build() {
     MainTabShell({
@@ -159,8 +180,10 @@ export struct RssPage {
   @Builder
   private topBar() {
     Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween, alignItems: ItemAlign.Center,
-      space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
+      space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
       Text('RSS')
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+          ? { role: 'header-content', id: 'rss-title', wrapPart: 'leading' } as LayoutInvariantTag : undefined)
         .fontFamily(TYPE_RSS_HOME_TITLE.fontFamily)
         .fontWeight(TYPE_RSS_HOME_TITLE.fontWeight)
         .fontSize(TYPE_RSS_HOME_TITLE.fontSizeFp)
@@ -174,11 +197,16 @@ export struct RssPage {
         this.refreshPill();
         this.managePill();
       }
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'header-content', id: 'rss-top-actions', wrapPart: 'trailing' } as LayoutInvariantTag : undefined)
       .constraintSize({ maxWidth: this.contentFrame().width })
       .margin({ left: this.headerLeftInset() });
     }
     .width('100%')
-    .constraintSize({ minHeight: 58 })
+    .constraintSize({ minHeight: APP_HEADER_BAR_HEIGHT })
+    .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+      ? { role: 'fixed-header', id: 'rss-top-bar', expectedHeightVp: APP_HEADER_BAR_HEIGHT,
+        expectedTopGapVp: 0, wrapGapVp: TOK_SPACE_XS } as LayoutInvariantTag : undefined)
     .padding({ right: this.headerRightInset() });
   }
 
@@ -271,12 +299,11 @@ export struct RssPage {
   private searchBar() {
     Row() {
       ReaderSearchField({
-        variant: 'rssPassive', mode: 'live', text: this.query,
-        fieldWidthVp: this.contentFrame().width,
-        placeholder: '搜索订阅源、文章标题或分组', accessibilityLabel: '搜索订阅源、文章标题或分组',
+        editingHost: this.editingHost, variant: 'rss', mode: 'live', text: this.query,
+        placeholder: '搜索订阅内容', accessibilityLabel: '搜索订阅源、文章标题或分组',
         onTextChange: (value: string): void => { this.query = value; },
       });
-    }.width(this.contentFrame().width).constraintSize({ minHeight: 44 })
+    }.width(this.contentFrame().width)
       .alignItems(VerticalAlign.Center)
       .margin({ top: TOK_SPACE_XS, left: this.contentFrame().left });
   }
@@ -288,7 +315,7 @@ export struct RssPage {
         this.statusTab('源列表', 'sources');
         this.statusTab('全部', 'all');
         this.statusTab('收藏', 'favorites');
-      }.constraintSize({ minWidth: this.contentFrame().width, minHeight: 44 })
+      }.constraintSize({ minWidth: this.contentFrame().width, minHeight: RSS_STATUS_TABS_HEIGHT })
         .alignItems(VerticalAlign.Center);
     }.width(this.contentFrame().width).scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
       .margin({ top: TOK_SPACE_XS, left: this.contentFrame().left });

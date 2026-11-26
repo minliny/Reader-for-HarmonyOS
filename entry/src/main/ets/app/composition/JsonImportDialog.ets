@@ -6,11 +6,16 @@ import { readerInteractiveSafeTop } from '../../ui/foundation/ReaderWindowMetric
 import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
 import { ReaderButton } from '../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../ui/controls/ReaderFormField';
+import { ReaderTransientFeedback } from '../../ui/feedback/ReaderTransientFeedback';
+import { ReaderClipboardDraftPaste, readerClipboardPasteMessage,
+  type ReaderClipboardPasteProblem } from '../../platform/clipboard/ReaderClipboardHost';
 import { TYPE_FORM_ACTION } from '../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
 import { registerReaderFonts } from '../../ui/foundation/ReaderFonts';
 import { TOK_SPACE_XS } from '../../ui/foundation/ReaderTokens';
 import { ReaderDialogSurface, DialogActionView } from '../../ui/surfaces/ReaderDialogSurface';
+import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../ui/surfaces/ReaderSurfaceMaterial';
+import type { ReaderNavigationPreferences } from '../HarmonyCapabilityPolicy';
 import { readerImportCardTransition, readerImportOverlayTransition } from '../../ui/surfaces/ReaderImportDialogStyle';
 import { MESSAGE_BODY, MESSAGE_META } from '../../ui/foundation/ReaderMessageStyle';
 import { FrameCallback } from '@kit.ArkUI';
@@ -40,8 +45,12 @@ export struct JsonImportDialog {
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   private readonly editingScroller: Scroller = new Scroller();
+  private readonly draftPaste: ReaderClipboardDraftPaste = new ReaderClipboardDraftPaste();
+  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private foreground: boolean = true;
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
+  @StorageLink('readerAppForeground') @Watch('retireClipboardPaste') private foreground: boolean = true;
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
@@ -68,7 +77,13 @@ export struct JsonImportDialog {
     registerReaderFonts(this.getUIContext().getFont());
   }
 
-  aboutToDisappear(): void { this.mounted = false; this.focusRevision += 1; this.urlInputRevision += 1; }
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.focusRevision += 1;
+    this.urlInputRevision += 1;
+    this.retireClipboardPaste();
+    this.transientFeedback.reset();
+  }
 
   private inputIsCurrent(): boolean { return this.mounted && (this.isInputAllowed?.() ?? true); }
 
@@ -114,8 +129,10 @@ export struct JsonImportDialog {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Row().width('100%').height('100%').backgroundColor(readerAppColor('app.scrim.modal', this.appThemeScheme))
-        .backdropBlur(6).accessibilityLevel('no')
+      Stack().width('100%').height('100%')
+        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
+          readerAppColor('app.scrim.modal', this.appThemeScheme)))
+        .accessibilityLevel('no')
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .onClick((): void => this.dismissIfCurrent());
       Scroll(this.editingScroller) {
@@ -174,12 +191,17 @@ export struct JsonImportDialog {
       this.localButton();
 
       Column({ space: TOK_SPACE_XS }) {
-        Text('或输入在线链接')
-          .width('100%')
-          .fontFamily(TYPE_FORM_ACTION.fontFamily)
-          .fontWeight(TYPE_FORM_ACTION.fontWeight)
-          .fontSize(TYPE_FORM_ACTION.fontSizeFp)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+        Row({ space: TOK_SPACE_XS }) {
+          Text('或输入在线链接')
+            .layoutWeight(1)
+            .fontFamily(TYPE_FORM_ACTION.fontFamily)
+            .fontWeight(TYPE_FORM_ACTION.fontWeight)
+            .fontSize(TYPE_FORM_ACTION.fontSizeFp)
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+          PasteButton()
+            .enabled(this.foreground && this.inputIsCurrent())
+            .onClick((_event: ClickEvent, result: PasteButtonOnClickResult): void => this.pasteUrlDraft(result));
+        }.width('100%');
         ForEach([this.urlInputRevision], (revision: number): void => {
           ReaderFormField({ editingHost: this.editingHost, isEditable: this.inputIsCurrent(), scheme: this.appThemeScheme, specId: 'form-url', text: this.urlDraft,
             placeholder: 'https://example.com/data.json',
@@ -224,12 +246,28 @@ export struct JsonImportDialog {
       if (value !== this.urlDraft) this.urlInputRevision += 1;
       return;
     }
+    if (value !== this.urlDraft) this.retireClipboardPaste();
     this.urlDraft = value;
     if (this.validationMessage.length > 0) this.validationMessage = '';
   }
 
+  private retireClipboardPaste(): void { this.draftPaste.retire(); }
+
+  private pasteUrlDraft(result: PasteButtonOnClickResult): void {
+    const opening = this.openingId;
+    const revision = this.urlInputRevision;
+    const isCurrent = (): boolean => this.foreground && this.inputIsCurrent() &&
+      opening === this.openingId && revision === this.urlInputRevision;
+    void this.draftPaste.paste(result === PasteButtonOnClickResult.SUCCESS, isCurrent,
+      (text: string): void => this.updateUrlDraft(revision, text), (problem: ReaderClipboardPasteProblem): void => {
+        this.transientFeedback.show((): UIContext => this.getUIContext(),
+          { message: readerClipboardPasteMessage(problem), tone: 'error' }, isCurrent);
+      });
+  }
+
   private submitOnlineImport(): void {
     if (!this.inputIsCurrent()) return;
+    this.retireClipboardPaste();
     const onlineUrl = this.urlDraft.trim();
     if (onlineUrl.length === 0) {
       this.validationMessage = '请输入在线 JSON 的 HTTP/HTTPS 地址';

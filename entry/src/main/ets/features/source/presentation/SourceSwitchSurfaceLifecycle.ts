@@ -1,3 +1,5 @@
+import { READER_SHEET_CLOSE_MS } from '../../../ui/foundation/ProductMotionTiming.ts';
+
 export interface SourceSwitchSurfaceSnapshot {
   attachment: number;
   attached: boolean;
@@ -11,11 +13,17 @@ export class SourceSwitchSurfaceLifecycle {
   private scope: number = -1;
   private closing: boolean = false;
   private parts: string[] = [];
+  private closeTimer: number = -1;
   private readonly changed: (snapshot: SourceSwitchSurfaceSnapshot) => void;
+  private readonly closed: (scope: number) => void;
 
-  constructor(changed: (snapshot: SourceSwitchSurfaceSnapshot) => void) { this.changed = changed; }
+  constructor(changed: (snapshot: SourceSwitchSurfaceSnapshot) => void, closed: (scope: number) => void) {
+    this.changed = changed;
+    this.closed = closed;
+  }
 
   attach(scope: number): number {
+    this.cancelCloseTimer();
     this.attachment = ++this.generation;
     this.scope = scope;
     this.closing = false;
@@ -33,27 +41,40 @@ export class SourceSwitchSurfaceLifecycle {
     this.parts = [...this.parts, part];
   }
 
+  hideCurrent(scope: number): void {
+    this.hide(this.attachment, scope);
+  }
+
   hide(attachment: number, scope: number): boolean {
-    if (!this.current(attachment, scope)) return false;
+    if (!this.current(attachment, scope) || this.closing) return false;
     this.closing = true;
     if (this.parts.length === 0) return this.finish(attachment, scope);
+    // ArkUI may unmount a replaced drawer without delivering its exit callback.
+    // Allow a full additional close interval for a delayed native transition.
+    this.closeTimer = setTimeout((): void => { this.finish(attachment, scope); }, 2 * READER_SHEET_CLOSE_MS);
     this.publish();
     return false;
   }
 
   transitionFinished(attachment: number, scope: number, part: string, transitionIn: boolean): boolean {
-    if (transitionIn || !this.current(attachment, scope) || !this.parts.includes(part)) return false;
+    return transitionIn ? false : this.disappeared(attachment, scope, part);
+  }
+
+  disappeared(attachment: number, scope: number, part: string): boolean {
+    if (!this.current(attachment, scope) || !this.parts.includes(part)) return false;
     this.parts = this.parts.filter((candidate: string): boolean => candidate !== part);
     return this.closing && this.parts.length === 0 ? this.finish(attachment, scope) : false;
   }
 
   private finish(attachment: number, scope: number): boolean {
     if (!this.current(attachment, scope)) return false;
+    this.cancelCloseTimer();
     this.attachment = 0;
     this.scope = -1;
     this.parts = [];
     this.closing = false;
     this.publish();
+    this.closed(scope);
     return true;
   }
 
@@ -62,12 +83,18 @@ export class SourceSwitchSurfaceLifecycle {
   }
 
   retire(): void {
+    this.cancelCloseTimer();
     this.generation += 1;
     this.attachment = 0;
     this.scope = -1;
     this.parts = [];
     this.closing = false;
     this.publish();
+  }
+
+  private cancelCloseTimer(): void {
+    if (this.closeTimer !== -1) clearTimeout(this.closeTimer);
+    this.closeTimer = -1;
   }
 
   private publish(): void {

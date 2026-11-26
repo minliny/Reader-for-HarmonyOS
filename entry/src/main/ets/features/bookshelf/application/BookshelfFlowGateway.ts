@@ -208,13 +208,18 @@ export class BookshelfFlowGateway {
     return this.localImport.selectLocalBookInputs(canOpenPicker);
   }
 
+  async prepareDroppedBookInputs(uris: string[], isCurrent: () => boolean): Promise<LocalBookPreparation[]> {
+    return this.localImport.prepareDroppedBookInputs(uris, isCurrent);
+  }
+
   async releaseUnusedSelections(selections: LocalBookPreparation[]): Promise<void> {
     return this.localImport.releaseUnusedSelections(selections);
   }
 
-  async importPreparedSelections(selections: LocalBookPreparation[], onDispatched?: () => void): Promise<BookshelfImportOutcome> {
-    const batch = await this.localImport.importPreparedSelections(selections, onDispatched);
-    // Always re-read after the picker returns. A completed batch can upsert an
+  async importPreparedSelections(selections: LocalBookPreparation[], onDispatched?: () => void,
+    preserveExisting: boolean = false): Promise<BookshelfImportOutcome> {
+    const batch = await this.localImport.importPreparedSelections(selections, onDispatched, preserveExisting);
+    // Always re-read after the batch returns. A completed picker batch can upsert an
     // existing book, and a cancelled batch must still expose the restored
     // Core-owned shelf instead of retaining a UI-side copy.
     //

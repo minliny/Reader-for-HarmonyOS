@@ -15,17 +15,30 @@ export interface ReaderShareFile {
   title: string;
 }
 
-export type ReaderShareRecord = ReaderShareText | ReaderShareFile;
+export interface ReaderShareImage {
+  kind: 'image';
+  path: string;
+  title: string;
+}
+
+export interface ReaderQuoteCardCopy {
+  path: string;
+  release: () => Promise<void>;
+}
+
+export type ReaderShareRecord = ReaderShareText | ReaderShareFile | ReaderShareImage;
 export type SystemShareResult = 'shown' | 'dismissed' | 'unavailable' | 'unsafe';
-export type ReaderShareResult = SystemShareResult | 'copied' | 'fileCopied' | 'copyFailed' | 'unsafeFile' | 'retired';
+export type ReaderShareResult = SystemShareResult | 'copied' | 'fileCopied' | 'quoteCopied' | 'quoteFailed' |
+  'copyFailed' | 'unsafeFile' | 'retired';
 export type RetainedShareFile = (bookId: string, current: () => boolean) => Promise<string | undefined>;
+export type ReaderQuoteCardAction = (text: string, anchor: string, current: () => boolean) => Promise<ReaderShareResult>;
 
 export interface SystemSharePort {
   publicLink(value: string): string | undefined;
   show(record: ReaderShareRecord, current: () => boolean): Promise<SystemShareResult>;
 }
 
-function originalExtension(book: ReadingBookDetail): string | undefined {
+export function readerOriginalBookExtension(book: ReadingBookDetail): string | undefined {
   const kind = book.kind?.trim().toLowerCase();
   switch (kind) {
     // Core production TXT imports store the historical local alias.
@@ -39,7 +52,7 @@ function originalExtension(book: ReadingBookDetail): string | undefined {
 }
 
 export function readerCanShareOriginal(book: ReadingBookDetail): boolean {
-  return book.sourceId === 'local' && /^local:[0-9a-f]{64}$/.test(book.bookId) && originalExtension(book) !== undefined;
+  return book.sourceId === 'local' && /^local:[0-9a-f]{64}$/.test(book.bookId) && readerOriginalBookExtension(book) !== undefined;
 }
 
 export class ReaderShareActions {
@@ -53,6 +66,28 @@ export class ReaderShareActions {
 
   async shareSelection(text: string, current: () => boolean, copyRequested: boolean = false): Promise<ReaderShareResult> {
     return copyRequested ? this.copyText(text, current) : this.share({ kind: 'text', text }, text, current);
+  }
+
+  async shareQuoteCard(text: string, title: string, render: () => Promise<ReaderQuoteCardCopy | undefined>,
+    current: () => boolean): Promise<ReaderShareResult> {
+    if (!current()) return 'retired';
+    let result: SystemShareResult = 'unavailable';
+    let image: ReaderQuoteCardCopy | undefined;
+    try {
+      image = await render();
+      if (!current()) return 'retired';
+      if (image !== undefined) result = await this.port.show({ kind: 'image', path: image.path, title }, current);
+    } catch (_) { /* Export and platform failures fall back to the original text. */ }
+    finally {
+      if (image !== undefined && result !== 'shown') {
+        try { await image.release(); } catch (_) { /* Cache cleanup does not change the share result. */ }
+      }
+    }
+    if (!current()) return 'retired';
+    if (result === 'shown' || result === 'dismissed') return result;
+    const copied = this.copyText(text, current);
+    if (copied === 'copied') return 'quoteCopied';
+    return copied === 'copyFailed' ? 'quoteFailed' : copied;
   }
 
   async shareBook(book: ReadingBookDetail, current: () => boolean): Promise<ReaderShareResult> {
@@ -69,7 +104,7 @@ export class ReaderShareActions {
 
   async shareFile(book: ReadingBookDetail, retained: RetainedShareFile, current: () => boolean): Promise<ReaderShareResult> {
     if (!current()) return 'retired';
-    const extension = originalExtension(book);
+    const extension = readerOriginalBookExtension(book);
     if (!readerCanShareOriginal(book) || extension === undefined) return 'unsafeFile';
     const copy = this.bookText(book);
     let path: string | undefined;

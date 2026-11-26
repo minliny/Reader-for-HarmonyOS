@@ -3,28 +3,7 @@ import { ReadingSurfaceLayoutMap } from '../application/ReadingSurfaceLayoutMap'
 import { ReadingPaginationKey, ReadingPaginationPrefixObservation } from '../application/ReadingPaginationIndex';
 import { ReaderAppearanceSnapshot } from '../application/ReaderAppearanceState';
 
-// Bounded measurement DTOs. This module owns no UI lifecycle or persistent state.
-export class ParagraphRange {
-  id: string;
-  startUtf16: number;
-  endUtf16: number;
-  startScalar: number;
-  endScalar: number;
-
-  constructor(
-    id: string,
-    startUtf16: number,
-    endUtf16: number,
-    startScalar: number,
-    endScalar: number,
-  ) {
-    this.id = id;
-    this.startUtf16 = startUtf16;
-    this.endUtf16 = endUtf16;
-    this.startScalar = startScalar;
-    this.endScalar = endScalar;
-  }
-}
+export { MeasuredReadingLine, ParagraphRange } from '../application/ReadingMeasurementFacts';
 
 /**
  * A bounded paragraph submitted to the native Text measurement owner.
@@ -61,31 +40,6 @@ export class MeasurementParagraph {
     this.controller = controller;
     this.isParagraphStart = isParagraphStart;
     this.requestedStartScalar = requestedStartScalar;
-  }
-}
-
-export class MeasuredReadingLine {
-  lineIndex: number;
-  startUtf16: number;
-  endUtf16: number;
-  startScalar: number;
-  endScalar: number;
-  height: number;
-
-  constructor(
-    lineIndex: number,
-    startUtf16: number,
-    endUtf16: number,
-    startScalar: number,
-    endScalar: number,
-    height: number,
-  ) {
-    this.lineIndex = lineIndex;
-    this.startUtf16 = startUtf16;
-    this.endUtf16 = endUtf16;
-    this.startScalar = startScalar;
-    this.endScalar = endScalar;
-    this.height = height;
   }
 }
 

@@ -1,10 +1,12 @@
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { ReaderDelayedRowPress } from '../../../ui/foundation/ReaderPressMotion';
 import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
@@ -58,6 +60,8 @@ import { sourceVerificationOfflineDetectIdentity, sourceVerificationOpening, sou
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier,
+  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
@@ -167,6 +171,9 @@ export struct SourceManagementPage {
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding('reader-source-list');
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @StorageLink('readerAppForeground') @Watch('onToolsFocusContextChanged') private appForeground: boolean = true;
 
   @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
@@ -197,6 +204,11 @@ export struct SourceManagementPage {
   onV9Action: (action: SourceV9ListAction, sourceIds: string[]) => void =
     (_action: SourceV9ListAction, _sourceIds: string[]): void => {};
   onRetryLoad: () => void = (): void => {};
+  // Rows paint press feedback only after a short still hold, so a scroll drag never highlights the touched row.
+  @State private pressedRowKey: string = '';
+  private readonly delayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    this.pressedRowKey = key;
+  });
   @State private searchQuery: string = '';
   @State private searchInputRevision: number = 0;
   @State private statusValue: string = '全部';
@@ -341,6 +353,7 @@ export struct SourceManagementPage {
   }
 
   aboutToDisappear(): void {
+    this.cancelRowPress();
     this.cancelToolsReturnFocus('retire');
     this.v9ListReturnView = undefined;
     this.v9ListReturnScroll = undefined;
@@ -953,6 +966,10 @@ export struct SourceManagementPage {
       TransitionEffect.OPACITY.animation(readerMotionAnimateParam('dropdown.menu.collapse', false)));
   }
 
+  private moreMenuMaterial(): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision('popoverMenu', this.appearancePreferences, this.appThemeScheme, this.systemScheme);
+  }
+
   @Builder
   private sourceMoreMenu() {
     if (this.moreMenuOpen) {
@@ -968,14 +985,19 @@ export struct SourceManagementPage {
             onAction: (id: string): void => this.chooseMoreAction(id) });
         }.width('100%').padding({ top: 6, bottom: 6 })
           .borderRadius(resolvePopupSpec('source-v9-more-menu').borderRadius).clip(true)
-          .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
-          .border({ width: 1, color: readerAppColor('app.border.menu', this.appThemeScheme) })
-          .shadow(readerSurfaceElevation('popover', this.appThemeScheme));
-        Row().width(12).height(12).rotate({ angle: 45 })
-          .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
-          .border({ width: { top: 1, left: 1 }, color: readerAppColor('app.border.menu', this.appThemeScheme) })
-          .position({ x: this.morePointerX(), y: -6 }).zIndex(1)
-          .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+          .backgroundEffect(undefined)
+          .backgroundColor(this.moreMenuMaterial().native ? Color.Transparent : readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+          .border(this.moreMenuMaterial().native ? { width: 0, color: Color.Transparent } :
+            { width: 1, color: readerAppColor('app.border.menu', this.appThemeScheme) })
+          .shadow(this.moreMenuMaterial().native ? undefined : readerSurfaceElevation('popover', this.appThemeScheme))
+          .attributeModifier(new ReaderImmersiveMaterialModifier(this.moreMenuMaterial()));
+        if (!this.moreMenuMaterial().native) {
+          Row().width(12).height(12).rotate({ angle: 45 })
+            .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+            .border({ width: { top: 1, left: 1 }, color: readerAppColor('app.border.menu', this.appThemeScheme) })
+            .position({ x: this.morePointerX(), y: -6 }).zIndex(1)
+            .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+        }
       }.width(this.moreWidth()).clip(false).position({ x: this.moreLeft(), y: this.moreTop() })
         .transition(this.moreTransition());
     }
@@ -1029,7 +1051,7 @@ export struct SourceManagementPage {
             editingFocusId: 'reader-source-editor',
             mode: 'live',
             text: this.searchQuery,
-            placeholder: '搜索书源名称或域名',
+            placeholder: '搜索书源',
             accessibilityLabel: '搜索书源名称或域名',
             editingCurrent: (): boolean => identity === this.sourceSearchInputIdentity() &&
               this.managementInputIsCurrent() && !this.groupOpen,
@@ -1857,20 +1879,41 @@ export struct SourceManagementPage {
       } else this.scheduleSourceAnchorRestore();
     })
     .onAreaChange((): void => { this.editingHost.refresh(); this.scheduleSourceAnchorRestore(); })
-    .onDisAppear((): void => { this.editingScroll.unmount(); this.listMounted = false; })
+    .onDisAppear((): void => {
+      this.cancelRowPress();
+      this.editingScroll.unmount();
+      this.listMounted = false;
+    })
     .onScrollIndex((start: number): void => {
       if (!this.listMounted || this.pendingScroll !== undefined || this.pendingSourceAnchor.length > 0) return;
       this.firstVisibleListIndex = Math.max(0, start);
       // The permanent filter header is the first native ListItem.
     })
+    .onScrollStart((): void => this.cancelRowPress())
     .onScrollStop((): void => this.captureScroll('settled'))
     .onTouch((event: TouchEvent): void => { if (event.type === TouchType.Down) this.cancelScrollRestore(); })
     .onWillScroll((_offset: number, _state: ScrollState, source: ScrollSource): void => {
       if (source === ScrollSource.DRAG || source === ScrollSource.OTHER_USER_INPUT || source === ScrollSource.SCROLL_BAR) {
+        this.cancelRowPress();
         this.cancelScrollRestore();
         this.cancelToolsReturnFocus('scroll');
       }
     });
+  }
+
+  private rowPressKey(source: BookSource, part: string): string {
+    return `${source.sourceId}\u0000${part}`;
+  }
+
+  private rowPressed(source: BookSource, part: string): boolean {
+    return this.pressedRowKey === this.rowPressKey(source, part);
+  }
+
+  private cancelRowPress(): void { this.delayedPress.cancel(); }
+
+  /** Observes touches without consuming them; the List keeps ownership of drag and fling. */
+  private rowPressTouch(source: BookSource, part: string, event: TouchEvent): void {
+    this.delayedPress.observe(event, this.rowPressKey(source, part), true);
   }
 
   private scheduleSourceAnchorRestore(): void {
@@ -2000,7 +2043,9 @@ export struct SourceManagementPage {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           this.sourceRowContent(source);
         }.width('100%').padding(10)
-          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme))
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, true,
+            this.rowPressed(source, 'row'), false))
+          .onTouch((event: TouchEvent): void => this.rowPressTouch(source, 'row', event))
           .accessibilitySelected(this.batchSourceIds.includes(source.sourceId))
           .accessibilityText(source.name)
           .onClick((): void => this.toggleBatchSource(this.currentSourceRow(source),
@@ -2078,7 +2123,9 @@ export struct SourceManagementPage {
           SourceV9TypeSeal({ category: source.category, paintSurface: false });
         }.width('100%').height('100%').padding(0)
           .attributeModifier(new ReaderPressFeedback(readerAppColor(source.category === 'comic' ? 'app.status.warningSoft' :
-            'app.sourceUi.selected', this.appThemeScheme), this.appThemeScheme, 10, 10, this.sourceDetectEnabled(source.sourceId)))
+            'app.sourceUi.selected', this.appThemeScheme), this.appThemeScheme, 10, 10, this.sourceDetectEnabled(source.sourceId),
+            this.rowPressed(source, 'leading'), false))
+          .onTouch((event: TouchEvent): void => this.rowPressTouch(source, 'leading', event))
           .enabled(this.sourceDetectEnabled(source.sourceId))
           .onClick(this.sourceRowCommand(this.currentSourceRow(source), 'check'));
       }.width(SOURCE_ROW_ICON_WIDTH).height(34).accessibilityLevel('no-hide-descendants');
@@ -2126,7 +2173,8 @@ export struct SourceManagementPage {
     .accessibilityText(`${source.name}，${readerSourceCategoryLabel(source.category)}，${source.baseUrl}`)
     .alignItems(HorizontalAlign.Start)
     .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 6, 6,
-      !this.batchMode && this.sourceDetectEnabled(source.sourceId)))
+      !this.batchMode && this.sourceDetectEnabled(source.sourceId), this.rowPressed(source, 'info'), false))
+    .onTouch((event: TouchEvent): void => { if (!this.batchMode) this.rowPressTouch(source, 'info', event); })
     .onClick((): void => {
       if (!this.batchMode) this.sourceRowCommand(source, 'check')();
     });
@@ -2160,6 +2208,8 @@ export struct SourceManagementPage {
       iconId: this.offlineDetectBadgeId(source), actionEnabled: this.sourceDetectEnabled(source.sourceId),
       label: this.sourceActionLabel(source, `检测，${this.sourceBadgeLabel(source)}`, this.sourceDetectEnabled(source.sourceId),
         source.checkState === 'checking'),
+      nativePress: false, paintPressed: this.rowPressed(source, 'detect'),
+      onPressTouch: (event: TouchEvent): void => this.rowPressTouch(source, 'detect', event),
       onTap: this.sourceRowCommand(source, 'check') });
   }
 
@@ -2189,7 +2239,8 @@ export struct SourceManagementPage {
       .width(58).height(26).padding(2).flexShrink(0)
       .responseRegion({ x: 0, y: -9, width: 58, height: 44 })
       .attributeModifier(new ReaderPressFeedback(this.loginSurface(source), this.appThemeScheme, 13, 13,
-        this.sourceActionEnabled() && source.checkState !== 'checking'))
+        this.sourceActionEnabled() && source.checkState !== 'checking', this.rowPressed(source, 'login'), false))
+      .onTouch((event: TouchEvent): void => this.rowPressTouch(source, 'login', event))
       .border({ width: 1, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
       .enabled(this.sourceActionEnabled() && source.checkState !== 'checking')
       .accessibilityText(this.sourceActionLabel(source, source.loginState === 'verified' ? '登录，已验证' :

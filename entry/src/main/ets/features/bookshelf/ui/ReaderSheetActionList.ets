@@ -69,6 +69,7 @@ export struct ReaderSheetActionList {
         ReaderActionMenuSurface({
           variant: 'bookshelf',
           actions: this.actionItems(id),
+          actionIdPrefix: 'reader-bookshelf-book-action-',
           scheme: 'auto',
           onAction: (token: string): void => this.dispatchToken(token),
         });

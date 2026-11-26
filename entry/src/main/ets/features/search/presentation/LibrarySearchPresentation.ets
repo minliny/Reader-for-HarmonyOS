@@ -2,10 +2,12 @@ import type { ShelfBook } from '../../../app/ReaderCoreGateway';
 import type { BookAcquisitionCandidate, BookAcquisitionCoordinator } from '../../reading/application/BookAcquisitionCoordinator';
 import { diagnosticCodeOf } from '../../../app/LogPrivacy';
 import { errorMessageOf } from '../../../app/ErrorMessage';
-import { resolveBookshelfBook } from '../../bookshelf/application/BookshelfBookIdentity';
+import { resolveBookshelfBook, type BookshelfBookMatch } from '../../bookshelf/application/BookshelfBookIdentity';
+import { readableBookshelfSourceName } from '../../bookshelf/application/BookshelfSourceNameProjection';
 import { readerPageInitialHeaderHeight } from '../../../ui/foundation/ReaderHeaderSpecs';
 import { readerSurfaceRectValid, type ReaderSurfaceRect } from '../../../ui/layout/ReaderSurfaceRect';
 import type { RemoteReadingEntryInput } from '../../reading/application/ReadingEntryHost';
+import { readingEntryInputForShelfSnapshot } from '../../reading/presentation/ReadingEntryDto';
 import { readingFailureHint } from '../../reading/presentation/ReadingFailurePresentation';
 import type { RemoteReadingBookSeed } from '../../reading/application/RemoteReadingFlowGateway';
 import type { RemoteReadingVariable } from '../../reading/application/RemoteReadingContract';
@@ -68,8 +70,8 @@ interface SearchSourceRetryEvidence extends SearchSourceRetryObservation {
 }
 
 export interface LibrarySearchSelectionPorts {
-  beginLocalRead: () => (() => boolean);
-  loadLocal: (bookId: string) => Promise<ShelfBook | undefined>;
+  beginShelfRead: () => (() => boolean);
+  loadShelfBook: (sourceId: string, bookId: string) => Promise<ShelfBook | undefined>;
   refreshMembership: () => void;
   failure: (title: string, message: string) => void;
   sourceName: (sourceId: string) => string;
@@ -406,15 +408,18 @@ export class LibrarySearchPresentation {
     // A completed membership read, including an empty one, supersedes the
     // retained filtered shelf window. That window may predate a removal.
     const membership = this.host.shelfMembership() ?? shelf;
+    const beginShelfRead = (): (() => boolean) => {
+      const routeCurrent = ports.beginShelfRead();
+      const candidates = this.detailCandidates;
+      return (): boolean => routeCurrent() && this.detailCandidates === candidates && sameSelection();
+    };
     if (book.sourceId === 'local') {
       const stillOnShelf = membership.some((item: ShelfBook): boolean => item.sourceId === 'local' && item.bookId === book.bookId);
       const visibleBook = stillOnShelf ? shelf.find((item: ShelfBook): boolean =>
         item.sourceId === 'local' && item.bookId === book.bookId) : undefined;
       if (visibleBook !== undefined) { openDetail((): boolean => ports.local(visibleBook)); return; }
-      const isRouteCurrent = ports.beginLocalRead();
-      const candidates = this.detailCandidates;
-      const current = (): boolean => isRouteCurrent() && this.detailCandidates === candidates && sameSelection();
-      void ports.loadLocal(book.bookId).then((stored: ShelfBook | undefined): void => {
+      const current = beginShelfRead();
+      void ports.loadShelfBook(book.sourceId, book.bookId).then((stored: ShelfBook | undefined): void => {
         if (!current()) return;
         if (stored === undefined) {
           ports.refreshMembership();
@@ -427,14 +432,51 @@ export class LibrarySearchPresentation {
     }
     // The search badge describes a saved work, not just this source URL. Keep
     // its exact durable identity so changing source owns the existing row.
-    const shelfMatch = resolveBookshelfBook(book.sourceId, book.bookId, book.title, book.author,
-      membership.filter((saved: ShelfBook): boolean =>
-        (saved.sourceId === book.sourceId && saved.bookId === book.bookId) ||
-        saved.contentKind === (book.category === 'comic' ? 'manga' : 'text')),
-      book.authorIdentity, book.sourceRuleVersion);
+    const shelfMatch = resolveBookshelfBook(book, variants, membership);
+    const open = (match: BookshelfBookMatch): void => {
+      openDetail((): boolean => this.openRemoteResult(book, match, ports, displayCoverUrl));
+    };
+    if (shelfMatch.kind === 'matched' && shelfMatch.book.contentKind === undefined) {
+      const current = beginShelfRead();
+      void this.confirmSearchShelfMatch(book, variants, membership, shelf, shelfMatch, ports, current)
+        .then((match: BookshelfBookMatch | undefined): void => {
+          if (match !== undefined && current()) open(match);
+        }).catch((_error: Error): void => {
+          if (current()) ports.failure('读取书架信息失败', '请重试读取书架信息。');
+        });
+    } else open(shelfMatch);
+  }
+
+  private async confirmSearchShelfMatch(book: SearchBook, variants: SearchBook[], membership: ShelfBook[], visible: ShelfBook[],
+    match: BookshelfBookMatch, ports: LibrarySearchSelectionPorts, current: () => boolean): Promise<BookshelfBookMatch | undefined> {
+    let rows = membership;
+    let published = membership;
+    while (match.kind === 'matched' && match.book.contentKind === undefined) {
+      const saved = match.book;
+      const confirmed = await ports.loadShelfBook(saved.sourceId, saved.bookId);
+      if (!current()) return undefined;
+      if (confirmed !== undefined && confirmed.contentKind === undefined) {
+        ports.failure('书籍类型尚未确认', '请重试读取书架信息。');
+        return undefined;
+      }
+      if (confirmed === undefined) ports.refreshMembership();
+      const latest = this.host.shelfMembership() ?? visible;
+      if (published !== latest) { rows = latest; published = latest; }
+      // Use current membership and replace only this provisional identity. A
+      // confirmed manga cannot satisfy a cross-source novel alias.
+      const remaining = rows.filter((row: ShelfBook): boolean => row.sourceId !== saved.sourceId || row.bookId !== saved.bookId);
+      if (remaining.length < rows.length && confirmed !== undefined) remaining.push(confirmed);
+      rows = remaining;
+      match = resolveBookshelfBook(book, variants, rows);
+    }
+    return match;
+  }
+
+  private openRemoteResult(book: SearchBook, shelfMatch: BookshelfBookMatch, ports: LibrarySearchSelectionPorts,
+    displayCoverUrl?: string): boolean {
     if (shelfMatch.kind === 'ambiguous') {
       ports.failure('书架中有多个版本', '请从书架选择要阅读或换源的版本，已有书籍不会自动合并。');
-      return;
+      return false;
     }
     if (shelfMatch.kind === 'matched') {
       const saved = shelfMatch.book;
@@ -442,9 +484,12 @@ export class LibrarySearchPresentation {
         contentKind: saved.contentKind,
         detailUrl: saved.bookId, title: saved.title, author: saved.author, coverUrl: saved.coverUrl,
         intro: saved.intro, kind: saved.kind, lastChapter: saved.lastChapter };
-      openDetail((): boolean => ports.remote({ seed, sourceName: saved.sourceName ?? ports.sourceName(saved.sourceId),
-        shelfSnapshot: saved, fallbackSeeds: [], fallbackSourceNames: [], displayCoverUrl }));
-      return;
+      const namedCandidate = this.detailCandidates.find((candidate: SearchBook): boolean => candidate.sourceId === saved.sourceId &&
+        readableBookshelfSourceName(saved.sourceId, candidate.sourceName.trim()));
+      const sourceName = namedCandidate?.sourceName ?? ports.sourceName(saved.sourceId);
+      return ports.remote(readingEntryInputForShelfSnapshot({
+        seed, sourceName, fallbackSeeds: [], fallbackSourceNames: [], displayCoverUrl,
+      }, saved));
     }
     // Unsaved works retain every source candidate. The shared scheduler bounds concurrency.
     const ordered: SearchBook[] = [book];
@@ -466,12 +511,7 @@ export class LibrarySearchPresentation {
       seeds.push(seed);
       sourceNames.push(candidate.sourceName);
     }
-    // A search result that is already on the shelf has a durable Core
-    // snapshot. Pass it through so detail/TOC opens cache-first instead of
-    // issuing a second live detail+TOC sweep for the same identity.
-    const shelfSnapshot = membership.find((item: ShelfBook): boolean =>
-      item.sourceId === book.sourceId && item.bookId === book.bookId);
-    openDetail((): boolean => ports.remote({ seed: seeds[0], sourceName: sourceNames[0], shelfSnapshot,
-      fallbackSeeds: seeds.slice(1), fallbackSourceNames: sourceNames.slice(1), displayCoverUrl }));
+    return ports.remote({ seed: seeds[0], sourceName: sourceNames[0],
+      fallbackSeeds: seeds.slice(1), fallbackSourceNames: sourceNames.slice(1), displayCoverUrl });
   }
 }

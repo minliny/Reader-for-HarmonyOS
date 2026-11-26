@@ -426,9 +426,10 @@ export struct SourceToolsPage {
 
   @Builder
   private sourceSearch(opening: string) {
-    ReaderSearchField({ editingHost: this.editingHost, variant: 'sourceManagement', mode: 'live', text: this.sourceQuery,
+    ReaderSearchField({ editingHost: this.editingHost, variant: 'sourceManagement', sourceV9Chrome: true,
+      mode: 'live', text: this.sourceQuery,
       editingCurrent: (): boolean => this.toolsInputIsCurrent(opening),
-      placeholder: '搜索书源名称、域名或分组', accessibilityLabel: '筛选书源工具列表',
+      placeholder: '搜索书源', accessibilityLabel: '按名称、域名或分组筛选书源工具列表',
       onTextChange: (query: string): void => this.changeSourceQuery(opening, query) });
   }
 

@@ -91,6 +91,12 @@ export const READER_APPEARANCE_PARAGRAPH_SPACING_RANGE = new ReaderAppearanceMet
 export const READER_APPEARANCE_LETTER_SPACING_RANGE = new ReaderAppearanceMetricRange(-2, 4);
 export const READER_APPEARANCE_PAGE_MARGIN_OFFSET_RANGE = new ReaderAppearanceMetricRange(-12, 24);
 
+const READER_APPEARANCE_FONT_SIZE_STEP = 2;
+const READER_APPEARANCE_LINE_HEIGHT_STEP = 0.08;
+const READER_APPEARANCE_PARAGRAPH_SPACING_STEP = 2;
+const READER_APPEARANCE_LETTER_SPACING_STEP = 0.5;
+const READER_APPEARANCE_PAGE_MARGIN_OFFSET_STEP = 2;
+
 export type ReaderAppearanceSnapshot = {
   version: 4;
   appThemeMode: ReaderAppThemeMode;
@@ -224,6 +230,27 @@ export function normalizeReaderAppearanceSnapshot(
 
 export function copyReaderAppearanceSnapshot(snapshot: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot {
   return normalizeReaderAppearanceSnapshot(snapshot);
+}
+
+export function sameReaderAppearanceFont(left: ReaderAppearanceSnapshot, right: ReaderAppearanceSnapshot): boolean {
+  return left.font === right.font && (left.font !== 'custom' ||
+    JSON.stringify(left.customFont) === JSON.stringify(right.customFont));
+}
+
+export function resolveMeasuredReaderAppearanceSnapshot(
+  measured: ReaderAppearanceSnapshot | undefined,
+  current: ReaderAppearanceSnapshot,
+): ReaderAppearanceSnapshot {
+  if (measured === undefined) return current;
+  if (measured.activeTheme === current.activeTheme && measured.appThemeMode === current.appThemeMode &&
+    measured.dayTheme === current.dayTheme && measured.nightTheme === current.nightTheme) return measured;
+  // The measured line breaks keep their font and spacing. Colors can update immediately.
+  const rendered = copyReaderAppearanceSnapshot(measured);
+  rendered.activeTheme = current.activeTheme;
+  rendered.appThemeMode = current.appThemeMode;
+  rendered.dayTheme = current.dayTheme;
+  rendered.nightTheme = current.nightTheme;
+  return rendered;
 }
 
 export function appearanceThemeSelection(snapshot: ReaderAppearanceSnapshot): ReaderThemeSelection {
@@ -367,6 +394,33 @@ export function readerAppearanceCanStep(
   const range = readerAppearanceMetricRange(metric);
   const value = readerAppearanceMetricValue(snapshot, metric);
   return direction < 0 ? value > range.minimum : value < range.maximum;
+}
+
+export function stepReaderAppearanceMetric(
+  snapshot: ReaderAppearanceSnapshot,
+  metric: ReaderAppearanceMetric,
+  direction: ReaderAppearanceStepDirection,
+): ReaderAppearanceSnapshot {
+  let value = 0;
+  if (metric === 'fontSize') {
+    value = snapshot.fontSize + direction * READER_APPEARANCE_FONT_SIZE_STEP;
+  } else if (metric === 'lineHeightMultiplier') {
+    value = roundAppearanceMetric(
+      snapshot.lineHeightMultiplier + direction * READER_APPEARANCE_LINE_HEIGHT_STEP,
+    );
+  } else if (metric === 'paragraphSpacing') {
+    value = snapshot.paragraphSpacing + direction * READER_APPEARANCE_PARAGRAPH_SPACING_STEP;
+  } else if (metric === 'pageMarginOffset') {
+    value = (snapshot.pageMarginOffset ?? 0) + direction * READER_APPEARANCE_PAGE_MARGIN_OFFSET_STEP;
+  } else {
+    value = roundAppearanceMetric(snapshot.letterSpacing + direction * READER_APPEARANCE_LETTER_SPACING_STEP);
+  }
+  // Bound the step before validation so a decrement from zero spacing is allowed.
+  return setReaderAppearanceMetric(snapshot, metric, clampReaderAppearanceMetric(metric, value));
+}
+
+function roundAppearanceMetric(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 export function isReaderAppearanceTheme(value: string): value is ReaderAppearanceTheme {

@@ -76,7 +76,7 @@ export class SharedDownloadGateway {
     this.assertCurrent(isCurrent);
     const projected = (input as DownloadBookView).shelfBook;
     const book: ShelfBook = projected === undefined ? input as ShelfBook : projected;
-    const view = createDownloadBookView(book);
+    let view = createDownloadBookView(book);
     if (view.contentKind === undefined) return view;
     const contentCurrent = this.runtime.captureReadingContentValidity?.(book.sourceId, book.bookId);
     const current = (): boolean => isCurrent() && (contentCurrent === undefined || contentCurrent());
@@ -91,7 +91,18 @@ export class SharedDownloadGateway {
         typeof data['tocAvailable'] !== 'boolean' || !Array.isArray(data['chapters'])) {
         throw new Error('下载内容归属需要重新读取');
       }
-      let chapters = this.chapterRows(view, data['chapters']);
+      // Legacy shelf rows may omit the media kind. An exact book-status
+      // receipt with a chapter manifest identifies manga without rewriting
+      // the shelf DTO or treating Core's manifest version as a file receipt.
+      const hasMangaChapter = book.sourceId !== 'local' && book.contentKind === undefined &&
+        (data['chapters'] as unknown[]).some(rawValue => {
+          const row = this.object(rawValue);
+          return row['navigable'] !== false && typeof row['url'] === 'string' &&
+            (row['url'] as string).trim().length > 0 && this.manifestVersion(row) !== undefined;
+        });
+      const admittedView: DownloadBookView = hasMangaChapter ? { ...view, contentKind: 'manga' } : view;
+      let chapters = this.chapterRows(admittedView, data['chapters']);
+      view = admittedView;
       let totalChapters: number | undefined = data['tocAvailable'] === true ?
         chapters.filter(chapter => chapter.navigable).length : undefined;
       if (book.sourceId === 'local') {
@@ -200,8 +211,7 @@ export class SharedDownloadGateway {
       // SQLite's status query joins the actual chapter_cache body with byte
       // metrics computed from that body by triggers. InMemory measures the
       // actual content string. A cached state by itself is insufficient.
-      const mangaManifestVersion = typeof row['mangaManifestVersion'] === 'string' &&
-        (row['mangaManifestVersion'] as string).trim().length > 0 ? row['mangaManifestVersion'] as string : undefined;
+      const mangaManifestVersion = this.manifestVersion(row);
       // Core's batch status distinguishes a completed manga queue row from a
       // body-only/cache row. This is a projection hint for the list; opening a
       // chapter still performs the strict manifest and file check.
@@ -215,6 +225,11 @@ export class SharedDownloadGateway {
         stateLabel: downloadChapterStateLabel(queueState, localComplete) });
     }
     return rows.sort((left, right) => left.index - right.index);
+  }
+
+  private manifestVersion(row: JsonObject): string | undefined {
+    const value = row['mangaManifestVersion'];
+    return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
   }
 
   private state(value: unknown): LocalReadingDownloadState {

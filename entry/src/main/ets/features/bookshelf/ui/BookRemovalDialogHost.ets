@@ -3,11 +3,15 @@ import { BookRemovalDialogPresentation, type BookRemovalDialogHandle } from '../
 import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam, readerReduceMotionFromStorage } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { defaultNavigationPreferences, readerSheetBackdropBlur } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { resolveReaderModalScrimSpec, type ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 
 /** Mounted ArkUI owner for the native dialog. The scene supplies admission
  * and the existing bookshelf action through BookRemovalDialogPresentation. */
 @Component
 export struct BookRemovalDialogHost {
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   presentation: BookRemovalDialogPresentation | undefined;
   private detach: (() => void) | undefined;
   @State private backdropTicket: number = 0;
@@ -56,7 +60,7 @@ export struct BookRemovalDialogHost {
       alignment: DialogAlignment.Center,
       customStyle: true,
       autoCancel: true,
-      maskColor: readerAppColor('app.scrim.modal', scheme),
+      maskColor: resolveReaderModalScrimSpec(this.appearancePreferences, scheme, readerAppColor('app.scrim.modal', scheme)).scrimColor,
       // The content owns the reduced entrance fade after its first layout.
       openAnimation: { duration: reducedMotion ? 0 : openDuration, curve },
       closeAnimation: reducedMotion ? readerMotionReducedFadeParam() : { duration: closeDuration, curve },
@@ -107,12 +111,18 @@ export struct BookRemovalDialogHost {
     });
   }
 
+  private backdropEffect(): BackgroundEffectOptions | undefined {
+    if (this.backdropTicket === 0) return undefined;
+    const radius = readerSheetBackdropBlur(this.appearancePreferences);
+    return radius > 0 ? { radius, color: Color.Transparent } : undefined;
+  }
+
   build() {
     Stack()
       .width(this.backdropTicket > 0 ? '100%' : 0)
       .height(this.backdropTicket > 0 ? '100%' : 0)
       .backgroundColor(Color.Transparent)
-      .backdropBlur(this.backdropTicket > 0 ? 6 : 0)
+      .backgroundEffect(this.backdropEffect())
       .opacity(this.backdropOpacity)
       .expandSafeArea(this.backdropTicket > 0 ? [SafeAreaType.SYSTEM] : [],
         this.backdropTicket > 0 ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [])

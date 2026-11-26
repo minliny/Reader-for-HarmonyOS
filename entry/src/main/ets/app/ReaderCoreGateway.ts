@@ -1,6 +1,6 @@
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
-import { ReaderRuntimeOwner } from './ReaderRuntimeOwner';
+import type { ReaderRuntimeOwner } from './ReaderRuntimeOwner';
 
 export type ShelfBook = {
   sourceId: string;
@@ -112,7 +112,7 @@ export interface BookshelfRemovalObservation<T> {
 export class ReaderCoreGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
 
-  constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
+  constructor(runtimeOwner: ReaderRuntimeOwner) {
     this.runtimeOwner = runtimeOwner;
   }
 

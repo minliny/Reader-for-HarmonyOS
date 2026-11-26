@@ -7,6 +7,7 @@ import type {
   ReaderAppearanceSnapshot,
   ReaderAppearanceTheme,
 } from '../application/ReaderAppearanceState';
+import { createReadingPaginationLayoutSignature } from '../application/ReadingPaginationIndex';
 import {
   READER_FONT_HARMONYOS_SANS,
   READER_FONT_LXGW_WENKAI_LITE,
@@ -17,6 +18,18 @@ import {
   READER_FONT_SOURCE_HAN_SERIF,
   READER_FONT_ZHUQUE_FANGSONG,
 } from '../../../ui/foundation/ReaderFontFamilies.ts';
+import type { ReaderReadingLayoutSnapshot } from './ReaderLayoutGeometry';
+
+const FIGMA_BODY_FONT_WEIGHT = 'regular';
+const READING_WRITING_MODE = 'horizontal-tb';
+
+export function sameReaderAppearanceLayout(left: ReaderAppearanceSnapshot, right: ReaderAppearanceSnapshot): boolean {
+  return readerAppearanceSnapshotFontFamily(left) === readerAppearanceSnapshotFontFamily(right) &&
+    left.fontSize === right.fontSize && left.lineHeightMultiplier === right.lineHeightMultiplier &&
+    left.paragraphSpacing === right.paragraphSpacing && left.letterSpacing === right.letterSpacing &&
+    (left.pageMarginOffset ?? 0) === (right.pageMarginOffset ?? 0) &&
+    left.indent === right.indent && left.alignment === right.alignment;
+}
 
 /**
  * Reading-surface values resolve from the shared registry. User correction
@@ -146,6 +159,35 @@ export function readerAppearanceParagraphIndent(
     return fontSize;
   }
   return indent === 'firstLine' ? fontSize * 2 : 0;
+}
+
+export function createNativeReadingPaginationLayoutSignature(
+  layout: ReaderReadingLayoutSnapshot,
+  appearance: ReaderAppearanceSnapshot,
+  punctuationOverflow: boolean = false,
+): string {
+  const shaping = punctuationOverflow ? 'native-paragraph-v3|punctuation-overflow|' : 'native-paragraph-v3|';
+  return shaping + createReadingPaginationLayoutSignature({
+    deviceForm: layout.widthClass === 'expanded' ? 'tablet' : 'phone',
+    viewportWidth: layout.viewportWidth,
+    viewportHeight: layout.viewportHeight,
+    fontFamily: readerAppearanceSnapshotFontFamily(appearance),
+    fontWeight: FIGMA_BODY_FONT_WEIGHT,
+    fontSize: appearance.fontSize,
+    fontScale: readerAppearanceFontScale(appearance) * layout.systemFontScale,
+    lineHeight: readerAppearanceLineHeight(appearance),
+    topInset: layout.contentTop,
+    bottomInset: layout.contentBottom,
+    leftInset: layout.contentLeft,
+    rightInset: layout.contentRight,
+    titleLineHeight: layout.titleLineHeightFp,
+    titleToBodySpacing: layout.titleToBodySpacingVp,
+    paragraphSpacing: appearance.paragraphSpacing,
+    paragraphIndent: readerAppearanceParagraphIndent(appearance.fontSize, appearance.indent),
+    letterSpacing: appearance.letterSpacing,
+    textAlignment: appearance.alignment,
+    writingMode: READING_WRITING_MODE,
+  });
 }
 
 /**

@@ -5,7 +5,8 @@
 | 入口 | 用途 |
 | --- | --- |
 | `node scripts/toolchain-info.mjs` | 只读显示工具发现结果；不会输出签名材料或密码 |
-| `node scripts/check-local.mjs` | 默认只列清单并报告 `NOT_RUN`；旧 `check-local.sh` 仅为 Bash 兼容入口 |
+| `node scripts/test-host.mjs --help` | 查看 Host 测试域和 `--all`、`--domain`、`--changed-from` 用法 |
+| `node scripts/vm-journeys.mjs --help` | 使用已验签和已部署的远程 VM 候选运行原生旅程 |
 | `node scripts/deveco-build.mjs` | DevEco 原生增量 debug 构建，复用项目签名准入与产物复验；可透传 Hvigor 参数 |
 | `node scripts/hap-pipeline.mjs --help` | 不可变交付 HAP、复验、精确目标检查与保数据安装的唯一入口 |
 | `node scripts/test-toolchain-portability.mjs` | 不构建 HAP、不访问设备的工具发现与执行策略回归 |
@@ -20,7 +21,7 @@ node Reader-for-HarmonyOS/scripts/hap-pipeline.mjs build --class iteration
 
 DevEco 原生 Build/Run 会先核对当前 Core 提交、dirty 状态、输入快照和 Native/SDK 配套。Core 提交或内容变化、或本地 Native 包缺失时，复用 Core 的构建入口按需重建并事务同步；仅 Host 配套落后时只同步，输入已匹配时直接复用。嵌套构建借用同一资源租约，失败仍停止，损坏证据和未知错误不会被自动放过。打包完成后再次核对实际 HAP 内的 Native 身份。首次刷新需要已安装的 Rust/Cargo 和对应宿主 SDK；Bun 仅在显式选择需要它的 Host/SDK probe 时要求，不作为普通 Native 刷新的前置。GUI 的工具搜索保留已有 PATH 优先级，并补充标准 `CARGO_HOME/bin`、`BUN_INSTALL/bin` 位置。
 
-HAP 构建默认 `--contracts-scope none`，Host 回归为 `NOT_RUN`。普通功能开发、漏洞修复和每次构建均不自动执行主题、Host 全量或 Core 全量；[检查场景与入口](../../GATE_INDEX.md) 说明正式发布及完整复验的边界。需要局部回归时先用 `node tools/gate-index.mjs --need '<需求关键词>'` 查询合格项，确认作用、成本和隐式子检查，再按准确 ID 选择。旧 `--full` / `--contracts-scope full` 是历史范围，不能代替经过审定的发布集合；未选择的检查保持 `NOT_RUN`，不合格项不进入发布集合。
+HAP 构建只执行产物构建与校验，嵌入式业务回归记为 `NOT_RUN`。按变更选择 Core 契约、Host 领域或远程 VM 旅程。需要完整回归时，使用变更记录明确要跑的三轨范围。历史 HAP 仍依据原 manifest 与档案内证据复验。[检查场景与入口](../../GATE_INDEX.md)
 
 普通 IDE/HAP 构建不自动扫描或修复生成的 Native 缓存。当前问题确需诊断时，用 `node scripts/lib/ide-native-cache.mjs --path '<精确的仓库相对生成 SO 路径>'` 只读检查所选文件；只有明确选择 `--repair` 才持有构建租约、先备份并移除与规范库字节完全相同的编号副本。范围仅为生成的 CMake、收集库和裁剪库目录；未知库、不同内容、缺失规范库或符号链接仍拒绝修复，不处理 `entry/libs` 等源码输入，也不放宽最终 HAP 的 Native 集合校验。
 

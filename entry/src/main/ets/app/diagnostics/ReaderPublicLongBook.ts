@@ -75,7 +75,13 @@ async function preparePublicBooks(owner: ReaderRuntimeOwner, fixture: ReaderPubl
   }
 
   const bookshelf = new ReaderCoreGateway(owner);
-  const readShelf = (): Promise<BookshelfState> => bookshelf.loadBookshelf({ limit: books.length + 1 }, current);
+  const readShelf = async (): Promise<BookshelfState> => {
+    const state = await bookshelf.loadBookshelf({ limit: fixture.id === 'vm-journeys' ? 16 : books.length + 1 }, current);
+    if (fixture.id !== 'vm-journeys') return state;
+    if (state.total !== state.books.length) throw new Error('PUBLIC_LONG_BOOK_UNEXPECTED_BOOKSHELF');
+    const local = state.books.filter(book => book.sourceId === 'local');
+    return { ...state, books: local, total: local.length };
+  };
   const before = await readShelf();
   requireBookPrefix(before, books);
   for (const book of books.slice(0, before.total)) {

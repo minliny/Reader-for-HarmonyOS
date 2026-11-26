@@ -1,3 +1,5 @@
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
@@ -8,15 +10,17 @@ import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPre
 import { motionAnimateParam, readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { detailChapterPreview } from '../presentation/DetailChapterPreview';
+import { resolveReadingDetailShelfAction, type ReadingDetailShelfAction } from '../presentation/ReadingDetailShelfActionPolicy';
 import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { MeasureOptions } from '@ohos.measure';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
+import { bookContentKindLabel, bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
@@ -30,11 +34,13 @@ import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import type { ReadingBookDetail } from '../presentation/ReadingBookDetail';
-import { readerCanShareOriginal, type ReaderShareResult, type RetainedShareFile } from '../application/ReaderShareActions';
-import { readerShareMessage, readerSystemShareActions } from './ReaderSharePresentation';
+import { common } from '@kit.AbilityKit';
+import { ReaderDocumentSaveHost, type ReaderDocumentSaveResult } from '../../../platform/share/ReaderDocumentSaveHost';
+import { readerCanShareOriginal, readerOriginalBookExtension, type ReaderShareResult, type RetainedShareFile } from '../application/ReaderShareActions';
+import { readerDocumentSaveMessage, readerShareMessage, readerSystemShareActions } from './ReaderSharePresentation';
 import { bookIntroText } from '../../../app/library/BookIntroText';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
-import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision, ReaderSurfaceMaterialRole } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
 import {
   readerVisualSafeLeft,
@@ -84,11 +90,11 @@ class DetailDirectoryFocusFrame extends FrameCallback {
 export struct LocalBookDetail {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
   @StorageLink('readerAppForeground') @Watch('onShareForegroundChanged') private appForeground: boolean = true;
   @StorageProp('readerReduceMotion') private appReduceMotion: boolean = false;
-  @StorageProp('readerNavigationAppearancePreferences') private navigationAppearance: ReaderNavigationPreferences = {
-    override: 'unset', reduceTransparency: false,
-  };
+  @StorageProp('readerNavigationAppearancePreferences') private navigationAppearance: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @StorageLink('readerWindowMetricsRevision') @Watch('onMangaGeometryChanged') readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onBookChanged') book: ReadingBookDetail;
   @Prop @Watch('onTocChanged') toc: LocalReadingTocEntry[] = [];
@@ -110,6 +116,7 @@ export struct LocalBookDetail {
   @Prop catalogBusy: boolean = false;
   isDetailActionCurrent: () => boolean = (): boolean => true;
   retainedShareFile: RetainedShareFile | undefined = undefined;
+  captureDocumentSave: (() => (() => boolean)) | undefined = undefined;
   onContinue: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onOpenDirectory: () => void = (): void => {};
@@ -155,6 +162,7 @@ export struct LocalBookDetail {
   private mounted: boolean = false;
   private shareGeneration: number = 0;
   @State private shareBusy: boolean = false;
+  @State private savingOriginal: boolean = false;
   private pendingDirectoryFocus: string = '';
   private directoryFocusGeneration: number = 0;
   private mangaFontGeneration: number = 0;
@@ -361,7 +369,7 @@ export struct LocalBookDetail {
           .constraintSize({ minHeight: primary ? 40 : 36 })
           .fontFamily(TYPE_APP_PRIMARY_ACTION.fontFamily).fontWeight(TYPE_APP_PRIMARY_ACTION.fontWeight)
           .fontSize(TYPE_APP_PRIMARY_ACTION.fontSizeFp)
-          .fontColor(!primary && (this.removing || this.cancellingAdd) ? Color.Transparent :
+          .fontColor(!primary && this.shelfAction().busy ? Color.Transparent :
             readerAppColor(primary ? 'TOK_ON_PRIMARY' : 'TOK_INK', this.appThemeScheme))
           .scale(readerPressScale(this.detailPressedAction === (primary ? 'read' : 'shelf'), this.appReduceMotion))
           .opacity(readerPressOpacity(this.detailPressedAction === (primary ? 'read' : 'shelf'), this.appReduceMotion))
@@ -370,8 +378,13 @@ export struct LocalBookDetail {
             999, primary ? 'read' : 'shelf', primary ? this.readingActionAvailable() : this.shelfActionAvailable()))
           .textAlign(TextAlign.Center).accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
       }.width('100%').constraintSize({ minWidth: 44, minHeight: 44 })
+        .id(primary ? 'reader-detail-primary-action' : `reader-detail-shelf-action:${this.shelfActionLabel()}`)
         .padding(0).backgroundColor(Color.Transparent).borderRadius(999)
         .enabled(primary ? this.readingActionAvailable() : this.shelfActionAvailable())
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'key-control', id: primary ? 'detail-read' : 'detail-shelf',
+          busy: primary ? this.removing || this.catalogBusy : this.shelfAction().busy,
+          unavailable: !this.detailBookAvailable() || (primary && this.book.sourceId === 'local' && !this.readingEnabled) } as LayoutInvariantTag : undefined)
         .opacity((primary ? this.readingActionAvailable() : this.shelfActionAvailable()) ? 1 : .45)
         .accessibilityText(primary ? this.readingActionLabel() : this.shelfActionLabel())
         .onTouch((event: TouchEvent): void => this.observeDetailPress(primary ? 'read' : 'shelf', event,
@@ -381,7 +394,7 @@ export struct LocalBookDetail {
           if (primary && this.readingActionAvailable()) this.onContinue();
           if (!primary && this.shelfActionAvailable()) this.commitShelfAction(this.admissionIdentity);
         });
-      if (!primary && (this.removing || this.cancellingAdd)) {
+      if (!primary && this.shelfAction().busy) {
         LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
           .enableLoading(this.appForeground && this.directoryFocusContext === 'detail' && !this.appReduceMotion)
           .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
@@ -396,12 +409,13 @@ export struct LocalBookDetail {
       this.shareAction('复制书籍信息', 'copy');
       if (this.retainedShareFile !== undefined && readerCanShareOriginal(this.book)) {
         this.shareAction('分享原文件', 'file');
+        this.shareAction('保存原书', 'save');
       }
     }.width('100%');
   }
 
   @Builder
-  private shareAction(label: string, action: 'book' | 'copy' | 'file') {
+  private shareAction(label: string, action: 'book' | 'copy' | 'file' | 'save') {
     Button(label, { type: ButtonType.Normal, stateEffect: false })
       .constraintSize({ minWidth: READER_ACTION_MIN_TARGET, minHeight: READER_ACTION_MIN_TARGET })
       .padding({ left: 10, right: 10 })
@@ -410,11 +424,37 @@ export struct LocalBookDetail {
       .id(`reader-detail-share-${action}`)
       .attributeModifier(new ReaderActionAccessibility(label, this.shareActionAvailable(), false, true,
         new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 999, 999, this.shareActionAvailable()), 'nativeButton'))
-      .onClick((): void => { void this.runShareAction(action); });
+      .onClick((): void => {
+        if (action === 'save') void this.saveOriginalBook();
+        else void this.runShareAction(action);
+      });
   }
 
   private shareActionAvailable(): boolean {
-    return this.appForeground && !this.shareBusy && this.acceptsDetailInput() && this.detailBookAvailable();
+    return this.appForeground && !this.shareBusy && !this.savingOriginal && this.acceptsDetailInput() && this.detailBookAvailable();
+  }
+
+  private async saveOriginalBook(): Promise<void> {
+    const book = this.book;
+    const retained = this.retainedShareFile;
+    const extension = readerOriginalBookExtension(book);
+    if (!this.shareActionAvailable() || !readerCanShareOriginal(book) || retained === undefined || extension === undefined) return;
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext | undefined;
+    const identity = this.detailScrollIdentity();
+    const routeCurrent = this.captureDocumentSave?.() ?? this.isDetailActionCurrent;
+    const current = (): boolean => this.mounted && routeCurrent() && this.detailBookAvailable() &&
+      this.detailScrollIdentity() === identity;
+    this.savingOriginal = true;
+    let result: ReaderDocumentSaveResult = 'failed';
+    try {
+      const path = await retained(book.bookId, current);
+      if (context !== undefined && path !== undefined && current()) {
+        result = await new ReaderDocumentSaveHost(context).saveOriginal(path, book.title, extension, current);
+      }
+    } catch (_) { /* The retained bytes were unavailable for this request. */ }
+    finally { this.savingOriginal = false; }
+    const message = readerDocumentSaveMessage(result, '原书');
+    if (message !== undefined) this.transientFeedback.show(() => this.getUIContext(), { message }, current);
   }
 
   private async runShareAction(action: 'book' | 'copy' | 'file'): Promise<void> {
@@ -610,9 +650,10 @@ export struct LocalBookDetail {
   @Builder
   private detailMoreMenu() {
     Stack({ alignContent: Alignment.TopEnd }) {
-      Column().width('100%').height('100%').opacity(.32)
-        .backgroundColor(readerAppColor('app.scrim.select', this.appThemeScheme))
-        .backdropBlur(this.navigationAppearance.reduceTransparency ? 0 : 6)
+      Stack().width('100%').height('100%').opacity(.32)
+        .attributeModifier(new ReaderModalScrimModifier(this.navigationAppearance, this.appThemeScheme,
+          readerAppColor('app.scrim.select', this.appThemeScheme), this.surfaceMaterial('popoverMenu').native))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no').onClick((): void => this.closeMore(true));
       Stack({ alignContent: Alignment.TopEnd }) {
         Column() {
@@ -622,18 +663,28 @@ export struct LocalBookDetail {
             reduceMotion: this.appReduceMotion, actions: this.detailMenuActions(),
             onAction: (id: string): void => this.chooseMoreAction(id) });
         }.width('100%').padding({ top: 6, bottom: 6 }).borderRadius(16)
-          .backgroundColor(readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))
-          .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-          .shadow(readerSurfaceElevation('dialog', this.appThemeScheme));
-        Column().width(12).height(12).rotate({ angle: 45 })
-          .backgroundColor(readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))
-          .border({ width: { top: 1, left: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-          .position({ x: DETAIL_MENU_WIDTH - 28, y: -6 }).zIndex(1)
-          .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+          .backgroundEffect(undefined)
+          .backgroundColor(this.surfaceMaterial('popoverMenu').native ? Color.Transparent :
+            readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))
+          .border({ width: this.surfaceMaterial('popoverMenu').native ? 0 : 1,
+            color: this.surfaceMaterial('popoverMenu').native ? Color.Transparent : readerAppColor('TOK_LINE', this.appThemeScheme) })
+          .shadow(this.surfaceMaterial('popoverMenu').native ? undefined : readerSurfaceElevation('dialog', this.appThemeScheme))
+          .attributeModifier(new ReaderImmersiveMaterialModifier(this.surfaceMaterial('popoverMenu')));
+        if (!this.surfaceMaterial('popoverMenu').native) {
+          Column().width(12).height(12).rotate({ angle: 45 })
+            .backgroundColor(readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))
+            .border({ width: { top: 1, left: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+            .position({ x: DETAIL_MENU_WIDTH - 28, y: -6 }).zIndex(1)
+            .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+        }
       }.width(DETAIL_MENU_WIDTH).clip(false)
         .margin({ top: this.geometry.content.startInset, right: this.geometry.header.insetRight })
         .transition(this.detailMoreTransition());
     }.width('100%').height('100%');
+  }
+
+  private surfaceMaterial(role: ReaderSurfaceMaterialRole): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision(role, this.navigationAppearance, this.appThemeScheme, this.systemScheme);
   }
 
   private detailMoreTransition(): TransitionEffect {
@@ -650,6 +701,10 @@ export struct LocalBookDetail {
   @Builder
   private hero() { this.standardHero(); }
 
+  private contentKindLabel(): string {
+    return bookContentKindLabel(this.book.sourceId, this.book.contentKind);
+  }
+
   @Builder
   private detailCover(width: number, height: number) {
     if (this.hasCover()) {
@@ -657,7 +712,7 @@ export struct LocalBookDetail {
         .onError(this.coverErrorHandler(this.displayCoverUrl()));
     } else {
       NoCoverCover({ coverWidth: width, coverHeight: height, glyph: this.book.title,
-        kindLabel: this.book.contentKind === 'manga' ? '漫画' : '小说' });
+        kindLabel: this.contentKindLabel() });
     }
   }
 
@@ -679,16 +734,19 @@ export struct LocalBookDetail {
   @Builder
   private bookTags() {
     Row({ space: 6 }) {
-      this.metadataTag(this.book.contentKind === 'manga' ? '漫画' : '小说', false);
-      this.metadataTag(this.book.sourceId === 'local' ? '本地藏书' : '在线', true);
+      if (this.contentKindLabel().length > 0) {
+        this.metadataTag('content');
+      }
+      this.metadataTag('origin');
     }
   }
 
   @Builder
-  private metadataTag(label: string, tonal: boolean) {
-    Text(label).fontFamily(TYPE_BOOK_DETAIL_TAG.fontFamily).fontWeight(TYPE_BOOK_DETAIL_TAG.fontWeight).fontSize(TYPE_BOOK_DETAIL_TAG.fontSizeFp).lineHeight(TYPE_BOOK_DETAIL_TAG.lineHeightFp as number).padding({ left: 8, right: 8 })
-      .fontColor(readerAppColor(tonal ? 'TOK_PRIMARY_DARK' : 'TOK_MUTED', this.appThemeScheme))
-      .backgroundColor(readerAppColor(tonal ? 'TOK_PRIMARY_SOFT' : 'TOK_SURFACE_FIELD', this.appThemeScheme))
+  private metadataTag(kind: 'content' | 'origin') {
+    Text(kind === 'origin' ? (this.book.sourceId === 'local' ? '本地藏书' : '在线') : this.contentKindLabel())
+      .fontFamily(TYPE_BOOK_DETAIL_TAG.fontFamily).fontWeight(TYPE_BOOK_DETAIL_TAG.fontWeight).fontSize(TYPE_BOOK_DETAIL_TAG.fontSizeFp).lineHeight(TYPE_BOOK_DETAIL_TAG.lineHeightFp as number).padding({ left: 8, right: 8 })
+      .fontColor(readerAppColor(kind === 'origin' ? 'TOK_PRIMARY_DARK' : 'TOK_MUTED', this.appThemeScheme))
+      .backgroundColor(readerAppColor(kind === 'origin' ? 'TOK_PRIMARY_SOFT' : 'TOK_SURFACE_FIELD', this.appThemeScheme))
       .borderRadius(6);
   }
 
@@ -699,8 +757,7 @@ export struct LocalBookDetail {
         Column({ space: 2 }) {
           Text('当前书源').fontFamily(TYPE_READER_PANEL_META.fontFamily).fontWeight(TYPE_READER_PANEL_META.fontWeight).fontSize(TYPE_READER_PANEL_META.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
           Text(this.book.sourceName?.trim() || (this.book.sourceId === 'local' ? '本地文件' : '书源未知'))
-            .width('100%').fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
+            .width('100%').fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start);
         if (this.book.sourceId !== 'local') {
           Button({ type: ButtonType.Normal, stateEffect: false }) {
@@ -1010,8 +1067,12 @@ export struct LocalBookDetail {
           .fontColor(this.detailColor('TOK_ON_PRIMARY', 'onGreen'))
           .textAlign(TextAlign.Center).accessibilityLevel('no');
         }.layoutWeight(1)
+          .id('reader-detail-primary-action')
           .constraintSize({ minHeight: 44 })
           .padding(0).borderRadius(999)
+          .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'key-control', id: 'detail-read', busy: this.removing || this.catalogBusy,
+          unavailable: !this.detailBookAvailable() || (this.book.sourceId === 'local' && !this.readingEnabled) } as LayoutInvariantTag : undefined)
           .opacity(this.readingActionAvailable() ? 1 : this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.5)
           .attributeModifier(new ReaderActionAccessibility(this.readingActionLabel(), this.readingActionAvailable(), false, true,
             new ReaderPressFeedback(this.detailColor('TOK_PRIMARY_DARK', 'green'), this.appThemeScheme,
@@ -1029,12 +1090,14 @@ export struct LocalBookDetail {
           .minFontScale(Math.min(1, this.mangaFontScale()))
           .maxFontScale(Math.max(1, this.mangaFontScale()))
           .halfLeading(this.book.contentKind === 'manga').fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
-          .textAlign(TextAlign.Center).fontColor(this.removing || this.cancellingAdd ? Color.Transparent : this.detailColor(this.inBookshelf ? 'TOK_MUTED' : 'TOK_GREEN',
-            this.book.contentKind === 'manga' ? 'muted' : this.inBookshelf ? 'muted' : 'accent'))
+          .textAlign(TextAlign.Center).fontColor(this.shelfActionColor())
           .accessibilityLevel('no');
         }.width(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94)
+          .id(`reader-detail-shelf-action:${this.shelfActionLabel()}`)
           .constraintSize({ minHeight: 44 })
           .padding(0).borderRadius(999)
+          .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'key-control', id: 'detail-shelf', busy: this.shelfAction().busy, unavailable: !this.detailBookAvailable() } as LayoutInvariantTag : undefined)
           .opacity(this.shelfActionAvailable() ? 1 : this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.4)
           .border({ width: 1, color: this.detailColor('TOK_LINE', 'line') })
           .attributeModifier(new ReaderActionAccessibility(this.shelfActionLabel(), this.shelfActionAvailable(), false, true,
@@ -1043,7 +1106,7 @@ export struct LocalBookDetail {
           .onClick((): void => {
             if (this.acceptsDetailInput()) this.commitShelfAction(identity);
           });
-          if (this.removing || this.cancellingAdd) {
+          if (this.shelfAction().busy) {
             LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
               .enableLoading(this.appForeground && !this.appReduceMotion);
           }
@@ -1053,9 +1116,12 @@ export struct LocalBookDetail {
         .constraintSize({ minHeight: 44 }).alignItems(VerticalAlign.Center);
     // The viewport-bottom owner aligns this complete measured surface.
     }.width('100%')
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'primary-dock', id: 'detail-dock' } as LayoutInvariantTag : undefined)
       .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailDockHeight : DETAIL_DOCK_HEIGHT })
       .padding(this.book.contentKind === 'manga' ? visual.detailDockPadding : 9)
-      .attributeModifier(new ReaderPanelFrame('floating-action-dock', this.appThemeScheme, false, this.dockNativeShape()))
+      .attributeModifier(new ReaderPanelFrame('floating-action-dock', this.appThemeScheme, false, this.dockNativeShape(),
+        this.surfaceMaterial('floatingDock')))
       .hitTestBehavior(HitTestMode.Default)
       .onTouch((): void => {})
       .onAreaChange(this.dockAreaChangeHandler(this.footerMeasurementKey));
@@ -1142,7 +1208,8 @@ export struct LocalBookDetail {
     input.viewportWidth = this.liveWidth();
     input.viewportHeight = this.viewportHeight;
     input.measurementRevision = ++this.geometryRevision;
-    input.headerTop = this.headerSpec.headerTop(readerInteractiveSafeTop(metrics));
+    const stableSafeTop = Math.max(readerInteractiveSafeTop(metrics), metrics.statusBarRect.top + metrics.statusBarHeight);
+    input.headerTop = this.headerSpec.headerTop(stableSafeTop);
     const minimumHeaderHeight = manga ? mangaDirectoryHeaderHeight(this.mangaFontScale()) : this.headerSpec.barHeight;
     input.headerHeight = Math.max(minimumHeaderHeight, this.measurements.readForGeneration('detail:header', this.measurementKey, minimumHeaderHeight));
     input.headerInsetLeft = Math.max(8, this.safeLeft());
@@ -1323,15 +1390,22 @@ export struct LocalBookDetail {
   private readingActionAvailable(): boolean {
     return !this.removing && this.detailBookAvailable() && (this.book.sourceId !== 'local' || this.readingEnabled);
   }
-  private shelfActionLabel(): string {
-    if (this.cancellingAdd) return '取消加入';
-    if (this.adding) return '取消加入';
-    if (this.removing) return this.inBookshelf ? '移除书架' : '加入书架';
-    if (!this.detailBookAvailable()) return '已移除';
-    return this.inBookshelf ? '已在书架' : '加入书架';
+  private shelfAction(): ReadingDetailShelfAction {
+    return resolveReadingDetailShelfAction({
+      inBookshelf: this.inBookshelf,
+      bookAvailable: this.detailBookAvailable(),
+      removalEnabled: this.removalEnabled,
+      removing: this.removing,
+      adding: this.adding,
+      cancellingAdd: this.cancellingAdd,
+    });
   }
-  private shelfActionAvailable(): boolean {
-    return this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable();
+  private shelfActionLabel(): string { return this.shelfAction().label; }
+  private shelfActionAvailable(): boolean { return this.shelfAction().enabled; }
+  private shelfActionColor(): ResourceColor {
+    const action = this.shelfAction();
+    if (action.busy) return Color.Transparent;
+    return action.tone === 'ink' ? this.detailColor('TOK_INK', 'ink') : this.detailColor('TOK_GREEN', 'accent');
   }
   private commitShelfAction(identity: string): void {
     if (!this.shelfActionAvailable() || identity !== this.admissionIdentity) return;

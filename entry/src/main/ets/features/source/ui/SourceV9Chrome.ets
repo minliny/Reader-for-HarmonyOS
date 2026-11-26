@@ -116,7 +116,11 @@ export struct SourceV9DetectButton {
   @Prop label: string = '';
   @Prop controlId: string = '';
   @Prop iconId: string = '';
+  /** Scroll containers disable ArkUI's touch-down state and paint a delayed press instead. */
+  @Prop nativePress: boolean = true;
+  @Prop paintPressed: boolean = false;
   onTap: () => void = (): void => {};
+  onPressTouch: (event: TouchEvent) => void = (_event: TouchEvent): void => {};
 
   private reportBackground(): string {
     const color = this.checking ? undefined : sourceV9ReportFill(this.tone, this.scheme);
@@ -135,8 +139,10 @@ export struct SourceV9DetectButton {
       }
     }.id(this.controlId).width(28).height(28).padding(0)
       .responseRegion({ x: -8, y: -8, width: 44, height: 44 })
-      .attributeModifier(new ReaderPressFeedback(this.reportBackground(), this.scheme, 14, 14, this.actionEnabled))
+      .attributeModifier(new ReaderPressFeedback(this.reportBackground(), this.scheme, 14, 14, this.actionEnabled,
+        this.paintPressed && this.actionEnabled, this.nativePress))
       .opacity(this.actionEnabled || this.checking ? 1 : 0.45)
+      .onTouch((event: TouchEvent): void => this.onPressTouch(event))
       .enabled(this.actionEnabled).accessibilityText(this.label).onClick(this.onTap);
   }
 }

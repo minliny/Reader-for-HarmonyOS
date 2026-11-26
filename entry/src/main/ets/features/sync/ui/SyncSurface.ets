@@ -21,7 +21,9 @@ export struct SyncSurface {
         snapshot: this.presentation.snapshot,
         expandedLayout: this.expandedLayout,
         embeddedWide: this.embeddedWide,
+        isOpeningCurrent: (): boolean => this.presentation.operations(this.identity) !== undefined,
         onBack: (): void => { if (this.presentation.operations(this.identity) !== undefined) this.onBack(); },
+        onReloadConfiguration: (): void => this.presentation.operations(this.identity)?.open(),
         onReconcile: (expected: number): void => this.presentation.operations(this.identity)?.reconcile(expected),
         onSkipBackupRetention: (expected: number): void => this.presentation.operations(this.identity)?.skipBackupRetention(expected),
         onContinueConfigSave: (expected: number, url: string, user: string, pass: string, backupPass: string, directory: string): void =>

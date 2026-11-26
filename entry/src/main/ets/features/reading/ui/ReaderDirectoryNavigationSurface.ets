@@ -16,6 +16,7 @@ import { ReaderDirectoryNavigationGateway, type ReaderDirectoryNavigationPort, t
   type ReaderDirectoryNavigationPreparedPage } from '../application/ReaderDirectoryNavigation';
 import { openReaderDirectoryNavigation, readerDirectoryToggleCollapsed } from '../presentation/ReaderDirectoryNavigationSession';
 import { ReaderDirectoryNavigationList, cacheReaderDirectoryNavigationPage } from './ReaderDirectoryNavigationList';
+import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
 import { readerDirectoryObserveScrollIntent, readerDirectoryViewportAnchor } from '../presentation/ReaderDirectoryViewport';
 import { projectReaderDirectoryEntries } from '../presentation/ReaderDirectoryProjection';
 import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
@@ -604,6 +605,17 @@ export struct ReaderDirectoryNavigationSurface {
 
   private hasPrefix(): boolean { return !this.mangaDisplay && this.headerCount === 1; }
 
+  private titleMaxLines(): number { return !this.mangaDisplay && readerHarmonyApi24() ? 2 : 1; }
+
+  private resolvedRowHeight(): number {
+    if (this.mangaDisplay) return this.rowHeight;
+    // The owner already adds the extra height for a single scaled line. A
+    // second title line needs the same font growth above its normal row.
+    const extraLineHeight = Math.max(0, this.rowHeight - 44);
+    if (this.titleMaxLines() === 2) return 56 + 2 * extraLineHeight;
+    return extraLineHeight > 0 ? this.rowHeight : 40;
+  }
+
   private currentInputOwnerKey(): string {
     return JSON.stringify([this.sourceId, this.bookId, this.openRevision]);
   }
@@ -704,7 +716,8 @@ export struct ReaderDirectoryNavigationSurface {
               chapterInputCurrent: this.chapterInputCurrent,
               verificationChapterActions: this.verificationChapterActions,
               navigationPortFactory: this.navigationPortFactory,
-              view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
+              view: this.view, sourceId: this.sourceId, bookId: this.bookId,
+              rowHeight: this.resolvedRowHeight(), titleMaxLines: this.titleMaxLines(),
               mangaDisplay: this.mangaDisplay, mangaRowMinHeight: this.mangaRowMinHeight, mangaScheme: this.mangaScheme,
               mangaCatalogDisplay: this.mangaCatalogDisplay, mangaCatalogNarrow: this.mangaCatalogNarrow,
               mangaInitialViewportWidth: this.mangaInitialViewportWidth,

@@ -1,5 +1,7 @@
+import type { ReadingChapterWindow } from '../application/ReadingChapterWindow';
+import type { ReaderPageTurnDirection } from './ReaderPageGestureState';
 import { ReadingPaginationIndex, ReadingPaginationPrefix,
-  type ReadingPaginationKey, type ReadingPaginationPrefixObservation } from '../application/ReadingPaginationIndex.ts';
+  type ReadingIndexedPage, type ReadingPaginationKey, type ReadingPaginationPrefixObservation } from '../application/ReadingPaginationIndex.ts';
 
 export interface ReaderPhysicalPageReceipt {
   readonly startScalar: number;
@@ -22,6 +24,26 @@ export interface ReaderPhysicalPageAdmission {
 export interface ReaderPhysicalPageAdmissionResult {
   readonly draft: ReadingPaginationPrefix | undefined;
   readonly completed: boolean;
+}
+
+export interface ReaderAdjacentPageEvidence {
+  readonly chapterIndex: number;
+  readonly startScalar: number;
+  readonly endScalar: number;
+  readonly window: ReadingChapterWindow;
+  readonly currentKey: () => ReadingPaginationKey;
+  readonly chapterKey: (chapterIndex: number) => ReadingPaginationKey | undefined;
+  readonly lastVisibleScalar: () => number;
+}
+
+export class ReaderPageTurnTarget {
+  chapterIndex: number;
+  chapterOffset: number;
+
+  constructor(chapterIndex: number, chapterOffset: number) {
+    this.chapterIndex = chapterIndex;
+    this.chapterOffset = chapterOffset;
+  }
 }
 
 /** Owns bounded physical-page packing state and admission of measured facts.
@@ -117,6 +139,60 @@ export class ReaderPhysicalPaginationOwner<TFragment> {
     this.index.recordChapter({ key, contentScalarLength: input.contentScalarLength,
       pageStartScalars: draft.pageStartScalars() });
     return { draft: undefined, completed: true };
+  }
+
+  adjacentTarget(direction: ReaderPageTurnDirection, page: ReaderAdjacentPageEvidence): ReaderPageTurnTarget | undefined {
+    if (direction === 'next') {
+      const draft = this.draft;
+      const knownNext = draft?.matches(page.currentKey()) === true ?
+        draft.nextRequestForPageStart(page.startScalar) : undefined;
+      if (knownNext !== undefined) return new ReaderPageTurnTarget(page.chapterIndex, knownNext);
+      if (page.endScalar <= page.lastVisibleScalar()) return new ReaderPageTurnTarget(page.chapterIndex, page.endScalar);
+      const nextChapter = page.window.adjacentChapterIndex(page.chapterIndex, 1);
+      return nextChapter === undefined ? undefined : new ReaderPageTurnTarget(nextChapter, 0);
+    }
+
+    const key = page.currentKey();
+    const previousChapterIndex = page.window.adjacentChapterIndex(page.chapterIndex, -1);
+    const observed = this.draft?.matches(key) === true ? this.draft.observationForPageStart(page.startScalar) : undefined;
+    const containingPage = this.exactContainingPage(key, page);
+    if (observed !== undefined) {
+      const previousRequest = this.draft?.previousRequestForPageStart(page.startScalar);
+      if (previousRequest !== undefined) return new ReaderPageTurnTarget(page.chapterIndex, previousRequest);
+    }
+    if (containingPage === undefined) {
+      const prefix = this.draft;
+      const previousRequest = prefix !== undefined && prefix.matches(key) ?
+        prefix.previousRequestForPageStart(page.startScalar) : undefined;
+      return previousRequest === undefined ? undefined : new ReaderPageTurnTarget(page.chapterIndex, previousRequest);
+    }
+    const previousChapterKey = containingPage.pageIndex === 0 && previousChapterIndex !== undefined ?
+      page.chapterKey(previousChapterIndex) ?? null : null;
+    const previous = this.index.findPreviousPage(key, page.startScalar, previousChapterKey);
+    return previous.kind === 'page' ?
+      new ReaderPageTurnTarget(previous.page.key.chapterIndex, previous.page.startScalar) : undefined;
+  }
+
+  /** Returns a boundary only from the Host's admitted physical-page evidence. */
+  knownBoundary(direction: ReaderPageTurnDirection, page: ReaderAdjacentPageEvidence,
+    firstParagraphStart: () => number | undefined): 'start' | 'end' | undefined {
+    if (direction === 'next') {
+      return page.endScalar > page.lastVisibleScalar() && page.window.adjacentChapterIndex(page.chapterIndex, 1) === undefined
+        ? 'end' : undefined;
+    }
+    const previousChapterIndex = page.window.adjacentChapterIndex(page.chapterIndex, -1);
+    const containingPage = this.exactContainingPage(page.currentKey(), page);
+    if (containingPage !== undefined) {
+      return containingPage.pageIndex === 0 && previousChapterIndex === undefined ? 'start' : undefined;
+    }
+    if (previousChapterIndex !== undefined) return undefined;
+    const first = firstParagraphStart();
+    return first !== undefined && page.startScalar <= first ? 'start' : undefined;
+  }
+
+  private exactContainingPage(key: ReadingPaginationKey, page: ReaderAdjacentPageEvidence): ReadingIndexedPage | undefined {
+    const indexed = this.index.findContainingPage(key, page.startScalar);
+    return indexed?.startScalar === page.startScalar && indexed.endScalarExclusive === page.endScalar ? indexed : undefined;
   }
 
   sameKey(left: ReadingPaginationKey, right: ReadingPaginationKey): boolean {

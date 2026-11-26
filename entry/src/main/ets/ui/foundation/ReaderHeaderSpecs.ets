@@ -2,6 +2,10 @@ import { TOK_BORDER_W } from './ReaderTokens';
 import {
   APP_FLOATING_HEADER_BAR_HEIGHT,
   APP_FLOATING_HEADER_TOP_GAP,
+  BOOKSHELF_HEADER_CONTENT_GAP,
+  BOOKSHELF_HEADER_TITLE_LINE_HEIGHT,
+  SEARCH_HEADER_BAR_VERTICAL_PADDING,
+  SEARCH_HEADER_FIELD_GAP,
 } from './ReaderHeaderMetrics';
 
 // One threshold for raised shelf/detail chrome; consumers only publish a
@@ -11,18 +15,19 @@ const RAISED_HEADER_SCROLL_THRESHOLD_VP: number = 4;
 /**
  * Bookshelf floating header contract. The bar, its top inset and the gap below
  * the header are one surface: shell, content and route layers read the derived
- * frame/clearance instead of repeating 52/8/14 independently.
+ * frame/clearance instead of repeating the dimensions independently.
  */
 export class BookshelfHeaderSpec {
   readonly titleFontSize: number = 19;
-  readonly titleLineHeight: number = 28;
+  readonly titleLineHeight: number = BOOKSHELF_HEADER_TITLE_LINE_HEIGHT;
   readonly innerInset: number = 9;
   readonly actionExtent: number = 44;
   readonly iconExtent: number = 24;
-  readonly retainedActionIconExtent: number = 22;
+  readonly retainedActionIconExtent: number = 20;
   readonly retainedActionRadius: number = 14;
-  readonly retainedLeadingInset: number = 4;
+  readonly retainedLeadingInset: number = 3;
   readonly retainedTrailingInset: number = 5;
+  readonly titleSideInset: number = this.actionExtent + Math.max(this.retainedLeadingInset, this.retainedTrailingInset);
   readonly panelRadius: number = 18;
   readonly minWindowInset: number = 8;
   readonly barHeight: number;
@@ -42,7 +47,7 @@ export class BookshelfHeaderSpec {
   }
 }
 
-const BOOKSHELF_HEADER_SPEC = new BookshelfHeaderSpec(APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP, 14);
+const BOOKSHELF_HEADER_SPEC = new BookshelfHeaderSpec(APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP, BOOKSHELF_HEADER_CONTENT_GAP);
 
 export function bookshelfHeaderSpec(): BookshelfHeaderSpec {
   return BOOKSHELF_HEADER_SPEC;
@@ -81,13 +86,14 @@ export class SearchHeaderSpec {
   readonly panelInnerInset: number = 12;
   readonly outerInsetPhone: number = 16;
   readonly outerInsetTablet: number = 20;
-  readonly panelRadius: number = 18;
+  readonly historyRadius: number = 24;
   readonly borderWidth: number = TOK_BORDER_W;
   readonly panelBottomGap: number = 6;
   readonly barPaddingLeft: number = 5;
-  readonly barPaddingRight: number = 6;
-  readonly barPaddingTop: number = 8;
-  readonly barPaddingBottom: number = 8;
+  readonly barPaddingRight: number = 7;
+  readonly barPaddingTop: number = SEARCH_HEADER_BAR_VERTICAL_PADDING;
+  readonly barPaddingBottom: number = SEARCH_HEADER_BAR_VERTICAL_PADDING;
+  readonly fieldGap: number = SEARCH_HEADER_FIELD_GAP;
   readonly barHeightExtra: number;
   readonly filterMinHeight: number = 44;
   readonly filterLabelLineHeight: number = 17;

@@ -1,15 +1,24 @@
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
+import { READER_LAYOUT_DEBUG_BUILD, newReaderLayoutModalId, publishReaderLayoutModal } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
+import { READER_REDUCED_FADE_MS, READER_SHEET_CLOSE_MS } from '../foundation/ProductMotionTiming';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeTop, readerVisualSafeBottom, readerVisualSafeLeft, readerVisualSafeRight }
   from '../foundation/ReaderWindowMetrics';
 import { readerSurfaceElevation, resolveSheetSpec, type SheetSpecId, type SheetSurfaceSpec } from './ReaderSurfaceSpecs';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
+  readerSurfaceMaterialDecision } from './ReaderSurfaceMaterial';
 
 /** The cover owns native modal isolation and system Back. The scrim and
  * independently timed sheet are drawn over the live page inside that cover. */
 @Component
 export struct ReaderBottomSheet {
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @Prop @Watch('onVisibilityChanged') visible: boolean = false;
   @Prop specId: SheetSpecId = 'bookshelf-book-action';
   @Prop surfaceWidth: number = 390;
@@ -30,6 +39,7 @@ export struct ReaderBottomSheet {
   private coverAppearance: number = 0;
   private frameAttached: boolean = false;
   private opened: boolean = false;
+  private layoutModalId: number = 0;
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -39,6 +49,7 @@ export struct ReaderBottomSheet {
   aboutToDisappear(): void {
     this.mounted = false;
     this.coverAppearance += 1;
+    if (this.layoutModalId > 0) publishReaderLayoutModal(this.layoutModalId, false, false, 0);
   }
 
   private onVisibilityChanged(): void {
@@ -49,6 +60,14 @@ export struct ReaderBottomSheet {
       this.frameVisible = false;
       if (this.coverReady && !this.frameAttached) this.coverVisible = false;
     }
+    this.reportLayoutModal();
+  }
+
+  private reportLayoutModal(): void {
+    if (typeof READER_LAYOUT_DEBUG_BUILD !== 'boolean' || !READER_LAYOUT_DEBUG_BUILD) return;
+    if (this.layoutModalId === 0) this.layoutModalId = newReaderLayoutModalId();
+    publishReaderLayoutModal(this.layoutModalId, this.visible, this.coverVisible || this.coverReady,
+      this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS);
   }
 
   private coverOptions(): ContentCoverOptions {
@@ -59,6 +78,7 @@ export struct ReaderBottomSheet {
       onAppear: (): void => {
         if (!this.mounted) return;
         this.coverReady = true;
+        this.reportLayoutModal();
         const appearance = ++this.coverAppearance;
         // The native cover may announce appearance during its first render.
         void Promise.resolve().then((): void => {
@@ -76,6 +96,7 @@ export struct ReaderBottomSheet {
         this.frameVisible = false;
         this.frameAttached = false;
         this.opened = false;
+        this.reportLayoutModal();
         if (this.mounted) this.onClosed();
       },
     };
@@ -95,9 +116,10 @@ export struct ReaderBottomSheet {
   private sheetCoverContent() {
     Stack({ alignContent: Alignment.Bottom }) {
       if (this.frameVisible) {
-        Rect().width('100%').height('100%')
-          .fill(readerAppColor(this.spec().hostMaskRole, this.scheme))
-          .backdropBlur(6)
+        Stack().width('100%').height('100%')
+          .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+            readerAppColor(this.spec().hostMaskRole, this.scheme), this.frameMaterial().native))
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
           .accessibilityLevel('no')
           .onClick((): void => {
             if (this.mounted && this.visible && this.opened) this.onRequestClose();
@@ -106,7 +128,10 @@ export struct ReaderBottomSheet {
             readerMotionAnimateParam('app.sheet.scrim', false)));
         this.frame();
       }
-    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Default);
+    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Default)
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'modal-overlay', id: 'bottom-sheet', active: this.visible,
+          intercepts: this.coverVisible, closeDurationMs: this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS } as LayoutInvariantTag : undefined);
   }
 
   @Builder
@@ -121,10 +146,13 @@ export struct ReaderBottomSheet {
       .constraintSize({ maxHeight: this.frameMaxHeight() })
       .padding({ bottom: this.safeBottom() })
       .translate({ x: this.safeCenterOffset() })
-      .backgroundColor(readerAppColor(this.spec().hostBackgroundRole, this.scheme))
-      .border({ width: { top: this.spec().hostBorderWidth }, color: readerAppColor(this.spec().hostBorderRole, this.scheme) })
+      .backgroundEffect(undefined)
+      .backgroundColor(this.frameMaterial().native ? Color.Transparent : readerAppColor(this.spec().hostBackgroundRole, this.scheme))
+      .border(this.frameMaterial().native ? { width: 0, color: Color.Transparent } :
+        { width: { top: this.spec().hostBorderWidth }, color: readerAppColor(this.spec().hostBorderRole, this.scheme) })
       .borderRadius({ topLeft: this.spec().borderRadius, topRight: this.spec().borderRadius })
-      .shadow(this.frameShadow()).clip(true)
+      .shadow(this.frameMaterial().native ? undefined : this.frameShadow())
+      .attributeModifier(new ReaderImmersiveMaterialModifier(this.frameMaterial())).clip(true)
       .hitTestBehavior(HitTestMode.Default).focusable(true).focusScopeId(this.nativeId, true, false)
       .onAppear((): void => { this.frameAttached = true; })
       .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) :
@@ -148,6 +176,10 @@ export struct ReaderBottomSheet {
   }
 
   private spec(): SheetSurfaceSpec { return resolveSheetSpec(this.specId); }
+
+  private frameMaterial(): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision('modalSheet', this.appearancePreferences, this.scheme, this.systemScheme);
+  }
 
   private frameMaxHeight(): Length {
     this.metricsRevision;

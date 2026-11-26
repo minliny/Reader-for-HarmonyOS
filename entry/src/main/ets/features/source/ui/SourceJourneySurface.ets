@@ -1,3 +1,5 @@
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { ReaderNativeAlertOptions } from '../../../ui/platform/ReaderNativeAlertOwner';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { SourceManagementPage } from './SourceManagementPage';
@@ -24,6 +26,8 @@ import { EMPTY_SOURCE_JOURNEY, SourceJourneyPresentation, type SourceJourneySnap
 
 @Component
 export struct SourceJourneySurface {
+  @StorageProp('readerNavigationAppearancePreferences')
+  private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @Prop expandedLayout: boolean = false;
   @Prop embeddedWide: boolean = false;
@@ -280,7 +284,10 @@ export struct SourceJourneySurface {
       if (this.listDialogVisible()) {
         ForEach([this.listDialogGeneration], (generation: number): void => {
           Stack({ alignContent: Alignment.Center }) {
-            Rect().width('100%').height('100%').fill(readerAppColor('app.scrim.warmModal', this.scheme))
+            Stack().width('100%').height('100%')
+              .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+                readerAppColor('app.scrim.warmModal', this.scheme)))
+              .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
               .accessibilityLevel('no').onClick((): void => this.chooseListDialog(generation, 'cancel'));
             Column() {
               ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: this.paneWidth,

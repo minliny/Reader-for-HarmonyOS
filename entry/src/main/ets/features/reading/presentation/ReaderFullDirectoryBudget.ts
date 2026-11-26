@@ -1,3 +1,11 @@
+import { SEARCH_CONTROL_COMPACT_CLEAR_SLOT, SEARCH_CONTROL_COMPACT_CLEAR_END_INSET, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
+
+export const DIRECTORY_TOOL_SIZE = 36;
+export const DIRECTORY_TOOL_TARGET = SEARCH_CONTROL_MIN_TARGET;
+export const DIRECTORY_TOOL_GAP = DIRECTORY_TOOL_TARGET - DIRECTORY_TOOL_SIZE;
+export const DIRECTORY_TOOL_OUTSET = DIRECTORY_TOOL_GAP / 2;
+export const DIRECTORY_TOOL_SIDE_INSET = 10;
+
 export interface ReaderFullDirectoryHeights {
   panel: number;
   content: number;
@@ -13,20 +21,27 @@ export interface ReaderDirectoryToolbarBudget {
   actionsWidth: number;
 }
 
-/** The field pays for its icon/insets as well as useful editable text.
- * Adjacent tool slots reserve their full touch width. */
+export function readerDirectoryFieldChromeWidth(readingPalette: boolean): number {
+  const leading = readingPalette ? 10 + 14 + 6 : 12 + 15 + 7;
+  const trailing = SEARCH_CONTROL_COMPACT_CLEAR_SLOT + SEARCH_CONTROL_COMPACT_CLEAR_END_INSET;
+  return leading + trailing + 2;
+}
+
+/** An 8vp gap leaves room for each 36vp action's 4vp response outset. */
 export function readerDirectoryToolbarBudget(width: number, chapterTools: boolean,
   fieldHeight: number, editableMinimum: number, naturalHeight: number = 0,
   catalog: boolean = false): ReaderDirectoryToolbarBudget {
-  const field = Math.max(32, Number.isFinite(fieldHeight) ? fieldHeight : 32);
+  const field = Math.max(DIRECTORY_TOOL_SIZE, Number.isFinite(fieldHeight) ? fieldHeight : DIRECTORY_TOOL_SIZE);
   const text = Math.max(44, Number.isFinite(editableMinimum) ? editableMinimum : 60);
-  const fieldMinimumWidth = 39 + text;
-  const actionsWidth = catalog ? 96 : chapterTools ? 191 : 44;
-  const gutter = catalog ? 8 : 25;
-  const stacked = Number.isFinite(width) && width > 0 && width - gutter - actionsWidth < fieldMinimumWidth;
-  const row = catalog ? Math.max(44, field) : field + 18;
+  const fieldMinimumWidth = readerDirectoryFieldChromeWidth(!catalog) + text;
+  const actions = catalog ? 2 : chapterTools ? 3 : 0;
+  const actionsWidth = actions * DIRECTORY_TOOL_SIZE + Math.max(0, actions - 1) * DIRECTORY_TOOL_GAP;
+  const gutter = (catalog ? 0 : 2 * DIRECTORY_TOOL_SIDE_INSET) + DIRECTORY_TOOL_GAP;
+  const stacked = actions > 0 && Number.isFinite(width) && width > 0 && width - gutter - actionsWidth < fieldMinimumWidth;
+  const row = Math.max(DIRECTORY_TOOL_TARGET, field);
   return { stacked, height: Math.max(Number.isFinite(naturalHeight) ? naturalHeight : 0,
-    stacked ? row * 2 + 8 : row), fieldMinimumWidth, actionsWidth };
+    stacked ? field + DIRECTORY_TOOL_SIZE + DIRECTORY_TOOL_GAP + 2 * DIRECTORY_TOOL_OUTSET : row),
+    fieldMinimumWidth, actionsWidth };
 }
 
 /** All standalone allocations consume the same admitted viewport. */

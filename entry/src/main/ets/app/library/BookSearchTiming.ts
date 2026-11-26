@@ -6,6 +6,19 @@ export type BookSearchTiming = {
   latencyMeasuredAt: number;
 };
 
+interface BookSearchTimingProjection {
+  latencyKind?: 'search';
+  latencyMs?: number;
+  latencyFromCache?: boolean;
+}
+
+/** The displayed duration and sort key use the same search-only evidence. */
+export function bookSearchDuration(timing: BookSearchTimingProjection, includeCached: boolean = false): number | undefined {
+  const value = timing.latencyMs;
+  return timing.latencyKind === 'search' && value !== undefined && Number.isFinite(value) && value >= 0 &&
+    (includeCached || timing.latencyFromCache !== true) ? value : undefined;
+}
+
 /** Reader's source-version-bound search fact. Legacy body respondTime and
  * timing from another source rule cannot represent this request stage. */
 export function readBookSearchTiming(acquisition: unknown,

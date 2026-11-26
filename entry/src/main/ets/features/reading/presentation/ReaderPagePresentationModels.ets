@@ -4,7 +4,6 @@ import type { ReadingSurfaceLayoutMap } from '../application/ReadingSurfaceLayou
 import type { ReadingPaginationKey, ReadingPaginationPrefix } from '../application/ReadingPaginationIndex';
 import type { ReadingEntryNavigation } from '../application/ReadingEntrySnapshot';
 import type { LocalReadingTocEntry, LocalReadingProgress } from '../application/LocalReadingFlowGateway';
-import type { RemoteReadingPositionContext } from '../application/RemoteReadingPositionMigration';
 import type { ReadingCommit } from '../application/ReadingCommit';
 import type { ParagraphRange, PhysicalReadingPage } from '../ui/ReadingMeasurementModels';
 import type { ReaderPageTurnDirection } from '../ui/ReaderPageGestureState';
@@ -71,25 +70,6 @@ export class ReaderRetainedPresentation {
     this.appearanceKey = appearanceKey; this.settingsKey = settingsKey;
     this.layoutKey = layoutKey; this.densityPixels = densityPixels; this.isCurrent = isCurrent; this.navigation = navigation; this.catalogPending = catalogPending;
   }
-}
-
-export interface ReaderControlPlaybackPresentation {
-  lifecycleToken: number;
-  sourceId: string;
-  bookId: string;
-  openRevision: number;
-  moduleVisitRevision: number;
-  module: string;
-}
-
-export interface ReaderTtsPlayIntent {
-  generation: number;
-  lifecycleToken: number;
-  selectionToken: number;
-  sourceId: string;
-  bookId: string;
-  presentation: ReaderControlPlaybackPresentation;
-  capsuleFallback: boolean;
 }
 
 export interface ReaderControlSelectionDisplay {
@@ -188,52 +168,7 @@ export class ReaderPageTurnPreparation {
   }
 }
 
-export class ReaderPageTurnTarget {
-  chapterIndex: number;
-  chapterOffset: number;
-
-  constructor(chapterIndex: number, chapterOffset: number) {
-    this.chapterIndex = chapterIndex;
-    this.chapterOffset = chapterOffset;
-  }
-}
-
-export class ReaderDeferredChapterSelection {
-  chapterIndex: number;
-  chapterOffset: number;
-  requireChapterStart: boolean;
-  stopTts: boolean;
-  requestedProgress: number | undefined;
-  controlOwnerRevision: number;
-  closeControlOnCommit: boolean;
-  refreshContent: boolean;
-  positionContext?: RemoteReadingPositionContext;
-  ttsOwner?: ReaderTtsFollowLease;
-
-  constructor(
-    chapterIndex: number,
-    chapterOffset: number,
-    requireChapterStart: boolean,
-    stopTts: boolean,
-    requestedProgress: number | undefined,
-    controlOwnerRevision: number,
-    closeControlOnCommit: boolean = true,
-    refreshContent: boolean = false,
-    positionContext?: RemoteReadingPositionContext,
-    ttsOwner?: ReaderTtsFollowLease,
-  ) {
-    this.ttsOwner = ttsOwner;
-    this.chapterIndex = chapterIndex;
-    this.chapterOffset = chapterOffset;
-    this.requireChapterStart = requireChapterStart;
-    this.stopTts = stopTts;
-    this.requestedProgress = requestedProgress;
-    this.controlOwnerRevision = controlOwnerRevision;
-    this.closeControlOnCommit = closeControlOnCommit;
-    this.refreshContent = refreshContent;
-    this.positionContext = positionContext;
-  }
-}
+export { ReaderPageTurnTarget } from '../ui/ReaderPhysicalPaginationOwner';
 
 export interface ReaderAutomaticPageStart {
   generation: number;

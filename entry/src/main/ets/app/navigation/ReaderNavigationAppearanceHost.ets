@@ -1,4 +1,5 @@
 import { readerHarmonyCapabilities } from '../HarmonyCapabilityProbe';
+import { defaultNavigationPreferences } from '../../ui/surfaces/ReaderSurfaceMaterial';
 import {
   adoptReaderNavigationAppearance, resolveReaderNavigationAppearance, type ReaderNavigationAppearance,
   type ReaderNavigationPreferences,
@@ -7,7 +8,7 @@ import {
 @Component
 export struct ReaderNavigationAppearanceHost {
   @StorageLink('readerNavigationAppearancePreferences') @Watch('refreshAppearance')
-  private preferences: ReaderNavigationPreferences = { override: 'unset', reduceTransparency: false };
+  private preferences: ReaderNavigationPreferences = defaultNavigationPreferences();
   @StorageLink('readerAppScheme') @Watch('refreshAppearance') private appScheme: string = 'day';
   @StorageLink('readerSystemScheme') @Watch('refreshAppearance') private systemScheme: string = 'day';
   @StorageLink('readerAppForeground') @Watch('refreshAppearance') private foreground: boolean = true;
@@ -99,15 +100,14 @@ export struct ReaderNavigationAppearanceHost {
 
   private refreshAppearance(): void {
     if (!this.mounted) return;
-    if (!this.inputEnabled || !this.foreground) {
-      // The disabled renderer may never receive the matching Up or Cancel.
-      // Retire its interaction before the gate opens again and keep the current view.
+    const requested = resolveReaderNavigationAppearance(this.preferences, readerHarmonyCapabilities(),
+      this.appScheme, this.systemScheme);
+    if (!this.inputEnabled || !this.foreground || (requested === 'unified' && this.shown !== 'unified')) {
+      // A disabled or retired renderer may never deliver the matching Up or Cancel.
       this.releaseInteraction();
-      return;
     }
-    const requested = this.preferences.override !== 'systemNative' || this.preferences.reduceTransparency ? 'unified' :
-      resolveReaderNavigationAppearance(this.preferences, readerHarmonyCapabilities(), this.appScheme, this.systemScheme);
     this.shown = adoptReaderNavigationAppearance(this.shown, requested,
-      this.touchIds.size > 0 || this.keyPressed || this.navigationFocused || this.releaseTimer >= 0);
+      !this.inputEnabled || !this.foreground || this.touchIds.size > 0 || this.keyPressed ||
+      this.navigationFocused || this.releaseTimer >= 0);
   }
 }

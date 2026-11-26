@@ -1,5 +1,7 @@
 # 受限触摸诊断 probe 接口
 
+2026-11-26 更新：下文记录旧工具当时的接口。现行 probe 只支持远程 VM 主旅程。入口为 `node scripts/vm-journeys.mjs --help`。
+
 2026-09-06：仅开发诊断工具，不进入产品 HAP。不发现设备、不启动服务、不安装/卸载；本轮仅离线实现/测试，未 push 或执行设备。
 
 更新：主代理随后执行的独立 ELF dry-run 在 main 前因 Ark runtime 依赖加载失败，未请求授权或注入；该路线已停止，不改库路径/namespace，不继续 prepare/dryRun/sampleTouch。详见 `evidence/control-bar-development-20260905/NATIVE_TOUCH_LOADER_AND_UINPUT_DIAGNOSIS_20260906.md`。下面 ELF 接口作为实现记录保留，不是继续执行许可。

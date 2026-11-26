@@ -1,3 +1,5 @@
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
@@ -7,17 +9,23 @@ import inputMethod from '@ohos.inputMethod';
 import { PathShape } from '@ohos.arkui.shape';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
-import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import { isReaderRealtimeBlurEnabled } from '../../../app/HarmonyCapabilityPolicy';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 import { readerVisualSafeTop, readerVisualSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReaderFixedHeaderHost } from '../../../ui/layout/ReaderFixedHeaderHost';
 import { ReaderHeaderFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { readerPresentedHeaderBottom, readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { bookshelfHeaderSpec, searchHeaderSpec, SearchHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
-import { readerSearchControlHeight, readerSearchControlVisualHeight, readerSearchActionWidth, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
+import { readerLibraryHeaderContentHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerSearchControlHeight, readerSearchControlVisualHeight, readerSearchActionWidth,
+  SEARCH_CAPSULE_EMPTY_CHROME, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
+import { resolveSearchHeaderField, SearchHeaderFieldGeometry } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerSurfaceElevation, readerHeaderVeilMaterial, readerHeaderVeilBorder } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
+  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { motionSegment } from '../../../ui/foundation/MotionTimeline';
 import { motionAnimateParam, motionSpecGet, MotionSpecEntry } from '../../../ui/foundation/MotionSpec';
@@ -29,6 +37,7 @@ import type { ReaderSearchEditorEvent, ReaderSearchEditorObservation } from '../
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../../../ui/foundation/ReaderPressMotion';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
+import { TYPE_SEARCH_BOOK_PANEL_INPUT } from '../../../ui/foundation/ReaderTypography';
 import { ReaderSearchHistoryPanel, SearchHistoryMeasurements } from './ReaderSearchHistoryPanel';
 import { projectSearchHistoryPanel, SearchHistoryGeometry, SearchHistoryPanelLayout, SearchHistoryViewport } from './SearchHistoryGeometry';
 import type { ReaderSurfaceRect } from '../../../ui/layout/ReaderSurfaceRect';
@@ -82,8 +91,9 @@ export struct ReaderLibrarySearchSurface {
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding('reader-library-search-surface');
   private readonly editingScroller: Scroller = new Scroller();
   @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
-    { override: 'unset', reduceTransparency: false };
+    defaultNavigationPreferences();
   @StorageLink('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
   @ObjectLink @Watch('historyChanged') model: ReaderLibrarySearchModel;
   @Prop @Watch('modeChanged') mode: LibrarySearchMode = 'idle';
@@ -586,9 +596,10 @@ export struct ReaderLibrarySearchSurface {
   }
   private titleOpacity(): number { return 1 - Math.min(1, this.surfaceValue() / .45); }
   private barHeight(): number {
-    const height = this.spec.barHeight(this.controlHeight());
-    return this.searchMounted && this.model.currentOwner() !== 0 ?
-      height + (this.searchLaneHeight() - this.controlHeight()) * this.surfaceValue() : height;
+    const shelf = bookshelfHeaderSpec();
+    const searchBarHeight = this.searchMounted ? this.spec.barHeight(this.searchLaneHeight()) : undefined;
+    return readerLibraryHeaderContentHeight(shelf.barHeight, shelf.titleLineHeight, this.fontScale(), this.spec.borderWidth,
+      searchBarHeight, this.searchMounted ? this.surfaceValue() : 0);
   }
   private trailingWidth(): number {
     return this.blend(bookshelfHeaderSpec().actionExtent,
@@ -789,18 +800,17 @@ export struct ReaderLibrarySearchSurface {
       2 * this.spec.borderWidth);
   }
   private actionWidth(): number { return readerSearchActionWidth(this.expandedLayout, this.fontScale()); }
-  private searchLaneLeft(): number { return this.spec.barPaddingLeft + bookshelfHeaderSpec().actionExtent + 2; }
+  private searchLaneLeft(): number { return this.spec.barPaddingLeft + bookshelfHeaderSpec().actionExtent; }
   private searchLaneWidth(): number {
     return Math.max(0, this.cardContentWidth() - this.searchLaneLeft() - this.spec.barPaddingRight);
   }
-  private stackedSearch(): boolean {
-    return this.searchLaneWidth() - this.actionWidth() - 5 < SEARCH_CONTROL_MIN_TARGET * 2 + 18;
+  private searchHeaderField(): SearchHeaderFieldGeometry {
+    return resolveSearchHeaderField(this.searchLaneWidth(), this.actionWidth(), SEARCH_CAPSULE_EMPTY_CHROME,
+      TYPE_SEARCH_BOOK_PANEL_INPUT.fontSizeFp * Math.max(1, this.fontScale()));
   }
+  private stackedSearch(): boolean { return this.searchHeaderField().stacked; }
   private searchLaneHeight(): number {
-    return this.stackedSearch() ? this.controlHeight() * 2 + 5 : this.controlHeight();
-  }
-  private fieldWidth(): number {
-    return this.stackedSearch() ? this.searchLaneWidth() : Math.max(0, this.searchLaneWidth() - this.actionWidth() - 5);
+    return this.stackedSearch() ? this.controlHeight() * 2 + this.spec.fieldGap : this.controlHeight();
   }
   private laneTop(): number { return this.spec.barPaddingTop; }
   // The icon describes the current destination state. The closing track may
@@ -895,6 +905,13 @@ export struct ReaderLibrarySearchSurface {
     return (this.barHeight() - bookshelfHeaderSpec().actionExtent) / 2;
   }
   private moreInteractive(): boolean { return this.mode === 'idle' && this.transitionKind === 'none'; }
+
+  private layoutInvariantHeaderStable(): boolean {
+    // Observe the rendered endpoints. The transition kind is an ordinary field
+    // and can finish without invalidating a Native custom-property observer.
+    return this.mode === 'idle' ? !this.searchMounted :
+      this.searchMounted && this.surfaceValue() === 1 && !this.reducedTransition;
+  }
   @Styles
   private headerActionFrame() {
     .width(bookshelfHeaderSpec().actionExtent).height(bookshelfHeaderSpec().actionExtent)
@@ -917,10 +934,13 @@ export struct ReaderLibrarySearchSurface {
         Text('书架').width('100%').textAlign(TextAlign.Center)
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(bookshelfHeaderSpec().titleFontSize)
           .lineHeight(bookshelfHeaderSpec().titleLineHeight).fontWeight(FontWeight.Bold)
+          .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD &&
+            this.mode === 'idle' && this.layoutInvariantHeaderStable()
+        ? { role: 'header-content', id: 'bookshelf-title' } as LayoutInvariantTag : undefined)
           .fontColor(readerAppColor('TOK_INK', this.scheme)).opacity(this.titleOpacity())
           .accessibilityLevel(this.mode === 'idle' ? 'auto' : 'no-hide-descendants');
-      }.width(Math.max(0, this.cardContentWidth() - 120)).height(this.barHeight())
-        .position({ x: 60, y: 0 });
+      }.width(Math.max(0, this.cardContentWidth() - 2 * bookshelfHeaderSpec().titleSideInset)).height(this.barHeight())
+        .position({ x: bookshelfHeaderSpec().titleSideInset, y: 0 });
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         this.headerActionGlyph('more');
       }.headerActionFrame().padding(0).backgroundColor(Color.Transparent)
@@ -929,6 +949,9 @@ export struct ReaderLibrarySearchSurface {
           y: this.headerActionTop() })
         .opacity(1 - this.surfaceValue())
         .id(this.moreIdentity)
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD &&
+          this.mode === 'idle' && this.layoutInvariantHeaderStable()
+        ? { role: 'key-control', id: 'bookshelf-more' } as LayoutInvariantTag : undefined)
         .hitTestBehavior(this.moreInteractive() ? HitTestMode.Default : HitTestMode.None)
         .attributeModifier(new ReaderActionAccessibility('更多', this.moreInteractive(), false, true,
           new ReaderPressFeedback(Color.Transparent, this.scheme, bookshelfHeaderSpec().retainedActionRadius,
@@ -938,7 +961,7 @@ export struct ReaderLibrarySearchSurface {
       if (this.searchMounted && this.model.currentOwner() !== 0) {
         Stack({ alignContent: Alignment.TopStart }) {
           Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.End, alignItems: ItemAlign.Center,
-            space: { main: LengthMetrics.vp(5), cross: LengthMetrics.vp(5) } }) {
+            space: { main: LengthMetrics.vp(this.spec.fieldGap), cross: LengthMetrics.vp(this.spec.fieldGap) } }) {
             ForEach([this.fieldIdentity()], (key: string) => {
               // The closing track keeps the field mounted after search mode ends.
               ReaderSearchField({ editingHost: this.editingHost,
@@ -948,14 +971,16 @@ export struct ReaderLibrarySearchSurface {
                 bookPanelFrameId: 'reader-bookshelf-search-field',
                 observeBookEditor: this.model.verification === undefined ? undefined :
                   this.bookEditorObservation(this.model.currentOwner(), key),
-                text: this.model.keyword, placeholder: '搜索书名、作者…', accessibilityLabel: '搜索书名或作者',
+                text: this.model.keyword,
+                placeholder: this.searchHeaderField().shortPlaceholder ? '书名、作者' : '搜索书名、作者…',
+                accessibilityLabel: '搜索书名或作者',
                 expandedLayout: this.expandedLayout, clearable: true, submitEnabled: this.model.fieldSubmitEnabled,
                 bookPanelClearId: this.model.verification?.enabled() === true ? 'reader-book-search-clear' : '',
                 onTextChange: this.textAction(this.model.currentOwner(), key),
                 onBookClear: this.clearAction(this.model.currentOwner(), key),
                 onSubmit: this.submitAction(this.model.currentOwner(), key),
                 onFocusChanged: this.focusAction(this.model.currentOwner(), key) })
-                .width(this.fieldWidth())
+                .width(this.searchHeaderField().width)
                 .height(this.controlHeight())
                 .enabled(this.presentedSearch() && !this.model.panelOwnsInput)
                 .hitTestBehavior(this.inputInteractive() ? HitTestMode.Default : HitTestMode.None)
@@ -969,7 +994,7 @@ export struct ReaderLibrarySearchSurface {
                   .minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale()))
                   .fontColor(readerAppColor('TOK_ON_PRIMARY', this.scheme));
               }.width(this.actionWidth()).height(this.searchActionVisualHeight())
-                .attributeModifier(new ReaderPressFeedback(readerAppColor('app.action.fill', this.scheme), this.scheme,
+                .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_PRIMARY_DARK', this.scheme), this.scheme,
                   this.searchActionVisualHeight() / 2, this.searchActionVisualHeight() / 2,
                   this.actionInteractive(), this.searchActionPointer >= 0))
                 .scale(readerPressScale(this.actionInteractive() && this.searchActionPointer >= 0, this.reduceMotion))
@@ -978,6 +1003,9 @@ export struct ReaderLibrarySearchSurface {
                 .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
             }.width(this.actionWidth()).height(this.controlHeight()).padding(0)
               .id('reader-bookshelf-search-submit')
+              .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD &&
+                this.layoutInvariantHeaderStable() && (this.mode === 'results' ? this.resultsProgress() >= 1 : this.historyProgress() >= 1)
+        ? { role: 'key-control', id: 'search-submit', unavailable: !this.model.canSubmit && !this.model.sweeping } as LayoutInvariantTag : undefined)
               .backgroundColor(Color.Transparent)
               .opacity(this.model.sweeping || this.model.canSubmit ? 1 : .38)
               .enabled(this.actionInteractive())
@@ -1003,20 +1031,32 @@ export struct ReaderLibrarySearchSurface {
       }.headerActionFrame().padding(0).backgroundColor(Color.Transparent)
         .position({ x: bookshelfHeaderSpec().retainedLeadingInset, y: this.headerActionTop() })
         .id(this.mode === 'idle' ? 'reader-bookshelf-search-entry' : READER_LIBRARY_SEARCH_BACK_FOCUS_ID)
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD && this.layoutInvariantHeaderStable()
+        ? { role: 'key-control', id: 'search-entry-back' } as LayoutInvariantTag : undefined)
         .attributeModifier(new ReaderActionAccessibility(this.presentedSearch() ? '返回' : '搜索书籍', !this.model.panelOwnsInput,
           false, true, new ReaderPressFeedback(Color.Transparent, this.scheme, bookshelfHeaderSpec().retainedActionRadius,
             bookshelfHeaderSpec().retainedActionRadius, !this.model.panelOwnsInput), 'nativeButton'))
         .accessibilityLevel(this.model.panelOwnsInput ? 'no-hide-descendants' : 'auto')
         .onClick(this.leadingAction(this.identity, this.navigationGeneration, this.mounting));
-    }.width('100%').height(this.barHeight()).id('reader-bookshelf-search-bar');
+    }.width('100%').height(this.barHeight()).id('reader-bookshelf-search-bar')
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD && this.layoutInvariantHeaderStable()
+        ? { role: 'floating-header', id: 'bookshelf-search-header',
+          scope: this.mode === 'idle' ? 'bookshelf' : undefined, expectedHeightVp: this.mode === 'idle'
+            ? bookshelfHeaderSpec().barHeight - 2 * this.spec.borderWidth : this.spec.barHeight(this.searchLaneHeight()),
+          expectedTopGapVp: bookshelfHeaderSpec().topInset + this.spec.borderWidth } as LayoutInvariantTag : undefined);
   }
   private panelBorderColor(): string {
     return readerAppColor(this.scheme === 'night' || this.historyProgress() > .01 ?
       'app.search.panelBorder' : 'app.border.control', this.scheme);
   }
   private headerVeil(): boolean {
-    return this.mode === 'idle' && !this.searchMounted && this.transitionKind === 'none' &&
-      this.resultsProgress() <= .01 && this.historyProgress() <= .01;
+    if (!this.headerSurfaceCollapsed()) return false;
+    return (this.mode === 'idle' && !this.searchMounted) ||
+      (this.mode === 'results' && this.resultsProgress() > .01);
+  }
+  private headerMaterial(): ReaderSurfaceMaterialDecision | undefined {
+    return this.headerVeil() ?
+      readerSurfaceMaterialDecision('chromeBar', this.appearancePreferences, this.scheme, this.systemScheme) : undefined;
   }
   private headerSurfaceGeometryKey(): string {
     const metrics = ReaderWindowCoordinator.metrics();
@@ -1035,12 +1075,14 @@ export struct ReaderLibrarySearchSurface {
     return this.mounted ? this.headerRaisedShape : undefined;
   }
   private headerMaterialRadius(): number {
-    return this.currentHeaderRaisedShape()?.radius ?? resolveReaderRaisedShape(this.headerRaisedShapeIdentity(),
-      ReaderWindowCoordinator.metrics().windowRect.width - this.horizontalInset(true) - this.horizontalInset(false),
-      this.barHeight(), this.spec.panelRadius)?.radius ?? 0;
-  }
-  private hasHeaderSurfaceMeasurement(): boolean {
-    return this.headerSurfaceCollapsed() && this.currentHeaderRaisedShape() !== undefined;
+    const width = this.cardContentWidth() + 2 * this.spec.borderWidth;
+    const height = this.barHeight() + 2 * this.spec.borderWidth;
+    const collapsed = this.currentHeaderRaisedShape();
+    const capsule = collapsed !== undefined && Math.abs(collapsed.height - height) <= 1 &&
+      Math.abs(collapsed.width - width) <= 1 ? collapsed.radius : Math.min(width, height) / 2;
+    if (this.headerSurfaceCollapsed()) return capsule;
+    const historyRadius = this.spec.historyRadius + (this.controlHeight() - SEARCH_CONTROL_MIN_TARGET) / 2;
+    return Math.min(width / 2, this.blend(capsule, historyRadius, this.historyProgress()));
   }
   private headerSurfaceAreaChange(): (_old: Area, next: Area) => void {
     const key = this.measurementKey;
@@ -1055,7 +1097,7 @@ export struct ReaderLibrarySearchSurface {
       // Use the painted panel's native border box. At fractional density its
       // snapped border widths need not equal barHeight + two logical borders.
       // Expanded history never replaces this confirmed collapsed-box sample.
-      const shape = resolveReaderRaisedShape(identity, width, height, this.spec.panelRadius);
+      const shape = resolveReaderRaisedShape(identity, width, height, height / 2);
       if (shape === undefined) { this.headerRaisedShape = undefined; return; }
       const previous = this.headerRaisedShape;
       if (previous?.identity === identity && Math.abs(previous.width - width) <= .01 && Math.abs(previous.height - height) <= .01) return;
@@ -1100,11 +1142,18 @@ export struct ReaderLibrarySearchSurface {
       }.width('100%')
         .borderRadius(Math.max(0, this.headerMaterialRadius() - this.spec.borderWidth)).clip(true);
     }.width('100%').clip(false)
-      .backgroundColor(this.headerVeil() ? Color.Transparent : readerAppColor('app.search.panelSurface', this.scheme))
-      .backgroundEffect(this.headerVeil() ? readerHeaderVeilMaterial(this.headerScrolled, this.scheme) : undefined)
-      .border({ width: this.spec.borderWidth, color: this.headerVeil() ? readerHeaderVeilBorder(this.scheme) : this.panelBorderColor() })
+      .padding(this.headerMaterial()?.native ? this.spec.borderWidth : 0)
+      .backgroundColor(this.headerVeil() && isReaderRealtimeBlurEnabled(this.appearancePreferences) ? Color.Transparent :
+        readerAppColor('app.search.panelSurface', this.scheme))
+      .backgroundEffect(this.headerVeil() && !this.headerMaterial()?.native &&
+        isReaderRealtimeBlurEnabled(this.appearancePreferences) ?
+        readerHeaderVeilMaterial(this.headerScrolled, this.scheme) : undefined)
+      .border({ width: this.headerMaterial()?.native ? 0 : this.spec.borderWidth,
+        color: this.headerMaterial()?.native ? Color.Transparent :
+          this.headerVeil() ? readerHeaderVeilBorder(this.scheme) : this.panelBorderColor() })
       .borderRadius(this.headerMaterialRadius()).hitTestBehavior(HitTestMode.Default)
-      .shadow(this.headerStackShadow())
+      .shadow(this.headerMaterial()?.native ? undefined : this.headerStackShadow())
+      .attributeModifier(new ReaderImmersiveMaterialModifier(this.headerMaterial()))
       .onAreaChange(this.headerSurfaceAreaChange());
   }
   private headerStackShadow(): ShadowOptions {
@@ -1120,7 +1169,7 @@ export struct ReaderLibrarySearchSurface {
   }
 
   private headerShadowStrength(): number {
-    const target = 1 - this.toResults;
+    const target = this.blend(1, .55, this.toResults);
     if (this.transitionKind === 'none') return target;
     if (this.reducedTransition) {
       // Follow the existing opacity fade while reduced motion holds the layout fixed.
@@ -1148,18 +1197,20 @@ export struct ReaderLibrarySearchSurface {
           (this.mode === 'input' && this.inputInteractive() && this.model.sourceRecoveryVisible) ?
           'auto' : 'no-hide-descendants');
       // Keep backdrop clicks behind the recovery actions while dimming the recovery surface.
-      Column().width('100%').height('100%')
-        .backgroundColor(this.mode === 'input' && this.model.sourceRecoveryVisible ?
-          Color.Transparent : readerAppColor('app.scrim.modal', this.scheme))
-        .backdropBlur(this.appearancePreferences.reduceTransparency || this.scrimProgress() <= .01 ||
-          (this.mode === 'input' && this.model.sourceRecoveryVisible) ? 0 : 6)
+      Stack().width('100%').height('100%')
+        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+          this.mode === 'input' && this.model.sourceRecoveryVisible ? Color.Transparent :
+            readerAppColor('app.scrim.modal', this.scheme), this.headerMaterial()?.native === true,
+          this.scrimProgress() > .01 && !(this.mode === 'input' && this.model.sourceRecoveryVisible)))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .opacity(this.scrimProgress() * this.reducedSearchOpacity).zIndex(1)
         .hitTestBehavior(this.mode === 'input' && this.scrimProgress() > .01 ? HitTestMode.Default : HitTestMode.None)
         .onClick(this.backAction(this.identity, this.navigationGeneration, this.mounting));
       if (this.mode === 'input' && this.model.sourceRecoveryVisible) {
-        Column().id('reader-library-search-recovery-scrim').width('100%').height('100%')
-          .backgroundColor(readerAppColor('app.scrim.modal', this.scheme))
-          .backdropBlur(this.appearancePreferences.reduceTransparency || this.scrimProgress() <= .01 ? 0 : 6)
+        Stack().id('reader-library-search-recovery-scrim').width('100%').height('100%')
+          .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+            readerAppColor('app.scrim.modal', this.scheme), this.headerMaterial()?.native === true, this.scrimProgress() > .01))
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
           .opacity(this.scrimProgress() * this.reducedSearchOpacity).zIndex(3).hitTestBehavior(HitTestMode.None);
       }
       Column() {

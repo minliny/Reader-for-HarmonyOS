@@ -1,6 +1,6 @@
 import type { JsonObject } from '@reader/core-harmony';
 
-export type ReaderPublicSearchHttpFixture = 'delayed' | 'http-503' | 'http-503-body';
+export type ReaderPublicSearchHttpFixture = 'delayed' | 'http-503' | 'http-503-body' | 'vm-journeys';
 
 export const READER_PUBLIC_SEARCH_DELAYED_URL = 'https://httpbingo.org/delay/5';
 export const READER_PUBLIC_SEARCH_HTTP_503_URL = 'https://httpbingo.org/status/503';
@@ -9,6 +9,7 @@ export const READER_PUBLIC_SEARCH_HTTP_503_BODY_URL =
 
 /** Maps fixed cold-start storage scopes to their exact request policy. */
 export function readerPublicSearchHttpFixtureMode(id?: string): ReaderPublicSearchHttpFixture | undefined {
+  if (id === 'vm-journeys') return 'vm-journeys';
   if (id === 'search-delayed') return 'delayed';
   if (id === 'search-http-503') return 'http-503';
   if (id === 'search-http-503-body') return 'http-503-body';
@@ -30,6 +31,7 @@ function absent(value: unknown): boolean {
 /** The caller must independently verify the current isolated DEBUG fixture scope. */
 export function admitReaderPublicSearchHttpFixtureRequest(fixture: ReaderPublicSearchHttpFixture,
   params: JsonObject): JsonObject | undefined {
+  if (fixture === 'vm-journeys') return undefined;
   const expectedUrl = fixture === 'delayed' ? READER_PUBLIC_SEARCH_DELAYED_URL :
     fixture === 'http-503' ? READER_PUBLIC_SEARCH_HTTP_503_URL :
       fixture === 'http-503-body' ? READER_PUBLIC_SEARCH_HTTP_503_BODY_URL : undefined;

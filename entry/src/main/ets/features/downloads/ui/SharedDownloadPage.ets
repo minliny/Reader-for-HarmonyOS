@@ -3,6 +3,10 @@ import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibil
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderEditableTarget, ReaderEditableInputModifier } from '../../../ui/layout/ReaderEditableTarget';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
+import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_INVARIANT_PROPERTY,
+  readerLayoutInvariantChanged } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_SHEET_CLOSE_MS } from '../../../ui/foundation/ProductMotionTiming';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { LengthMetrics } from '@kit.ArkUI';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
@@ -21,6 +25,7 @@ import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { DOWNLOAD_HEADER_HEIGHT, DOWNLOAD_HEADER_ACTION_WIDTH, DOWNLOAD_HEADER_ACTION_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { readerPageAreaLength, readerPresentedHeaderBottom } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
@@ -34,7 +39,7 @@ import {
   TYPE_DOWNLOAD_BOOK_TITLE, TYPE_DOWNLOAD_SHEET_TITLE, TYPE_DOWNLOAD_EMPTY_TITLE, TYPE_DOWNLOAD_META_LINE,
   TYPE_DOWNLOAD_STORAGE_META, TYPE_DOWNLOAD_STATUS_BODY,
   TYPE_DOWNLOAD_TAB, TYPE_DOWNLOAD_TAB_SELECTED,
-  TYPE_DOWNLOAD_SEARCH, TYPE_DOWNLOAD_LIST_TOOLS, TYPE_DOWNLOAD_SOURCE,
+  TYPE_DOWNLOAD_LIST_TOOLS, TYPE_DOWNLOAD_SOURCE,
   TYPE_DOWNLOAD_CHAPTER_TITLE,
   TYPE_DOWNLOAD_STORAGE_TOTAL, TYPE_DOWNLOAD_STORAGE_VALUE,
 } from './DownloadTypography';
@@ -49,6 +54,10 @@ import { ReaderInlineSelect } from '../../../ui/controls/ReaderInlineSelect';
 import { ReaderChoiceRow } from '../../../ui/controls/ReaderChoiceRow';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
+import { isReaderRealtimeBlurEnabled, resolveReaderModalScrimSpec, type ReaderNavigationPreferences }
+  from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, ReaderModalScrimModifier, readerSurfaceMaterialDecision }
+  from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
 import { resolveDrawerSpec, resolveActionSheetSpec, readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
@@ -94,14 +103,15 @@ export struct SharedDownloadPage {
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   private readonly rangeScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   private readonly rangeScroller: Scroller = new Scroller();
-  private readonly queryController: TextInputController = new TextInputController();
   private readonly rangeStartController: TextInputController = new TextInputController();
   private readonly rangeEndController: TextInputController = new TextInputController();
-  private readonly queryTarget: ReaderEditableTarget = new ReaderEditableTarget();
   private readonly rangeStartTarget: ReaderEditableTarget = new ReaderEditableTarget();
   private readonly rangeEndTarget: ReaderEditableTarget = new ReaderEditableTarget();
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') @Watch('syncOverlayChrome') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') @Watch('syncOverlayChrome') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') @Watch('syncOverlayChrome')
+  private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
   @StorageLink('readerAppForeground') @Watch('onInputEligibilityChanged') private appForeground: boolean = true;
   @StorageLink('readerWindowMetricsRevision') @Watch('onListGeometryChanged') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onBooksChanged') books: DownloadBookView[] = [];
@@ -341,6 +351,7 @@ export struct SharedDownloadPage {
       // Keep an empty carrier until its actually mounted Native actors exit.
       ForEach([this.sheetActorAttachment], (attachment: number): void => {
         Stack() { this.sheetOverlay(attachment, this.sheetActorOwner); }.width('100%').height('100%')
+          .customProperty(READER_LAYOUT_INVARIANT_PROPERTY, READER_LAYOUT_DEBUG_BUILD ? this.sheetLayoutTag() : undefined)
           .enabled(this.confirmation.length === 0)
           .accessibilityLevel(this.confirmation.length > 0 ? 'no-hide-descendants' : 'auto')
           .hitTestBehavior(this.confirmation.length > 0 ? HitTestMode.None : HitTestMode.Transparent);
@@ -350,6 +361,11 @@ export struct SharedDownloadPage {
       ForEach([this.confirmationGeneration], (opening: number): void => { this.confirmationOverlay(opening); },
         (opening: number): string => opening.toString());
     }
+  }
+
+  private sheetLayoutTag(): LayoutInvariantTag {
+    return { role: 'modal-overlay', id: 'download-sheet', active: this.sheet.length > 0,
+      closeDurationMs: READER_SHEET_CLOSE_MS, intercepts: this.sheet.length > 0 || this.sheetExitPending };
   }
 
   private lastErrorFeedback: string = '';
@@ -396,6 +412,7 @@ export struct SharedDownloadPage {
   @Builder
   private topBar() {
     PageBackBar({ variant: this.embeddedWide ? 'standard' : 'download', floating: this.embeddedWide,
+      layoutExpectedTopGapVp: this.headerTop(),
       centered: this.embeddedWide, elevation: this.embeddedWide ? 'floating' : 'fixed', trailingWidthVp: this.manageHeaderActionWidth(),
       showBack: !this.embeddedWide || this.detailKey.length > 0 || this.managing,
       title: this.detailKey.length === 0 ? '下载管理' : '章节下载',
@@ -606,33 +623,11 @@ export struct SharedDownloadPage {
 
   @Builder
   private searchField(identity: string = this.searchInputIdentity()) {
-    Row({ space: DOWNLOAD_VISUAL.searchGap }) {
-      Image(this.visualIcon('search')).width(DOWNLOAD_VISUAL.searchIconSize).height(DOWNLOAD_VISUAL.searchIconSize);
-      TextInput({ text: this.query, placeholder: '搜索书名、作者、书源', controller: this.queryController }).layoutWeight(1)
-        .attributeModifier(new ReaderEditableInputModifier(this.queryTarget, `${this.queryTarget.id}:${identity}`,
-          (editing: boolean): void => this.queryTarget.edit(editing)))
-        .onAppear((): void => this.mountQueryEditing(identity))
-        .onDisAppear((): void => this.queryTarget.unmount(`${this.queryTarget.id}:${identity}`))
-        .fontFamily(TYPE_DOWNLOAD_SEARCH.fontFamily).fontWeight(TYPE_DOWNLOAD_SEARCH.fontWeight)
-        .fontSize(TYPE_DOWNLOAD_SEARCH.fontSizeFp).lineHeight(TYPE_DOWNLOAD_SEARCH.lineHeightFp as number)
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).placeholderColor(downloadVisualColor('muted', this.appThemeScheme))
-        .placeholderFont({ family: TYPE_DOWNLOAD_SEARCH.fontFamily, size: TYPE_DOWNLOAD_SEARCH.fontSizeFp, weight: TYPE_DOWNLOAD_SEARCH.fontWeight })
-        .backgroundColor(Color.Transparent).caretColor(downloadVisualColor('ink', this.appThemeScheme)).borderRadius(0)
-        .padding({ top: DOWNLOAD_VISUAL.searchPaddingY, bottom: DOWNLOAD_VISUAL.searchPaddingY, left: 0, right: 0 })
-        .height(this.textControlHeight(DOWNLOAD_VISUAL.touchTarget,
-          DOWNLOAD_VISUAL.searchLineHeight, DOWNLOAD_VISUAL.searchPaddingY * 2))
-        .enterKeyType(EnterKeyType.Search).accessibilityText('搜索书架书籍')
-        .onChange((value: string): void => this.changeSearchInput(value, identity));
-      if (this.query.length > 0) {
-        Button({ type: ButtonType.Normal }) {
-          Image(this.visualIcon('clear')).width(DOWNLOAD_VISUAL.moreIconSize).height(DOWNLOAD_VISUAL.moreIconSize);
-        }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.touchTarget).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-          .accessibilityText('清除搜索')
-          .onClick((): void => this.clearSearchInput(identity));
-      }
-    }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.searchHeight + DOWNLOAD_VISUAL.borderWidth * 2 }).padding({ left: DOWNLOAD_VISUAL.searchPaddingX, right: DOWNLOAD_VISUAL.searchPaddingX }).borderRadius(DOWNLOAD_VISUAL.searchRadius)
-      .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
-      .border({ width: DOWNLOAD_VISUAL.borderWidth, color: readerAppColor('app.border.searchField', this.appThemeScheme) });
+    ReaderSearchField({ editingHost: this.editingHost, variant: 'pageForm', mode: 'live', text: this.query,
+      editingCurrent: (): boolean => this.searchInputIsCurrent(identity),
+      placeholder: '筛选下载书籍', accessibilityLabel: '按书名、作者或书源筛选下载书籍', clearAccessibilityLabel: '清除搜索',
+      onTextChange: (value: string): void => this.changeSearchInput(value, identity),
+      onClear: (): void => this.clearSearchInput(identity) });
   }
 
   private searchInputIdentity(): string {
@@ -803,7 +798,7 @@ export struct SharedDownloadPage {
 
   @Builder
   private statusButton(book: () => DownloadBookView, ownerGeneration: number = this.presentationGeneration) {
-    if (book().stateLabel === '已下载') {
+    if (book().statusAction === 'completed') {
       Row({ space: DOWNLOAD_VISUAL.statusGap }) {
         Image(this.statusIcon(book())).width(DOWNLOAD_VISUAL.statusIconSize).height(DOWNLOAD_VISUAL.statusIconSize);
         Text(book().stateLabel).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
@@ -815,7 +810,7 @@ export struct SharedDownloadPage {
     Button({ type: ButtonType.Normal }) {
       Row({ space: DOWNLOAD_VISUAL.statusGap }) {
         Image(this.statusIcon(book())).width(DOWNLOAD_VISUAL.statusIconSize).height(DOWNLOAD_VISUAL.statusIconSize);
-        Text(book().stateLabel === '下载失败' ? '重试' : book().stateLabel).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
+        Text(this.statusActionLabel(book())).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
           .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
           .fontColor(this.statusInk(book()))
           .textAlign(TextAlign.Center).layoutWeight(1);
@@ -826,12 +821,12 @@ export struct SharedDownloadPage {
       .padding({ left: DOWNLOAD_VISUAL.statusPaddingX, right: DOWNLOAD_VISUAL.statusPaddingX }).borderRadius(DOWNLOAD_VISUAL.statusRadius)
       .backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
       .enabled(!this.managing).opacity(this.managing ? DOWNLOAD_VISUAL.disabledOpacity : 1)
-      .accessibilityText(`${book().title}，${book().stateLabel}${this.bookIsRunning(book()) ? '，暂停' : book().stateLabel === '下载失败' ? '，重试' : ''}`)
+      .accessibilityText(this.statusActionAccessibility(book()))
       .onClick((): void => {
         const current = this.eventBook(book, ownerGeneration);
-        if (this.managing || current === undefined) return;
+        if (this.managing || current === undefined || current.statusAction === 'completed') return;
         this.actionBookKeys = [current.key]; this.actionChapters = [];
-        if (this.bookIsRunning(current)) this.sendAction('pause');
+        if (current.statusAction === 'pause') this.sendAction('pause');
         else { this.prepareRange(current.key); this.openSheet('range', 'book-status:' + current.key); }
       });
     }
@@ -1219,7 +1214,11 @@ export struct SharedDownloadPage {
   private sheetOverlay(attachment: number = this.sheetActorAttachment, ownerGeneration: number = this.sheetActorOwner) {
     Stack({ alignContent: Alignment.Bottom }) {
       if (this.sheet.length > 0) {
-        Rect().width('100%').height('100%').fill(this.sheetScrimColor())
+        Stack().width('100%').height('100%')
+          .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
+            this.sheetScrimColor(), this.operationsSheetUsesNativeMaterial()))
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+          .accessibilityLevel('no')
           .onClick((): void => {
             if (this.uiInputIsCurrent() && this.sheetActorIsCurrent(attachment, ownerGeneration) &&
               this.sheetMaskReady && this.confirmation.length === 0)
@@ -1255,6 +1254,11 @@ export struct SharedDownloadPage {
   }
 
   private isOperationsSheet(): boolean { return this.sheet === 'book-actions' || this.sheet === 'chapter-actions'; }
+
+  private operationsSheetUsesNativeMaterial(): boolean {
+    return this.isOperationsSheet() &&
+      readerSurfaceMaterialDecision('modalSheet', this.appearancePreferences, this.appThemeScheme, this.systemScheme).native;
+  }
 
   private sheetScrimColor(): string {
     return readerAppColor(this.isOperationsSheet() ? resolveDrawerSpec('reader-action-sheet').scrimRole :
@@ -1461,19 +1465,23 @@ export struct SharedDownloadPage {
   @Builder
   private operationsSheet(ownerGeneration: number, opening: number) {
     ReaderActionMenuSurface({ variant: 'grouped', actions: this.operationsActions(), scheme: this.appThemeScheme === 'night' ? 'night' : 'day',
+      actionIdPrefix: 'reader-download:sheet-action:',
       onAction: (id: string): void => this.performOperationsAction(id, ownerGeneration, opening) });
   }
 
   private operationsActions(): ReaderMenuActionView[] {
+    const books = this.actionBooks();
+    const deletion = books.some((book: DownloadBookView): boolean => book.sourceId !== 'local') ? [
+      new ReaderMenuActionView('deleteLocal', '删除本地内容', this.actionAvailable('deleteLocal', books),
+        readerActionIcon('trash', this.appThemeScheme), '删除本地内容', '', '', '', 'danger'),
+    ] : [];
     if (this.sheet === 'book-actions') {
       if (this.managing && this.detailKey.length === 0) {
         return [
           new ReaderMenuActionView('cancel', '取消下载任务', this.actionAvailable('cancel'), readerActionIcon('close', this.appThemeScheme)),
-          new ReaderMenuActionView('deleteLocal', '删除本地内容', this.actionAvailable('deleteLocal'),
-            readerActionIcon('trash', this.appThemeScheme), '删除本地内容', '', '', '', 'danger'),
+          ...deletion,
         ];
       }
-      const books = this.actionBooks();
       const complete = books.length > 0 && books.every((book: DownloadBookView): boolean => book.projectionStatus === 'ready' &&
         book.totalChapters !== undefined && book.totalChapters > 0 && book.downloadedChapters === book.totalChapters &&
         book.chapters.filter((chapter: DownloadChapterView): boolean => chapter.navigable).length === book.totalChapters &&
@@ -1482,8 +1490,7 @@ export struct SharedDownloadPage {
       return [
         new ReaderMenuActionView(cancel ? 'cancel' : 'download', complete ? '已下载' : cancel ? '取消下载' : '下载',
           !complete && this.actionAvailable(cancel ? 'cancel' : 'download'), readerActionIcon(complete ? 'check' : cancel ? 'close' : 'download', this.appThemeScheme)),
-        new ReaderMenuActionView('deleteLocal', '删除本地内容', this.actionAvailable('deleteLocal'),
-          readerActionIcon('trash', this.appThemeScheme), '删除本地内容', '', '', '', 'danger'),
+        ...deletion,
       ];
     }
     // Chapter actions retain their established download/pause/cancel entries.
@@ -1492,8 +1499,7 @@ export struct SharedDownloadPage {
       new ReaderMenuActionView(running ? 'pause' : 'download', running ? '暂停' : '下载',
         this.actionAvailable(running ? 'pause' : 'download'), readerActionIcon(running ? 'pause' : 'download', this.appThemeScheme)),
       new ReaderMenuActionView('cancel', '取消下载任务', this.actionAvailable('cancel'), readerActionIcon('close', this.appThemeScheme)),
-      new ReaderMenuActionView('deleteLocal', '删除本地内容', this.actionAvailable('deleteLocal'),
-        readerActionIcon('trash', this.appThemeScheme), '删除本地内容', '', '', '', 'danger'),
+      ...deletion,
     ];
   }
 
@@ -1663,12 +1669,6 @@ export struct SharedDownloadPage {
     }.width('100%').margin({ top: DOWNLOAD_VISUAL.rangeSelectionTop });
   }
 
-  private mountQueryEditing(identity: string): void {
-    if (!this.mounted || identity !== this.searchInputIdentity()) return;
-    this.queryTarget.mount(this.getUIContext(), this.editingHost, this.queryController,
-      (): boolean => this.searchInputIsCurrent(identity), (): number => DOWNLOAD_VISUAL.searchLineHeight * this.fontScale(),
-      `${this.queryTarget.id}:${identity}`);
-  }
   private mountRangeEditing(start: boolean, opening: number, revision: number): void {
     if (!this.mounted || opening !== this.sheetOpeningGeneration || revision !== this.rangeDraftRevision || this.sheet !== 'range') return;
     const target = start ? this.rangeStartTarget : this.rangeEndTarget;
@@ -1705,7 +1705,11 @@ export struct SharedDownloadPage {
     Stack({ alignContent: Alignment.Center }) {
       // A nested confirmation keeps the sheet's existing backdrop in place.
       if (this.sheet.length === 0 && !this.sheetExitPending) {
-        Rect().width('100%').height('100%').fill(downloadVisualColor('scrim', this.appThemeScheme));
+        Stack().width('100%').height('100%')
+          .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
+            downloadVisualColor('scrim', this.appThemeScheme)))
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+          .accessibilityLevel('no');
       }
       Column() {
         ReaderDialogSurface({ specId: 'download-confirmation', body: (): void => { this.confirmationSurfaceBody(opening); } }).clip(true);
@@ -1934,6 +1938,7 @@ export struct SharedDownloadPage {
     this.syncOverlayChrome();
     this.retireEmptyBookSelection();
     this.syncOverlayFocus();
+    if (READER_LAYOUT_DEBUG_BUILD) readerLayoutInvariantChanged();
   }
 
   private onConfirmationChanged(): void {
@@ -1976,6 +1981,7 @@ export struct SharedDownloadPage {
     this.syncOverlayChrome();
     this.retireEmptyBookSelection();
     this.syncOverlayFocus();
+    if (READER_LAYOUT_DEBUG_BUILD) readerLayoutInvariantChanged();
   }
 
   private retireSheetActors(): void {
@@ -2011,7 +2017,9 @@ export struct SharedDownloadPage {
     const hasSheet = this.sheet.length > 0;
     const operationsSheet = this.isOperationsSheet();
     const sheetVisible = hasSheet && (!operationsSheet || this.confirmation.length === 0);
-    const scrim = hasSheet ? this.sheetScrimColor() : downloadVisualColor('scrim', scheme);
+    const scrim = resolveReaderModalScrimSpec(this.appearancePreferences, scheme,
+      hasSheet ? this.sheetScrimColor() : downloadVisualColor('scrim', scheme),
+      hasSheet && this.operationsSheetUsesNativeMaterial()).scrimColor;
     const pageInk = downloadVisualColor('ink', scheme);
     const statusPaper = readerScrimmedOpaqueColor(downloadVisualColor('paper', scheme), scrim);
     const statusInk = readerScrimmedOpaqueColor(pageInk, scrim);
@@ -2019,7 +2027,8 @@ export struct SharedDownloadPage {
     let navigationInk = statusInk;
     if (sheetVisible) {
       const drawer = resolveDrawerSpec('reader-action-sheet');
-      navigationPaper = readerAppColor(operationsSheet ? drawer.surfaceRole : 'app.surface.menuSolid', scheme);
+      const operationsRole = isReaderRealtimeBlurEnabled(this.appearancePreferences) ? drawer.surfaceRole : 'TOK_SURFACE_SOLID';
+      navigationPaper = readerAppColor(operationsSheet ? operationsRole : 'app.surface.menuSolid', scheme);
       navigationInk = operationsSheet ? readerAppColor(drawer.inkRole, scheme) : pageInk;
     }
     const style = new ReaderWindowChromeStyle(statusPaper, scheme === 'night' ? 'light' : 'dark', statusInk);
@@ -2173,9 +2182,6 @@ export struct SharedDownloadPage {
     });
     return choices;
   }
-  private bookIsRunning(book: DownloadBookView): boolean {
-    return book.chapters.some((chapter: DownloadChapterView): boolean => chapter.navigable && this.chapterIsRunning(chapter));
-  }
   private chapterIsRunning(chapter: DownloadChapterView): boolean {
     return !chapter.localComplete && (chapter.queueState === 'inProgress' || chapter.queueState === 'queued');
   }
@@ -2186,16 +2192,23 @@ export struct SharedDownloadPage {
     if (chapter.queueState === 'paused') return '继续';
     return chapter.queueState === 'unknown' ? '' : '下载';
   }
+  private statusActionLabel(book: DownloadBookView): string {
+    const action = book.statusAction;
+    return action === 'pause' ? '暂停' : action === 'retry' ? '重试' : book.stateLabel;
+  }
+  private statusActionAccessibility(book: DownloadBookView): string {
+    const actionLabel = this.statusActionLabel(book);
+    const status = book.stateLabel === actionLabel ? actionLabel : `${book.stateLabel}，${actionLabel}`;
+    return `${book.title}，${status}`;
+  }
   private statusIcon(book: DownloadBookView): Resource {
-    if (book.stateLabel === '已下载') return this.visualIcon('check');
-    if (book.stateLabel === '下载失败') return this.visualIcon('retry');
-    if (this.bookIsRunning(book)) return this.visualIcon('pause');
+    const action = book.statusAction;
+    if (action === 'completed') return this.visualIcon('check');
+    if (action === 'pause' || action === 'retry') return this.visualIcon(action);
     if (book.chapters.some((chapter: DownloadChapterView): boolean => chapter.queueState === 'paused' && !chapter.localComplete)) return this.visualIcon('play');
     return this.visualIcon('download');
   }
   private visualIcon(name: string): Resource {
-    if (name === 'search') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_search_theme_night') : $r('app.media.download_visual_search');
-    if (name === 'clear') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_close_theme_night') : $r('app.media.download_visual_close');
     if (name === 'filter') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_filter_theme_night') : $r('app.media.download_visual_filter');
     if (name === 'storage') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_storage_theme_night') : $r('app.media.download_visual_storage');
     if (name === 'trash') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_trash_theme_night') : $r('app.media.download_visual_trash');
@@ -2490,7 +2503,8 @@ export struct SharedDownloadPage {
   }
 
   private removalActionBooks(action: 'cancel' | 'deleteLocal'): DownloadBookView[] {
-    const books = this.actionBooks();
+    const books = this.actionBooks().filter((book: DownloadBookView): boolean =>
+      action !== 'deleteLocal' || book.sourceId !== 'local');
     if (!this.managing || this.detailKey.length > 0) return books;
     return books.filter((book: DownloadBookView): boolean => this.actionAvailable(action, [book], []));
   }
@@ -2530,7 +2544,7 @@ export struct SharedDownloadPage {
   private actionAvailable(action: SharedDownloadUiAction, books: DownloadBookView[] = this.actionBooks(),
     proofs: SharedDownloadExpectedChapter[] = this.actionChapters): boolean {
     return books.some((book: DownloadBookView): boolean => {
-      if (book.projectionStatus !== 'ready') return false;
+      if (book.projectionStatus !== 'ready' || (action === 'deleteLocal' && book.sourceId === 'local')) return false;
       const chapters = this.actionChapterRows(book, proofs);
       if (proofs.length > 0 && chapters.length !== proofs.length) return false;
       if (action === 'download') return chapters.some((chapter: DownloadChapterView): boolean => !chapter.localComplete && chapter.queueState !== 'unknown');

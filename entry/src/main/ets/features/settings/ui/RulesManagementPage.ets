@@ -43,6 +43,7 @@ export struct RulesManagementPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerAppForeground') private appForeground: boolean = true;
   @Prop inputEnabled: boolean = true;
+  @Prop embeddedWide: boolean = false;
   @Prop importFocusId: string = '';
   @Prop backFocusId: string = '';
   inputCurrent: (() => boolean) | undefined = undefined;
@@ -140,7 +141,7 @@ export struct RulesManagementPage {
 
   build() {
     ReaderStandardPage({ floatingHeader: true, editingHost: this.editingHost,
-      variant: 'management',
+      variant: 'management', embeddedWide: this.embeddedWide,
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
     }).enabled(this.inputAllowed());
@@ -148,7 +149,8 @@ export struct RulesManagementPage {
 
   @Builder
   private pageHeader() {
-    PageBackBar({ floating: true, centered: true, elevation: 'floating', title: '规则实体管理',
+    PageBackBar({ floating: true, centered: true, elevation: 'floating', title: '规则与订阅',
+      showBack: !this.embeddedWide,
       backFocusId: this.backFocusId, onBack: (): void => { if (this.inputAllowed()) this.onBack(); } });
   }
 

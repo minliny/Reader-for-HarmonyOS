@@ -4,6 +4,8 @@ import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryD
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { readerKeyboardViewport } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { ReaderRectVp, readerVisualSafeBottom, readerVisualSafeRight, readerVisualSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
 import { READER_FULL_PANEL_TOP, readerControlIslandHeight, type ReaderControlContentBudget } from './ReaderLayoutGeometry';
@@ -14,8 +16,12 @@ import { measureReaderControlMinimum, readerControlModuleFactsGeometryKey, reade
 import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision, ReaderSurfaceMaterialRole } from '../../../app/HarmonyCapabilityPolicy';
+import { applyReaderPopupMaterial, defaultNavigationPreferences, ReaderModalScrimModifier,
+  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { ReaderControlChapterProgressCard } from './ReaderControlChapterProgressCard';
+import { ReaderControlModuleNavigation, type ReaderControlNavigationModule } from './ReaderControlModuleNavigation';
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
-import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import { ReaderReadingTopBar, readerReadingTopBarHeight } from '../../../ui/chrome/ReaderReadingTopBar';
 import { TYPE_READER_CONTROL_BOOK_TITLE, TYPE_READER_CONTROL_CHAPTER_SOURCE, TYPE_READER_CONTROL_COLLAPSE_INTER, TYPE_READER_CONTROL_COLLAPSE_UI, TYPE_READER_CONTROL_COLLAPSE_TTS, TYPE_READER_CONTROL_HEADER_INTER, TYPE_READER_CONTROL_HEADER_UI, type ReaderTextStyle } from '../../../ui/foundation/ReaderTypography';
 import { TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL, TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_COLLAPSE, TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_VALUE, TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL, TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL, TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY } from '../../../ui/foundation/ReaderTypography';
@@ -108,7 +114,7 @@ import type { ReaderControlReplaceHeaderFrame } from './ReaderControlReplaceGeom
 import type { ReaderReplacePreview } from '../application/ReaderReplaceQuickGateway';
 import { createReaderControlReplaceState, type ReaderControlReplaceState } from '../presentation/ReaderControlReplaceState';
 import type { ReaderReplaceRule, ReaderControlReplaceDraft } from '../application/ReaderReplaceQuickState';
-import { TOK_BORDER_W, TOK_RADIUS_LG } from '../../../ui/foundation/ReaderTokens';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import {
   ReaderControlGeometry,
   READER_CONTROL_BRIGHTNESS_AUTO_HIT_WIDTH,
@@ -132,7 +138,6 @@ import {
   READER_CONTROL_TOP_BAR_HEIGHT,
   READER_CONTROL_PROGRESS_MAX,
   READER_CONTROL_PROGRESS_MIN,
-  READER_CONTROL_PROGRESS_STEP,
   readerControlBrightnessTrackHeight,
 } from './ReaderControlGeometry';
 import {
@@ -272,6 +277,9 @@ export struct ReaderControlPanel {
 
   @Prop sessionFontScale: number = 1;
   @StorageLink('readerAppScheme') private appScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @Prop @Watch('onLaunchSampleChanged') launchSample: ReaderSessionLaunchSample | undefined = undefined;
   @Prop @Watch('onLaunchSampleChanged') launchGeneration: number = 0;
   @Prop @Watch('onLaunchSampleChanged') launchSourceMinimum: ReaderControlPlaybackLaunchProfile | undefined = undefined;
@@ -594,7 +602,8 @@ export struct ReaderControlPanel {
   onAutoPageSpeedUp: () => void = (): void => {};
   onAutoPageFullTimerChange: (minutes: number, seconds: number) => void =
     (_minutes: number, _seconds: number): void => {};
-  onAutoPageFullSpeedChange: (seconds: number) => void = (_seconds: number): void => {};
+  onAutoPageFullSpeedChange: (seconds: number, onDeclined?: () => void) => void =
+    (_seconds: number, onDeclined?: () => void): void => { onDeclined?.(); };
   onAutoPageFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onOpenReplace: () => void = (): void => {};
   onReloadControlReplace: (operationId?: string) => Promise<void> = async (): Promise<void> => {};
@@ -645,7 +654,8 @@ export struct ReaderControlPanel {
   onTtsPrevious: () => void = (): void => {};
   onTtsNext: () => void = (): void => {};
   onTtsSeek: (sliceIndex: number) => void = (_sliceIndex: number): void => {};
-  onTtsRateChange: (rate: number) => void = (_rate: number): void => {};
+  onTtsRateChange: (rate: number, onDeclined?: () => void) => void =
+    (_rate: number, onDeclined?: () => void): void => { onDeclined?.(); };
   onTtsTimerChange: (minutes: number, seconds: number, mode?: ReaderTtsTimerMode) => void =
     (_minutes: number, _seconds: number, _mode?: ReaderTtsTimerMode): void => {};
   onTtsFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
@@ -1934,6 +1944,10 @@ export struct ReaderControlPanel {
     if (this.directSheetVisible() && !this.directSheetClosing && this.controlActionInputEnabled()) this.requestPage('home');
   }
 
+  private surfaceMaterial(role: ReaderSurfaceMaterialRole): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision(role, this.navigationPreferences, this.appScheme, this.systemScheme);
+  }
+
   // The production component owns both the clock and every actor builder.
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -1954,8 +1968,10 @@ export struct ReaderControlPanel {
             height: Number(current.height) });
         });
       if (this.directSheetVisible()) {
-        Rect().width('100%').height('100%').id('reader-control-direct-sheet-scrim')
-          .fill(readerAppColor('app.scrim.warmModal', this.appScheme)).backdropBlur(6)
+        Stack().width('100%').height('100%').id('reader-control-direct-sheet-scrim')
+          .attributeModifier(new ReaderModalScrimModifier(this.navigationPreferences, this.appScheme,
+            readerAppColor('app.scrim.warmModal', this.appScheme), this.surfaceMaterial('controlPanel').native))
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
           .opacity(this.visualExpansionProgress)
           .accessibilityLevel('no').onClick((): void => this.closeDirectSheet());
       }
@@ -1964,7 +1980,8 @@ export struct ReaderControlPanel {
           .id('reader-control-motion-shell')
           .width(this.frame().shell.width).height(this.frame().shell.height)
           .position({ x: 0, y: this.frame().shell.y })
-          .attributeModifier(new ReaderPanelFrame('reader', this.appScheme))
+          .attributeModifier(new ReaderPanelFrame('reader', this.appScheme, false, undefined,
+            this.frame().visibility > 0 ? this.surfaceMaterial('controlPanel') : undefined))
           .opacity(this.frame().shell.opacity)
           // The shell is a visual actor only.  A full-size Block here steals
           // pointer hit testing from the mounted header/content actors below,
@@ -2087,6 +2104,9 @@ export struct ReaderControlPanel {
         }
         .width(this.currentLayout().fullPanelWidth).height(this.controlPanelHeight())
         .id('reader-control-motion-dock')
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+          ? { role: 'modal-overlay', id: 'reading-controls', active: this.frame().visibility > 0,
+            intercepts: this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0) } as LayoutInvariantTag : undefined)
         .translate({ x: this.currentLayout().isExpanded() ? this.directSheetTranslation() : 0,
           y: this.frame().dock.translateY + (this.currentLayout().isExpanded() ? 0 : this.directSheetTranslation()) })
         .opacity(this.frame().dock.opacity * (this.directSheetVisible() && this.reduceMotion ? this.visualExpansionProgress : 1))
@@ -2103,8 +2123,7 @@ export struct ReaderControlPanel {
           sample: this.launchSample, sessionState: this.launchBusinessStatus,
           desiredPlaying: this.launchDesiredPlaying, countdown: this.launchCountdown,
           interactionEnabled: this.launchInteractionEnabled,
-          surfaceColor: readerAppColor('app.sessionCapsule.surface', this.appScheme),
-          surfaceBorderColor: readerAppColor('app.sessionCapsule.border', this.appScheme),
+          material: this.surfaceMaterial('sessionCapsule'),
           sourceSurfaceColor: readerAppColor(this.fixedIsland ? 'TOK_READ_CARD_EMPHASIS' : this.launchSourceKind === 'fullAutoPagePlayback' ?
             'TOK_SURFACE_PANEL_SOFT' : this.launchSourceKind === 'fullTtsPlayback' ? 'TOK_TTS_CARD' :
               this.launchSourceKind === 'quickTts' ? 'TOK_TTS_QUICK_CARD' : 'TOK_SURFACE_PANEL', this.appScheme),
@@ -2115,9 +2134,6 @@ export struct ReaderControlPanel {
           sourceHighlightColor: this.launchSourceKind === 'fullTtsPlayback' ? readerAppColor('app.control.paint.99FFFFFF', this.appScheme) : '#00000000',
           sourceGradientStart: !this.fixedIsland && this.launchSourceKind === 'quickTts' ? readerAppColor('app.control.paint.FFFAF4', this.appScheme) : '',
           sourceGradientEnd: !this.fixedIsland && this.launchSourceKind === 'quickTts' ? readerAppColor('app.control.paint.F6ECDD', this.appScheme) : '',
-          textColor: readerAppColor('app.sessionCapsule.ink', this.appScheme),
-          primaryColor: readerAppColor('TOK_READ_PRIMARY', this.appScheme),
-          onPrimaryColor: readerAppColor('app.sessionCapsule.onPrimary', this.appScheme),
           themeScheme: this.appScheme,
           sourceSharpContent: (): void => { this.launchSourceContent(); },
           onToggle: (): void => this.onLaunchToggle(),
@@ -2269,7 +2285,8 @@ export struct ReaderControlPanel {
   private readerMorePopupOptions(generation: number): CustomPopupOptions {
     const surface = this.readerMoreSurfaceSpec();
     const density = readerWindowMetrics().densityPixels;
-    return {
+    const material = this.surfaceMaterial('popoverMenu');
+    const options: CustomPopupOptions = {
       builder: (): void => { this.readerMoreMenu(generation); },
       placement: Placement.BottomRight,
       width: this.readerMoreMenuWidth(),
@@ -2277,14 +2294,15 @@ export struct ReaderControlPanel {
       radius: surface.borderRadius,
       arrowPointPosition: ArrowPointPosition.CENTER,
       targetSpace: 8,
-      popupColor: readerAppColor(surface.surfaceBackgroundRole, this.appScheme),
+      popupColor: material.native ? Color.Transparent : readerAppColor(surface.surfaceBackgroundRole, this.appScheme),
       backgroundBlurStyle: BlurStyle.NONE,
-      borderWidth: surface.borderWidth,
-      borderLinearGradient: { colors: [
+      borderWidth: material.native ? 0 : surface.borderWidth,
+      borderLinearGradient: material.native ? undefined : { colors: [
         [readerAppColor(surface.surfaceBorderRole, this.appScheme), 0],
         [readerAppColor(surface.surfaceBorderRole, this.appScheme), 1],
       ] },
-      shadow: { radius: surface.shadowRadius * density, color: readerAppColor(surface.surfaceShadowRole, this.appScheme),
+      shadow: material.native ? undefined : { radius: surface.shadowRadius * density,
+        color: readerAppColor(surface.surfaceShadowRole, this.appScheme),
         offsetY: surface.shadowOffsetY * density },
       autoCancel: true, mask: true, focusable: true, followTransformOfTarget: true,
       transition: this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : undefined,
@@ -2296,6 +2314,8 @@ export struct ReaderControlPanel {
         if (!event.isVisible) this.dismissMoreMenu(generation);
       },
     };
+    applyReaderPopupMaterial(options, material);
+    return options;
   }
 
   private readerMoreActionEnabled(action: 'info' | 'refresh' | 'download' | 'recovery'): boolean {
@@ -2868,7 +2888,7 @@ export struct ReaderControlPanel {
       onPrevious: (): void => this.onTtsPrevious(),
       onNext: (): void => this.onTtsNext(),
       onSeek: (sliceIndex: number): void => this.onTtsSeek(sliceIndex),
-      onRateChange: (rate: number): void => this.onTtsRateChange(rate),
+      onRateChange: (rate: number, onDeclined?: () => void): void => this.onTtsRateChange(rate, onDeclined),
       onTimerChange: (minutes: number, seconds: number, mode?: ReaderTtsTimerMode): void =>
         this.onTtsTimerChange(minutes, seconds, mode),
       onFollowHighlightChange: (enabled: boolean): void => this.onTtsFollowHighlightChange(enabled),
@@ -2919,7 +2939,8 @@ export struct ReaderControlPanel {
           onNextChapter: (): void => this.onNextChapter(),
           onTimerChange: (minutes: number, seconds: number): void =>
             this.onAutoPageFullTimerChange(minutes, seconds),
-          onSpeedChange: (seconds: number): void => this.onAutoPageFullSpeedChange(seconds),
+          onSpeedChange: (seconds: number, onDeclined?: () => void): void =>
+            this.onAutoPageFullSpeedChange(seconds, onDeclined),
           onFollowHighlightChange: (enabled: boolean): void => this.onAutoPageFollowHighlightChange(enabled),
           onMorphActorMeasured: (kind: ReaderSessionMorphSourceKind, left: number, top: number,
             width: number, height: number): void => this.reportSessionMorphSource(kind, left, top, width, height),
@@ -3222,147 +3243,33 @@ export struct ReaderControlPanel {
 
   @Builder
   private chapterProgress() {
-    Column({ space: 0 }) {
-      this.chapterRow();
-      this.chapterBookmarkRow();
-      this.progressRow();
-    }
-    .width('100%')
-    .id('reader-control-chapter-progress-card')
-    .height(this.homeChapterCardHeight())
-    .alignItems(HorizontalAlign.Start)
-    .attributeModifier(new ReaderPanelFrame('reader-card', this.appScheme));
-  }
-
-  @Builder
-  private chapterRow() {
-    Row({ space: 8 }) {
-      ReaderIconButton({ specId: 'reader-chapter-step', scheme: this.appScheme,
-        icon: $r(this.appScheme === 'night' ? 'app.media.rc_chevron_left_theme_night' : 'app.media.rc_chevron_left'),
-        accessibilityLabel: '上一章', actionEnabled: this.progressInputEnabled(true) && this.canStepChapter(-1),
-        actionScope: this.controlActionScope(),
-        onTap: (): void => { if (this.progressInputEnabled() && this.canStepChapter(-1)) this.onPreviousChapter(); },
-      });
-
-      // ChapterTitle Inter Bold 13 居中 (layoutWeight 吃剩余宽)。
-      Text(this.presentedHomeChapterTitle())
-        .layoutWeight(1)
-        .height(this.homeMetric('chapterTitleHeight', 34))
-        .fontFamily(TYPE_READER_CONTROL_CHAPTER_TITLE.fontFamily)
-        .fontWeight(TYPE_READER_CONTROL_CHAPTER_TITLE.fontWeight)
-        .fontSize(TYPE_READER_CONTROL_CHAPTER_TITLE.fontSizeFp)
-        .lineHeight(TYPE_READER_CONTROL_CHAPTER_TITLE.lineHeightFp)
-        .letterSpacing(TYPE_READER_CONTROL_CHAPTER_TITLE.letterSpacingFp)
-        .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
-        .textAlign(TextAlign.Center)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
-
-      ReaderIconButton({ specId: 'reader-chapter-step', scheme: this.appScheme,
-        icon: $r(this.appScheme === 'night' ? 'app.media.rc_chevron_right_theme_night' : 'app.media.rc_chevron_right'),
-        accessibilityLabel: '下一章', actionEnabled: this.progressInputEnabled(true) && this.canStepChapter(1),
-        actionScope: this.controlActionScope(),
-        onTap: (): void => { if (this.progressInputEnabled() && this.canStepChapter(1)) this.onNextChapter(); },
-      });
-    }
-    .width('100%')
-    .id('reader-control-chapter-title-lane')
-    .height(this.chapterTitleLaneHeight())
-    .padding({ left: 11, right: 11 })
-    .alignItems(VerticalAlign.Center)
-    .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto');
-  }
-
-  @Builder
-  private chapterBookmarkRow() {
-    Row({ space: 8 }) {
-      Text(`第 ${this.readableChapterPosition >= 0 ? this.readableChapterPosition + 1 : '—'} / 共 ${this.presentedHomeTotalChapters()} 章`)
-        .layoutWeight(1).fontFamily(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontFamily)
-        .fontWeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontWeight)
-        .fontSize(11).fontFeature('"tnum" 1').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-        .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme));
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Row({ space: 4 }) {
-          Stack({ alignContent: Alignment.TopStart }) {
-            Image(this.appScheme === 'night' ? $r('app.media.reader_control_bookmark_outline_theme_night') :
-              $r('app.media.reader_control_bookmark_outline')).width(14).height(14);
-            Stack({ alignContent: Alignment.TopStart }) {
-              Image(this.appScheme === 'night' ? $r('app.media.reader_control_bookmark_filled_theme_night') :
-                $r('app.media.reader_control_bookmark_filled')).width(14).height(14).position({ x: 0, y: 0 });
-            }.width(14).height(14 * (this.reduceMotion ? 1 : this.pageBookmarkFill)).clip(true)
-              .opacity(this.reduceMotion ? this.pageBookmarkFill : 1).scale({ x: 1, y: this.pageBookmarkTuck, centerY: 0 });
-          }.width(14).height(14).accessibilityLevel('no');
-          Text(this.pageBookmarkStatus === 'bookmarked' ? '已加书签' : '加书签')
-            .fontFamily(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.fontFamily)
-            .fontWeight(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.fontWeight)
-            .fontSize(11).lineHeight(15 * Math.max(1, this.sessionFontScale)).halfLeading(true).maxLines(1)
-            .fontColor(readerAppColor(this.pageBookmarkStatus === 'bookmarked' ? 'TOK_READ_PRIMARY' : 'TOK_READ_INK', this.appScheme));
-        }.width(this.bookmarkPillWidth()).height(this.bookmarkPillHeight()).justifyContent(FlexAlign.Center).borderRadius(14)
-          .backgroundColor(readerPressSurface(readerAppColor(this.pageBookmarkStatus === 'bookmarked' ?
-            'TOK_READ_ACTIVE_SOFT' : 'TOK_SURFACE_PANEL_SOFT', this.appScheme),
-          this.appScheme, this.quickOrModulePress === 'bookmark', this.reduceMotion))
-          .scale(readerPressScale(this.quickOrModulePress === 'bookmark', this.reduceMotion))
-          .opacity(readerPressOpacity(this.quickOrModulePress === 'bookmark', this.reduceMotion))
-          .border({ width: 1, color: readerAppColor(this.pageBookmarkStatus === 'bookmarked' ? 'TOK_READ_PRIMARY' :
-            'app.border.readerConfig', this.appScheme) });
-      }.id('novel-bookmark-pill').width(this.bookmarkPillWidth()).height(Math.max(44, this.bookmarkPillHeight()))
-        .padding(0).backgroundColor(Color.Transparent)
-        .accessibilityText(this.pageBookmarkStatus === 'bookmarked' ? '已加书签，点击移除' : '加书签')
-        .enabled(this.pageBookmarkEnabled && this.progressInputEnabled(true))
-        .onTouch((event: TouchEvent): void => this.observeQuickOrModulePress(event, 'bookmark',
-          this.pageBookmarkEnabled && this.progressInputEnabled(true)))
-        .opacity(this.pageBookmarkEnabled ? 1 : .45)
-        .onClick(this.controlActionHandler((): void => {
-          if (this.pageBookmarkEnabled && this.progressInputEnabled()) this.onTogglePageBookmark();
-        }));
-    }.width('100%').id('reader-control-chapter-bookmark-lane').height(this.bookmarkLaneHeight()).padding({ left: 11, right: 11 });
-  }
-
-  @Builder
-  private progressRow() {
-    Row() {
-      // 进度百分比 Inter Regular 9 (固定 26.23 宽容器, 使 slider 起点对齐 Figma)。
-      Text(`${Math.round(this.effectiveProgressPercent())}%`)
-        .width(this.homeMetric('percentWidth', 26.23))
-        .fontFamily(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontFamily)
-        .fontWeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontWeight)
-        .fontSize(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontSizeFp)
-        .lineHeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
-        .maxLines(1);
-
-      // Native Slider owns pointer/keyboard semantics; its visual parameters
-      // retain the Figma 5vp track and 18vp bordered thumb. The owner receives
-      // only the final value and resolves it to a real chapter/scalar anchor.
-      Slider({
-        value: this.effectiveProgressPercent(),
-        min: READER_CONTROL_PROGRESS_MIN,
-        max: READER_CONTROL_PROGRESS_MAX,
-        step: READER_CONTROL_PROGRESS_STEP,
-        style: SliderStyle.OutSet,
-        direction: Axis.Horizontal,
-        reverse: false,
-      })
-      .trackThickness(5)
-      .blockSize({ width: 18, height: 18 })
-      .blockColor(readerAppColor('TOK_SURFACE_SOLID_OPAQUE', this.appScheme))
-      .blockBorderColor(readerAppColor('TOK_ACCENT', this.appScheme))
-      .blockBorderWidth(2.778)
-      .selectedColor(readerAppColor('TOK_ACCENT', this.appScheme))
-      .trackColor(readerAppColor('TOK_BORDER', this.appScheme))
-      .showSteps(false)
-      .showTips(false)
-      .accessibilityText('阅读进度')
-      .onChange(this.progressChangeHandler(this.progressInputRevision))
-      .layoutWeight(1)
-      .height(this.progressLaneHeight());
-
-    }
-    .width('100%')
-    .id('reader-control-chapter-progress-lane')
-    .height(this.progressLaneHeight())
-    .padding({ left: 11, right: 11 })
-    .alignItems(VerticalAlign.Center);
+    ReaderControlChapterProgressCard({
+      appScheme: this.appScheme, chapterTitle: this.presentedHomeChapterTitle(),
+      titleHeight: this.homeMetric('chapterTitleHeight', 34), titleLaneHeight: this.chapterTitleLaneHeight(),
+      cardHeight: this.homeChapterCardHeight(), totalChapters: this.presentedHomeTotalChapters(),
+      readableChapterPosition: this.readableChapterPosition, menuOccludesActions: this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu',
+      previousEnabled: this.progressInputEnabled(true) && this.canStepChapter(-1),
+      nextEnabled: this.progressInputEnabled(true) && this.canStepChapter(1),
+      actionScope: this.controlActionScope(),
+      chapterActionsCurrent: (scope: string): boolean => this.controlActionScope() === scope &&
+        this.progressInputEnabled(true) && !this.moreMenuVisible && this.temporaryLayerKind === '',
+      bookmarkLaneHeight: this.bookmarkLaneHeight(), bookmarkWidth: this.bookmarkPillWidth(), bookmarkHeight: this.bookmarkPillHeight(),
+      pageBookmarkStatus: this.pageBookmarkStatus, pageBookmarkEnabled: this.pageBookmarkEnabled,
+      bookmarkInputEnabled: this.pageBookmarkEnabled && this.progressInputEnabled(true),
+      quickOrModulePress: $quickOrModulePress, pageBookmarkFill: $pageBookmarkFill, pageBookmarkTuck: $pageBookmarkTuck,
+      sessionFontScale: this.sessionFontScale, reduceMotion: this.reduceMotion,
+      progressPercent: this.effectiveProgressPercent(), progressLabelWidth: this.homeMetric('percentWidth', 26.23),
+      progressLaneHeight: this.progressLaneHeight(), progressInputRevision: this.progressInputRevision,
+      onPreviousChapter: (): void => { if (this.progressInputEnabled() && this.canStepChapter(-1)) this.onPreviousChapter(); },
+      onNextChapter: (): void => { if (this.progressInputEnabled() && this.canStepChapter(1)) this.onNextChapter(); },
+      onBookmarkPress: (event: TouchEvent): void => this.observeQuickOrModulePress(event, 'bookmark',
+        this.pageBookmarkEnabled && this.progressInputEnabled(true)),
+      bookmarkClickHandler: (_scope: string): (() => void) => this.controlActionHandler((): void => {
+        if (this.pageBookmarkEnabled && this.progressInputEnabled()) this.onTogglePageBookmark();
+      }),
+      progressChangeHandler: (revision: number): ((value: number, mode: SliderChangeMode) => void) =>
+        this.progressChangeHandler(revision),
+    });
   }
 
   private clampPercent(value: number): number {
@@ -3673,68 +3580,25 @@ export struct ReaderControlPanel {
 
   @Builder
   private moduleNavBar() {
-    Row({ space: 4 }) {
-      this.moduleButton('rc_autopage', '翻页', 'autoPage');
-      this.moduleButton('rc_headphones', '朗读', 'tts');
-      this.moduleButton('rc_palette', '界面', 'appearance');
-      this.moduleButton('rc_settings', '设置', 'settings');
-    }
-    .width('100%')
-    .height(this.currentLayout().contentBudget?.navigationHeightVp ?? this.geo.moduleNavH)
-    .padding({ left: 9, right: 9, top: 9, bottom: 6 })
-    .backgroundColor(readerAppColor('TOK_SURFACE_SOLID_OPAQUE', this.appScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appScheme) })
-    .borderRadius({
-      topLeft: this.geo.moduleNavRadiusTop,
-      topRight: this.geo.moduleNavRadiusTop,
-      bottomLeft: TOK_RADIUS_LG,
-      bottomRight: TOK_RADIUS_LG,
+    ReaderControlModuleNavigation({
+      appScheme: this.appScheme, activeModule: this.activeNavigationModule(),
+      navHeight: this.currentLayout().contentBudget?.navigationHeightVp ?? this.geo.moduleNavH,
+      topRadius: this.geo.moduleNavRadiusTop,
+      labelHeight: this.selectedMinimumProfile()?.navigationLabelHeight ?? 13.889,
+      hasMeasuredProfile: this.selectedMinimumProfile() !== undefined,
+      ttsUnavailable: this.ttsState.status === 'unavailable', quickOrModulePress: $quickOrModulePress,
+      reduceMotion: this.reduceMotion, actionEnabled: this.navigationInputEnabled(true),
+      actionScope: this.controlActionScope(),
+      onModulePress: (event: TouchEvent, module: ReaderControlNavigationModule): void =>
+        this.observeQuickOrModulePress(event, module, this.navigationInputEnabled(true)),
+      moduleClickHandler: (module: ReaderControlNavigationModule, _scope: string): (() => void) =>
+        this.controlActionHandler((): void => { if (this.navigationInputEnabled()) void this.activateModule(module); }),
     });
   }
 
-  @Builder
-  private moduleButton(icon: string, label: string, module: 'autoPage' | 'tts' | 'appearance' | 'settings') {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
-    Column() {
-      Stack({ alignContent: Alignment.Center }) {
-        Image($r(`app.media.${this.moduleIcon(icon, module)}`))
-          .width(20)
-          .height(20).accessibilityLevel('no');
-      }
-      .width(32)
-      .height(32)
-      .backgroundColor(readerPressSurface(readerAppColor(this.isActiveModule(module) ? 'TOK_READ_PRIMARY' : 'TOK_SURFACE_PANEL_SOFT', this.appScheme),
-        this.appScheme, this.quickOrModulePress === module, this.reduceMotion))
-      .borderRadius(16).scale(readerPressScale(this.quickOrModulePress === module, this.reduceMotion))
-      .opacity(readerPressOpacity(this.quickOrModulePress === module, this.reduceMotion));
-
-      // Original Make V17 navigation uses Black 10/13.889; the complete bundled Sans face owns its 900 axis.
-      Text(label)
-        .width('100%')
-        .height(this.selectedMinimumProfile()?.navigationLabelHeight ?? 13.889)
-        .fontFamily(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.fontFamily)
-        .fontWeight(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.fontWeight, { enableVariableFontWeight: true })
-        .fontSize(TYPE_READER_CONTROL_SOURCE_ACTION.fontSizeFp)
-        .lineHeight(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.lineHeightFp as number)
-        .halfLeading(true)
-        .fontColor(this.isActiveModule(module) ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_READ_ICON', this.appScheme))
-        .textAlign(TextAlign.Center)
-        .maxLines(this.selectedMinimumProfile() === undefined ? 1 : undefined)
-        .accessibilityLevel('no')
-        .margin({ top: 4 });
-    }.width('100%').height('100%').alignItems(HorizontalAlign.Center).justifyContent(FlexAlign.Center);
-    }
-    .layoutWeight(1)
-    .id('reader-control-entry-' + module)
-    .height(62 + (this.selectedMinimumProfile()?.navigationLabelHeight ?? 13.889) - 13.889)
-    .padding(0).backgroundColor(Color.Transparent)
-    .borderRadius(12)
-    .opacity(module === 'tts' && this.ttsState.status === 'unavailable' ? 0.72 : 1)
-    .attributeModifier(new ReaderActionAccessibility(label, this.navigationInputEnabled(true), this.isActiveModule(module), true, undefined, 'nativeButton'))
-    .onTouch((event: TouchEvent): void => this.observeQuickOrModulePress(event, module, this.navigationInputEnabled(true)))
-    .onClick(this.controlActionHandler((): void => {
-      if (this.navigationInputEnabled()) void this.activateModule(module);
-    }));
+  private activeNavigationModule(): string {
+    const location = this.contentLocation();
+    return location.level === 'secondary' ? location.module : '';
   }
 
   private isActiveModule(module: string): boolean {
@@ -3763,23 +3627,6 @@ export struct ReaderControlPanel {
       if (icon === 'rc_list') return 'rc_list_theme_night';
       if (icon === 'rc_replace') return 'rc_replace_theme_night';
     }
-    return icon;
-  }
-
-  private moduleIcon(icon: string, module: string): string {
-    const night = this.appScheme === 'night';
-    if (module === 'autoPage') return this.isActiveModule(module) ?
-      (night ? 'reader_autopage_nav_active_theme_night' : 'reader_autopage_nav_active') :
-      (night ? 'rc_autopage_theme_night' : icon);
-    if (module === 'tts') return this.isActiveModule(module) ?
-      (night ? 'reader_tts_nav_active_theme_night' : 'reader_tts_nav_active') :
-      (night ? 'rc_headphones_theme_night' : icon);
-    if (module === 'appearance') return this.isActiveModule(module) ?
-      (night ? 'reader_appearance_nav_active_theme_night' : 'reader_appearance_nav_active') :
-      (night ? 'rc_palette_theme_night' : icon);
-    if (module === 'settings') return this.isActiveModule(module) ?
-      (night ? 'reader_settings_nav_active_theme_night' : 'reader_settings_nav_active') :
-      (night ? 'rc_settings_theme_night' : icon);
     return icon;
   }
 }

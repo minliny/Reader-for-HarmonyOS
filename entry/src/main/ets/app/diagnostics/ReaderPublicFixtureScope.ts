@@ -1,9 +1,12 @@
+import { READER_VM_JOURNEY_SCOPE } from './ReaderVmJourneyData.ts';
+
 export const READER_PUBLIC_FIXTURE_PARAMETER = 'readerPublicFixture';
 export const READER_NAMED_PUBLIC_FIXTURE_IDS = ['single-reserved', 'group-options-12', 'row-actions',
   'row-detect-center', 'row-detect-edge', 'row-detect-center-v2', 'row-detect-edge-v2',
   'search-delayed', 'search-http-503', 'search-http-503-body',
   'import-research-center', 'import-research-edge', 'import-research-center-v2', 'import-research-edge-v2',
-  'import-research-center-v3', 'import-research-edge-v3', 'all-disabled-layout', 'search-detail-scroll-corpus'] as const;
+  'import-research-center-v3', 'import-research-edge-v3', 'all-disabled-layout', 'search-detail-scroll-corpus',
+  READER_VM_JOURNEY_SCOPE] as const;
 export const READER_PUBLIC_FIXTURE_IDS = ['empty-shelf', 'empty-sources', ...READER_NAMED_PUBLIC_FIXTURE_IDS] as const;
 
 export type ReaderPublicFixtureId = (typeof READER_PUBLIC_FIXTURE_IDS)[number];
@@ -59,6 +62,10 @@ export function buildReaderPublicFixtureDirectory(sandboxFilesDir: string, id: R
 let namedFixture: ReaderNamedPublicFixtureId | undefined;
 let fixtureFilesDir: string | undefined;
 let fixtureCacheDir: string | undefined;
+
+export function readerVmJourneyFixtureActive(): boolean {
+  return namedFixture === READER_VM_JOURNEY_SCOPE;
+}
 
 export function bindReaderNamedPublicStorage(id: ReaderNamedPublicFixtureId, filesDir: string, cacheDir: string): void {
   if (!isReaderNamedPublicFixture(id) || buildReaderPublicFixtureDirectory(filesDir, id) === undefined ||

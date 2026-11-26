@@ -16,8 +16,11 @@ export const READER_PAGE_CHROME_BOOKMARK_SIZE = 24;
 // offset; the complete line remains constrained to the measured status lane.
 export const READER_SYSTEM_STATUS_TEXT_SHIFT_RATIO = 0.2;
 
-export function readerPageChromeBottomInset(safeBottom: number): number {
-  return Math.max(READER_PAGE_CHROME_BOTTOM_INSET, safeBottom);
+/** With the navigation bar hidden there is no indicator to clear; keep only a small optical gap. */
+export const READER_PAGE_CHROME_HIDDEN_NAV_BOTTOM_INSET = 10;
+
+export function readerPageChromeBottomInset(safeBottom: number, hideNavigationBar: boolean = false): number {
+  return Math.max(hideNavigationBar ? READER_PAGE_CHROME_HIDDEN_NAV_BOTTOM_INSET : READER_PAGE_CHROME_BOTTOM_INSET, safeBottom);
 }
 
 export class ReaderPageChromeMeasurements {
@@ -144,8 +147,9 @@ export function resolveReaderPageChromeLayout(
     layout.pageChromeTopRegionHeight > 0 ? informationOrigin +
     Math.max(0, (layout.pageChromeTopRegionHeight - measurements.topStartHeight) / 2) :
     Math.max(READER_PAGE_CHROME_TOP_INSET, informationOrigin + READER_PAGE_CHROME_SAFE_TOP_GAP);
-  const bottomInset = readerPageChromeBottomInset(
-    Math.max(layout.pageChromeVisualSafeBottom, layout.pageChromeInteractiveSafeBottom));
+  const safeBottom = layout.hideNavigationBar ? layout.pageChromeVisualSafeBottom :
+    Math.max(layout.pageChromeVisualSafeBottom, layout.pageChromeInteractiveSafeBottom);
+  const bottomInset = readerPageChromeBottomInset(safeBottom, layout.hideNavigationBar);
   const footerHeight = layout.pageChromeFooterHeight;
   const footerTop = Math.max(top, layout.viewportHeight - bottomInset - footerHeight);
 

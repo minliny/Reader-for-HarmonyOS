@@ -12,6 +12,10 @@ export function readableBookshelfSourceName(sourceId: string, name: string): boo
   return name.length > 0 && name !== sourceId.trim() && name !== '书源名称暂不可用' &&
     name !== '书源已移除' && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name);
 }
+export function bookshelfSourceNameNeedsLookup(sourceId: string, name: string): boolean {
+  const saved = name.trim();
+  return sourceId !== 'local' && saved !== '书源已移除' && !readableBookshelfSourceName(sourceId, saved);
+}
 export function bookshelfSourceDisplayName(sourceId: string, persistedName: string,
   sources: BookshelfNamedSource[][], candidate?: BookshelfSourceNameCandidate): string {
   if (sourceId === 'local') return '本地书籍';

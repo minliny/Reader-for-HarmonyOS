@@ -1,7 +1,13 @@
+import { READER_LAYOUT_DEBUG_BUILD, readerLayoutInvariantChanged } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
+import { READER_REDUCED_FADE_MS, READER_SHEET_CLOSE_MS } from '../../../ui/foundation/ProductMotionTiming';
 import type { SourceSwitchPresentation } from '../presentation/SourceSwitchPresentation';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { resolveDrawerSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { defaultNavigationPreferences, ReaderModalScrimModifier,
+  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import type { SourceSwitchCandidate } from '../application/SourceSwitchGateway';
 import type { SourceSwitchPanelState } from '../presentation/SourceSwitchPresentationState';
@@ -19,6 +25,9 @@ class SourceSwitchSurfaceFrame extends FrameCallback {
 @Component
 export struct SourceSwitchPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @StorageLink('readerAppForeground') private appForeground: boolean = true;
   @Prop @Watch('surfaceChanged') scopeId: number = 0;
   @Prop @Watch('surfaceChanged') showing: boolean = true;
@@ -66,6 +75,7 @@ export struct SourceSwitchPanel {
       if (!this.mounted || revision !== this.surfaceRevision || surface !== this.surface ||
         scope !== this.scopeId || showing !== this.showing) return;
       this.applySurfaceChanged();
+      if (typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD) readerLayoutInvariantChanged();
     });
   }
   private postSurfaceAction(action: () => void): void {
@@ -94,6 +104,11 @@ export struct SourceSwitchPanel {
     return this.mounted && this.acceptsInput() && scopeId === this.scopeId;
   }
 
+  private drawerUsesNativeMaterial(): boolean {
+    // The drawer can remain visible as it transitions to switching progress.
+    return readerSurfaceMaterialDecision('modalSheet', this.appearancePreferences, this.appThemeScheme, this.systemScheme).native;
+  }
+
   build() {
     ForEach(this.attachment > 0 ? [this.attachment] : [], (attachment: number): void => {
       this.panel(this.scopeId, attachment);
@@ -107,12 +122,15 @@ export struct SourceSwitchPanel {
       Stack()
         .width('100%')
         .height('100%')
-        .backgroundColor(readerAppColor(resolveDrawerSpec('source-switch-drawer').scrimRole, this.appThemeScheme))
-        .backdropBlur(6)
+        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
+          readerAppColor(resolveDrawerSpec('source-switch-drawer').scrimRole, this.appThemeScheme), this.drawerUsesNativeMaterial()))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+        .accessibilityLevel('no')
         .transition(TransitionEffect.OPACITY.animation(this.reduceMotion ?
           readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.scrim')),
           (transitionIn: boolean): void => this.surface?.surfaceTransitionFinished(attachment, scopeId, 'scrim', transitionIn))
         .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scopeId, 'scrim'))
+        .onDisAppear((): void => this.surface?.surfacePartDisappeared(attachment, scopeId, 'scrim'))
         .onClick((): void => { if (this.isCurrent(scopeId)) this.onClose(scopeId); });
       }
       SourceSwitchWindow({
@@ -137,6 +155,9 @@ export struct SourceSwitchPanel {
     }.width('100%').height('100%')
       .focusScopeId(`reader-source-scope:${scopeId}:${attachment}`, true, false)
       .enabled(this.acceptsInput())
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'modal-overlay', id: 'source-switch', active: this.showing, expectsModalControl: this.state.kind !== 'switching',
+          intercepts: this.acceptsInput(), closeDurationMs: this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS } as LayoutInvariantTag : undefined)
       .accessibilityLevel(this.acceptsInput() ? 'auto' : 'no-hide-descendants')
       .hitTestBehavior(this.acceptsInput() ? HitTestMode.Default : HitTestMode.None);
   }

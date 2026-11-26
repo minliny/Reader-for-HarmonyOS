@@ -2,6 +2,8 @@ import { ReaderBottomNavigation } from '../../app/navigation/ReaderBottomNavigat
 import { readerMainTabIconResource } from '../../app/navigation/ReaderMainTabs';
 import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
 import { ReaderRaisedSurface } from '../../ui/surfaces/ReaderRaisedSurface';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../../ui/surfaces/ReaderSurfaceMaterial';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
 import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
 import { registerReaderShelfFonts } from '../../ui/foundation/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -27,6 +29,9 @@ import {
 @Component
 export struct MainTabBar {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences')
+  private navigationPreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop current: string = 'bookshelf';
@@ -54,8 +59,10 @@ export struct MainTabBar {
   @Builder
   private verticalRail() {
     Stack({ alignContent: Alignment.TopStart }) {
-      ReaderRaisedSurface({ surfaceWidth: this.railSurfaceWidth, surfaceHeight: this.railSurfaceHeight,
-        cornerRadius: TOK_RADIUS_PILL, scheme: this.appThemeScheme });
+      if (!this.material().native) {
+        ReaderRaisedSurface({ surfaceWidth: this.railSurfaceWidth, surfaceHeight: this.railSurfaceHeight,
+          cornerRadius: TOK_RADIUS_PILL, scheme: this.appThemeScheme });
+      }
     Column({ space: MAIN_TAB_RAIL_ITEM_GAP }) {
       ForEach(MAIN_TABS, (tab: MainTabDef): void => {
         this.tabItem(tab, true);
@@ -63,16 +70,23 @@ export struct MainTabBar {
     }
     .width(MAIN_TAB_RAIL_WIDTH)
     .height(mainTabRailHeight(MAIN_TABS.length, this.navigationFontScale()))
-    .padding(MAIN_TAB_RAIL_PADDING)
+    .padding(MAIN_TAB_RAIL_PADDING + (this.material().native ? TOK_BORDER_W : 0))
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(readerAppColor('app.navigation.floatingSurface', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) })
+    .backgroundEffect(undefined)
+    .backgroundColor(this.material().native ? Color.Transparent : readerAppColor('app.navigation.floatingSurface', this.appThemeScheme))
+    .border(this.material().native ? { width: 0, color: Color.Transparent } :
+      { width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) })
     .borderRadius(this.railRadius())
+    .attributeModifier(new ReaderImmersiveMaterialModifier(this.material()))
     .clip(false)
     .onAreaChange((_old: Area, area: Area): void => this.recordRaisedSurface(true, area))
     .hitTestBehavior(HitTestMode.Transparent);
     }.width(MAIN_TAB_RAIL_WIDTH).clip(false).hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  private material(): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision('chromeBar', this.navigationPreferences, this.appThemeScheme, this.systemScheme);
   }
 
   private recordRaisedSurface(vertical: boolean, area: Area): void {

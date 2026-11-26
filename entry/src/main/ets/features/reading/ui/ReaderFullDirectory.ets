@@ -171,6 +171,10 @@ export struct ReaderFullDirectory {
     const identity = `full-directory:${++fullDirectoryBackGeneration}`;
     this.temporaryBackIdentity = identity;
     this.retireDirectoryRules();
+    if (readerWindowMetrics().ready) {
+      this.containerWidth = this.liveContainerWidth();
+      this.containerHeight = this.liveContainerHeight();
+    }
     this.invalidateFrame();
     this.exitRequested = false;
     this.onTemporaryBackBridge((): boolean => this.consumeBack(identity), identity);
@@ -708,11 +712,12 @@ export struct ReaderFullDirectory {
   }
 
   private topBarTop(): number {
+    if (this.readerWindowMetricsRevision < 0) return this.catalogContext === 'detail' ? 0 : this.headerSpec.topGap;
+    const metrics = readerWindowMetrics();
     if (this.catalogContext === 'detail') {
-      return this.readerWindowMetricsRevision < 0 ? 0 : readerVisualSafeTop(readerWindowMetrics());
+      return Math.max(readerVisualSafeTop(metrics), metrics.statusBarRect.top + metrics.statusBarHeight);
     }
-    if (this.readerWindowMetricsRevision < 0) return this.headerSpec.topGap;
-    return Math.max(this.headerSpec.topGap, readerVisualSafeTop(readerWindowMetrics()));
+    return Math.max(this.headerSpec.topGap, readerVisualSafeTop(metrics));
   }
 
   private requestExit(): void {

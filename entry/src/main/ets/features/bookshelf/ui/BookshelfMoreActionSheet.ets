@@ -66,6 +66,7 @@ export struct BookshelfMoreActionSheet {
   private sheetActions() {
     Column() {
       ReaderActionMenuSurface({ variant: 'bookshelf', actions: this.actionItems(), scheme: 'auto',
+        actionIdPrefix: 'reader-bookshelf-more-action-',
         onAction: (token: string): void => this.dispatchToken(token) });
     }.width('100%').padding({ left: this.surfaceSpec().horizontalInset, right: this.surfaceSpec().horizontalInset });
   }

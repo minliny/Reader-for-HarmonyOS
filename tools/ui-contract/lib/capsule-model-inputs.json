@@ -1,8 +1,0 @@
-{
-  "presentation": "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts",
-  "timeline": "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchTimeline.ts",
-  "controller": "entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts",
-  "support": [
-    "entry/src/main/ets/ui/foundation/MotionTimeline.ts"
-  ]
-}
