@@ -19,6 +19,15 @@ const nativePath = process.env.READER_LOCAL_RECOVERY_TEST_NATIVE;
 assert.ok(nativePath, 'READER_LOCAL_RECOVERY_TEST_NATIVE must point to the desktop Core reader.node');
 const native = createRequire(import.meta.url)(resolve(nativePath));
 const { support, io, util, statvfs, crypto, handles, setPicker } = localRecoveryFileProbe();
+const unlink = io.unlink;
+let failWebDavCiphertextCleanup = false;
+io.unlink = async path => {
+  if (failWebDavCiphertextCleanup && path.includes('/reader-webdav-library/') && path.endsWith('.readerbackup')) {
+    failWebDavCiphertextCleanup = false;
+    throw Object.assign(new Error('controlled WebDAV ciphertext unlink failure'), { code: 'EACCES' });
+  }
+  return unlink(path);
+};
 const etsRoot = new URL('../entry/src/main/ets/', import.meta.url);
 function actualModule(path, dependencies, names) {
   return pureModuleProbe(readFileSync(new URL(path, etsRoot), 'utf8'), basename(path), dependencies, names);
@@ -44,7 +53,7 @@ io.AtomicFile = class {
 };
 const { replaceReaderAtomicSnapshot } = actualModule('app/ReaderAtomicSnapshotFile.ts', { fileIo: io }, ['replaceReaderAtomicSnapshot']);
 let currentRuntime;
-const ReaderRuntimeOwner = { current: () => currentRuntime };
+const ReaderRuntimeOwner = { current: () => currentRuntime, isCurrent: runtime => runtime === currentRuntime };
 const gatewayPath = new URL('features/bookshelf/application/LocalRecoveryGateway.ts', etsRoot);
 const gatewaySource = readFileSync(gatewayPath, 'utf8');
 const { LocalRecoveryGateway } = pureModuleProbe(gatewaySource, 'LocalRecoveryGateway.ts',
@@ -138,6 +147,73 @@ function choose(kind, path) {
   });
 }
 
+function simulatedWebDav() {
+  const base = 'https://backup.example.invalid/dav';
+  const directory = '/ReaderLibrary';
+  const collection = new URL(base + directory + '/');
+  const remote = new Map();
+  const requests = [];
+  let failManifestReadback = false;
+  let manifestDispatched = false;
+  let saved = {
+    saveOperationId: 'f022f1c7-7003-476b-a280-c0f10447f75d', savePayloadHash: 'a'.repeat(64),
+    config: { url: base, directory, user: '', password: '', backupPassword: 'fixture recovery passphrase' },
+  };
+  const http = {
+    async executeBounded(params, _maximum, _rid, cancelled) {
+      assert.equal(cancelled(), false);
+      assert.equal(params.httpsOnly, true);
+      assert.equal(params.sameOriginRedirectsOnly, true);
+      assert.equal(params.followRedirects, false);
+      const target = new URL(params.url);
+      assert.equal(target.origin, collection.origin);
+      assert.ok(target.pathname === collection.pathname.slice(0, -1) || target.pathname.startsWith(collection.pathname));
+      const name = target.pathname.slice(collection.pathname.length);
+      requests.push([params.method, name]);
+      if (params.method === 'PROPFIND') return { status: 207,
+        body: `<D:multistatus xmlns:D="DAV:">${Array.from(remote.keys(), key =>
+          `<D:response><D:href>${collection.pathname}${key}</D:href><D:propstat><D:prop><D:getlastmodified>Wed, 25 Nov 2026 02:00:00 GMT</D:getlastmodified></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>`).join('')}</D:multistatus>` };
+      if (params.method === 'GET') {
+        if (failManifestReadback && manifestDispatched && name.endsWith('.manifest')) {
+          failManifestReadback = false;
+          throw Error('controlled loss of readback');
+        }
+        const body = remote.get(name);
+        if (body === undefined) return { status: 404 };
+        const ETag = `"${hash(body)}"`;
+        if (params.headers['If-Match'] !== undefined && params.headers['If-Match'] !== ETag) return { status: 412 };
+        return { status: 200, bodyBase64: body.toString('base64'), headers: { ETag } };
+      }
+      assert.equal(params.method, 'PUT');
+      assert.equal(params.headers['If-None-Match'], '*');
+      if (remote.has(name)) return { status: 412 };
+      remote.set(name, Buffer.from(params.body));
+      if (name.endsWith('.manifest')) manifestDispatched = true;
+      return { status: 201 };
+    },
+  };
+  const url = { URL: { parseURL: (value, parent) => new URL(value, parent) } };
+  const transportUtil = { ...util, Base64Helper: class {
+    encodeToStringSync(bytes) { return Buffer.from(bytes).toString('base64'); }
+    decodeSync(value) { return Buffer.from(value, 'base64'); }
+  } };
+  const HttpExecuteHost = { instance: http };
+  const transport = actualModule('features/sync/application/WebDavLibraryBackup.ts',
+    { ...support, HttpExecuteHost, url, util: transportUtil }, ['WebDavLibraryBackup', 'WebDavLibraryBackupError']);
+  const { SyncGateway } = actualModule('features/sync/application/SyncGateway.ts', {
+    ...transport, ...support, fileIo: io, replaceReaderAtomicSnapshot, readerHostFilesDirectory, HttpExecuteHost,
+    url, util: transportUtil, ReaderRuntimeOwner, SyncHostConfigurationGateway: class {},
+  }, ['SyncGateway']);
+  const credentials = { async requireConfigSettled() {}, loadSerializedState: async () => saved };
+  return {
+    remote, requests, gateway: runtime => new SyncGateway(runtime, credentials),
+    loseReadback: () => { failManifestReadback = true; },
+    setConfigRevision(other) {
+      saved = { ...saved, saveOperationId: other ? 'cb49db58-9038-4e28-869f-3dd66f2d1b11' : 'f022f1c7-7003-476b-a280-c0f10447f75d' };
+    },
+  };
+}
+
 try {
   ReaderDocumentPickerActivity.bind(7);
   ReaderDocumentPickerActivity.setForeground(true);
@@ -224,9 +300,98 @@ try {
   assert.equal(await receiver.retainedLocalBookSourcePath(missing.bookId, current), undefined);
   assert.deepEqual(await readFile(await receiver.retainedLocalBookSourcePath(complete.bookId, current)), complete.bytes);
   assert.deepEqual(await readFile(await receiver.retainedLocalBookSourcePath(old.bookId, current)), old.bytes);
+  receiver.close();
+  console.log('PASS interrupted Core apply survives cold reopen, retains the exact rollback point and restores raw TXT with a separate missing-original fact');
+
+  const rollbackEvents = [];
+  let rollbackReceiver = await openRuntime('rollback-receiver', rollbackEvents);
+  const prior = await importBook(rollbackReceiver, 'RollbackBefore.txt', '回退后仍必须能够读取');
+  currentRuntime = rollbackReceiver;
+  gateway = new LocalRecoveryGateway();
+  choose('select', packagePath);
+  assert.deepEqual(await gateway.inspectPackage(passphrase, current), { state: 'preview', included: 1, missing: 1 });
+  rollbackReceiver.loseApplyAck = true;
+  assert.deepEqual(await gateway.applyPackage(passphrase), { state: 'interrupted' });
+  assert.equal(await gateway.pendingAction(), 'restore');
+  assert.deepEqual(await gateway.rollbackPackage('wrong recovery password'), { state: 'rejected' });
+  assert.equal(await gateway.pendingAction(), 'restore', 'an unverified rollback does not replace the pending restore decision');
+  rollbackReceiver.loseApplyAck = true;
+  assert.deepEqual(await gateway.rollbackPackage(passphrase), { state: 'interrupted' });
+  assert.equal(await gateway.pendingAction(), 'rollback', 'rollback decision is durable before its Core mutation');
+  rollbackReceiver.close();
+  rollbackReceiver = await openRuntime('rollback-receiver', rollbackEvents);
+  currentRuntime = rollbackReceiver;
+  gateway = new LocalRecoveryGateway();
+  assert.equal(await gateway.pendingAction(), 'rollback');
+  assert.deepEqual(await gateway.resumePackage(passphrase), { state: 'rolledBack' });
+  assert.equal(await gateway.pending(), false);
+  assert.equal(rollbackEvents.filter(event => event.method === 'library.package.restore.apply').length, 2,
+    'retry observes the original restore and rollback receipts without another apply');
+  const rolledBackShelf = JSON.stringify(await shelf(rollbackReceiver));
+  assert.match(rolledBackShelf, new RegExp(prior.bookId));
+  assert.doesNotMatch(rolledBackShelf, new RegExp(complete.bookId));
+  assert.ok(JSON.stringify(await chapter(rollbackReceiver, prior.bookId)).includes(prior.line));
+  rollbackReceiver.close();
+  console.log('PASS portable rollback admission rejects wrong passphrase and cold-resumes one exact rollback with readable original');
+
+  let webDavDonor = await openRuntime('donor');
+  currentRuntime = webDavDonor;
+  const provider = simulatedWebDav();
+  let sync = provider.gateway(webDavDonor);
+  gateway = new LocalRecoveryGateway();
+  provider.loseReadback();
+  assert.deepEqual(await sync.backupLibrary(gateway, true, current), { state: 'unconfirmed' });
+  assert.equal((await sync.libraryBackupConfiguration()).pendingPublication, true);
+  const objectNames = Array.from(provider.remote.keys());
+  const publishActions = provider.requests.filter(([verb, name]) => verb === 'PUT' && name.endsWith('.manifest'));
+  webDavDonor.close();
+  webDavDonor = await openRuntime('donor');
+  currentRuntime = webDavDonor;
+  sync = provider.gateway(webDavDonor);
+  assert.equal((await sync.libraryBackupConfiguration()).pendingPublication, true);
+  failWebDavCiphertextCleanup = true;
+  assert.deepEqual(await sync.backupLibrary(new LocalRecoveryGateway(), false, current), { state: 'cleanupPending' });
+  assert.deepEqual(Array.from(provider.remote.keys()), objectNames, 'cold retry reuses identical provider objects and original inclusion');
+  assert.deepEqual(provider.requests.filter(([verb, name]) => verb === 'PUT' && name.endsWith('.manifest')), publishActions);
+  assert.equal((await sync.libraryBackupConfiguration()).pendingPublication, false);
+  const cleanupReceipt = (await sync.libraryBackupConfiguration()).cleanupReceipt;
+  assert.match(cleanupReceipt, /^[a-f0-9-]{36}\/[a-f0-9]{64}$/);
+  const remoteActions = [...provider.requests];
+  webDavDonor.close();
+  webDavDonor = await openRuntime('donor');
+  currentRuntime = webDavDonor;
+  sync = provider.gateway(webDavDonor);
+  assert.equal((await sync.libraryBackupConfiguration()).cleanupReceipt, cleanupReceipt);
+  assert.deepEqual(await sync.backupLibrary(new LocalRecoveryGateway(), false, current, 'stale receipt'), { state: 'cancelled' });
+  assert.deepEqual(await sync.backupLibrary(new LocalRecoveryGateway(), false, current, cleanupReceipt), { state: 'exported' });
+  assert.equal((await sync.libraryBackupConfiguration()).cleanupReceipt, undefined);
+  assert.deepEqual(await sync.backupLibrary(new LocalRecoveryGateway(), false, current, cleanupReceipt), { state: 'cancelled' });
+  assert.deepEqual(provider.requests, remoteActions, 'acknowledged cleanup and stale cleanup taps do not access the provider');
+  console.log('PASS verified WebDAV publication survives failed local cleanup and reopens for cleanup without provider requests');
+  webDavDonor.close();
+
+  const webDavReceiver = await openRuntime('webdav-receiver');
+  currentRuntime = webDavReceiver;
+  const priorRemote = await importBook(webDavReceiver, 'BeforeWebDav.txt', '远端预览前的本地原书');
+  const beforeWebDav = await shelf(webDavReceiver);
+  gateway = new LocalRecoveryGateway();
+  sync = provider.gateway(webDavReceiver);
+  assert.deepEqual(await sync.previewLibraryBackup(gateway, current), { state: 'preview', included: 1, missing: 1 });
+  assert.deepEqual(await shelf(webDavReceiver), beforeWebDav, 'remote preview is read-only locally');
+  provider.setConfigRevision(true);
+  assert.deepEqual(await sync.restoreLibraryBackup(gateway, current), { state: 'providerChanged' });
+  assert.deepEqual(await shelf(webDavReceiver), beforeWebDav);
+  provider.setConfigRevision(false);
+  assert.deepEqual(await sync.previewLibraryBackup(gateway, current), { state: 'preview', included: 1, missing: 1 });
+  assert.deepEqual(await sync.restoreLibraryBackup(gateway, current), { state: 'restored', included: 1, missing: 1 });
+  assert.ok(JSON.stringify(await chapter(webDavReceiver, complete.bookId)).includes(complete.line));
+  assert.deepEqual(await readFile(await webDavReceiver.retainedLocalBookSourcePath(priorRemote.bookId, current)), priorRemote.bytes);
+  assert.equal(provider.requests.some(([method]) => method === 'DELETE'), false);
+  webDavReceiver.close();
+  console.log('PASS WebDAV and actual Core roundtrip preserves pending upload across reopen, binds previews to provider and restores readable original');
+
   assert.equal(handles.size, 0);
   assert.equal(hash(await readFile(gatewayPath)), hash(gatewaySource), 'Gateway source stayed stable during the native probe');
-  console.log('PASS interrupted Core apply survives cold reopen, retains the exact rollback point and restores raw TXT with a separate missing-original fact');
 } finally {
   for (const handle of alive) native.releaseRuntime(handle);
   ReaderDocumentPickerActivity.destroy();

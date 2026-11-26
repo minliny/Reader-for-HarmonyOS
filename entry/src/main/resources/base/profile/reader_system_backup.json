@@ -1,0 +1,8 @@
+{
+  "allowToBackupRestore": true,
+  "fullBackupOnly": true,
+  "includes": [
+    "/data/storage/el2/base/files/reader-system-migration-v1/manifest.json",
+    "/data/storage/el2/base/files/reader-system-migration-v1/library.readerbackup"
+  ]
+}

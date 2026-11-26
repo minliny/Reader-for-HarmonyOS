@@ -36,6 +36,20 @@
     ],
     "pages": "$profile:main_pages",
     "shareFiles": "$profile:reader_share_files",
+    "extensionAbilities": [
+      {
+        "name": "ReaderBackupExtensionAbility",
+        "srcEntry": "./ets/backup/ReaderBackupExtensionAbility.ets",
+        "type": "backup",
+        "exported": false,
+        "metadata": [
+          {
+            "name": "ohos.extension.backup",
+            "resource": "$profile:reader_system_backup"
+          }
+        ]
+      }
+    ],
     "abilities": [
       {
         "name": "EntryAbility",

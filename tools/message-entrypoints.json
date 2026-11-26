@@ -339,8 +339,8 @@
       "owner": "LocalRecoveryPanel",
       "member": "requestRestore",
       "family": "native.alert",
-      "category": "经 ReaderNativeAlertOwner 发起恢复确认",
-      "effectiveHost": "当前书架设置，隔离校验完成且预览、口令和动作仍属于当前代次。",
+      "category": "经 ReaderNativeAlertOwner 发起恢复或回退确认",
+      "effectiveHost": "当前通用设置或书架设置，隔离预览或原中断恢复日志、口令和动作仍属于当前代次。",
       "retireRule": "原生回调由确认 lease 封装，退役拒绝旧按钮，恢复结果仍由 gateway 持有。",
       "status": "registered-source-entry",
       "bridge": "owned-alert-native-callback"
@@ -351,9 +351,9 @@
       "owner": "LocalRecoveryPanel",
       "member": "requestRestore",
       "family": "shared.alert-owner",
-      "category": "本地恢复的明确确认",
-      "effectiveHost": "当前书架设置与已校验预览。",
-      "retireRule": "确认、取消或打开代次退役时结束 lease。确认动作提交恢复，完成状态由原业务回执确认。",
+      "category": "本地恢复或回退的明确确认",
+      "effectiveHost": "当前通用设置或书架设置、已校验预览或中断恢复的原日志。",
+      "retireRule": "确认、取消或打开代次退役时结束 lease。完成状态由原业务回执确认。",
       "status": "registered-source-entry"
     },
     {
@@ -362,8 +362,8 @@
       "owner": "LocalRecoveryPanel",
       "member": "resumeControl",
       "family": "shared.recovery-notice",
-      "category": "本地恢复中断后的继续入口",
-      "effectiveHost": "当前书架设置中的恢复包面板，恢复 journal 确认有待续操作。",
+      "category": "本地恢复或回退中断后的继续入口",
+      "effectiveHost": "当前通用设置或书架设置的恢复包面板，原日志确认有待续操作。",
       "retireRule": "继续动作核对当前打开代次并交给 gateway。退场只撤销本次交互与口令，原恢复状态可再次读取。",
       "status": "registered-source-entry"
     },
@@ -373,8 +373,8 @@
       "owner": "LocalRecoveryPanel",
       "member": "showOutcome",
       "family": "shared.transient",
-      "category": "本地导出、恢复、取消与明确失败的短反馈",
-      "effectiveHost": "当前前景书架设置中的恢复包面板，绑定打开代次和当前动作。",
+      "category": "本地导出、恢复、回退、取消与明确失败的短反馈",
+      "effectiveHost": "当前通用设置或书架设置前景的恢复包面板，绑定打开代次和当前动作。",
       "retireRule": "打开代次退役及新动作重置当前发布。中断恢复由独立待续通知承载。",
       "status": "registered-source-entry"
     },
@@ -1907,6 +1907,73 @@
       "category": "页面或局部内容的加载/空态/无内容失败",
       "effectiveHost": "当前 mounted 的书源工具页；snapshot 原操作 generation/identity 与 exportRevision/nativeAlertOwner 决定准入。 有旧内容的读取中状态复用ReaderPageState inline局部变体，保留原32vp指示、10vp横距及原调用方内距。",
       "retireRule": "退场递增 exportRevision 并 retire 原生确认；批量检查、检测日志与原写入各自保持原 session/operation 所有权。 加载/确认空/失败由当前读取事实切换，有待核对回执时恢复槽独占解释。空列表读取失败的重试仅接纳当前 opening 和读取代次，随后回到原 owner。 原生加载动效同时消费已有readerAppForeground、readerReduceMotion及当前调用方loadingActive，原状态文案保留加载/忙碌事实，隐藏动画不改变原操作准入。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.pendingNotice::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "pendingNotice",
+      "family": "shared.recovery-notice",
+      "category": "原 WebDAV 发布待核对或已核对后的本机暂存待清理",
+      "effectiveHost": "当前通用设置 WebDAV 备份面板和安全配置代次，原包日志仍存在。",
+      "retireRule": "核对只继续同一密文。读回确认后持久确认清理状态，本机清理成功才移除日志。配置或页面退役后拒绝旧按钮。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.processing::shared.page-state",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "processing",
+      "family": "shared.page-state",
+      "category": "书库备份配置读取与实际操作中",
+      "effectiveHost": "当前通用设置 WebDAV 面板当次读取、备份、隔离校验或恢复。",
+      "retireRule": "当次操作结算或面板退役后移除，原备份及恢复日志继续由 gateway 持有。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.requestRestore::native.alert",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "requestRestore",
+      "family": "native.alert",
+      "category": "通过 ReaderNativeAlertOwner 明确确认替换阅读库",
+      "effectiveHost": "当前通用设置 WebDAV 面板与其隔离校验的原预览。",
+      "retireRule": "原生按钮与原预览、配置和当次确认 lease 绑定。",
+      "status": "registered-source-entry",
+      "bridge": "owned-alert-native-callback"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.requestRestore::shared.alert-owner",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "requestRestore",
+      "family": "shared.alert-owner",
+      "category": "覆盖当前阅读库前的确认",
+      "effectiveHost": "当前通用设置 WebDAV 面板和原预览。",
+      "retireRule": "确认、取消或面板退役后结束 lease。新配置不能应用旧预览。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.showMessage::shared.transient",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "showMessage",
+      "family": "shared.transient",
+      "category": "WebDAV 配置或备份校验、完成及失败的短反馈",
+      "effectiveHost": "当前前景通用设置的 WebDAV 面板代次。",
+      "retireRule": "新动作、换页或前景变化阻止旧短反馈。持续的中断和待核对由原日志及对应入口保留。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.statusReadFailed::shared.page-state",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "statusReadFailed",
+      "family": "shared.page-state",
+      "category": "WebDAV 安全配置暂时无法读取",
+      "effectiveHost": "当前通用设置 WebDAV 面板，在没有可确认配置时展示读取失败。",
+      "retireRule": "重新读取或面板退役清除，重试仍只读取配置。",
       "status": "registered-source-entry"
     },
     {

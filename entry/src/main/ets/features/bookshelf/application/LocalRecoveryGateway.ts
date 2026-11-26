@@ -14,9 +14,19 @@ import {
 } from '../../../platform/backup/LocalRecoveryFile';
 
 export interface LocalRecoveryOutcome {
-  state: 'cancelled' | 'preview' | 'exported' | 'restored' | 'interrupted' | 'rejected' | 'failed' | 'tooLarge';
+  state: 'cancelled' | 'preview' | 'exported' | 'restored' | 'rolledBack' | 'interrupted' | 'rejected' | 'failed' | 'tooLarge';
   included?: number;
   missing?: number;
+}
+
+export type LocalRecoveryArchiveReceiver = (destination: string) => Promise<boolean>;
+export type LocalRecoveryArchiveConsumer = (path: string, sha256: string, size: number) => Promise<boolean>;
+
+/** The system extension can build an archive from its isolated read-only source. */
+export interface LocalRecoveryExportPort {
+  readonly filesDir: string;
+  request(method: string, params: JsonObject): Promise<JsonObject>;
+  retainedLocalBookSourcePath(bookId: string, current: () => boolean): Promise<string | undefined>;
 }
 
 interface Original {
@@ -45,6 +55,7 @@ interface Journal {
   rollbackKind: 'physical' | 'portable';
   rollbackId?: string;
   rollbackSha256: string;
+  rollbackRequested?: boolean;
 }
 
 interface Preview {
@@ -62,12 +73,24 @@ const LOG_DOMAIN = 0x5244;
 export class LocalRecoveryGateway {
   private static readonly active = new Set<string>();
   private preview: Preview | undefined;
-  private readonly runtime: ReaderRuntimeOwner = ReaderRuntimeOwner.current();
-  private readonly directory: string =
-    `${readerHostFilesDirectory(this.runtime.getUIAbilityContext().filesDir)}/reader-local-recovery`;
+  private readonly runtime: ReaderRuntimeOwner | undefined;
+  private readonly exportPort: LocalRecoveryExportPort | undefined;
+  private readonly directory: string;
+
+  constructor(runtime?: ReaderRuntimeOwner, exportPort?: LocalRecoveryExportPort) {
+    this.exportPort = exportPort;
+    this.runtime = exportPort === undefined ? runtime ?? ReaderRuntimeOwner.current() : undefined;
+    const directory = exportPort?.filesDir ?? readerHostFilesDirectory(this.requireRuntime().getUIAbilityContext().filesDir);
+    this.directory = `${directory}/reader-local-recovery`;
+  }
 
   async pending(): Promise<boolean> {
     return fileIo.access(this.journalPath());
+  }
+
+  async pendingAction(): Promise<'restore' | 'rollback' | undefined> {
+    const journal = await this.readJournal();
+    return journal === undefined ? undefined : journal.rollbackRequested === true ? 'rollback' : 'restore';
   }
 
   clearPreview(): void {
@@ -76,6 +99,22 @@ export class LocalRecoveryGateway {
   }
 
   exportPackage(passphrase: string, current: () => boolean): Promise<LocalRecoveryOutcome> {
+    return this.exportStagedPackage(passphrase, true, async (path, sha256): Promise<boolean> => {
+      const uri = await selectRecoveryDocument(this.requireRuntime().getUIAbilityContext(), true);
+      if (uri === undefined) return false;
+      this.checkCurrent(current);
+      // Complete the bounded provider write after explicit selection. An
+      // observed exact readback is the receipt for the export.
+      await recoveryOutput(uri, async (emit): Promise<void> => {
+        if (await recoveryVisitFile(path, emit, () => true) !== sha256) this.reject();
+      });
+      if (await recoveryHashFile(uri) !== sha256) this.reject();
+      return true;
+    }, current);
+  }
+
+  exportStagedPackage(passphrase: string, includeOriginals: boolean, consume: LocalRecoveryArchiveConsumer,
+    current: () => boolean): Promise<LocalRecoveryOutcome> {
     return this.perform(passphrase, async (work): Promise<LocalRecoveryOutcome> => {
       if (await this.pending()) return { state: 'interrupted' };
       const exported = await this.request('library.package.export', { password: passphrase });
@@ -87,9 +126,10 @@ export class LocalRecoveryGateway {
       let bytes = recoveryUtf8(content).length;
       for (const row of rows) {
         this.checkCurrent(current);
-        if (row.original === null || !this.canMaterialize(row.original)) continue;
+        if (!includeOriginals || row.original === null || !this.canMaterialize(row.original)) continue;
         const expected = row.original;
-        const path = await this.runtime.retainedLocalBookSourcePath(`local:${expected.sha256}`, current);
+        const port = this.exportPort ?? this.requireRuntime();
+        const path = await port.retainedLocalBookSourcePath(`local:${expected.sha256}`, current);
         if (path === undefined || !(await fileIo.lstat(path)).isFile()) continue;
         if ((await fileIo.stat(path)).size !== expected.byteLength || await recoveryHashFile(path) !== expected.sha256) continue;
         originals.set(row.bookId, path);
@@ -115,38 +155,82 @@ export class LocalRecoveryGateway {
         }
       });
       this.checkCurrent(current);
-      const context = this.runtime.getUIAbilityContext();
-      const uri = await selectRecoveryDocument(context, true);
-      if (uri === undefined) return { state: 'cancelled' };
-      this.checkCurrent(current);
-      // Once the provider starts accepting bytes, complete the bounded write
-      // even if the settings page retires. A partial write never gets a receipt.
       const expected = await recoveryHashFile(packagePath);
-      await recoveryOutput(uri, async (emit): Promise<void> => {
-        if (await recoveryVisitFile(packagePath, emit, () => true) !== expected) this.reject();
-      });
-      if (await recoveryHashFile(uri) !== expected) this.reject();
+      const sizeBytes = (await fileIo.stat(packagePath)).size;
+      if (!await consume(packagePath, expected, sizeBytes)) return { state: 'cancelled' };
       return this.outcome('exported', rows);
     });
   }
 
   inspectPackage(passphrase: string, current: () => boolean): Promise<LocalRecoveryOutcome> {
+    return this.inspectStagedPackage(passphrase, async (staged): Promise<boolean> => {
+      const uri = await selectRecoveryDocument(this.requireRuntime().getUIAbilityContext(), false);
+      if (uri === undefined) return false;
+      this.checkCurrent(current);
+      const size = (await fileIo.stat(uri)).size;
+      if (size > LOCAL_RECOVERY_MAX_BYTES) throw new LocalRecoveryFileError('tooLarge');
+      await recoveryReserve(this.directory, 3 * size);
+      await recoveryOutput(staged, async (emit): Promise<void> => { await recoveryVisitFile(uri, emit, current, size); });
+      return true;
+    }, current);
+  }
+
+  /** The system already authorized this transfer. A stable parent operation
+   * resumes after a cold-start interruption or a lost system journal ACK. */
+  restoreSystemStagedPackage(passphrase: string, expectedBundleSha256: string, receive: LocalRecoveryArchiveReceiver,
+    current: () => boolean): Promise<LocalRecoveryOutcome> {
+    this.requireRuntime();
+    return this.perform(passphrase, async (work): Promise<LocalRecoveryOutcome> => {
+      if (!HASH.test(expectedBundleSha256)) this.reject();
+      this.checkCurrent(current);
+      const identity = expectedBundleSha256;
+      const operationId = `quarantined-v1-${identity.slice(0, 8)}-${identity.slice(8, 12)}-${identity.slice(12, 16)}-` +
+        `${identity.slice(16, 20)}-${identity.slice(20, 32)}`;
+      const accepted = await this.readJournal();
+      if (accepted !== undefined) {
+        if (accepted.operationId !== operationId || accepted.bundleSha256 !== expectedBundleSha256 ||
+          accepted.rollbackRequested === true) return { state: 'interrupted' };
+        const archive = await this.openPending(work, passphrase, expectedBundleSha256);
+        if (archive.packageSha256 !== accepted.packageSha256) this.reject();
+        return this.apply(work, archive, accepted, passphrase);
+      }
+
+      const staged = `${work}/system.readerbackup`;
+      if (!await receive(staged)) return { state: 'cancelled' };
+      if (await recoveryHashFile(staged) !== expectedBundleSha256) this.reject();
+      await recoveryReserve(this.directory, 2 * (await fileIo.stat(staged)).size + MAX_ORIGINAL_BYTES);
+      const archive = await this.open(staged, work, passphrase, current);
+      await this.checkOriginalsReadable(work, archive);
+      this.checkCurrent(current);
+      const intent: JsonObject = { operationId, packageSha256: archive.packageSha256 };
+      const status = await this.request('library.package.restore.status', intent);
+      if (status['operationId'] !== operationId || status['packageSha256'] !== archive.packageSha256 ||
+        (status['status'] !== 'missing' && status['status'] !== 'committedCurrent')) return { state: 'interrupted' };
+      this.checkCurrent(current);
+      await this.clearUnaccepted();
+      await fileIo.moveFile(staged, this.packagePath());
+      await this.syncDirectory();
+      const journal = await this.prepareJournal(archive.packageSha256, expectedBundleSha256, passphrase, operationId);
+      this.checkCurrent(current);
+      await replaceReaderAtomicSnapshot(this.journalPath(), this.directory, JSON.stringify(journal));
+      this.preview = undefined;
+      return this.apply(work, archive, journal, passphrase);
+    });
+  }
+
+  inspectStagedPackage(passphrase: string, receive: LocalRecoveryArchiveReceiver,
+    current: () => boolean): Promise<LocalRecoveryOutcome> {
     return this.perform(passphrase, async (work): Promise<LocalRecoveryOutcome> => {
       if (await this.pending()) return { state: 'interrupted' };
       this.preview = undefined;
       await this.clearUnaccepted();
       this.checkCurrent(current);
-      const uri = await selectRecoveryDocument(this.runtime.getUIAbilityContext(), false);
-      if (uri === undefined) return { state: 'cancelled' };
-      this.checkCurrent(current);
-      const size = (await fileIo.stat(uri)).size;
-      if (size > LOCAL_RECOVERY_MAX_BYTES) throw new LocalRecoveryFileError('tooLarge');
-      await recoveryReserve(this.directory, 3 * size);
       const staged = `${work}/selected.readerbackup`;
-      let bundleSha256 = '';
-      await recoveryOutput(staged, async (emit): Promise<void> => {
-        bundleSha256 = await recoveryVisitFile(uri, emit, current, size);
-      });
+      if (!await receive(staged)) return { state: 'cancelled' };
+      this.checkCurrent(current);
+      const bundleSha256 = await recoveryHashFile(staged);
+      const size = (await fileIo.stat(staged)).size;
+      await recoveryReserve(this.directory, 2 * size);
       const archive = await this.open(staged, work, passphrase, current);
       this.checkCurrent(current);
       await fileIo.moveFile(staged, this.packagePath());
@@ -160,7 +244,8 @@ export class LocalRecoveryGateway {
     });
   }
 
-  applyPackage(passphrase: string): Promise<LocalRecoveryOutcome> {
+  applyPackage(passphrase: string, admit?: () => Promise<void>): Promise<LocalRecoveryOutcome> {
+    this.requireRuntime();
     const preview = this.preview;
     return this.perform(passphrase, async (work): Promise<LocalRecoveryOutcome> => {
       if (await this.pending()) return { state: 'interrupted' };
@@ -168,7 +253,9 @@ export class LocalRecoveryGateway {
       const archive = await this.openPending(work, passphrase, preview.bundleSha256);
       if (archive.packageSha256 !== preview.packageSha256) this.reject();
       await this.checkOriginalsReadable(work, archive);
+      if (admit !== undefined) await admit();
       const journal = await this.prepareJournal(archive.packageSha256, preview.bundleSha256, passphrase);
+      if (admit !== undefined) await admit();
       await replaceReaderAtomicSnapshot(this.journalPath(), this.directory, JSON.stringify(journal));
       this.preview = undefined;
       return this.apply(work, archive, journal, passphrase);
@@ -176,9 +263,11 @@ export class LocalRecoveryGateway {
   }
 
   resumePackage(passphrase: string): Promise<LocalRecoveryOutcome> {
+    this.requireRuntime();
     return this.perform(passphrase, async (work): Promise<LocalRecoveryOutcome> => {
       const journal = await this.readJournal();
       if (journal === undefined) return { state: 'cancelled' };
+      if (journal.rollbackRequested === true) return this.rollback(work, journal, passphrase);
       if (journal.rollbackKind === 'portable' && await recoveryHashFile(this.rollbackPath()) !== journal.rollbackSha256) {
         throw new Error('Core rollback snapshot changed');
       }
@@ -186,6 +275,84 @@ export class LocalRecoveryGateway {
       if (archive.packageSha256 !== journal.packageSha256) this.reject();
       return this.apply(work, archive, journal, passphrase);
     });
+  }
+
+  rollbackPackage(passphrase: string): Promise<LocalRecoveryOutcome> {
+    this.requireRuntime();
+    return this.perform(passphrase, async (work): Promise<LocalRecoveryOutcome> => {
+      const journal = await this.readJournal();
+      if (journal === undefined) return { state: 'cancelled' };
+      if (journal.rollbackRequested === true) return this.rollback(work, journal, passphrase);
+      // Authenticate before committing the user's choice. For an older
+      // physical checkpoint the still-authenticated pending package supplies
+      // this proof. Portable recovery can authenticate its own checkpoint.
+      let portable: Archive | undefined;
+      if (journal.rollbackKind === 'portable') {
+        portable = await this.loadPortableRollback(journal, passphrase);
+      } else {
+        const archive = await this.openPending(work, passphrase, journal.bundleSha256);
+        if (archive.packageSha256 !== journal.packageSha256) this.reject();
+      }
+      const rollback: Journal = { ...journal, rollbackRequested: true };
+      await replaceReaderAtomicSnapshot(this.journalPath(), this.directory, JSON.stringify(rollback));
+      return this.rollback(work, rollback, passphrase, portable);
+    });
+  }
+
+  private async loadPortableRollback(journal: Journal, passphrase: string): Promise<Archive> {
+    const target = this.rollbackPath();
+    if (await recoveryHashFile(target) !== journal.rollbackSha256) this.reject();
+    const content = await fileIo.readText(target);
+    const rows = await this.inspectCore(content, journal.rollbackSha256, passphrase);
+    return { content, packageSha256: journal.rollbackSha256, rows };
+  }
+
+  private async rollback(work: string, journal: Journal, passphrase: string, portable?: Archive):
+    Promise<LocalRecoveryOutcome> {
+    if (journal.rollbackKind === 'physical') {
+      const restored = await this.request('runtime.storage.backup.restore', {
+        backupId: journal.rollbackId, expectedSha256: journal.rollbackSha256,
+      });
+      if (restored['restored'] !== true || restored['backupId'] !== journal.rollbackId ||
+        restored['sha256'] !== journal.rollbackSha256) return { state: 'interrupted' };
+    } else {
+      const operationId = 'rollback-v1-' + journal.operationId.slice('quarantined-v1-'.length);
+      const intent: JsonObject = { operationId, packageSha256: journal.rollbackSha256 };
+      const archive = portable ?? await this.loadPortableRollback(journal, passphrase);
+      let receipt = await this.request('library.package.restore.status', intent);
+      if (receipt['status'] === 'missing') {
+        await this.request('library.package.restore.apply', { ...intent, content: archive.content, password: passphrase });
+        receipt = await this.request('library.package.restore.status', intent);
+      }
+      if (receipt['operationId'] !== operationId || receipt['packageSha256'] !== journal.rollbackSha256 ||
+        receipt['status'] !== 'committedCurrent') return { state: 'interrupted' };
+      // A portable metadata restore revokes the previous local-resource
+      // publication receipts. Re-adopt only originals still held in the
+      // immutable Host archive, under the new rollback receipt identity.
+      const rollbackParent: Journal = { ...journal, operationId, packageSha256: journal.rollbackSha256,
+        bundleSha256: journal.rollbackSha256 };
+      for (let index = 0; index < archive.rows.length; index++) {
+        const row = archive.rows[index];
+        const original = row.original;
+        if (original === null || !this.canMaterialize(original)) continue;
+        await this.adoptRollbackOriginal(work, index, row.bookId, original, rollbackParent);
+      }
+    }
+    await this.finishJournal();
+    return { state: 'rolledBack' };
+  }
+
+  private async adoptRollbackOriginal(work: string, index: number, bookId: string, original: Original, journal: Journal):
+    Promise<void> {
+    const current = (): boolean => true;
+    const retained = await this.requireRuntime().retainedLocalBookSourcePath(`local:${original.sha256}`, current);
+    if (retained === undefined) return;
+    const path = this.originalPath(work, index, original);
+    await recoveryOutput(path, async (emit): Promise<void> => {
+      if (await recoveryVisitFile(retained, emit, current, original.byteLength) !== original.sha256) this.reject();
+    });
+    try { await this.restoreOriginal(path, bookId, original, journal); }
+    finally { await fileIo.unlink(path).catch(() => {}); }
   }
 
   private async apply(work: string, archive: Archive, journal: Journal, passphrase: string): Promise<LocalRecoveryOutcome> {
@@ -205,6 +372,11 @@ export class LocalRecoveryGateway {
         await this.restoreOriginal(this.originalPath(work, index, row.original), row.bookId, row.original, journal);
       }
     }
+    await this.finishJournal();
+    return this.outcome('restored', archive.rows);
+  }
+
+  private async finishJournal(): Promise<void> {
     try { await fileIo.unlink(this.journalPath()); }
     catch (error) { if (!this.isMissingFile(error)) throw error; }
     try { await this.clearUnaccepted(); }
@@ -212,11 +384,10 @@ export class LocalRecoveryGateway {
       // Core and every included original already have committed receipts.
       hilog.warn(LOG_DOMAIN, 'Reader', 'Completed local recovery cleanup deferred');
     }
-    return this.outcome('restored', archive.rows);
   }
 
-  private async prepareJournal(packageSha256: string, bundleSha256: string, passphrase: string): Promise<Journal> {
-    const operationId = `quarantined-v1-${util.generateRandomUUID(true)}`;
+  private async prepareJournal(packageSha256: string, bundleSha256: string, passphrase: string,
+    operationId: string = `quarantined-v1-${util.generateRandomUUID(true)}`): Promise<Journal> {
     const info = await this.request('core.info', {});
     const storage = this.object(info['storageFormat']);
     const capabilities = this.object(storage['capabilities']);
@@ -268,13 +439,14 @@ export class LocalRecoveryGateway {
     let receipt = await this.resourceStatus(binding);
     if (receipt['status'] === 'finalized') return;
     // Retain and verify original bytes before Core makes the book readable.
-    const materialized = await this.runtime.prepareSystemLocalBookInput(fileUri.getUriFromPath(path));
+    const runtime = this.requireRuntime();
+    const materialized = await runtime.prepareSystemLocalBookInput(fileUri.getUriFromPath(path));
     const hashBookId = `local:${original.sha256}`;
     if (materialized.state !== 'ready') throw new Error('Could not stage the original book');
     const input = materialized.input;
     try {
       if (input.bookId !== hashBookId) throw new Error('Original staging identity changed');
-      const commit = await this.runtime.commitLocalBookInput(input);
+      const commit = await runtime.commitLocalBookInput(input);
       if (!(await fileIo.lstat(commit.path)).isFile() || await recoveryHashFile(commit.path) !== original.sha256)
         throw new Error('Retained original does not match the recovery receipt');
       if (receipt['status'] === 'missing') {
@@ -294,7 +466,7 @@ export class LocalRecoveryGateway {
         receipt = await this.resourceStatus(binding);
       }
       if (receipt['status'] !== 'finalized') throw new Error('Original publication is unconfirmed');
-    } finally { await this.runtime.discardLocalBookInput(input).catch(() => {}); }
+    } finally { await runtime.discardLocalBookInput(input).catch(() => {}); }
   }
 
   private async resourceStatus(binding: JsonObject): Promise<JsonObject> {
@@ -446,6 +618,7 @@ export class LocalRecoveryGateway {
     if ((await fileIo.stat(path)).size > 2048) throw new Error('Recovery journal exceeds its limit');
     const journal = JSON.parse(await fileIo.readText(path)) as Journal;
     if (journal.schemaVersion !== 1 || !/^quarantined-v1-[a-f0-9-]{36}$/.test(journal.operationId) ||
+      (journal.rollbackRequested !== undefined && journal.rollbackRequested !== true) ||
       !HASH.test(journal.packageSha256) || !HASH.test(journal.bundleSha256) ||
       !HASH.test(journal.rollbackSha256) || (journal.rollbackKind !== 'portable' &&
         (journal.rollbackKind !== 'physical' || typeof journal.rollbackId !== 'string' ||
@@ -471,7 +644,15 @@ export class LocalRecoveryGateway {
   }
 
   private request(method: string, params: JsonObject): Promise<JsonObject> {
-    return this.runtime.request(method, params, { timeoutMs: TIMEOUT }).then((result) => result.data);
+    if (this.exportPort !== undefined && (method === 'library.package.export' || method === 'library.package.inspect')) {
+      return this.exportPort.request(method, params);
+    }
+    return this.requireRuntime().request(method, params, { timeoutMs: TIMEOUT }).then((result) => result.data);
+  }
+
+  private requireRuntime(): ReaderRuntimeOwner {
+    if (this.runtime === undefined) throw new Error('A read-only recovery owner cannot write application storage');
+    return this.runtime;
   }
 
   private outcome(state: 'exported' | 'preview' | 'restored', rows: Row[]): LocalRecoveryOutcome {

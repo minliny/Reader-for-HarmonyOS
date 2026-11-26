@@ -13,19 +13,21 @@ import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../../
 import { CategorySection } from '../../settings/ui/CategorySection';
 import { LocalRecoveryGateway, type LocalRecoveryOutcome } from '../application/LocalRecoveryGateway';
 
-type LocalRecoveryAction = 'export' | 'inspect' | 'apply' | 'resume';
+type LocalRecoveryAction = 'export' | 'inspect' | 'apply' | 'resume' | 'rollback';
 const RECOVERY_PASSPHRASE_WIDTH = 168;
 
 @Component
 export struct LocalRecoveryPanel {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @Prop @Watch('refreshOpening') navigationGeneration: number = 0;
+  @Prop @Watch('refreshOpening') externalRestoreRevision: number = 0;
   editingHost: ReaderEditingVisibility | undefined = undefined;
   isInputAllowed: () => boolean = (): boolean => true;
   @State private passphrase: string = '';
   @State private checking: boolean = true;
   @State private statusUnavailable: boolean = false;
   @State private pendingRestore: boolean = false;
+  @State private rollbackPending: boolean = false;
   @State private active: LocalRecoveryAction | undefined = undefined;
   @State private preview: LocalRecoveryOutcome | undefined = undefined;
   @State private revision: number = 0;
@@ -68,8 +70,11 @@ export struct LocalRecoveryPanel {
     this.checking = true;
     this.statusUnavailable = false;
     try {
-      const pending = await this.gateway.pending();
-      if (this.current(revision, navigation)) this.pendingRestore = pending;
+      const pending = await this.gateway.pendingAction();
+      if (this.current(revision, navigation)) {
+        this.pendingRestore = pending !== undefined;
+        this.rollbackPending = pending === 'rollback';
+      }
     } catch (_) {
       if (this.current(revision, navigation)) this.statusUnavailable = true;
     } finally {
@@ -91,34 +96,38 @@ export struct LocalRecoveryPanel {
     this.passphrase = '';
   }
 
-  private requestRestore(revision: number): void {
+  private requestRestore(revision: number, action: 'apply' | 'rollback' = 'apply'): void {
     const navigation = this.navigationGeneration;
-    const current = (): boolean => this.current(revision, navigation) && this.canStart(revision) && this.preview !== undefined;
+    const rollback = action === 'rollback';
+    const current = (): boolean => this.current(revision, navigation) && this.canStart(revision) &&
+      (rollback ? this.pendingRestore && !this.rollbackPending : this.preview !== undefined);
     if (!current() || this.confirmationOpen) return;
     this.confirmationOpen = true;
     try {
       const paint = resolveReaderButtonMatrixPaint('primary', true);
       const alert = this.alert.present((native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native),
         'confirmation-cancelable', {
-          title: '恢复本地阅读库', message: '恢复包将替换当前阅读库。导入的联网书源和自动更新需重新启用。',
+          title: rollback ? '回退未完成的恢复' : '恢复本地阅读库',
+          message: rollback ? '将用恢复前的检查点替换当前阅读库，恢复开始后的变更将被替换。' :
+            '恢复包将替换当前阅读库。导入的联网书源和自动更新需重新启用。',
           primaryButton: { value: '取消', action: (): void => {} },
-          secondaryButton: { value: '恢复', style: DialogButtonStyle.HIGHLIGHT,
+          secondaryButton: { value: rollback ? '回退' : '恢复', style: DialogButtonStyle.HIGHLIGHT,
             backgroundColor: readerAppColor(paint.surface, this.scheme), fontColor: readerAppColor(paint.ink, this.scheme),
-            action: (): void => { void this.perform('apply', revision); } },
+            action: (): void => { void this.perform(action, revision); } },
         }, current);
       void alert.decision.then((decision): void => {
         if (!this.current(revision, navigation)) return;
         this.confirmationOpen = false;
-        if (decision === 'native-failure' && current()) this.showOutcome('apply', { state: 'failed' }, revision, navigation);
+        if (decision === 'native-failure' && current()) this.showOutcome(action, { state: 'failed' }, revision, navigation);
       });
     } catch (_) {
       this.confirmationOpen = false;
-      if (current()) this.showOutcome('apply', { state: 'failed' }, revision, navigation);
+      if (current()) this.showOutcome(action, { state: 'failed' }, revision, navigation);
     }
   }
 
   private async perform(action: LocalRecoveryAction, expected: number): Promise<void> {
-    if (!this.canStart(expected) || (action === 'resume') !== this.pendingRestore ||
+    if (!this.canStart(expected) || (action === 'resume' || action === 'rollback') !== this.pendingRestore ||
       (action === 'apply') !== (this.preview !== undefined)) return;
     const revision = ++this.revision, navigation = this.navigationGeneration;
     const current = (): boolean => this.current(revision, navigation);
@@ -132,6 +141,7 @@ export struct LocalRecoveryPanel {
       if (action === 'export') outcome = await this.gateway.exportPackage(passphrase, current);
       else if (action === 'inspect') outcome = await this.gateway.inspectPackage(passphrase, current);
       else if (action === 'apply') outcome = await this.gateway.applyPackage(passphrase);
+      else if (action === 'rollback') outcome = await this.gateway.rollbackPackage(passphrase);
       else outcome = await this.gateway.resumePackage(passphrase);
     } catch (_) {
       outcome = { state: 'failed' };
@@ -144,8 +154,7 @@ export struct LocalRecoveryPanel {
     }
     this.preview = undefined;
     this.passphrase = '';
-    if (outcome.state === 'interrupted') this.pendingRestore = true;
-    else if (action === 'apply' || action === 'resume') await this.readPending();
+    if (outcome.state === 'interrupted' || action === 'apply' || action === 'resume' || action === 'rollback') await this.readPending();
     if (current()) this.showOutcome(action, outcome, revision, navigation);
   }
 
@@ -159,6 +168,7 @@ export struct LocalRecoveryPanel {
     switch (outcome.state) {
       case 'exported': message = `恢复包已导出。${this.originalCounts(outcome)}`; break;
       case 'restored': message = `阅读库已恢复。${this.originalCounts(outcome)}`; break;
+      case 'rolledBack': message = '已回退到恢复前的阅读库'; break;
       case 'cancelled': message = action === 'export' ? '已取消导出' : '已取消选择恢复包'; break;
       case 'rejected': message = '恢复包未通过校验，请核对口令与文件完整性。'; break;
       case 'tooLarge': message = action === 'export' ? '待备份内容超过恢复包大小限制。' : '恢复包超过可导入的大小限制。'; break;
@@ -182,7 +192,8 @@ export struct LocalRecoveryPanel {
   private processing() {
     ReaderPageState({ variant: 'inline', padded: false, loading: true,
       title: this.checking ? '正在核对恢复状态…' : this.active === 'export' ? '正在导出恢复包…' :
-        this.active === 'inspect' ? '正在隔离校验恢复包…' : '正在恢复阅读库…' });
+        this.active === 'inspect' ? '正在隔离校验恢复包…' :
+          this.active === 'rollback' || this.rollbackPending ? '正在回退阅读库…' : '正在恢复阅读库…' });
   }
 
   @Builder
@@ -196,8 +207,10 @@ export struct LocalRecoveryPanel {
 
   @Builder
   private resumeControl() {
-    ReaderRecoveryNotice({ tag: '恢复中断', actionLabel: '继续恢复',
-      view: { visible: true, canRetry: true, generation: this.revision, message: '请输入原恢复包口令，继续未完成的恢复。' },
+    ReaderRecoveryNotice({ tag: this.rollbackPending ? '回退中断' : '恢复中断',
+      actionLabel: this.rollbackPending ? '继续回退' : '继续恢复',
+      view: { visible: true, canRetry: true, generation: this.revision, message: this.rollbackPending ?
+        '请输入原恢复包口令，继续未完成的回退。' : '请输入原恢复包口令，继续恢复或回退到恢复前。' },
       actionEnabled: this.passphrase.length > 0, onReconcile: (expected: number): void => { void this.perform('resume', expected); } });
   }
 
@@ -217,6 +230,10 @@ export struct LocalRecoveryPanel {
       }
       if (this.pendingRestore) {
         Column() { this.resumeControl(); }.width('100%').padding(TOK_SPACE_SM);
+        if (!this.rollbackPending) {
+          ReaderButton({ scheme: this.scheme, variant: 'subtle', label: '回退到恢复前…',
+            actionEnabled: this.passphrase.length > 0, onAction: (): void => this.requestRestore(expected, 'rollback') });
+        }
       } else {
         Row({ space: TOK_SPACE_SM }) {
           ReaderButton({ scheme: this.scheme, variant: 'tonal', label: '导出恢复包', layout: 'equal',

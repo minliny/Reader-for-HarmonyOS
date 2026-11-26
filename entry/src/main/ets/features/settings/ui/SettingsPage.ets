@@ -17,6 +17,7 @@ import { ReaderRouteStackSurface, type ReaderRouteSurfaceKey } from '../../../ap
 import type { SettingsSection } from '../../../app/navigation/ReaderNavigation';
 import { settingsNavigationItems, type SettingsNavigationItem, type SettingsPane } from '../presentation/SettingsNavigationItems';
 import { ReaderControlPlacementPreferences } from '../../../app/ReaderControlPlacementPreferences';
+import { setReaderSystemMigrationIncludesOriginals } from '../../../app/ReaderSystemMigrationPreferences';
 import { readerControlAlignment } from '../../reading/ui/ReaderControlPlacement';
 import { readerWidthClassWithHint } from '../../../ui/foundation/ReaderWidthClass';
 import { ReaderAppearanceSaveUnconfirmedError, type ReaderAppearanceSaveState } from '../../reading/application/ReaderAppearanceStore';
@@ -45,6 +46,8 @@ import { readerHarmonyCapabilities } from '../../../app/HarmonyCapabilityProbe';
 import { isReaderProductSurfaceEnabled } from '../../../app/ReaderProductScope';
 import { emptyReaderAppBuildInfo, readReaderAppBuildInfo, readerAppBuildDisplay, readerAppBuildCopy, type ReaderAppBuildInfo } from '../../../platform/bundle/ReaderAppBuildInfo';
 import { copyReaderBuildIdentity } from '../../../platform/clipboard/ReaderClipboardHost';
+import { LocalRecoveryPanel } from '../../bookshelf/ui/LocalRecoveryPanel';
+import { ReaderWebDavLibraryPanel } from '../../sync/ui/ReaderWebDavLibraryPanel';
 
 // App主题 为分段控件 (Figma ThemeSegment 2114:20635), 非下拉; 标签用 Figma 原文。
 const SEG_OPTIONS: string[] = ['跟随', '浅色', '深色'];
@@ -60,6 +63,9 @@ let settingsSelectionGeneration: number = 0;
 export struct SettingsPage {
   @Prop embeddedWide: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
+  @StorageProp('readerSystemMigrationOriginals') private systemMigrationOriginals: boolean = false;
+  @StorageProp('readerSystemMigrationState') private systemMigrationState: string = 'none';
+  @State private systemMigrationSaving: boolean = false;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerAppForeground') private appForeground: boolean = true;
   @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
@@ -93,6 +99,7 @@ export struct SettingsPage {
   @State private developerModeValue: boolean = false;
   @State private wideNavigationRailValue: boolean = false;
   @State private resetInFlight: boolean = false;
+  @State private libraryRestoreRevision: number = 0;
   @State private resetMessage: string = '';
   @State private resetDialogTicket: number = 0;
   @State private resetCoverVisible: boolean = false;
@@ -527,6 +534,12 @@ export struct SettingsPage {
     this.preferenceCard();
     this.behaviorCard();
     this.maintenanceCard();
+    LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration, externalRestoreRevision: this.libraryRestoreRevision,
+      isInputAllowed: (): boolean => this.activeSection === 'general' && this.settingsInputIsCurrent() });
+    ReaderWebDavLibraryPanel({ navigationGeneration: this.navigationGeneration,
+      isInputAllowed: (): boolean => this.activeSection === 'general' && this.settingsInputIsCurrent(),
+      onRestoreStateChanged: (): void => { this.libraryRestoreRevision += 1; } });
+    this.systemMigrationCard();
     if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
       this.permissionCard();
     }
@@ -535,6 +548,34 @@ export struct SettingsPage {
   }
 
   private recovery(): ReaderRecoveryView { return readerRecoveryView(this.operation.receipt, this.operation.readFacts); }
+
+  @Builder
+  private systemMigrationCard() {
+    CategorySection({ title: '系统迁移' }) {
+      ReaderFormRow({ label: '系统备份包含本地原书',
+        secondaryText: this.systemMigrationState === 'interrupted' ? '迁移尚待完成，将在下次启动继续' :
+          '由系统发起备份或换机。默认迁移书库资料，开启后加入保留的原书',
+        actionEnabled: this.settingsInputIsCurrent() && !this.systemMigrationSaving,
+        onLabelAction: (): void => { void this.setSystemMigrationOriginals(!this.systemMigrationOriginals); } }) {
+        ReaderToggle({ value: this.systemMigrationOriginals, accessibilityLabel: '系统备份包含本地原书',
+          actionEnabled: this.settingsInputIsCurrent() && !this.systemMigrationSaving,
+          onToggle: (enabled: boolean): void => { void this.setSystemMigrationOriginals(enabled); } });
+      }
+    }
+  }
+
+  private async setSystemMigrationOriginals(enabled: boolean): Promise<void> {
+    if (this.systemMigrationSaving || !this.settingsInputIsCurrent()) return;
+    this.systemMigrationSaving = true;
+    try {
+      const application = ReaderRuntimeOwner.current().getUIAbilityContext().getApplicationContext();
+      await setReaderSystemMigrationIncludesOriginals(application, enabled);
+    } catch (_) {
+      this.showFeedbackToast('系统备份偏好保存失败，请重试');
+    } finally {
+      this.systemMigrationSaving = false;
+    }
+  }
 
   private feedbackMessage(): string {
     const messages: string[] = [];

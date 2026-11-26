@@ -6,13 +6,14 @@ const file = new URL('../entry/src/main/ets/features/bookshelf/ui/LocalRecoveryP
 const Panel = selectedProductionMethods(file, 'LocalRecoveryPanel', [
   'aboutToAppear', 'aboutToDisappear', 'retireOpening', 'refreshOpening', 'current', 'readPending',
   'canStart', 'clearPreview', 'requestRestore', 'perform', 'originalCounts', 'showOutcome',
-], { readerAppColor: () => '#cc0000' });
+], { readerAppColor: () => '#cc0000', resolveReaderButtonMatrixPaint: () => ({ surface: 'button', ink: 'text' }),
+  DialogButtonStyle: { HIGHLIGHT: 'highlight' } });
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
 function fixture(overrides = {}) {
   const events = [], notices = [], dialogs = [];
   const gateway = {
-    pending: async () => false,
+    pendingAction: async () => undefined,
     clearPreview() { events.push('clearPreview'); },
     async inspectPackage() { events.push('inspect'); return { state: 'preview', included: 2, missing: 1 }; },
     async applyPackage() { events.push('apply'); return { state: 'restored', included: 2, missing: 1 }; },
@@ -62,7 +63,7 @@ console.log('PASS local recovery previews original counts and applies only after
 {
   let pending = true;
   const { panel, events, notices } = fixture({
-    pending: async () => pending,
+    pendingAction: async () => pending ? 'restore' : undefined,
     async resumePackage(passphrase) {
       assert.equal(passphrase, 'fixture passphrase');
       events.push('resume');
@@ -113,3 +114,40 @@ console.log('PASS interrupted local recovery survives re-entry and only then res
   assert.equal(events.includes('apply'), false, 'retired native callback cannot start a restore');
 }
 console.log('PASS late picker and native confirmation callbacks cannot apply against a retired settings opening');
+
+{
+  let pending = 'restore';
+  const { panel, events, notices, dialogs } = fixture({
+    pendingAction: async () => pending,
+    async rollbackPackage(passphrase) {
+      assert.equal(passphrase, 'fixture passphrase');
+      events.push('rollback');
+      pending = 'rollback';
+      return { state: 'interrupted' };
+    },
+    async resumePackage(passphrase) {
+      assert.equal(passphrase, 'fixture passphrase');
+      events.push('resume-rollback');
+      pending = undefined;
+      return { state: 'rolledBack' };
+    },
+  });
+  panel.aboutToAppear(); await tick();
+  panel.passphrase = 'fixture passphrase';
+  panel.requestRestore(panel.revision, 'rollback'); await tick();
+  assert.equal(dialogs[0].title, '回退未完成的恢复');
+  decide(dialogs[0], 'primaryButton'); await tick();
+  assert.deepEqual(events, ['clearPreview']);
+  panel.requestRestore(panel.revision, 'rollback');
+  decide(dialogs[1], 'secondaryButton'); await tick();
+  assert.equal(panel.rollbackPending, true);
+  panel.aboutToDisappear(); panel.aboutToAppear(); await tick();
+  assert.equal(panel.rollbackPending, true);
+  assert.equal(panel.passphrase, '');
+  panel.passphrase = 'fixture passphrase';
+  await panel.perform('resume', panel.revision);
+  assert.deepEqual(events.filter(event => event !== 'clearPreview'), ['rollback', 'resume-rollback']);
+  assert.deepEqual(notices, ['已回退到恢复前的阅读库']);
+  assert.equal(panel.pendingRestore, false);
+}
+console.log('PASS rollback requires confirmation and resumes the already accepted rollback after opening retirement');
