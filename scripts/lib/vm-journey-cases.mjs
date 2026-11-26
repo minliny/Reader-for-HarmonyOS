@@ -302,7 +302,15 @@ export const journeys = {
     });
     await ui.key('从无结果态返回书架', 'Back', localShelf);
 
-    await openLocalDetail(ui);
+    const localResult = { id: /^reader-search-result:.*"local:local:/, enabled: 'true' };
+    await ui.tap('从恢复的书架重新打开搜索', searchEntry, { route: 'search', all: [searchField] });
+    await ui.input('填写本地 TXT 的检索词', searchField, 'Reader', { route: 'search', all: [searchField] });
+    await ui.tap('检索并核对公开本地 TXT', searchSubmit, {
+      route: 'search', all: [localResult, { ...text(LOCAL_TXT), within: localResult }],
+    });
+    await ui.tap('从本地搜索结果打开 TXT 详情', localResult, {
+      route: 'detail', all: [text(LOCAL_TXT), text('本地藏书'), readBook], modalOpen: false,
+    });
     await ui.tap('打开本地 TXT 并等待分页正文', readBook, { route: 'reading', all: [readingStage, activePage] });
     const appearanceEntry = { id: 'reader-control-entry-appearance', enabled: 'true' };
     const appearance = id('reader-control-module-appearance');
@@ -330,6 +338,9 @@ export const journeys = {
     });
     await ui.key('返回夜间详情并核对本地书动作', 'Back', {
       route: 'detail', all: [text(LOCAL_TXT), readBook], modalOpen: false, scheme: 'night', requiredRules: ['R7'],
+    });
+    await ui.key('从夜间详情返回本地搜索结果', 'Back', {
+      route: 'search', all: [localResult], modalOpen: false, scheme: 'night',
     });
     await ui.key('返回夜间书架并核对原条目', 'Back', {
       ...localShelf, scheme: 'night', requiredRules: ['R7'],
