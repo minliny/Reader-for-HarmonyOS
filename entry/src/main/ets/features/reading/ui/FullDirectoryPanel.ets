@@ -1,8 +1,9 @@
 import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
-import { readerFullDirectoryHeights, readerDirectoryToolbarBudget, type ReaderFullDirectoryHeights } from '../presentation/ReaderFullDirectoryBudget';
+import { DIRECTORY_TOOL_SIZE, readerFullDirectoryHeights, readerDirectoryToolbarBudget, type ReaderFullDirectoryHeights } from '../presentation/ReaderFullDirectoryBudget';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerCompactSearchHeight } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import type { ReaderDirectoryNavigationPortFactory } from '../application/ReaderDirectoryNavigation';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
@@ -431,7 +432,7 @@ export struct FullDirectoryPanel {
       Stack({ alignContent: Alignment.TopStart }) {
         this.searchControls();
         // Figma 1689:2137 is a CHILD of Toolbar 1689:2125. Its local
-        // y=51 plus 12->0 translation and opacity inherit the parent's
+        // bottom edge, 12->0 translation and opacity inherit the parent's
         // 18->0 translation/opacity; do not flatten these two actor tracks.
         Text('')
           .width(Math.max(0, this.panelWidth() - 2))
@@ -441,7 +442,7 @@ export struct FullDirectoryPanel {
           .opacity(this.controlProgress());
       }
       .width(Math.max(0, this.panelWidth() - 2))
-      .height(Math.max(52, this.searchControlsHeight()))
+      .height(this.searchControlsHeight())
       .position({ x: 1, y: this.controlValue(61, 43) })
       .opacity(this.controlProgress())
       .enabled(this.controlProgress() > 0)
@@ -686,6 +687,7 @@ export struct FullDirectoryPanel {
       ReaderDirectoryToolbar({ editingHost: this.editingHost,
         editingCurrent: (): boolean => this.panelInputCurrent(),
         variant: this.catalogToolbar() ? 'standalone-catalog' : 'full-directory',
+        readingPalette: !this.standaloneCatalog || this.embeddedInControl,
         text: this.searchDraft, placeholder: this.searchPlaceholder(),
         ascending: this.ascending, showChapterTools: this.activeTab === 'directory',
         availableWidthVp: this.innerWidth(), inputMinimumWidthVp: this.toolbarInputMinimumWidth(),
@@ -693,7 +695,7 @@ export struct FullDirectoryPanel {
         onTextChange: (value: string): void => {
           if (!this.panelInputCurrent()) return;
           this.searchDraft = value;
-          if (this.catalogToolbar()) this.applySearch(value);
+          this.applySearch(value);
         },
         onSearch: (): void => this.handleControl('search'),
         onTop: (): void => this.handleControl('top'),
@@ -989,7 +991,7 @@ export struct FullDirectoryPanel {
 
   private applySearch(value: string = this.searchDraft): void {
     const nextQuery = value.trim();
-    if (this.catalogToolbar() && nextQuery === this.searchQuery) return;
+    if (nextQuery === this.searchQuery) return;
     this.searchQuery = nextQuery;
     this.rebuildProjection(this.activeTab, this.ascending, nextQuery);
     this.scheduleProjectionTopScroll();
@@ -1535,7 +1537,9 @@ export struct FullDirectoryPanel {
     return readerScaledControlHeight(26, TYPE_READER_DIRECTORY_COLLAPSE.lineHeightFp as number, this.fontScale());
   }
   private catalogToolbar(): boolean { return this.standaloneCatalog && !this.embeddedInControl && this.activeTab === 'directory'; }
-  private queryHeight(): number { return readerScaledControlHeight(this.catalogToolbar() ? 36 : 32, 24, this.fontScale()); }
+  private queryHeight(): number {
+    return readerCompactSearchHeight(DIRECTORY_TOOL_SIZE, TYPE_SEARCH_DIRECTORY_INPUT.lineHeightFp as number, this.fontScale());
+  }
   private tabStripHeight(): number { return this.tabHeight() + 6; }
   private toolbarInputMinimumWidth(): number {
     const scale = this.fontScale();
@@ -1556,10 +1560,10 @@ export struct FullDirectoryPanel {
   private searchControlsHeight(): number {
     const catalog = this.catalogToolbar();
     return readerDirectoryToolbarBudget(this.innerWidth(), this.activeTab === 'directory',
-      this.queryHeight(), this.toolbarInputMinimumWidth() + (catalog ? 44 : 0), 0, catalog).height + (this.embeddedInControl ? 0 : 1);
+      this.queryHeight(), this.toolbarInputMinimumWidth(), 0, catalog).height + (this.embeddedInControl ? 0 : 1);
   }
   private embeddedToolbarGrowth(): number {
-    return Math.max(0, this.searchControlsHeight() - 52) * this.controlProgress();
+    return (this.searchControlsHeight() - 52) * this.controlProgress();
   }
   private heights(): ReaderFullDirectoryHeights {
     const heights = readerFullDirectoryHeights(this.panelHeight());

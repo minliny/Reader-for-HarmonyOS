@@ -2,6 +2,7 @@ import type { ReaderControlDirectorySnapshot } from './ReaderControlDirectoryMod
 import { readerBookmarkEmptyCopy } from '../presentation/ReaderBookmarkProjection';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerCompactSearchHeight } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import { ReaderInheritedTextStyle, TYPE_READER_DIRECTORY_TAB_COMPACT, TYPE_READER_DIRECTORY_TITLE,
   TYPE_SEARCH_DIRECTORY_INPUT, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_POSITION,
@@ -11,7 +12,7 @@ import { TOK_SPACE_CONTROL_INLINE, TOK_SPACE_SM } from '../../../ui/foundation/R
 import type { ReaderControlCandidateWidths, ReaderControlFormMinimum } from './ReaderLayoutGeometry';
 import type { ReaderControlBookmarkNaturalSize } from './ReaderControlBookmarkGeometry';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
-import { readerDirectoryToolbarBudget } from '../presentation/ReaderFullDirectoryBudget';
+import { DIRECTORY_TOOL_SIDE_INSET, DIRECTORY_TOOL_SIZE, readerDirectoryFieldChromeWidth, readerDirectoryToolbarBudget } from '../presentation/ReaderFullDirectoryBudget';
 
 export interface ReaderDirectoryMinimumFactsInput {
   snapshot: ReaderControlDirectorySnapshot;
@@ -91,10 +92,10 @@ function form(context: UIContext, width: number, full: boolean,
     Math.max(1, (width - (full ? 18 : 32)) / 2 - 20));
   const title = measureReaderControlText(context, facts.title, TYPE_READER_DIRECTORY_TITLE,
     Math.max(1, width - (full ? 22 : 34) - 86));
-  const fieldWidth = width - 2 - TOK_SPACE_CONTROL_INLINE * 2 - (facts.tab === 'directory' ? 184 : 52);
+  const fieldWidth = width - 2 - DIRECTORY_TOOL_SIDE_INSET * 2 - readerDirectoryFieldChromeWidth(true);
   const field = measureReaderControlText(context, facts.tab === 'bookmarks' ? '搜索书签内容' : '搜索章节名称',
-    TYPE_SEARCH_DIRECTORY_INPUT, Math.max(1, fieldWidth - 39));
-  const fieldGlyph = measureReaderControlText(context, '字', TYPE_SEARCH_DIRECTORY_INPUT, Math.max(1, fieldWidth - 39));
+    TYPE_SEARCH_DIRECTORY_INPUT, Math.max(1, fieldWidth));
+  const fieldGlyph = measureReaderControlText(context, '字', TYPE_SEARCH_DIRECTORY_INPUT, Math.max(1, fieldWidth));
   const bookmarkTitle = measureReaderControlText(context, facts.title, TYPE_READER_BOOKMARK_CHAPTER, Math.max(1, width - 180));
   const bookmarkLine = measureReaderControlText(context, facts.excerpt, TYPE_READER_BOOKMARK_EXCERPT, Math.max(1, width - 62));
   const metaStyle = new ReaderInheritedTextStyle(TYPE_READER_BOOKMARK_META.fontFamily,
@@ -115,12 +116,12 @@ function form(context: UIContext, width: number, full: boolean,
   const scale = readerReadableFontScale(readerWindowMetrics().systemFontScale);
   const tabBase = full ? 36 : 31;
   const tabHeight = Math.max(readerScaledControlHeight(tabBase, TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number, scale), tabBase, tab.heightVp, bookmarkTab.heightVp, 15);
-  const inputHeight = readerScaledControlHeight(30, 24, scale);
-  const fieldHeight = Math.max(readerScaledControlHeight(32, 24, scale), inputHeight + 2);
+  const fieldHeight = readerCompactSearchHeight(DIRECTORY_TOOL_SIZE, TYPE_SEARCH_DIRECTORY_INPUT.lineHeightFp as number, scale);
+  const inputHeight = fieldHeight - 2;
   const inputMinimumWidth = Math.max(44, TYPE_SEARCH_DIRECTORY_INPUT.fontSizeFp * 6 * scale,
     Math.min(field.singleLineWidthVp, fieldGlyph.singleLineWidthVp * 6));
   const toolbarBudget = readerDirectoryToolbarBudget(width - 2, facts.tab === 'directory', fieldHeight,
-    inputMinimumWidth, Math.max(52, fieldHeight + 20) - 2);
+    inputMinimumWidth);
   const toolbarHeight = toolbarBudget.height + 2;
   const bookmark: ReaderControlBookmarkNaturalSize = {
     titleHeightVp: Math.max(14, bookmarkTitle.heightVp, meta.heightVp, pending.heightVp),
@@ -129,8 +130,7 @@ function form(context: UIContext, width: number, full: boolean,
   const bookmarkHeight = Math.max(full ? 74 : 54, (full ? 9 : 7) + bookmark.titleHeightVp +
     (full ? 9 : 2) + bookmark.excerptHeightVp + (full ? 14 : 7));
   const rowHeight = facts.tab === 'bookmarks' ? bookmarkHeight : Math.max(readerScaledControlHeight(full ? 40 : 32, 20, scale), title.heightVp);
-  const listTop = (full ? 99 : facts.tab === 'bookmarks' ? 47 : 48) + tabHeight - tabBase +
-    (full ? toolbarHeight - 52 : 0);
+  const listTop = (full ? 47 + toolbarHeight : facts.tab === 'bookmarks' ? 47 : 48) + tabHeight - tabBase;
   const footerHeight = facts.tab === 'directory' ? Math.max(readerScaledControlHeight(48, 16, scale),
     2 + Math.max(footerLabel.heightVp, footerPosition.heightVp, footerTitle.heightVp)) : 0;
   let viewport = rowHeight;

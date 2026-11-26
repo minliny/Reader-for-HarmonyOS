@@ -5,6 +5,7 @@ import { readerControlSearchResultTitle, readerControlSearchStatusText, readerCo
 
 import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, readerControlModuleFactsGeometryKey, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
+import { readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import hilog from '@ohos.hilog';
 import { DEBUG } from '../../../../../../build/default/generated/profile/default/BuildProfile';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
@@ -12,7 +13,7 @@ import { ReaderControlQuickBack } from './ReaderControlQuickBack';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
-import { TYPE_READER_SNIPPET_INLINE_MATCH, TYPE_READER_SNIPPET_INLINE_REGULAR, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_READER_SNIPPET_INLINE_MATCH, TYPE_READER_SNIPPET_INLINE_REGULAR, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_SEARCH_FIELD_ACTION } from '../../../ui/foundation/ReaderTypography';
 
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
@@ -21,9 +22,9 @@ import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, re
 import { sampleReaderControlMorphScrollPath,
   type ReaderControlMorphScrollPath } from './ReaderControlMorphScroll';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
-import { SEARCH_CONTROL_CLEAR_END_INSET, SEARCH_CONTROL_CLEAR_ICON_SIZE, SEARCH_CONTROL_CLEAR_SLOT,
-  SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
+import { SEARCH_CONTROL_CLEAR_ICON_SIZE, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import type { ReadingContentSearchResult } from '../application/ReadingSessionFlowGateway';
 import { ReaderContentSearchPublication, type ReaderQuickSearchState, type ReaderQuickSearchResultsState } from '../presentation/ReaderContentSearchPublication';
 import { ReaderContentSearchDataSource, readerContentSearchResultKey } from './ReaderContentSearchDataSource';
@@ -31,7 +32,9 @@ import { READER_SEARCH_LIST_ITEM_HEIGHT, READER_SEARCH_LIST_CACHE_COUNT, readerC
   readerControlSearchListRowTranslation, readerControlSearchListScrollDelta,
   type ReaderControlSearchListProjection } from './ReaderControlSearchListProjection';
 import { splitReaderSearchSnippet, type ReaderSearchSnippetParts } from '../presentation/ReaderSearchHighlight';
-import { sampleReaderControlSearch, type ReaderControlSearchFrame,
+import { READER_CONTROL_SEARCH_BORDER, READER_CONTROL_SEARCH_CLEAR_SLOT, READER_CONTROL_SEARCH_END_INSET,
+  READER_CONTROL_SEARCH_ICON_GAP, READER_CONTROL_SEARCH_ICON_SIZE, READER_CONTROL_SEARCH_INPUT_START, READER_CONTROL_SEARCH_LEADING_INSET,
+  sampleReaderControlSearch, type ReaderControlSearchFrame,
   type ReaderControlSearchNaturalSize } from './ReaderControlSearchGeometry';
 import type { ReaderControlModuleMeasurer, ReaderControlModuleMinimum, ReaderControlCandidateWidths } from './ReaderLayoutGeometry';
 
@@ -54,7 +57,7 @@ class ReaderSearchMeasuredMessageFrame implements AttributeModifier<TextAttribut
 /** Search 1938:4927 content only. One input and one result scroll tree survive
  * Quick/Full; Stage owns the shell, header, p, whole visibility and timing.
  * ReaderFormField owns the exact native IME/caret recipe; this persistent
- * actor retains the authored24->32 outer geometry and one input controller. */
+ * actor retains the authored anchors, with 32/36vp query capsules. */
 @Component
 export struct ReaderControlSearchContent {
   editingHost: ReaderEditingVisibility | undefined = undefined;
@@ -277,11 +280,11 @@ export struct ReaderControlSearchContent {
     if (!minimum.fits || !Number.isFinite(minimum.heightVp) || minimum.heightVp <= 0) return undefined;
     const frame = this.frame();
     // Anchor the semantic minimum to the current native field, including the
-    // authored Row's 9vp horizontal padding and centered native input. The
+    // capsule's border, leading icon and centered native input. The
     // minimum producer already measures one whole result plus paging/recovery,
     // or the current idle/loading/empty/error state. Never substitute the
     // currently clipped result viewport: zero visible results is the defect.
-    const originX = field.left - 9 - frame.field.x;
+    const originX = field.left - READER_CONTROL_SEARCH_INPUT_START - frame.field.x;
     const originY = field.top - Math.max(0, (frame.field.height - field.height) / 2) - frame.field.y;
     const top = Math.min(frame.field.y, frame.action.y, this.motionProgress === 0 ? frame.back.y : frame.field.y);
     const bottom = Math.max(minimum.heightVp, frame.field.y + frame.field.height, frame.action.y + frame.action.height);
@@ -333,6 +336,8 @@ export struct ReaderControlSearchContent {
     const quickScopeHeight = q.cacheScopeHeightVp ?? 0;
     const fullScopeHeight = f.cacheScopeHeightVp ?? 0;
     return { fieldHeightVp: q.fieldHeightVp + (f.fieldHeightVp - q.fieldHeightVp) * progress,
+      actionWidthVp: q.actionWidthVp + (f.actionWidthVp - q.actionWidthVp) * progress,
+      placeholderWidthVp: q.placeholderWidthVp + (f.placeholderWidthVp - q.placeholderWidthVp) * progress,
       inputHeightVp: q.inputHeightVp + (f.inputHeightVp - q.inputHeightVp) * progress,
       titleHeightVp: q.titleHeightVp + (f.titleHeightVp - q.titleHeightVp) * progress,
       snippetHeightVp: q.snippetHeightVp + (f.snippetHeightVp - q.snippetHeightVp) * progress,
@@ -660,7 +665,7 @@ export struct ReaderControlSearchContent {
     Stack({ alignContent: Alignment.TopStart }) {
       // Query bottom follows the actual input row in both forms.
       Row().height(this.frame().queryDivider.height).width(this.frame().queryDivider.width)
-        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
+        .backgroundColor(readerAppColor('app.border.readerConfig', this.appThemeScheme))
         .position({ x: this.frame().queryDivider.x, y: this.frame().queryDivider.y });
       this.searchField();
       this.searchAction();
@@ -678,10 +683,15 @@ export struct ReaderControlSearchContent {
   @Builder
   private searchField() {
     Row({ space: 0 }) {
+      Image($r('app.media.reader_directory_input_search'))
+        .width(READER_CONTROL_SEARCH_ICON_SIZE).height(READER_CONTROL_SEARCH_ICON_SIZE)
+        .margin({ right: READER_CONTROL_SEARCH_ICON_GAP })
+        .fillColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+        .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
       ReaderFormField({ editingHost: this.editingHost, specId: 'reader-content-search', scheme: this.appThemeScheme,
         editingContext: (field: ReaderRectVp): ReaderRectVp | undefined => this.queryEditingContext(field),
         naturalInputHeightVp: this.frame().inputHeightVp,
-        text: this.query, placeholder: '搜索正文内容', inputController: this.inputController, inputIdentity: this.queryInputId,
+        text: this.query, placeholder: this.frame().placeholder, inputController: this.inputController, inputIdentity: this.queryInputId,
         fieldAccessibilityLabel: '搜索正文内容', onTextChange: (value: string): void => {
           if (this.currentEditorInputEnabled()) this.onQueryChange(value);
         },
@@ -689,14 +699,15 @@ export struct ReaderControlSearchContent {
         .layoutWeight(1);
       if (this.query.length > 0) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
-          Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
+          Image($r('app.media.search_clear'))
             .width(SEARCH_CONTROL_CLEAR_ICON_SIZE).height(SEARCH_CONTROL_CLEAR_ICON_SIZE)
+            .fillColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
-        }.width(SEARCH_CONTROL_CLEAR_SLOT).height(this.frame().field.height).padding({ left: 10 })
+        }.width(READER_CONTROL_SEARCH_CLEAR_SLOT).height(SEARCH_CONTROL_CLEAR_ICON_SIZE).padding(0)
           .backgroundColor(Color.Transparent).focusOnTouch(false)
-          .responseRegion({ x: -SEARCH_CONTROL_CLEAR_END_INSET,
-            y: (this.frame().field.height - Math.max(this.frame().field.height, SEARCH_CONTROL_MIN_TARGET)) / 2,
-            width: SEARCH_CONTROL_MIN_TARGET, height: Math.max(this.frame().field.height, SEARCH_CONTROL_MIN_TARGET) })
+          .responseRegion({ x: READER_CONTROL_SEARCH_CLEAR_SLOT + READER_CONTROL_SEARCH_END_INSET - SEARCH_CONTROL_MIN_TARGET,
+            y: (SEARCH_CONTROL_CLEAR_ICON_SIZE - SEARCH_CONTROL_MIN_TARGET) / 2,
+            width: SEARCH_CONTROL_MIN_TARGET, height: SEARCH_CONTROL_MIN_TARGET })
           .enabled(this.currentEditorInputEnabled()).accessibilityText('清空正文搜索')
           .onClick((): void => {
             if (!this.currentEditorInputEnabled()) return;
@@ -707,11 +718,12 @@ export struct ReaderControlSearchContent {
     }
     .id('reader-control-search-field')
     .width(this.frame().field.width).height(this.frame().field.height)
-    .padding({ left: 9, right: this.query.length > 0 ? SEARCH_CONTROL_CLEAR_END_INSET : 9 })
+    .padding({ left: READER_CONTROL_SEARCH_LEADING_INSET, right: READER_CONTROL_SEARCH_END_INSET })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+    .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme))
+    .border({ width: READER_CONTROL_SEARCH_BORDER, color: readerAppColor('app.border.readerConfig', this.appThemeScheme) })
     .borderRadius(this.frame().field.height / 2)
+    .responseRegion(readerActionTouchRegion(this.frame().field.width, this.frame().field.height))
     .position({ x: this.frame().field.x, y: this.frame().field.y })
     .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
     .onClick((): void => this.focusQueryField());
@@ -720,15 +732,27 @@ export struct ReaderControlSearchContent {
   @Builder
   private searchAction() {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_search_theme_night') : $r('app.media.reader_directory_search'))).width(16).height(16)
-        .opacity(this.canSearch() ? 1 : .4);
+      Stack({ alignContent: Alignment.Center }) {
+        Image($r('app.media.reader_directory_search')).width(16).height(16)
+          .fillColor(readerAppColor(this.canSearch() ? 'app.control.onPrimary' : 'TOK_READ_MUTED', this.appThemeScheme))
+          .opacity(1 - this.frame().actionLabelOpacity);
+        Text('搜索')
+          .fontFamily(TYPE_SEARCH_FIELD_ACTION.fontFamily).fontWeight(TYPE_SEARCH_FIELD_ACTION.fontWeight)
+          .fontSize(TYPE_SEARCH_FIELD_ACTION.fontSizeFp).lineHeight(TYPE_SEARCH_FIELD_ACTION.lineHeightFp as number)
+          .maxLines(1).halfLeading(true)
+          .fontColor(readerAppColor(this.canSearch() ? 'app.control.onPrimary' : 'TOK_READ_MUTED', this.appThemeScheme))
+          .opacity(this.frame().actionLabelOpacity);
+      }.accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }
     .id('reader-control-search-submit')
     .width(this.frame().action.width).height(this.frame().action.height)
     .padding(0)
+    .responseRegion(readerActionTouchRegion(this.frame().action.width, this.frame().action.height))
     .position({ x: this.frame().action.x, y: this.frame().action.y })
     .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
-    .attributeModifier(new ReaderPanelFrame('reader-soft-control', this.appThemeScheme))
+    .attributeModifier(new ReaderPressFeedback(
+      readerAppColor(this.canSearch() ? 'TOK_READ_PRIMARY' : 'TOK_READ_DISABLED_BG', this.appThemeScheme),
+      this.appThemeScheme, this.frame().action.height / 2, this.frame().action.height / 2, this.canSearch()))
     .enabled(this.canSearch()).accessibilityText('搜索正文')
     .onClick((): void => this.submit());
   }

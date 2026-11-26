@@ -25,6 +25,7 @@ import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { DOWNLOAD_HEADER_HEIGHT, DOWNLOAD_HEADER_ACTION_WIDTH, DOWNLOAD_HEADER_ACTION_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { readerPageAreaLength, readerPresentedHeaderBottom } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
@@ -38,7 +39,7 @@ import {
   TYPE_DOWNLOAD_BOOK_TITLE, TYPE_DOWNLOAD_SHEET_TITLE, TYPE_DOWNLOAD_EMPTY_TITLE, TYPE_DOWNLOAD_META_LINE,
   TYPE_DOWNLOAD_STORAGE_META, TYPE_DOWNLOAD_STATUS_BODY,
   TYPE_DOWNLOAD_TAB, TYPE_DOWNLOAD_TAB_SELECTED,
-  TYPE_DOWNLOAD_SEARCH, TYPE_DOWNLOAD_LIST_TOOLS, TYPE_DOWNLOAD_SOURCE,
+  TYPE_DOWNLOAD_LIST_TOOLS, TYPE_DOWNLOAD_SOURCE,
   TYPE_DOWNLOAD_CHAPTER_TITLE,
   TYPE_DOWNLOAD_STORAGE_TOTAL, TYPE_DOWNLOAD_STORAGE_VALUE,
 } from './DownloadTypography';
@@ -98,10 +99,8 @@ export struct SharedDownloadPage {
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   private readonly rangeScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   private readonly rangeScroller: Scroller = new Scroller();
-  private readonly queryController: TextInputController = new TextInputController();
   private readonly rangeStartController: TextInputController = new TextInputController();
   private readonly rangeEndController: TextInputController = new TextInputController();
-  private readonly queryTarget: ReaderEditableTarget = new ReaderEditableTarget();
   private readonly rangeStartTarget: ReaderEditableTarget = new ReaderEditableTarget();
   private readonly rangeEndTarget: ReaderEditableTarget = new ReaderEditableTarget();
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
@@ -617,33 +616,11 @@ export struct SharedDownloadPage {
 
   @Builder
   private searchField(identity: string = this.searchInputIdentity()) {
-    Row({ space: DOWNLOAD_VISUAL.searchGap }) {
-      Image(this.visualIcon('search')).width(DOWNLOAD_VISUAL.searchIconSize).height(DOWNLOAD_VISUAL.searchIconSize);
-      TextInput({ text: this.query, placeholder: '搜索书名、作者、书源', controller: this.queryController }).layoutWeight(1)
-        .attributeModifier(new ReaderEditableInputModifier(this.queryTarget, `${this.queryTarget.id}:${identity}`,
-          (editing: boolean): void => this.queryTarget.edit(editing)))
-        .onAppear((): void => this.mountQueryEditing(identity))
-        .onDisAppear((): void => this.queryTarget.unmount(`${this.queryTarget.id}:${identity}`))
-        .fontFamily(TYPE_DOWNLOAD_SEARCH.fontFamily).fontWeight(TYPE_DOWNLOAD_SEARCH.fontWeight)
-        .fontSize(TYPE_DOWNLOAD_SEARCH.fontSizeFp).lineHeight(TYPE_DOWNLOAD_SEARCH.lineHeightFp as number)
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).placeholderColor(downloadVisualColor('muted', this.appThemeScheme))
-        .placeholderFont({ family: TYPE_DOWNLOAD_SEARCH.fontFamily, size: TYPE_DOWNLOAD_SEARCH.fontSizeFp, weight: TYPE_DOWNLOAD_SEARCH.fontWeight })
-        .backgroundColor(Color.Transparent).caretColor(downloadVisualColor('ink', this.appThemeScheme)).borderRadius(0)
-        .padding({ top: DOWNLOAD_VISUAL.searchPaddingY, bottom: DOWNLOAD_VISUAL.searchPaddingY, left: 0, right: 0 })
-        .height(this.textControlHeight(DOWNLOAD_VISUAL.touchTarget,
-          DOWNLOAD_VISUAL.searchLineHeight, DOWNLOAD_VISUAL.searchPaddingY * 2))
-        .enterKeyType(EnterKeyType.Search).accessibilityText('搜索书架书籍')
-        .onChange((value: string): void => this.changeSearchInput(value, identity));
-      if (this.query.length > 0) {
-        Button({ type: ButtonType.Normal }) {
-          Image(this.visualIcon('clear')).width(DOWNLOAD_VISUAL.moreIconSize).height(DOWNLOAD_VISUAL.moreIconSize);
-        }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.touchTarget).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-          .accessibilityText('清除搜索')
-          .onClick((): void => this.clearSearchInput(identity));
-      }
-    }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.searchHeight + DOWNLOAD_VISUAL.borderWidth * 2 }).padding({ left: DOWNLOAD_VISUAL.searchPaddingX, right: DOWNLOAD_VISUAL.searchPaddingX }).borderRadius(DOWNLOAD_VISUAL.searchRadius)
-      .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
-      .border({ width: DOWNLOAD_VISUAL.borderWidth, color: readerAppColor('app.border.searchField', this.appThemeScheme) });
+    ReaderSearchField({ editingHost: this.editingHost, variant: 'pageForm', mode: 'live', text: this.query,
+      editingCurrent: (): boolean => this.searchInputIsCurrent(identity),
+      placeholder: '筛选下载书籍', accessibilityLabel: '按书名、作者或书源筛选下载书籍', clearAccessibilityLabel: '清除搜索',
+      onTextChange: (value: string): void => this.changeSearchInput(value, identity),
+      onClear: (): void => this.clearSearchInput(identity) });
   }
 
   private searchInputIdentity(): string {
@@ -1676,12 +1653,6 @@ export struct SharedDownloadPage {
     }.width('100%').margin({ top: DOWNLOAD_VISUAL.rangeSelectionTop });
   }
 
-  private mountQueryEditing(identity: string): void {
-    if (!this.mounted || identity !== this.searchInputIdentity()) return;
-    this.queryTarget.mount(this.getUIContext(), this.editingHost, this.queryController,
-      (): boolean => this.searchInputIsCurrent(identity), (): number => DOWNLOAD_VISUAL.searchLineHeight * this.fontScale(),
-      `${this.queryTarget.id}:${identity}`);
-  }
   private mountRangeEditing(start: boolean, opening: number, revision: number): void {
     if (!this.mounted || opening !== this.sheetOpeningGeneration || revision !== this.rangeDraftRevision || this.sheet !== 'range') return;
     const target = start ? this.rangeStartTarget : this.rangeEndTarget;
@@ -2215,8 +2186,6 @@ export struct SharedDownloadPage {
     return this.visualIcon('download');
   }
   private visualIcon(name: string): Resource {
-    if (name === 'search') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_search_theme_night') : $r('app.media.download_visual_search');
-    if (name === 'clear') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_close_theme_night') : $r('app.media.download_visual_close');
     if (name === 'filter') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_filter_theme_night') : $r('app.media.download_visual_filter');
     if (name === 'storage') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_storage_theme_night') : $r('app.media.download_visual_storage');
     if (name === 'trash') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_trash_theme_night') : $r('app.media.download_visual_trash');

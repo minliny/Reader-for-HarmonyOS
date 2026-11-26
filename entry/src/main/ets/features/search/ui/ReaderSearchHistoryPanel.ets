@@ -2,8 +2,10 @@ import { readerPaperActionIcon } from '../../../ui/foundation/ReaderActionIconRe
 import type { UIContext } from '@ohos.arkui.UIContext';
 import type { MeasureOptions } from '@ohos.measure';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { TYPE_SEARCH_HISTORY_EMPTY, TYPE_SEARCH_HISTORY_HEADING } from '../../../ui/foundation/ReaderTypography';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import type { SearchHistoryStatus } from '../presentation/SearchPresentation';
@@ -70,12 +72,33 @@ export struct ReaderSearchHistoryPanel {
       .accessibilityLevel('no');
   }
   @Builder
-  private toggleHistory(height: number) {
-    ReaderButton({ scheme: this.appThemeScheme, variant: 'subtle', visualSize: 'small',
-      controlHeight: height, focusId: 'reader-search-history-toggle',
-      label: this.layout.expanded ? '收起' : '展开',
-      actionAccessibilityLabel: this.layout.expanded ? '收起搜索历史' : '展开搜索历史',
-      actionEnabled: this.actionsEnabled(), onAction: (): void => { if (this.actionsEnabled()) this.onToggle(); } });
+  private historyAction(clear: boolean) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Row({ space: 5 }) {
+        if (clear) this.clearHistoryIcon();
+        Text(clear ? '清空' : this.layout.expanded ? '收起' : '展开')
+          .fontFamily(TYPE_SEARCH_HISTORY_EMPTY.fontFamily).fontWeight(TYPE_SEARCH_HISTORY_EMPTY.fontWeight)
+          .fontSize(TYPE_SEARCH_HISTORY_EMPTY.fontSizeFp).lineHeight(TYPE_SEARCH_HISTORY_EMPTY.lineHeightFp as number)
+          .minFontScale(1).maxFontScale(this.layout.geometry.fontScale)
+          .halfLeading(true).maxLines(1)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      }.height(this.layout.geometry.headingHeight)
+        .alignItems(VerticalAlign.Center).justifyContent(FlexAlign.End)
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+    }.height(this.layout.geometry.headingHeight).padding(0).align(Alignment.End)
+      .constraintSize({ minWidth: READER_ACTION_MIN_TARGET })
+      .responseRegion(readerActionTouchRegion('100%', this.layout.geometry.headingHeight))
+      .id(clear ? '' : 'reader-search-history-toggle')
+      .attributeModifier(new ReaderActionAccessibility(
+        clear ? '清空搜索历史' : this.layout.expanded ? '收起搜索历史' : '展开搜索历史',
+        this.actionsEnabled(), false, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 8, 8, this.actionsEnabled()), 'nativeButton'))
+      .opacity(this.actionsEnabled() ? 1 : .45)
+      .onClick((): void => {
+        if (!this.actionsEnabled()) return;
+        if (clear) this.onClear();
+        else this.onToggle();
+      });
   }
   @Builder
   private historyRows() {
@@ -97,6 +120,7 @@ export struct ReaderSearchHistoryPanel {
           .fontWeight(TYPE_SEARCH_HISTORY_EMPTY.fontWeight)
           .fontSize(TYPE_SEARCH_HISTORY_EMPTY.fontSizeFp)
           .lineHeight(TYPE_SEARCH_HISTORY_EMPTY.lineHeightFp as number).halfLeading(true)
+          .minFontScale(1).maxFontScale(this.layout.geometry.fontScale)
           .height(this.layout.geometry.emptyHeight)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       }
@@ -105,24 +129,19 @@ export struct ReaderSearchHistoryPanel {
   build() {
     Column({ space: 0 }) {
       if (this.layout.geometry.headingVisible) {
-        Row() {
+        Row({ space: this.layout.geometry.gap }) {
+          Text('最近搜索').fontFamily(TYPE_SEARCH_HISTORY_HEADING.fontFamily)
+            .fontWeight(TYPE_SEARCH_HISTORY_HEADING.fontWeight)
+            .fontSize(TYPE_SEARCH_HISTORY_HEADING.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_HISTORY_HEADING.lineHeightFp as number)
+            .minFontScale(1).maxFontScale(this.layout.geometry.fontScale)
+            .halfLeading(true).maxLines(1)
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1);
           if (this.layout.canToggle && this.layout.toggleInHeading) {
-            this.toggleHistory(this.layout.geometry.headingHeight);
-            Blank();
-          } else {
-            Text('最近搜索').fontFamily(TYPE_SEARCH_HISTORY_HEADING.fontFamily)
-              .fontWeight(TYPE_SEARCH_HISTORY_HEADING.fontWeight)
-              .fontSize(TYPE_SEARCH_HISTORY_HEADING.fontSizeFp)
-              .lineHeight(TYPE_SEARCH_HISTORY_HEADING.lineHeightFp as number)
-              .halfLeading(true)
-              .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1);
+            this.historyAction(false);
           }
           if (this.history.length > 0) {
-            ReaderButton({ variant: 'subtle', visualSize: 'small', scheme: this.appThemeScheme,
-              controlHeight: this.layout.geometry.headingHeight,
-              label: '清空', actionAccessibilityLabel: '清空搜索历史', actionEnabled: this.actionsEnabled(),
-              leading: (): void => { this.clearHistoryIcon(); },
-              onAction: (): void => { if (this.actionsEnabled()) this.onClear(); } });
+            this.historyAction(true);
           }
         }.width('100%').height(this.layout.geometry.headingHeight).alignItems(VerticalAlign.Center)
           .margin({ bottom: this.layout.geometry.headingGap });
@@ -145,9 +164,9 @@ export struct ReaderSearchHistoryPanel {
       }
       if (this.layout.canToggle && !this.layout.toggleInHeading) {
         Row() {
-          this.toggleHistory(this.layout.geometry.buttonHeight);
-        }.width('100%').height(this.layout.geometry.buttonHeight).justifyContent(FlexAlign.End)
-          .margin({ top: this.layout.geometry.gap });
+          this.historyAction(false);
+        }.width('100%').height(this.layout.geometry.headingHeight).justifyContent(FlexAlign.End)
+          .margin({ top: this.layout.geometry.headingGap });
       }
     }.width('100%').padding({ left: this.layout.geometry.innerInset, right: this.layout.geometry.innerInset,
       top: this.layout.geometry.topInset, bottom: this.layout.geometry.bottomInset });

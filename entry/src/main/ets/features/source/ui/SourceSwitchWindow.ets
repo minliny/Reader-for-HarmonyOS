@@ -12,6 +12,7 @@ import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../..
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
+import { SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
@@ -40,6 +41,7 @@ import { sourceSwitchNovelChapter, sourceSwitchNovelLatency, sourceSwitchSearchL
   SOURCE_SWITCH_DISCOVERY_ACTION, sourceSwitchNovelDiscoveryCompact, sourceSwitchNovelDiscoveryPrefixVisible, sourceSwitchNovelDiscoveryActionWidth,
   sourceSwitchNovelDiscoveryActionVisibleHeight, sourceSwitchNovelDiscoveryActionHitHeight,
   sourceSwitchNovelColumnHeight, sourceSwitchNovelFooterHeight, sourceSwitchNovelTimingWidth,
+  SOURCE_SWITCH_FILTER_GAP, sourceSwitchNovelFilterHeight, sourceSwitchNovelFilterRowHeight,
   sourceSwitchCandidateMatches, sourceSwitchOrderByChapter, sourceSwitchOrderByLatency } from './SourceSwitchNovelPresentation';
 import type { SourceSwitchPanelState } from '../presentation/SourceSwitchPresentationState';
 
@@ -539,19 +541,6 @@ export struct SourceSwitchWindow {
     else if (this.state.kind === 'candidates') this.onRefresh();
     else this.onRetry();
   }
-  private statusText(): string {
-    const count = sourceSwitchSourceCount(this.latestCandidates);
-    if (this.isSweeping()) return this.contentKind === 'manga' ? `正在查找 · 已发现 ${count} 个` : `正在查找 · 已找到 ${count} 个书源`;
-    if (this.busy()) return '正在切换书源…';
-    if (this.state.kind === 'success') return '已切换书源';
-    if (this.state.kind === 'failure') return this.requiresReconciliation() ?
-      (this.state.confirmation === 'undispatched' ? '换源待核对' : '换源结果未确认') : '换源失败';
-    if (this.state.kind === 'discoveryError' || this.state.kind === 'candidates' && (this.state.refreshError?.trim().length ?? 0) > 0) return '查找失败';
-    if ((this.state.kind === 'candidates' || this.state.kind === 'empty') && this.state.stopped === true) {
-      return this.contentKind === 'manga' ? `已停止 · 已发现 ${count} 个` : `已停止 · 已找到 ${count} 个书源`;
-    }
-    return this.contentKind === 'manga' ? `查找完成 · 已发现 ${count} 个` : `查找结束 · 已找到 ${count} 个书源`;
-  }
   private errorText(): string {
     if (this.state.kind === 'discoveryError' || this.state.kind === 'failure') return this.state.message;
     return this.state.kind === 'candidates' ? this.state.refreshError ?? '' : '';
@@ -720,9 +709,10 @@ export struct SourceSwitchWindow {
       SOURCE_SWITCH_VISUAL.gripHeight + SOURCE_SWITCH_VISUAL.gripMarginTop + SOURCE_SWITCH_VISUAL.gripMarginBottom;
   }
   @State private measuredSearchAndSortHeight: number = 0;
+  private filterRowHeight(): number { return sourceSwitchNovelFilterRowHeight(this.novelFontScale()); }
   private searchAndSortHeight(): number {
     return this.measuredSearchAndSortHeight > 0 ? this.measuredSearchAndSortHeight :
-      90 + (this.isSweeping() && this.sweepProgress() !== undefined ? 24 : 0);
+      sourceSwitchNovelFilterHeight(this.novelFontScale(), this.isSweeping() && this.sweepProgress() !== undefined);
   }
   private fixedDrawerHeaderHeight(): number {
     if (this.flowChrome()) return this.searchAndSortHeight();
@@ -865,13 +855,13 @@ export struct SourceSwitchWindow {
       Column() {
         Flex({ direction: FlexDirection.Row, alignItems: ItemAlign.Baseline }) {
           if (this.discoveryPrefixVisible()) {
-            Text('已找到').fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontFamily)
+            Text(this.discoveryCountLabel()).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontFamily)
               .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontWeight)
               .fontSize(this.narrowWindow() ? TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW.fontSizeFp : TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontSizeFp)
               .lineHeight(this.narrowWindow() ? TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW.lineHeightFp : TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.lineHeightFp).halfLeading(true)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).flexShrink(0).maxLines(1);
           }
-          Text(`${this.totalCandidateCount()}`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontFamily)
+          Text(`${this.discoveryCandidateCount()}`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontFamily)
             .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontSizeFp)
             .lineHeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.lineHeightFp).halfLeading(true).fontFeature('"tnum" 1')
             .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).flexShrink(0)
@@ -887,7 +877,8 @@ export struct SourceSwitchWindow {
           .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE.fontSizeFp)
           .lineHeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE.lineHeightFp).halfLeading(true)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.alignItems(HorizontalAlign.Start).layoutWeight(1).accessibilityGroup(true).accessibilityText(this.statusText());
+      }.alignItems(HorizontalAlign.Start).layoutWeight(1).accessibilityGroup(true)
+        .accessibilityText(`${this.novelDiscoveryPhase()} · ${this.discoveryCountLabel()} ${this.discoveryCandidateCount()} 个书源`);
     }.width('100%').height(this.discoveryToolbarHeight()).margin({ bottom: SOURCE_SWITCH_VISUAL.discoveryBottomGap });
   }
 
@@ -923,12 +914,15 @@ export struct SourceSwitchWindow {
 
   @Builder
   private searchAndSort() {
-    Column({ space: 2 }) {
+    Column({ space: SOURCE_SWITCH_FILTER_GAP }) {
       if (this.isSweeping() && this.sweepProgress() !== undefined) this.sweepBar();
-      Row({ space: 4 }) {
+      Row({ space: 8 }) {
         Column() {
           ReaderSearchField({ variant: 'readerDirectory', mode: 'live', text: this.filterText,
-            placeholder: '筛选书源名或最新章节…', clearAccessibilityLabel: '清空书源筛选',
+            naturalFieldHeightVp: this.filterRowHeight(),
+            placeholder: this.novelFontScale() >= 1.75 ? '筛选…' :
+              this.narrowWindow() ? '书源名或章节' : '筛选书源名或最新章节…',
+            accessibilityLabel: '筛选书源名或最新章节', clearAccessibilityLabel: '清空书源筛选',
             editingFocusId: `reader-source-filter:${this.surfaceScope}:${this.surfaceAttachment}`,
             editingCurrent: (): boolean => this.filterInputCurrent(),
             onTextChange: (value: string): void => this.updateFilter(value) });
@@ -936,12 +930,9 @@ export struct SourceSwitchWindow {
         this.locateButton();
       }.width('100%');
       Row() {
-        Text(`已发现 ${sourceSwitchSourceCount(this.displayedCandidates)} 个候选书源`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontFamily).fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontWeight).fontSize(11)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).fontFeature('"tnum" 1')
-          .layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         this.sortSegment();
-      }.width('100%');
-    }.width('100%').onAreaChange((_before: Area, after: Area): void => {
+      }.width('100%').justifyContent(FlexAlign.End);
+    }.width('100%').padding({ top: SOURCE_SWITCH_FILTER_GAP }).onAreaChange((_before: Area, after: Area): void => {
       const height = Number(after.height);
       if (Number.isFinite(height) && height > 0) this.measuredSearchAndSortHeight = height;
     });
@@ -958,7 +949,10 @@ export struct SourceSwitchWindow {
     }.width('100%').alignItems(HorizontalAlign.End);
   }
 
-  private totalCandidateCount(): number {
+  private discoveryCountLabel(): string { return this.filterText.trim().length > 0 ? '匹配' : '已找到'; }
+
+  private discoveryCandidateCount(): number {
+    if (this.filterText.trim().length > 0) return sourceSwitchSourceCount(this.displayedCandidates);
     const candidates = this.state.kind === 'candidates' ?
       this.state.candidates.filter((candidate: SourceSwitchCandidate): boolean => candidate.isCurrent !== true) : this.latestCandidates;
     return sourceSwitchSourceCount(candidates);
@@ -1019,15 +1013,19 @@ export struct SourceSwitchWindow {
         Text('定位当前').fontFamily(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontFamily)
           .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontSizeFp)
           .lineHeight(TYPE_SOURCE_SWITCH_NOVEL_ACTION.lineHeightFp as number).halfLeading(true)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
-      }.padding({ left: 10, right: 10 }).height(32).borderRadius(16)
+          .minFontScale(Math.min(1, this.novelFontScale())).maxFontScale(Math.max(1, this.novelFontScale()))
+          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)).maxLines(1);
+      }.padding({ left: 10, right: 10 }).height(this.filterRowHeight()).borderRadius(this.filterRowHeight() / 2)
         .backgroundColor(readerPressSurface(readerAppColor('TOK_CARD_BG', this.appThemeScheme),
           this.appThemeScheme, this.filterPressedAction === 'locate', this.reduceMotion))
         .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
         .scale(readerPressScale(this.filterPressedAction === 'locate', this.reduceMotion))
         .opacity(readerPressOpacity(this.filterPressedAction === 'locate', this.reduceMotion))
         .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
-    }.padding(0).height(44).constraintSize({ minWidth: 44 }).backgroundColor(Color.Transparent)
+    }.padding(0).height(this.filterRowHeight()).constraintSize({ minWidth: SEARCH_CONTROL_MIN_TARGET })
+      .responseRegion({ x: 0, y: Math.min(0, (this.filterRowHeight() - SEARCH_CONTROL_MIN_TARGET) / 2), width: '100%',
+        height: Math.max(SEARCH_CONTROL_MIN_TARGET, this.filterRowHeight()) })
+      .backgroundColor(Color.Transparent)
       .enabled(this.currentSourceId.length > 0 && this.filterInputCurrent()).accessibilityText('定位当前')
       .opacity(this.currentSourceId.length > 0 ? 1 : .45)
       .onTouch((event: TouchEvent): void => this.observeFilterPress(event, 'locate', this.currentSourceId.length > 0 && this.filterInputCurrent()))

@@ -1036,7 +1036,7 @@ export struct SourceManagementPage {
             editingFocusId: 'reader-source-editor',
             mode: 'live',
             text: this.searchQuery,
-            placeholder: '搜索书源名称或域名',
+            placeholder: '搜索书源',
             accessibilityLabel: '搜索书源名称或域名',
             editingCurrent: (): boolean => identity === this.sourceSearchInputIdentity() &&
               this.managementInputIsCurrent() && !this.groupOpen,

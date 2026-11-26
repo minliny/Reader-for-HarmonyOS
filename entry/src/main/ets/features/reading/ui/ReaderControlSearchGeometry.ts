@@ -1,9 +1,27 @@
 import { readerControlActor as actor, readerControlLerp as lerp, readerControlUnit as unit,
   sampleReaderControlActor as sample, type ReaderControlActorFrame } from './ReaderControlActorGeometry.ts';
 
+export const READER_CONTROL_SEARCH_BORDER = 1;
+export const READER_CONTROL_SEARCH_LEADING_INSET = 10;
+export const READER_CONTROL_SEARCH_ICON_SIZE = 14;
+export const READER_CONTROL_SEARCH_ICON_GAP = 6;
+export const READER_CONTROL_SEARCH_INPUT_START = READER_CONTROL_SEARCH_BORDER + READER_CONTROL_SEARCH_LEADING_INSET +
+  READER_CONTROL_SEARCH_ICON_SIZE + READER_CONTROL_SEARCH_ICON_GAP;
+export const READER_CONTROL_SEARCH_END_INSET = 6;
+export const READER_CONTROL_SEARCH_CLEAR_SLOT = 24;
+export const READER_CONTROL_SEARCH_FULL_ACTION_PADDING = 16;
+export const READER_CONTROL_SEARCH_PLACEHOLDER = '搜索正文内容';
+export const READER_CONTROL_SEARCH_COMPACT_PLACEHOLDER = '正文';
+
+export function readerControlSearchFieldChrome(hasQuery: boolean): number {
+  return READER_CONTROL_SEARCH_INPUT_START + READER_CONTROL_SEARCH_END_INSET + READER_CONTROL_SEARCH_BORDER +
+    (hasQuery ? READER_CONTROL_SEARCH_CLEAR_SLOT : 0);
+}
+
 export interface ReaderControlSearchFrame {
   field: ReaderControlActorFrame;
   action: ReaderControlActorFrame;
+  actionLabelOpacity: number;
   back: ReaderControlActorFrame;
   /** Results viewport begins immediately below the current query row. */
   results: ReaderControlActorFrame;
@@ -12,6 +30,7 @@ export interface ReaderControlSearchFrame {
   rowHeight: number;
   resultEndPadding: number;
   queryDivider: ReaderControlActorFrame;
+  placeholder: string;
   inputHeightVp: number;
   titleHeightVp: number;
   snippetHeightVp: number;
@@ -21,6 +40,8 @@ export interface ReaderControlSearchFrame {
 }
 export interface ReaderControlSearchNaturalSize {
   fieldHeightVp: number;
+  actionWidthVp: number;
+  placeholderWidthVp: number;
   inputHeightVp: number;
   titleHeightVp: number;
   snippetHeightVp: number;
@@ -65,26 +86,30 @@ export function sampleReaderControlSearch(p: number, availableWidth: number,
   // The unanimated Full Query parent left a 38.45vp empty band in Quick,
   // and clipped most of the first result. Adapt the viewport to the query
   // row while compensating its children so their authored screen paths stay.
-  const fieldHeight = Math.max(32, field.height, natural?.fieldHeightVp ?? 0);
-  const actionWidth = action.width;
+  const fieldHeight = Math.max(lerp(32, 36, progress), natural?.fieldHeightVp ?? 0);
+  const actionWidth = Math.max(lerp(36, 58, progress), natural?.actionWidthVp ?? 0);
   const actionGrowth = actionWidth - action.width;
   const queryBottom = basisY + field.y + fieldHeight + lerp(5, 9, progress);
   const resultsY = queryBottom + 1;
-  const resultOriginCorrection = basisY + 51 - (basisY + field.y + field.height + lerp(5, 9, progress) + 1);
+  // Use the existing result inset to absorb the added Full capsule height.
+  // This keeps the default first row on its authored screen path.
+  const resultOriginCorrection = 51 - (field.y + field.height + lerp(5, 9, progress) + 1) - 4 * progress;
   const back = sample(actor(10.1, 12.99, 51, 24), actor(10.1, 404.99, 51, 24, 0), progress);
   const rowHeight = natural === undefined ? first.height : Math.max(first.height, natural.rowHeightVp);
   const backWidth = natural === undefined ? back.width : Math.max(back.width, natural.backWidthVp);
   const fieldShift = natural === undefined ? 0 : Math.max(0, back.x + backWidth + 4 - (basisX + field.x)) * (1 - progress);
+  const fieldX = basisX + field.x + fieldShift;
+  const actionX = Math.max(0, basisX + action.x + widthDelta - actionGrowth);
+  const fieldWidth = Math.max(0, actionX - fieldX - 8);
+  const placeholderWidth = natural?.placeholderWidthVp ?? READER_CONTROL_SEARCH_PLACEHOLDER.length * 13;
   return {
-    field: actor(basisX + field.x + fieldShift, basisY + field.y,
-      Math.max(0, field.width + widthDelta - fieldShift - actionGrowth), fieldHeight),
-    action: actor(Math.max(0, basisX + action.x + widthDelta - actionGrowth), basisY + action.y,
-      Math.min(width, actionWidth), Math.max(action.height, fieldHeight)),
+    field: actor(fieldX, basisY + field.y, fieldWidth, fieldHeight),
+    action: actor(actionX, basisY + action.y, Math.min(width, actionWidth), fieldHeight),
+    actionLabelOpacity: unit(2 * progress - 1),
     // Back is a screen-level sibling, NOT under the moving source shell.
     back: actor(back.x, back.y, backWidth, natural === undefined ? back.height : Math.max(back.height, natural.backHeightVp), back.opacity),
-    // Full 1938:5101 remains (2,53,334,612) in its canonical 338x666 slot.
-    // Quick adapts this viewport to the query instead of retaining Full's
-    // empty band; compensate the row origin below to preserve screen paths.
+    // Both viewports follow the actual query height. Row offsets preserve
+    // the underlying authored path as the query capsule grows.
     results: actor(basisX, resultsY, Math.max(0, width - 4), Math.max(0, height - resultsY - 1)),
     firstResult: actor(first.x, first.y + resultOriginCorrection,
       Math.max(0, first.width + widthDelta), rowHeight),
@@ -93,6 +118,8 @@ export function sampleReaderControlSearch(p: number, availableWidth: number,
     // already contains its top padding; retain the bottom padding separately.
     resultEndPadding: 5,
     queryDivider: actor(basisX, queryBottom, Math.max(0, width - 4), 1),
+    placeholder: fieldWidth - readerControlSearchFieldChrome(false) >= placeholderWidth
+      ? READER_CONTROL_SEARCH_PLACEHOLDER : READER_CONTROL_SEARCH_COMPACT_PLACEHOLDER,
     inputHeightVp: natural?.inputHeightVp ?? 0,
     titleHeightVp: natural?.titleHeightVp ?? 13,
     snippetHeightVp: natural?.snippetHeightVp ?? 28,

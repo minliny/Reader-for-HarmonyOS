@@ -17,7 +17,9 @@ import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame'
 import { readerPresentedHeaderBottom, readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { bookshelfHeaderSpec, searchHeaderSpec, SearchHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
 import { readerLibraryHeaderContentHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
-import { readerSearchControlHeight, readerSearchControlVisualHeight, readerSearchActionWidth, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
+import { readerSearchControlHeight, readerSearchControlVisualHeight, readerSearchActionWidth,
+  SEARCH_CAPSULE_EMPTY_CHROME, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
+import { resolveSearchHeaderField, SearchHeaderFieldGeometry } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerSurfaceElevation, readerHeaderVeilMaterial, readerHeaderVeilBorder } from '../../../ui/surfaces/ReaderSurfaceSpecs';
@@ -32,6 +34,7 @@ import type { ReaderSearchEditorEvent, ReaderSearchEditorObservation } from '../
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../../../ui/foundation/ReaderPressMotion';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
+import { TYPE_SEARCH_BOOK_PANEL_INPUT } from '../../../ui/foundation/ReaderTypography';
 import { ReaderSearchHistoryPanel, SearchHistoryMeasurements } from './ReaderSearchHistoryPanel';
 import { projectSearchHistoryPanel, SearchHistoryGeometry, SearchHistoryPanelLayout, SearchHistoryViewport } from './SearchHistoryGeometry';
 import type { ReaderSurfaceRect } from '../../../ui/layout/ReaderSurfaceRect';
@@ -793,18 +796,17 @@ export struct ReaderLibrarySearchSurface {
       2 * this.spec.borderWidth);
   }
   private actionWidth(): number { return readerSearchActionWidth(this.expandedLayout, this.fontScale()); }
-  private searchLaneLeft(): number { return this.spec.barPaddingLeft + bookshelfHeaderSpec().actionExtent + 2; }
+  private searchLaneLeft(): number { return this.spec.barPaddingLeft + bookshelfHeaderSpec().actionExtent; }
   private searchLaneWidth(): number {
     return Math.max(0, this.cardContentWidth() - this.searchLaneLeft() - this.spec.barPaddingRight);
   }
-  private stackedSearch(): boolean {
-    return this.searchLaneWidth() - this.actionWidth() - 5 < SEARCH_CONTROL_MIN_TARGET * 2 + 18;
+  private searchHeaderField(): SearchHeaderFieldGeometry {
+    return resolveSearchHeaderField(this.searchLaneWidth(), this.actionWidth(), SEARCH_CAPSULE_EMPTY_CHROME,
+      TYPE_SEARCH_BOOK_PANEL_INPUT.fontSizeFp * Math.max(1, this.fontScale()));
   }
+  private stackedSearch(): boolean { return this.searchHeaderField().stacked; }
   private searchLaneHeight(): number {
-    return this.stackedSearch() ? this.controlHeight() * 2 + 5 : this.controlHeight();
-  }
-  private fieldWidth(): number {
-    return this.stackedSearch() ? this.searchLaneWidth() : Math.max(0, this.searchLaneWidth() - this.actionWidth() - 5);
+    return this.stackedSearch() ? this.controlHeight() * 2 + this.spec.fieldGap : this.controlHeight();
   }
   private laneTop(): number { return this.spec.barPaddingTop; }
   // The icon describes the current destination state. The closing track may
@@ -955,7 +957,7 @@ export struct ReaderLibrarySearchSurface {
       if (this.searchMounted && this.model.currentOwner() !== 0) {
         Stack({ alignContent: Alignment.TopStart }) {
           Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.End, alignItems: ItemAlign.Center,
-            space: { main: LengthMetrics.vp(5), cross: LengthMetrics.vp(5) } }) {
+            space: { main: LengthMetrics.vp(this.spec.fieldGap), cross: LengthMetrics.vp(this.spec.fieldGap) } }) {
             ForEach([this.fieldIdentity()], (key: string) => {
               // The closing track keeps the field mounted after search mode ends.
               ReaderSearchField({ editingHost: this.editingHost,
@@ -965,14 +967,16 @@ export struct ReaderLibrarySearchSurface {
                 bookPanelFrameId: 'reader-bookshelf-search-field',
                 observeBookEditor: this.model.verification === undefined ? undefined :
                   this.bookEditorObservation(this.model.currentOwner(), key),
-                text: this.model.keyword, placeholder: '搜索书名、作者…', accessibilityLabel: '搜索书名或作者',
+                text: this.model.keyword,
+                placeholder: this.searchHeaderField().shortPlaceholder ? '书名、作者' : '搜索书名、作者…',
+                accessibilityLabel: '搜索书名或作者',
                 expandedLayout: this.expandedLayout, clearable: true, submitEnabled: this.model.fieldSubmitEnabled,
                 bookPanelClearId: this.model.verification?.enabled() === true ? 'reader-book-search-clear' : '',
                 onTextChange: this.textAction(this.model.currentOwner(), key),
                 onBookClear: this.clearAction(this.model.currentOwner(), key),
                 onSubmit: this.submitAction(this.model.currentOwner(), key),
                 onFocusChanged: this.focusAction(this.model.currentOwner(), key) })
-                .width(this.fieldWidth())
+                .width(this.searchHeaderField().width)
                 .height(this.controlHeight())
                 .enabled(this.presentedSearch() && !this.model.panelOwnsInput)
                 .hitTestBehavior(this.inputInteractive() ? HitTestMode.Default : HitTestMode.None)
@@ -986,7 +990,7 @@ export struct ReaderLibrarySearchSurface {
                   .minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale()))
                   .fontColor(readerAppColor('TOK_ON_PRIMARY', this.scheme));
               }.width(this.actionWidth()).height(this.searchActionVisualHeight())
-                .attributeModifier(new ReaderPressFeedback(readerAppColor('app.action.fill', this.scheme), this.scheme,
+                .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_PRIMARY_DARK', this.scheme), this.scheme,
                   this.searchActionVisualHeight() / 2, this.searchActionVisualHeight() / 2,
                   this.actionInteractive(), this.searchActionPointer >= 0))
                 .scale(readerPressScale(this.actionInteractive() && this.searchActionPointer >= 0, this.reduceMotion))
@@ -1042,8 +1046,9 @@ export struct ReaderLibrarySearchSurface {
       'app.search.panelBorder' : 'app.border.control', this.scheme);
   }
   private headerVeil(): boolean {
-    return this.mode === 'idle' && !this.searchMounted && this.transitionKind === 'none' &&
-      this.resultsProgress() <= .01 && this.historyProgress() <= .01;
+    if (!this.headerSurfaceCollapsed()) return false;
+    return (this.mode === 'idle' && !this.searchMounted) ||
+      (this.mode === 'results' && this.resultsProgress() > .01);
   }
   private headerSurfaceGeometryKey(): string {
     const metrics = ReaderWindowCoordinator.metrics();
@@ -1062,12 +1067,14 @@ export struct ReaderLibrarySearchSurface {
     return this.mounted ? this.headerRaisedShape : undefined;
   }
   private headerMaterialRadius(): number {
-    return this.currentHeaderRaisedShape()?.radius ?? resolveReaderRaisedShape(this.headerRaisedShapeIdentity(),
-      ReaderWindowCoordinator.metrics().windowRect.width - this.horizontalInset(true) - this.horizontalInset(false),
-      this.barHeight(), this.spec.panelRadius)?.radius ?? 0;
-  }
-  private hasHeaderSurfaceMeasurement(): boolean {
-    return this.headerSurfaceCollapsed() && this.currentHeaderRaisedShape() !== undefined;
+    const width = this.cardContentWidth() + 2 * this.spec.borderWidth;
+    const height = this.barHeight() + 2 * this.spec.borderWidth;
+    const collapsed = this.currentHeaderRaisedShape();
+    const capsule = collapsed !== undefined && Math.abs(collapsed.height - height) <= 1 &&
+      Math.abs(collapsed.width - width) <= 1 ? collapsed.radius : Math.min(width, height) / 2;
+    if (this.headerSurfaceCollapsed()) return capsule;
+    const historyRadius = this.spec.historyRadius + (this.controlHeight() - SEARCH_CONTROL_MIN_TARGET) / 2;
+    return Math.min(width / 2, this.blend(capsule, historyRadius, this.historyProgress()));
   }
   private headerSurfaceAreaChange(): (_old: Area, next: Area) => void {
     const key = this.measurementKey;
@@ -1082,7 +1089,7 @@ export struct ReaderLibrarySearchSurface {
       // Use the painted panel's native border box. At fractional density its
       // snapped border widths need not equal barHeight + two logical borders.
       // Expanded history never replaces this confirmed collapsed-box sample.
-      const shape = resolveReaderRaisedShape(identity, width, height, this.spec.panelRadius);
+      const shape = resolveReaderRaisedShape(identity, width, height, height / 2);
       if (shape === undefined) { this.headerRaisedShape = undefined; return; }
       const previous = this.headerRaisedShape;
       if (previous?.identity === identity && Math.abs(previous.width - width) <= .01 && Math.abs(previous.height - height) <= .01) return;
@@ -1147,7 +1154,7 @@ export struct ReaderLibrarySearchSurface {
   }
 
   private headerShadowStrength(): number {
-    const target = 1 - this.toResults;
+    const target = this.blend(1, .55, this.toResults);
     if (this.transitionKind === 'none') return target;
     if (this.reducedTransition) {
       // Follow the existing opacity fade while reduced motion holds the layout fixed.

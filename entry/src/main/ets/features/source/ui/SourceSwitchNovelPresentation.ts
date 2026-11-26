@@ -1,6 +1,7 @@
 import type { SourceSwitchCandidate } from '../application/SourceSwitchGateway';
 import { SOURCE_SWITCH_VISUAL as visual } from './SourceSwitchVisual.ts';
 import { bookSearchDuration as sourceSwitchSearchLatency } from '../../../app/library/BookSearchTiming.ts';
+import { readerCompactSearchHeight, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 
 export { sourceSwitchSearchLatency };
 
@@ -13,6 +14,19 @@ export const SOURCE_SWITCH_DISCOVERY_ACTION = {
   compactMinimumWidth: 58,
   labelReserve: 4,
 };
+
+export const SOURCE_SWITCH_FILTER_GAP = 4;
+
+export function sourceSwitchNovelFilterRowHeight(fontScale: number): number {
+  return readerCompactSearchHeight(36, visual.discoveryActionLineHeight, fontScale);
+}
+
+export function sourceSwitchNovelFilterHeight(fontScale: number, sweepProgressVisible: boolean): number {
+  const scale = sourceSwitchNovelScale(fontScale);
+  const sortingHeight = Math.max(SEARCH_CONTROL_MIN_TARGET, Math.ceil(visual.discoveryActionLineHeight * scale + 12)) + 2;
+  const sweepHeight = sweepProgressVisible ? Math.ceil(11 * 1.5 * scale) + 7 + SOURCE_SWITCH_FILTER_GAP : 0;
+  return sourceSwitchNovelFilterRowHeight(scale) + sortingHeight + 2 * SOURCE_SWITCH_FILTER_GAP + sweepHeight;
+}
 
 export function sourceSwitchNovelChapter(candidate: SourceSwitchCandidate): string {
   return candidate.latestChapterTitle?.trim() || '暂无最新章节';

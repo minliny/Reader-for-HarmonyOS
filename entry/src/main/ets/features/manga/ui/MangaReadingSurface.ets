@@ -17,6 +17,7 @@ import { MangaDirectoryCurrentFooter } from './MangaDirectoryCurrentFooter';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryLineBox, mangaDirectoryFooterHeight, mangaDirectoryQuickFlowGaps, mangaDirectoryQuickMinimumListHeight } from './MangaDirectoryVisual';
+import { MANGA_DIRECTORY_UTILITY_ACTION_LINE, mangaDirectoryUtilityGeometry, type MangaDirectoryUtilityGeometry } from './MangaDirectoryUtilityGeometry';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import vibrator from '@ohos.vibrator';
@@ -3020,13 +3021,20 @@ export struct MangaReadingSurface {
         right: this.widePanel() ? this.panelContentInset() - 8 : visual.quickPaddingX, bottom: this.widePanel() ? 22 : visual.quickPaddingBottom })
       .onAreaChange((_old: Area, area: Area): void => this.onDirectoryOuterContentArea(directoryIdentity, Number(area.height)));
   }
-  private directoryUtilityHeight(): number { return Math.max(92, this.directoryUtilityMeasured); }
+  private directoryUtilityGeometry(): MangaDirectoryUtilityGeometry {
+    return mangaDirectoryUtilityGeometry(this.directoryFontScale());
+  }
+  private directoryUtilityHeight(): number {
+    return Math.max(this.directoryUtilityGeometry().height, this.directoryUtilityMeasured);
+  }
 
   @Builder
   private directoryUtility(identity: string) {
-    Column({ space: 4 }) {
-      ReaderSearchField({ variant: 'readerDirectory', mode: 'live', catalogChrome: true, text: this.directoryQuery,
-        placeholder: '搜索话名或序号…', editingFocusId: `reader-manga-directory-query:${identity}`,
+    Column({ space: this.directoryUtilityGeometry().gap }) {
+      ReaderSearchField({ variant: 'readerDirectory', mode: 'live', colorScheme: this.chromeScheme(), text: this.directoryQuery,
+        naturalFieldHeightVp: this.directoryUtilityGeometry().searchHeight,
+        placeholder: this.directoryFontScale() >= 1.75 ? '话名或序号' : '搜索话名或序号…',
+        accessibilityLabel: '搜索话名或序号', editingFocusId: `reader-manga-directory-query:${identity}`,
         editingCurrent: (): boolean => this.directorySheetInputCurrent(identity),
         onTextChange: (value: string): void => {
           if (this.directorySheetInputCurrent(identity)) this.directoryQuery = value;
@@ -3036,9 +3044,14 @@ export struct MangaReadingSurface {
           Row({ space: 4 }) {
             Image(this.chromeScheme() === 'night' ? $r('app.media.manga_sheet_locate_theme_night') : $r('app.media.manga_sheet_locate'))
               .width(14).height(14).accessibilityLevel('no');
-            Text('定位当前话').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(500).fontSize(12).lineHeight(18).halfLeading(true).fontColor(this.greenColor());
+            Text('定位当前话').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(500).fontSize(12)
+              .lineHeight(MANGA_DIRECTORY_UTILITY_ACTION_LINE).halfLeading(true).maxLines(1)
+              .minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale()))
+              .fontColor(this.greenColor());
           }.accessibilityLevel('no-hide-descendants');
-        }.constraintSize({ minWidth: 44, minHeight: 44 }).padding({ left: 8, right: 8 })
+        }.constraintSize({ minWidth: 44 }).height(this.directoryUtilityGeometry().actionHeight).padding({ left: 8, right: 8 })
+          .responseRegion({ x: 0, y: this.directoryUtilityGeometry().actionResponseY,
+            width: '100%', height: this.directoryUtilityGeometry().actionResponseHeight })
           .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 8, 8, this.directoryCurrentIndex() >= 0))
           .accessibilityText('定位当前话').enabled(this.directoryCurrentIndex() >= 0)
           .onClick((): void => {
@@ -3050,17 +3063,22 @@ export struct MangaReadingSurface {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Row({ space: 4 }) {
             Image(this.directorySortIcon()).width(14).height(14).accessibilityLevel('no');
-            Text(this.directoryAscending ? '正序' : '倒序').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(500).fontSize(12).lineHeight(18).halfLeading(true).fontColor(this.greenColor());
+            Text(this.directoryAscending ? '正序' : '倒序').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(500).fontSize(12)
+              .lineHeight(MANGA_DIRECTORY_UTILITY_ACTION_LINE).halfLeading(true).maxLines(1)
+              .minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale()))
+              .fontColor(this.greenColor());
           }.accessibilityLevel('no-hide-descendants');
-        }.constraintSize({ minWidth: 44, minHeight: 44 }).padding({ left: 8, right: 8 })
+        }.constraintSize({ minWidth: 44 }).height(this.directoryUtilityGeometry().actionHeight).padding({ left: 8, right: 8 })
+          .responseRegion({ x: 0, y: this.directoryUtilityGeometry().actionResponseY,
+            width: '100%', height: this.directoryUtilityGeometry().actionResponseHeight })
           .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 8))
           .accessibilityText(this.directoryAscending ? '正序，切换倒序' : '倒序，切换正序')
           .onClick((): void => {
             if (this.directorySheetInputCurrent(identity)) this.directoryAscending = !this.directoryAscending;
           });
-      }.width('100%').constraintSize({ minHeight: 44 });
-    }.width('100%').constraintSize({ minHeight: 92 })
-      .padding({ left: this.panelContentInset(), right: this.panelContentInset() })
+      }.width('100%').height(this.directoryUtilityGeometry().actionHeight);
+    }.width('100%').padding({ left: this.panelContentInset(), right: this.panelContentInset(),
+      bottom: this.directoryUtilityGeometry().bottomInset })
       .onAreaChange((_old: Area, area: Area): void => {
         const height = Number(area.height);
         if (identity === this.directoryOuterIdentity() && Number.isFinite(height) && height > 0 &&

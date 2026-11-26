@@ -5,6 +5,7 @@ import {
   BOOKSHELF_HEADER_CONTENT_GAP,
   BOOKSHELF_HEADER_TITLE_LINE_HEIGHT,
   SEARCH_HEADER_BAR_VERTICAL_PADDING,
+  SEARCH_HEADER_FIELD_GAP,
 } from './ReaderHeaderMetrics';
 
 // One threshold for raised shelf/detail chrome; consumers only publish a
@@ -22,9 +23,9 @@ export class BookshelfHeaderSpec {
   readonly innerInset: number = 9;
   readonly actionExtent: number = 44;
   readonly iconExtent: number = 24;
-  readonly retainedActionIconExtent: number = 22;
+  readonly retainedActionIconExtent: number = 20;
   readonly retainedActionRadius: number = 14;
-  readonly retainedLeadingInset: number = 4;
+  readonly retainedLeadingInset: number = 3;
   readonly retainedTrailingInset: number = 5;
   readonly titleSideInset: number = this.actionExtent + Math.max(this.retainedLeadingInset, this.retainedTrailingInset);
   readonly panelRadius: number = 18;
@@ -85,13 +86,14 @@ export class SearchHeaderSpec {
   readonly panelInnerInset: number = 12;
   readonly outerInsetPhone: number = 16;
   readonly outerInsetTablet: number = 20;
-  readonly panelRadius: number = 18;
+  readonly historyRadius: number = 24;
   readonly borderWidth: number = TOK_BORDER_W;
   readonly panelBottomGap: number = 6;
   readonly barPaddingLeft: number = 5;
-  readonly barPaddingRight: number = 6;
+  readonly barPaddingRight: number = 7;
   readonly barPaddingTop: number = SEARCH_HEADER_BAR_VERTICAL_PADDING;
   readonly barPaddingBottom: number = SEARCH_HEADER_BAR_VERTICAL_PADDING;
+  readonly fieldGap: number = SEARCH_HEADER_FIELD_GAP;
   readonly barHeightExtra: number;
   readonly filterMinHeight: number = 44;
   readonly filterLabelLineHeight: number = 17;

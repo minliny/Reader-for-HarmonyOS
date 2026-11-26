@@ -13,7 +13,7 @@ import { type ReaderDirectoryNavigationPortFactory, readerDirectoryScopeKey } fr
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { TYPE_READER_BOOKMARK_CHAPTER, TYPE_READER_BOOKMARK_EXCERPT, TYPE_READER_DIRECTORY_CURRENT_TITLE,
-  TYPE_READER_DIRECTORY_POSITION, TYPE_READER_DIRECTORY_TAB_COMPACT } from '../../../ui/foundation/ReaderTypography';
+  TYPE_READER_DIRECTORY_POSITION, TYPE_READER_DIRECTORY_TAB_COMPACT, TYPE_SEARCH_DIRECTORY_INPUT } from '../../../ui/foundation/ReaderTypography';
 
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -45,7 +45,8 @@ import type { ReaderControlModuleMeasurer, ReaderControlCandidateWidths, ReaderC
 import { sampleReaderControlBookmark, type ReaderControlBookmarkNaturalSize } from './ReaderControlBookmarkGeometry';
 import { readerDirectorySignalScrollCommand, readerDirectorySignalScrollIntent } from '../presentation/ReaderDirectoryViewport';
 import { TOK_SPACE_SM } from '../../../ui/foundation/ReaderTokens';
-import { readerDirectoryToolbarBudget } from '../presentation/ReaderFullDirectoryBudget';
+import { DIRECTORY_TOOL_SIZE, readerDirectoryToolbarBudget } from '../presentation/ReaderFullDirectoryBudget';
+import { readerCompactSearchHeight } from '../../../ui/foundation/ReaderSearchControlGeometry';
 
 interface ReaderControlDirectoryScrollFacts {
   offsetVp?: number;
@@ -369,7 +370,7 @@ export struct ReaderControlDirectoryContent {
   private toolbarHeight(): number {
     return this.selectedMinimum()?.full.toolbarHeightVp ??
       readerDirectoryToolbarBudget(this.availableWidth - 2, this.tab === 'directory',
-        this.directoryQueryHeight(), 60 * this.fontScale()).height + 2;
+        this.directoryQueryHeight(), TYPE_SEARCH_DIRECTORY_INPUT.fontSizeFp * 6 * this.fontScale()).height + 2;
   }
   private footerHeight(): number { return this.selectedMinimum()?.full.footerHeightVp ?? 48; }
   private bookmarkNaturalSize(): ReaderControlBookmarkNaturalSize | undefined {
@@ -607,11 +608,10 @@ export struct ReaderControlDirectoryContent {
     return !Number.isFinite(this.minimumMetricsRevision) || this.minimumMetricsRevision < 0 ? 1 :
       readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
-  private queryGrowth(): number { return readerScaledControlHeight(32, 24, this.fontScale()) - 32; }
   private contentGeometry(): ReaderControlDirectoryGeometry {
     const profile = this.selectedMinimum();
     return resolveReaderControlDirectoryGeometry(this.progress, this.tab, this.availableHeight,
-      this.tabHeight(), this.queryGrowth(), this.rowHeight(), profile === undefined ? undefined : {
+      this.tabHeight(), this.rowHeight(), profile === undefined ? undefined : {
         listTop: this.value(profile.quick.listTopVp, profile.full.listTopVp),
         toolbarHeight: this.toolbarHeight(), footerHeight: this.footerHeight() }, this.toolbarHeight());
   }
@@ -697,7 +697,8 @@ export struct ReaderControlDirectoryContent {
   }
 
   private directoryQueryHeight(): number {
-    return Math.max(readerScaledControlHeight(32, 24, this.fontScale()), this.selectedMinimum()?.full.fieldHeightVp ?? 0);
+    return Math.max(readerCompactSearchHeight(DIRECTORY_TOOL_SIZE, TYPE_SEARCH_DIRECTORY_INPUT.lineHeightFp as number, this.fontScale()),
+      this.selectedMinimum()?.full.fieldHeightVp ?? 0);
   }
 
 
@@ -780,7 +781,9 @@ export struct ReaderControlDirectoryContent {
 
   private search(): void {
     if (this.deferCatalogAction('search')) return;
-    this.query = this.draft.trim(); this.cancelPendingPlacement(); this.refreshData();
+    const query = this.draft.trim();
+    if (query === this.query) return;
+    this.query = query; this.cancelPendingPlacement(); this.refreshData();
     this.scroller.scrollEdge(Edge.Top);
   }
   private sort(): void {
@@ -852,7 +855,7 @@ export struct ReaderControlDirectoryContent {
         variant: 'full-directory', actionEnabled: this.toolbarInteractive(),
         naturalFieldHeightVp: this.selectedMinimum()?.full.fieldHeightVp ?? 0,
         naturalInputHeightVp: this.selectedMinimum()?.full.inputHeightVp ?? 0,
-        inputMinimumWidthVp: this.selectedMinimum()?.full.inputMinimumWidthVp ?? 60 * this.fontScale(),
+        inputMinimumWidthVp: this.selectedMinimum()?.full.inputMinimumWidthVp ?? TYPE_SEARCH_DIRECTORY_INPUT.fontSizeFp * 6 * this.fontScale(),
         availableWidthVp: Math.max(0, this.availableWidth - 2),
         naturalToolbarHeightVp: this.selectedMinimum() === undefined ? 0 : this.toolbarHeight() - 2,
         text: this.draft, placeholder: this.placeholder(), ascending: this.ascending,
@@ -867,7 +870,12 @@ export struct ReaderControlDirectoryContent {
           this.verificationSession?.backConsumerForLatestLayer('keyboard');
         },
         onDirectoryKeyboardRestoreSettled: (id: string, requested: boolean): void => this.onDirectoryKeyboardRestoreSettled(presentation, id, requested),
-        onTextChange: (value: string): void => { if (this.currentContent(presentation) && this.queryInteractive()) this.draft = value; },
+        onTextChange: (value: string): void => {
+          if (!this.currentContent(presentation) || !this.queryInteractive()) return;
+          this.draft = value;
+          if (this.tab === 'bookmarks' || this.catalogComplete) this.search();
+          else if (value.trim().length === 0 && this.query.length > 0) this.clearAppliedSearch();
+        },
         onSearch: (): void => { if (this.currentContent(presentation) && this.toolbarInteractive()) this.search(); },
         onTop: (): void => { if (this.currentContent(presentation) && this.toolbarInteractive()) this.scrollCatalogEdge(false); },
         onBottom: (): void => { if (this.currentContent(presentation) && this.toolbarInteractive()) this.scrollCatalogEdge(true); },
