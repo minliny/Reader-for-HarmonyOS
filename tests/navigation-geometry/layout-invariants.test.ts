@@ -92,6 +92,33 @@ test('waits for modal recovery then checks the original route and any retained i
   assert.deepEqual(recovered.violations, []);
 });
 
+test('an active drawer requires its foreground control and still checks visible underlying geometry', () => {
+  const drawer: LayoutInvariantNode = {
+    tag: { role: 'modal-overlay', id: 'source-drawer', active: true, expectsModalControl: true }, opacity: 1,
+  };
+  const close: LayoutInvariantNode = { ...action, tag: { role: 'key-control', id: 'source-close', modalControl: true } };
+  const covered = { ...sample, modalOpen: true, nodes: [drawer] };
+  assert.deepEqual(evaluateLayoutInvariants(covered).missing, ['modal-control']);
+  const measured = evaluateLayoutInvariants({ ...covered, nodes: [drawer, close] });
+  assert.deepEqual(measured.missing, []);
+  assert.deepEqual(measured.observedRules, ['R5']);
+  const unsafeHeader = { ...header, bounds: { ...header.bounds!, y: 19 } };
+  assert.deepEqual(evaluateLayoutInvariants({ ...covered, nodes: [drawer, { ...close, enabled: false }, unsafeHeader] })
+    .violations.map(v => v.rule), ['R1', 'R5']);
+});
+
+test('reading recovery requires the native input host to agree with application admission', () => {
+  const reading = { ...sample, checkRecovery: true, requiresNativeMainInput: true };
+  assert.deepEqual(evaluateLayoutInvariants(reading).missing, ['recovered-input']);
+  const nativeHost: LayoutInvariantNode = { tag: { role: 'main-input', id: 'reader-body' }, opacity: 1, enabled: false };
+  assert.deepEqual(evaluateLayoutInvariants({ ...reading, nodes: [...reading.nodes, nativeHost] })
+    .violations.map(v => v.detail), ['native input host is still disabled']);
+  const restored = evaluateLayoutInvariants({ ...reading, nodes: [...reading.nodes, { ...nativeHost, enabled: true }] });
+  assert.deepEqual(restored.missing, []);
+  assert.deepEqual(restored.violations, []);
+  assert.ok(restored.observedRules.includes('R6'));
+});
+
 test('absent data and a truncated scan stay incomplete with zero violations', () => {
   const result = evaluateLayoutInvariants({ ...sample, safeTopVp: undefined, nodes: [], scanComplete: false });
   assert.deepEqual(result.violations, []);

@@ -230,7 +230,7 @@ export struct ReaderLayoutDebugOverlay {
       fontScale: metrics.ready ? metrics.systemFontScale : undefined,
       requiresHeader: this.requiresHeader, requiresControl: this.requiresControl,
       requiresFirstContent: this.requiresFirstContent, modalOpen, recoveryPending, checkRecovery: recovery,
-      mainInputEnabled: this.mainInputEnabled });
+      mainInputEnabled: this.mainInputEnabled, requiresNativeMainInput: this.route === 'reading' });
     const receipt: LayoutInvariantReceipt = {
       schemaVersion: 1, sequence: ++layoutInvariantSequence, route: this.route,
       status: result.missing.length === 0 && !recoveryPending ? 'measured' : 'incomplete',
@@ -437,13 +437,17 @@ export struct ReaderLayoutDebugOverlay {
       // the diagnostic frames do not recursively outline themselves.
       if (nodeId === 'reader-layout-debug-overlay') continue;
       try {
+        const property = node.getCustomProperty(READER_LAYOUT_INVARIANT_PROPERTY);
+        if (property !== undefined && property !== null && typeof property === 'object') invariantTag = property as LayoutInvariantTag;
         if (node.getCustomProperty('readerLayoutDebugExcluded') === true) {
+          // Keep the native admission receipt for an excluded/disabled reader, but omit its hidden child geometry.
+          if (invariantTag?.role === 'main-input') {
+            this.recordInvariantNode(node, uniqueId, invariantTag, undefined, visit.clip, visit.invariantHeaderId, visit.opacity);
+          }
           this.excludedBackgroundBranches += 1;
           continue;
         }
         const contentKey = node.getCustomProperty('readerLayoutDebugContentUnderHeader');
-        const property = node.getCustomProperty(READER_LAYOUT_INVARIANT_PROPERTY);
-        if (property !== undefined && property !== null && typeof property === 'object') invariantTag = property as LayoutInvariantTag;
         if (typeof contentKey === 'string') contentUnderHeader = contentKey;
         const headerKey = node.getCustomProperty('readerLayoutDebugOpaqueHeader');
         if (typeof headerKey === 'string') opaqueHeader = headerKey;
@@ -645,7 +649,7 @@ export struct ReaderLayoutDebugOverlay {
     opacity: number): void {
     let enabled: boolean | undefined;
     let intercepts: boolean | undefined = tag.intercepts;
-    if (tag.role === 'key-control' || tag.role === 'modal-overlay') {
+    if (tag.role === 'key-control' || tag.role === 'modal-overlay' || tag.role === 'main-input') {
       try {
         const raw: Object = node.getInspectorInfo();
         const inspector: LayoutInvariantInspectorNode = (typeof raw === 'string' ? JSON.parse(raw) : raw) as LayoutInvariantInspectorNode;
@@ -668,7 +672,8 @@ export struct ReaderLayoutDebugOverlay {
     }
     const reportTag: LayoutInvariantTag = { id: `${tag.id}:${nativeId}`, role: tag.role, scope: tag.scope,
       expectedHeightVp: tag.expectedHeightVp, expectedTopGapVp: tag.expectedTopGapVp,
-      expectedContentGapVp: tag.expectedContentGapVp, busy: tag.busy, unavailable: tag.unavailable,
+      expectedContentGapVp: tag.expectedContentGapVp, wrapGapVp: tag.wrapGapVp, wrapPart: tag.wrapPart,
+      busy: tag.busy, unavailable: tag.unavailable, modalControl: tag.modalControl, expectsModalControl: tag.expectsModalControl,
       active: tag.active, closeDurationMs: tag.closeDurationMs, intercepts: tag.intercepts };
     this.invariantNodes.push({ tag: reportTag, bounds, clipped, headerId, enabled, opacity, intercepts });
   }

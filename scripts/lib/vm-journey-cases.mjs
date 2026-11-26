@@ -165,7 +165,7 @@ export const journeys = {
     await ui.tap('打开阅读控制并显示目录入口', readingStage, {
       route: 'reading', all: [readerDirectory],
     });
-    const secondChapter = { text: SECOND_LOCAL_CHAPTER, within: readerDirectoryContent };
+    const secondChapter = { text: SECOND_LOCAL_CHAPTER, within: [readerDirectoryContent, { type: 'ListItem' }] };
     await ui.tap('打开阅读控制中的目录', readerDirectory, {
       route: 'reading', all: [readerDirectoryContent, secondChapter],
     });
@@ -201,14 +201,24 @@ export const journeys = {
     await ui.tap('打开在线小说的章节下载列表', novelRow, {
       route: 'downloads', all: [text('章节下载'), text(FIRST_REMOTE_CHAPTER), text(SECOND_REMOTE_CHAPTER)],
     });
-    const secondChapterActions = { id: /^reader-download:chapter-menu:.*\/chapter\/2/, enabled: 'true' };
-    const downloadChapter = id('reader-download:sheet-action:download');
-    await ui.tap('打开第二章操作', secondChapterActions, {
-      route: 'downloads', all: [text(/^章节操作 · 已选 1/), downloadChapter], modalOpen: true,
-    });
+    const secondChapterActions = { id: /^reader-download:chapter-menu:.*\/book\/ReaderShelfNovel\/chapter\/2/, enabled: 'true' };
+    const savedChapter = { id: /chapter-reading:.*\/book\/ReaderShelfNovel\/chapter\/2.*"action"\]$/, enabled: 'true' };
+    const downloadChapter = { id: 'reader-download:sheet-action:download', enabled: 'true' };
+    const chapterSheet = { route: 'downloads', all: [text(/^章节操作 · 已选 1/)], modalOpen: true };
+    const cached = ui.has(savedChapter);
+    await ui.tap('打开第二章操作', secondChapterActions, chapterSheet);
+    if (cached) {
+      const confirm = { id: 'reader-download:confirm', enabled: 'true' };
+      await ui.tap('打开公开样本第二章的缓存删除确认', { id: 'reader-download:sheet-action:deleteLocal', enabled: 'true' }, {
+        route: 'downloads', all: [text(/^确认删除内容 · 1章/), confirm], modalOpen: true,
+      });
+      await ui.tap('仅删除公开样本第二章的缓存以重跑下载', confirm, {
+        route: 'downloads', all: [secondChapterActions], none: [savedChapter, confirm], modalOpen: false,
+      });
+      await ui.tap('重新打开第二章操作', secondChapterActions, chapterSheet);
+    }
     await ui.tap('下载第二章并等待已保存的章节状态', downloadChapter, {
-      route: 'downloads', all: [text(SECOND_REMOTE_CHAPTER), text(/^正文已保存/),
-        { id: /chapter-reading:.*\/chapter\/2.*"action"\]$/, enabled: 'true' }], modalOpen: false,
+      route: 'downloads', all: [text(SECOND_REMOTE_CHAPTER), savedChapter], modalOpen: false,
     });
     await ui.key('从章节下载返回管理首页并核对计数', 'Back', {
       route: 'downloads', all: [{ text: /^已下载 [12] \/ 2 章$/, within: novelRow }],

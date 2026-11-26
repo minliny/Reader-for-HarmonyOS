@@ -1,6 +1,6 @@
 export type LayoutInvariantRule = 'R1' | 'R2' | 'R3' | 'R4' | 'R5' | 'R6';
 export type LayoutInvariantRole = 'floating-header' | 'fixed-header' | 'header-content' | 'scroll-content' |
-  'key-control' | 'primary-dock' | 'modal-overlay';
+  'key-control' | 'primary-dock' | 'modal-overlay' | 'main-input';
 
 export interface LayoutInvariantTag {
   role: LayoutInvariantRole;
@@ -13,6 +13,8 @@ export interface LayoutInvariantTag {
   wrapPart?: 'leading' | 'trailing';
   busy?: boolean;
   unavailable?: boolean;
+  modalControl?: boolean;
+  expectsModalControl?: boolean;
   active?: boolean;
   closeDurationMs?: number;
   intercepts?: boolean;
@@ -47,6 +49,7 @@ export interface LayoutInvariantSample {
   recoveryPending: boolean;
   checkRecovery: boolean;
   mainInputEnabled?: boolean;
+  requiresNativeMainInput?: boolean;
 }
 
 export interface LayoutInvariantViolation {
@@ -91,15 +94,24 @@ export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutI
   const body = sample.nodes.filter((node: LayoutInvariantNode): boolean =>
     node.tag.role === 'scroll-content' && node.tag.active !== false);
   const controls = sample.nodes.filter((node: LayoutInvariantNode): boolean => node.tag.role === 'key-control');
+  const expectsModalControl = sample.nodes.some((node: LayoutInvariantNode): boolean =>
+    node.tag.role === 'modal-overlay' && node.tag.active === true && node.tag.expectsModalControl === true);
   const safeTop = sample.safeTopVp;
   const fontScale = sample.fontScale;
   if (!sample.scanComplete) missing.push('frame-scan');
   if (safeTop === undefined || !Number.isFinite(safeTop) || fontScale === undefined || !Number.isFinite(fontScale)) {
     missing.push('window-metrics');
   }
-  if (sample.requiresHeader && headers.length === 0) missing.push('header');
-  if (sample.requiresFirstContent && body.length === 0) missing.push('first-content');
-  if (sample.requiresControl && controls.length === 0) missing.push('key-control');
+  if (!sample.modalOpen) {
+    if (sample.requiresHeader && headers.length === 0) missing.push('header');
+    if (sample.requiresFirstContent && body.length === 0) missing.push('first-content');
+    if (sample.requiresControl && !controls.some((node: LayoutInvariantNode): boolean => node.tag.modalControl !== true)) {
+      missing.push('key-control');
+    }
+  }
+  if (expectsModalControl && !controls.some((node: LayoutInvariantNode): boolean => node.tag.modalControl === true)) {
+    missing.push('modal-control');
+  }
 
   for (const header of headers) {
     const frame = header.bounds;
@@ -175,7 +187,8 @@ export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutI
       frame.height < NATIVE_MINIMUM_HIT_VP - BOUNDS_TOLERANCE_VP || control.clipped === true) {
       violations.push({ rule: 'R5', nodeId: id, detail: `target=${frame.width}×${frame.height} clipped=${control.clipped === true}` });
     }
-    if (sample.modalOpen || sample.recoveryPending || control.tag.busy === true || control.tag.unavailable === true) continue;
+    if ((sample.modalOpen && control.tag.modalControl !== true) || sample.recoveryPending ||
+      control.tag.busy === true || control.tag.unavailable === true) continue;
     if (control.enabled === undefined) missing.push(`control-enabled:${id}`);
     if (control.enabled === false || control.opacity < 0.55) {
       violations.push({ rule: 'R5', nodeId: id, detail: `enabled=${control.enabled} opacity=${control.opacity}` });
@@ -183,9 +196,14 @@ export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutI
   }
 
   if (sample.checkRecovery && !sample.recoveryPending && !sample.modalOpen) {
-    if (sample.mainInputEnabled === undefined) missing.push('recovered-input');
-    else observed.add('R6');
+    const nativeInput = sample.nodes.find((node: LayoutInvariantNode): boolean => node.tag.role === 'main-input');
+    if (sample.mainInputEnabled === undefined || (sample.requiresNativeMainInput === true && nativeInput?.enabled === undefined)) {
+      missing.push('recovered-input');
+    } else observed.add('R6');
     if (sample.mainInputEnabled === false) violations.push({ rule: 'R6', nodeId: 'route', detail: 'main input is still blocked' });
+    if (nativeInput?.enabled === false) {
+      violations.push({ rule: 'R6', nodeId: nativeInput.tag.id, detail: 'native input host is still disabled' });
+    }
     for (const node of sample.nodes) {
       if (node.tag.role !== 'modal-overlay') continue;
       if (node.intercepts === undefined) missing.push(`modal-hit-test:${node.tag.id}`);

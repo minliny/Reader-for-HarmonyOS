@@ -1,5 +1,7 @@
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import type { SourceSwitchPresentation } from '../presentation/SourceSwitchPresentation';
 import { ColorMetrics } from '@kit.ArkUI';
 import { SOURCE_SWITCH_VISUAL } from './SourceSwitchVisual';
@@ -807,6 +809,9 @@ export struct SourceSwitchWindow {
         .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme,
           SOURCE_SWITCH_VISUAL.closeRadius, SOURCE_SWITCH_VISUAL.closeRadius, this.canClose()))
         .id(`reader-source-close:${scope}:${attachment}:${variant}`)
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD && this.showing
+          ? { role: 'key-control', id: 'source-switch-close', modalControl: true,
+            busy: this.state.kind === 'switching' } as LayoutInvariantTag : undefined)
         .accessibilityText('关闭更换书源').enabled(this.canClose()).onClick((): void => this.requestClose())
         .onAppear((): void => this.focusDrawerActor(attachment, scope, variant, true));
     }.width('100%').height(this.headingHeight());

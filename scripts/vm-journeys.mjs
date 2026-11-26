@@ -57,9 +57,10 @@ function buttonLabels(node) {
 }
 
 function matchingNodes(root, selector) {
+  const scopes = [selector.within].flat().filter(scope => scope !== undefined);
   return nativeNodes(root).filter(node => matchesAttributes(node.attrs, selector,
     selector.label === undefined ? [] : buttonLabels(node.node)) &&
-    (selector.within === undefined || node.parents.some(parent => matchesAttributes(parent, selector.within))));
+    scopes.every(scope => node.parents.some(parent => matchesAttributes(parent, scope))));
 }
 
 function actor(root, selector) {
@@ -156,6 +157,7 @@ async function runJourney(id, run, candidate, options, outputDir) {
   }
 
   const ui = {
+    has: selector => matchingNodes(root, selector).length > 0,
     wait: (description, outcome) => checkpoint(description, outcome),
     tap: (description, selector, outcome) => checkpoint(description, outcome,
       () => probe.command({ op: 'click', ...center(actor(root, selector)) })),

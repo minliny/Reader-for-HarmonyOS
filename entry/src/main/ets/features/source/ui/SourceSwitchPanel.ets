@@ -143,7 +143,7 @@ export struct SourceSwitchPanel {
       .focusScopeId(`reader-source-scope:${scopeId}:${attachment}`, true, false)
       .enabled(this.acceptsInput())
       .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
-        ? { role: 'modal-overlay', id: 'source-switch', active: this.showing,
+        ? { role: 'modal-overlay', id: 'source-switch', active: this.showing, expectsModalControl: this.state.kind !== 'switching',
           intercepts: this.acceptsInput(), closeDurationMs: this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS } as LayoutInvariantTag : undefined)
       .accessibilityLevel(this.acceptsInput() ? 'auto' : 'no-hide-descendants')
       .hitTestBehavior(this.acceptsInput() ? HitTestMode.Default : HitTestMode.None);

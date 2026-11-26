@@ -126,7 +126,11 @@ export class SourceSwitchPresentation {
       this.surfaceClosing = snapshot.closing;
     }, (scope: number): void => this.restoreSurfaceFocus(scope));
 
-  isSurfacePresented(): boolean { return this.visible || this.surfaceAttached; }
+  isSurfacePresented(): boolean {
+    // Native input projections need to observe attachment even while visible.
+    const attached = this.surfaceAttached;
+    return this.visible || attached;
+  }
   attachSurface(scope: number): number { return this.visible && scope === this.scopeId ? this.surfaceLifecycle.attach(scope) : 0; }
   surfaceIsCurrent(attachment: number, scope: number): boolean { return this.surfaceLifecycle.current(attachment, scope); }
   surfacePartAppeared(attachment: number, scope: number, part: string): void {

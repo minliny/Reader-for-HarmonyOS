@@ -360,6 +360,8 @@ export struct ReaderShell {
       .id(sourceSwitchTriggerFocusId(this.sourceId, this.bookId, 'reader-body'))
       .focusable(this.readingContentIsForeground())
       .enabled(this.readingContentIsForeground())
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'main-input', id: 'reader-body' } as LayoutInvariantTag : undefined)
       .accessibilityLevel(this.readingContentIsForeground() ? 'auto' : 'no-hide-descendants')
       .customProperty('readerLayoutDebugExcluded', !this.readingContentIsForeground())
       .hitTestBehavior(this.readingContentIsForeground() ? HitTestMode.Transparent : HitTestMode.None);
@@ -568,3 +570,5 @@ export struct ReaderShell {
     }
   }
 }
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
