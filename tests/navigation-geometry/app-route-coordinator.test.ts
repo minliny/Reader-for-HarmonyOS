@@ -44,7 +44,7 @@ test('the reader retains its current parent lane and its control directory share
   navigation.returns.rememberBookshelfReaderOrigin();
   const reading = navigation.show('reading');
   const opened = coordinator.transition('bookshelf', 'detail', reading, transitionContext(navigation, 'bookshelf'));
-  assert.equal(coordinator.readerParentSharesLane(opened, 'bookshelf'), true);
+  assert.equal(coordinator.recordReaderParentLane(opened, 'bookshelf'), true);
   assert.equal(coordinator.appLane(reading.route, reading.directoryReturnTarget, false, 'bookshelf', assert.fail), 'bookshelf');
 
   const directory = navigation.openDirectory('readerControl', () => true);
@@ -57,7 +57,7 @@ test('the reader retains its current parent lane and its control directory share
   const reveal = coordinator.transition('directory', 'readerControl', shelf, transitionContext(navigation, 'bookshelf'));
   assert.equal(reveal.previousLane, 'bookshelf');
   assert.equal(reveal.toReader, false);
-  assert.equal(coordinator.readerParentSharesLane(reveal, 'bookshelf'), true);
+  assert.equal(coordinator.recordReaderParentLane(reveal, 'bookshelf'), true);
 });
 
 test('reader/detail coverage wins over native route motion only in the foreground', () => {
@@ -76,7 +76,7 @@ test('reader/detail coverage wins over native route motion only in the foregroun
   const returning = coordinator.transition('detail', 'detail', returned, transitionContext(navigation, 'detail'));
   assert.equal(returning.returningFromDetail, true);
   assert.equal(returning.paintMotion, 'none');
-  assert.equal(coordinator.readerParentSharesLane(returning, 'detail'), false);
+  assert.equal(coordinator.recordReaderParentLane(returning, 'detail'), false);
   assert.equal(coordinator.appLane('reading', 'detail', true, 'bookshelf', assert.fail), 'detail');
 });
 

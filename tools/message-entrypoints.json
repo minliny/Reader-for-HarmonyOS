@@ -2059,9 +2059,9 @@
       "status": "retained-disabled"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.chooseCachedChapterRefresh::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.chooseCachedChapterRefresh::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "chooseCachedChapterRefresh",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -2070,9 +2070,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.directoryJourneyPorts::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.directoryJourneyPorts::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "directoryJourneyPorts",
       "family": "shared.transient",
       "category": "普通短反馈",
@@ -2081,20 +2081,20 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.libraryJourneyPorts::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.libraryJourneyPorts::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "libraryJourneyPorts",
       "family": "shared.transient",
       "category": "普通短反馈",
-      "effectiveHost": "Index.libraryJourneyPorts 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
+      "effectiveHost": "AppRouteJourneyBindings.libraryJourneyPorts 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
       "retireRule": "调用方身份或原操作generation失效后由原owner拒绝动作；关闭展示按原生命周期清理。登记只确认当前源码入口，运行时退休与可达性证据另行记录。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.mangaSourceSwitchPorts::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.mangaSourceSwitchPorts::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "mangaSourceSwitchPorts",
       "family": "shared.transient",
       "category": "漫画换源确认后读回失败或核对结果短反馈",
@@ -2103,9 +2103,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.openCurrentDetailGroup::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.openCurrentDetailGroup::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "openCurrentDetailGroup",
       "family": "shared.transient",
       "category": "详情分组操作明确失败或确认后刷新失败的短反馈",
@@ -2125,32 +2125,32 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.readingExitActionPorts::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.readingExitActionPorts::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "readingExitActionPorts",
       "family": "shared.transient",
       "category": "普通短反馈",
-      "effectiveHost": "Index.readingExitActionPorts 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
+      "effectiveHost": "AppRouteJourneyBindings.readingExitActionPorts 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
       "retireRule": "调用方身份或原操作generation失效后由原owner拒绝动作；关闭展示按原生命周期清理。登记只确认当前源码入口，运行时退休与可达性证据另行记录。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.shelfCatalog::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "shelfCatalog",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.createShelfCatalog::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
+      "member": "createShelfCatalog",
       "family": "shared.transient",
       "category": "普通短反馈",
-      "effectiveHost": "Index.shelfCatalog 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
+      "effectiveHost": "AppRouteJourneyBindings.createShelfCatalog 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
       "retireRule": "调用方身份或原操作generation失效后由原owner拒绝动作；关闭展示按原生命周期清理。登记只确认当前源码入口，运行时退休与可达性证据另行记录。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.shelfMutations::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "shelfMutations",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.createShelfMutations::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
+      "member": "createShelfMutations",
       "family": "shared.transient",
       "category": "书架移除普通结果和清理、多选读取与确认前核对反馈",
       "effectiveHost": "BookshelfMutationPresentation 的当前 Runtime 与书架、详情或多选呈现。移除结果按回执代次去重，多选核对绑定本次打开。",
@@ -2158,9 +2158,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.showIndexAlert::native.alert",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.showIndexAlert::native.alert",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "showIndexAlert",
       "family": "native.alert",
       "category": "经 ReaderNativeAlertOwner 的原生确认/选择桥",
@@ -2170,9 +2170,9 @@
       "bridge": "owned-alert-native-callback"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.showIndexAlert::shared.alert-owner",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.showIndexAlert::shared.alert-owner",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "showIndexAlert",
       "family": "shared.alert-owner",
       "category": "原生确认/选择的原宿主 owner 入口",
@@ -2181,9 +2181,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.showOfflineDownloadFeedback::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.showOfflineDownloadFeedback::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "showOfflineDownloadFeedback",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -2192,9 +2192,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.showReadingFailure::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.showReadingFailure::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "showReadingFailure",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",

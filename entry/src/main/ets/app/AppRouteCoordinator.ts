@@ -71,7 +71,7 @@ export class AppRouteCoordinator {
       paintMotion: changed ? (keepLane ? 'none' : context.routeMotion) : undefined };
   }
 
-  readerParentSharesLane(transition: RoutePublication, lane: ReaderRoute): boolean {
+  recordReaderParentLane(transition: RoutePublication, lane: ReaderRoute): boolean {
     if (transition.toReader) this.readerOriginLane = lane;
     return transition.previousLane === lane && !transition.incomingDetail && !transition.returningFromDetail;
   }

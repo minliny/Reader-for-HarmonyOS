@@ -76,8 +76,8 @@ export interface AppFeedbackOverlayInput {
   readonly canInteract: () => boolean;
   readonly mangaVisible: boolean;
   readonly canRetryManga: () => boolean;
-  readonly firstContentRequired: boolean;
-  readonly pageInputEnabled: boolean;
+  readonly firstContentRequired: () => boolean;
+  readonly pageInputEnabled: () => boolean;
 }
 
 export interface AppOverlayHostInput {
@@ -149,8 +149,8 @@ export function AppOverlayHost($$: AppOverlayHostInput) {
       if (typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD) {
         ReaderLayoutDebugOverlay({ route: $$.route, requiresHeader: $$.route !== 'reading',
           requiresControl: $$.route === 'bookshelf' || $$.route === 'detail',
-          requiresFirstContent: $$.feedback.firstContentRequired,
-          mainInputEnabled: $$.feedback.pageInputEnabled });
+          requiresFirstContent: $$.feedback.firstContentRequired(),
+          mainInputEnabled: $$.feedback.pageInputEnabled() });
       }
       ReaderTransientToast()
     }
