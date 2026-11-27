@@ -98,7 +98,6 @@ jobs:
           echo 'Host contract snapshot matches the locked Core fixture.'
 
   unsigned-hap-build:
-    name: ${{ github.event_name == 'workflow_dispatch' && inputs.sdk != 'api26r' && format('core-native-only ({0})', inputs.sdk) || 'unsigned-hap-build (api26r)' }}
     needs: host-fast-checks
     if: >-
       ${{
