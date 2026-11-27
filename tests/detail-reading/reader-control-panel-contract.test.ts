@@ -6,6 +6,7 @@ import {
 import type { ReaderControlPanelFacts, ReaderControlNativeFactDelivery } from
   '../../entry/src/main/ets/features/reading/ui/ReaderControlPanelNativeContract.ets';
 import { ReaderControlRuntime } from '../../entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts';
+import { readerControlHostInputEnabled } from '../../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts';
 import { createDefaultReaderControlLayout } from '../../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts';
 import {
   advanceReaderControlSession, createReaderControlSessionState, dismissReaderControlSession,
@@ -123,6 +124,29 @@ test('control delivery keeps the intermediate disable that retires a real captur
   assert.equal(runtime.owner(), -1);
   assert.ok(runtime.ticket() > ticket);
   assert.equal(delivery.active(), undefined);
+});
+
+test('covering open controls with the source picker suspends input and preserves the control location', () => {
+  const runtime = new ReaderControlRuntime({
+    axis: { quickGrabberScreenY: 700, fullGrabberScreenY: 400, hiddenGrabberScreenY: 810 },
+    tapMaxDurationMs: 500, directionSlopVp: 8, settleDurationMs: 240,
+  }, () => 10);
+  const open = runtime.start(openReaderControlSession(createReaderControlSessionState(), 0)).session;
+  assert.equal(open.location.level, 'home');
+  const input = {
+    mounted: true, exitRequested: false, appForeground: true, windowChromeActive: true,
+    interactionBlocked: false, controlObscured: false,
+  };
+
+  const covered = runtime.setEnabled(readerControlHostInputEnabled({ ...input, interactionBlocked: true }));
+  assert.deepEqual(covered.session, open);
+  runtime.down(17, 700, 10);
+  assert.equal(runtime.owner(), -1);
+
+  const restored = runtime.setEnabled(readerControlHostInputEnabled(input));
+  assert.deepEqual(restored.session, open);
+  runtime.down(18, 700, 10);
+  assert.equal(runtime.owner(), 18);
 });
 
 test('control delivery advances the launch witness, layout and reduced motion at their former reset boundaries', () => {

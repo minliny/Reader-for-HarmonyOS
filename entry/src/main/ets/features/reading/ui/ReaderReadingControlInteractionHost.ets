@@ -189,7 +189,8 @@ export class ReaderReadingControlInteractionHost {
   }
 
   switchSource(focusId?: string): void {
-    this.hideControl();
+    // The source picker covers this session and returns focus to its trigger.
+    this.actors.geometry.hideKeyboardIfVisible();
     this.effects.openSourcePicker(focusId);
   }
 
