@@ -1,3 +1,7 @@
+import type { ReadingPhase } from '../application/ReadingExperienceRenderSnapshots';
+import type { ReaderMeasuredPagePublication } from './ReaderMeasuredPagePublication';
+import type { ReadingPageTurnRenderSnapshot } from './ReaderReadingSurfaceHost';
+import type { ReadingSurfacePageFragment } from './ReadingSurface';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import type { AnimatorResult } from '@ohos.animator';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../../../ui/feedback/ReaderTransientFeedback';
@@ -12,16 +16,31 @@ export interface ReaderSourceSwitchRevealEnvironment {
   readonly lifecycle: () => number;
   readonly selection: () => number;
   readonly mounted: () => boolean;
-  readonly disqualified: (completion: SourceSwitchCompletionPresentation) => boolean;
-  readonly currentPage: (completion: SourceSwitchCompletionPresentation) => boolean;
   readonly revision: (continuous: boolean) => number;
-  readonly anchorCurrent: (completion: SourceSwitchCompletionPresentation) => boolean;
   readonly continuous: () => boolean;
   readonly reducedMotion: () => boolean;
   readonly uiContext: () => UIContext;
   readonly publishOpacity: (opacity: number) => void;
   readonly publishSelection: (selection: number) => void;
   readonly visible: () => boolean;
+}
+
+export interface ReaderSourceSwitchReadingScene {
+  readonly sourceId: () => string;
+  readonly bookId: () => string;
+  readonly readyGeneration: () => number;
+  readonly candidate: () => ReaderMeasuredPagePublication;
+  readonly projection: () => ReadingPageTurnRenderSnapshot;
+  readonly phase: () => ReadingPhase;
+  readonly exiting: () => boolean;
+  readonly foreground: () => boolean;
+  readonly showCompletion: () => boolean;
+  readonly failureMessage: () => string;
+  readonly sessionCurrent: () => boolean;
+  readonly awaitingSourceSwitch: () => boolean;
+  readonly visualSelection: () => number;
+  readonly onContinuousRange: (start: number, end: number, progress: number) => void;
+  readonly verifyControl: () => void;
 }
 
 /** Owns the native wash actor and feedback lifetime for a single eligible
@@ -32,19 +51,99 @@ export class ReadingSourceSwitchOverlayHost {
   private animator: AnimatorResult | undefined = undefined;
   private readonly environment: ReaderSourceSwitchRevealEnvironment;
 
-  constructor(environment: ReaderSourceSwitchRevealEnvironment) {
+  private readonly scene: ReaderSourceSwitchReadingScene;
+
+  constructor(environment: ReaderSourceSwitchRevealEnvironment, scene: ReaderSourceSwitchReadingScene) {
+    this.scene = scene;
     this.environment = environment;
   }
 
-  present(revision: number, selection: number, continuous: boolean): void {
+  shouldShowPreparation(): boolean {
+    const scene = this.scene;
+    if (!scene.awaitingSourceSwitch() || !scene.sessionCurrent() || scene.phase() === 'failed' || scene.failureMessage().length > 0) {
+      return false;
+    }
+    return !(scene.phase() === 'ready' && scene.candidate().page !== undefined && scene.projection().visibleFragments.length > 0 &&
+      scene.candidate().selection === this.environment.selection());
+  }
+
+  observeContinuousRange(revision: number): (start: number, end: number, progress: number) => void {
+    return (start: number, end: number, progress: number): void => {
+      const scope = this.environment;
+      if (revision !== scope.revision(true) || this.scene.candidate().selection !== scope.selection()) return;
+      this.scene.onContinuousRange(start, end, progress);
+      this.pagePresented(revision, true);
+    };
+  }
+
+  pagePresented(revision: number, continuous: boolean = false): void {
+    const scope = this.environment;
+    const scene = this.scene;
+    const continuousStage = scope.continuous();
+    if (!scope.mounted() || scene.exiting() || scene.phase() !== 'ready' || continuous !== continuousStage ||
+      revision !== scope.revision(continuous) || !this.canonicalPageCurrent()) return;
+    // Visible view effects require a fresh stage receipt. Core acknowledgement
+    // and physical compositor fences remain independent of this reveal.
+    this.present(revision, scope.selection(), continuous);
+    this.completionChanged();
+  }
+
+  completionDisplayCurrent(): boolean {
+    const completion = this.environment.completion();
+    return completion !== undefined && this.scene.visualSelection() === this.environment.selection() && this.current(completion);
+  }
+
+  visibilityChanged(): void {
+    if (!this.scene.showCompletion()) this.retire();
+    else this.completionChanged();
+  }
+
+  completionChanged(): void {
+    this.scene.verifyControl();
+    this.refresh();
+  }
+
+  private canonicalPageCurrent(): boolean {
+    const scene = this.scene;
+    const measured = scene.candidate();
+    const chapter = measured.chapter;
+    return chapter !== undefined && chapter.sourceId === scene.sourceId() && chapter.bookId === scene.bookId() &&
+      chapter.cacheRefreshRequired !== true && chapter.sourceCorrectionRequired !== true && chapter.content.trim().length > 0 &&
+      measured.materializedChapterSelectionToken === this.environment.selection() &&
+      measured.page !== undefined && measured.selection === this.environment.selection() &&
+      scene.projection().visibleFragments.some((fragment: ReadingSurfacePageFragment): boolean => fragment.text.trim().length > 0 &&
+        fragment.imageHeight <= 0 && (fragment.nativeParagraph === undefined || fragment.nativeParagraphFirst));
+  }
+
+  private eligible(completion: SourceSwitchCompletionPresentation): boolean {
+    const scene = this.scene;
+    return this.environment.mounted() && !scene.exiting() && scene.foreground() && scene.showCompletion() && scene.sessionCurrent() &&
+      completion.sourceId === scene.sourceId() && completion.bookId === scene.bookId() &&
+      completion.readingReadyGeneration === scene.readyGeneration() && scene.phase() === 'ready' &&
+      scene.failureMessage().length === 0 && this.canonicalPageCurrent();
+  }
+
+  private disqualified(completion: SourceSwitchCompletionPresentation): boolean {
+    const scene = this.scene;
+    if (!scene.foreground() || !scene.showCompletion() || scene.exiting() || !scene.sessionCurrent() ||
+      completion.sourceId !== scene.sourceId() || completion.bookId !== scene.bookId() ||
+      completion.readingReadyGeneration !== scene.readyGeneration() || scene.phase() === 'failed') return true;
+    const chapter = scene.candidate().chapter;
+    return chapter?.sourceId === completion.sourceId && chapter.bookId === completion.bookId &&
+      (chapter.cacheRefreshRequired === true || chapter.sourceCorrectionRequired === true);
+  }
+
+  private present(revision: number, selection: number, continuous: boolean): void {
     this.reveal.present(revision, selection, continuous);
   }
 
   current(completion: SourceSwitchCompletionPresentation): boolean {
     const scope = this.environment;
     const continuous = scope.continuous();
-    return scope.currentPage(completion) && this.reveal.matches(completion, scope.selection(), scope.lifecycle(),
-      scope.revision(continuous), continuous) && scope.anchorCurrent(completion);
+    return this.eligible(completion) && this.reveal.matches(completion, scope.selection(), scope.lifecycle(),
+      scope.revision(continuous), continuous) &&
+      this.scene.candidate().chapter?.chapterIndex === completion.chapterIndex &&
+      this.scene.candidate().page?.startScalar === completion.chapterOffset;
   }
 
   finishWash(): void {
@@ -76,7 +175,7 @@ export class ReadingSourceSwitchOverlayHost {
     }
     if (!scope.mounted()) return;
     const key = this.reveal.bind(completion, scope.selection(), scope.lifecycle());
-    if (!this.reveal.pendingAt(scope.selection(), scope.lifecycle()) || scope.disqualified(completion)) {
+    if (!this.reveal.pendingAt(scope.selection(), scope.lifecycle()) || this.disqualified(completion)) {
       this.retire();
       return;
     }

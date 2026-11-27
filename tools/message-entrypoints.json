@@ -768,9 +768,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.changeChineseConversionMode::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingContentMutationHost.ets#ReaderReadingContentMutationHost.changeChineseConversionMode::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingContentMutationHost.ets",
+      "owner": "ReaderReadingContentMutationHost",
       "member": "changeChineseConversionMode",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -779,9 +779,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.changeReaderPageTurnStyle::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingPreferencesHost.ets#ReaderReadingPreferencesHost.changeReaderPageTurnStyle::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingPreferencesHost.ets",
+      "owner": "ReaderReadingPreferencesHost",
       "member": "changeReaderPageTurnStyle",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -790,9 +790,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.onEntryCatalogFailure::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingMountHost.ets#ReaderReadingMountHost.onEntryCatalogFailure::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingMountHost.ets",
+      "owner": "ReaderReadingMountHost",
       "member": "onEntryCatalogFailure",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -801,9 +801,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.notifyPreservedContentRefresh::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingChapterAcquisitionHost.ets#ReaderReadingChapterAcquisitionHost.notifyPreservedContentRefresh::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingChapterAcquisitionHost.ets",
+      "owner": "ReaderReadingChapterAcquisitionHost",
       "member": "notifyPreservedContentRefresh",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -812,9 +812,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.notifyTtsConfigurationFailure::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingSpeechHost.ets#ReaderReadingSpeechHost.notifyTtsConfigurationFailure::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingSpeechHost.ets",
+      "owner": "ReaderReadingSpeechHost",
       "member": "notifyTtsConfigurationFailure",
       "family": "shared.transient",
       "category": "朗读配置明确失败短反馈",
@@ -823,9 +823,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.onControlBookmarkFailureChanged::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryOperationsHost.ets#ReaderControlDirectoryOperationsHost.onControlBookmarkFailureChanged::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryOperationsHost.ets",
+      "owner": "ReaderControlDirectoryOperationsHost",
       "member": "onControlBookmarkFailureChanged",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -834,10 +834,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.onReaderBookmarkGestureUnavailable::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "onReaderBookmarkGestureUnavailable",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderBookmarkInteractionHost.ets#ReaderBookmarkInteractionHost.gestureUnavailable::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderBookmarkInteractionHost.ets",
+      "owner": "ReaderBookmarkInteractionHost",
+      "member": "gestureUnavailable",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。 The existing gesture feedback reports a refused global bookmarkWriteEnabled fact as a generic temporary-unavailability message without inferring a foreign operation identity. The Host remains the write authority.",
@@ -845,9 +845,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.projectTtsConfigurationRecovery::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingSpeechHost.ets#ReaderReadingSpeechHost.projectTtsConfigurationRecovery::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingSpeechHost.ets",
+      "owner": "ReaderReadingSpeechHost",
       "member": "projectTtsConfigurationRecovery",
       "family": "shared.transient",
       "category": "朗读配置刷新失败及已提交后的读回提示",
@@ -862,7 +862,7 @@
       "member": "failureActions",
       "family": "shared.recovery-action",
       "category": "阅读/换源失败恢复及设置/书源导航动作",
-      "effectiveHost": "当前ReadingExperience生命周期与章节selection；换回原书源捕获待处理换源标识、scope和章节尝试代次，原恢复动作捕获readerRecoveryView.generation；普通retryReading仍走原reader准入。",
+      "effectiveHost": "当前 ReadingExperience 的生命周期与章节 selection 由 ReaderReadingRecoveryHost 同步核对；换回原书源捕获待处理换源标识、scope和章节尝试代次，原恢复动作捕获readerRecoveryView.generation；普通retryReading仍走原reader准入。",
       "retireRule": "正文离开失败或阅读实体、章节尝试、待处理换源标识、scope变化即拒绝旧动作；SourceSwitchHost再核对精确事务、目标和当前租约，并串行化回滚与另选书源。",
       "status": "registered-source-entry"
     },
@@ -884,14 +884,14 @@
       "member": "readerRecoveryItems",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "ReaderRecoveryOverlay draws the mounted ReadingExperience’s lifecycle/source/book-scoped projections and calls its live input and identity checks before forwarding actions. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added. Its bounded active Scroll uses Default to block sibling hit collection and stops ancestor touch propagation. It forwards the readonly bookmark recoveryAction to the shared Surface. Returned-attempt short feedback leaves an unknown original receipt unresolved. 当前阅读的恢复面板由更多→待处理事项显式展开，多个未决事项共享绘制且保留原身份。 当前书籍原离线清理在可用性读回成功后仍未确认时，也进入同一阅读恢复入口，离线pending归组，confirmed读回失败提供所属只读重读，明确任务结果沿专用宿主。 Appearance保存事实从同一Runtime共享ReaderAppearanceStore订阅；生命周期/source/book/chapter与原revision共同交接展示代次，busy/ready保持同一代。经更多→待处理事项进入既有有界RecoveryGroup，不增加正文inset。",
+      "effectiveHost": "ReaderRecoveryOverlay draws the mounted ReadingExperience’s lifecycle/source/book-scoped projections and calls the mounted ReaderReadingRecoveryHost’s live input and identity checks before forwarding actions. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added. Its bounded active Scroll uses Default to block sibling hit collection and stops ancestor touch propagation. It forwards the readonly bookmark recoveryAction to the shared Surface. Returned-attempt short feedback leaves an unknown original receipt unresolved. 当前阅读的恢复面板由更多→待处理事项显式展开，多个未决事项共享绘制且保留原身份。 当前书籍原离线清理在可用性读回成功后仍未确认时，也进入同一阅读恢复入口，离线pending归组，confirmed读回失败提供所属只读重读，明确任务结果沿专用宿主。 Appearance保存事实从同一Runtime共享ReaderAppearanceStore订阅；生命周期/source/book/chapter与原revision共同交接展示代次，busy/ready保持同一代。经更多→待处理事项进入既有有界RecoveryGroup，不增加正文inset。",
       "retireRule": "Switching book, exit, background, temporary-layer coverage, controls display or a replaced presentation/generation retires old floating actions. The delegated surface also checks feedbackMounted and its caller lease. Canonical read success cannot confirm an original unknown write. Hiding feedback never cancels or confirms the intent. Back、正文操作或开控制只收起展示，原回执保持。 Appearance订阅退场只退投影，原saved回执与accepted snapshot继续由Store保留；当前前景/显示代次和源revision匹配才允许原Store.retrySave；只有实际最新revision保存ACK清除，warm读回不作ACK；busy仅由该原retry事实提供。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.requestPageTurnChapter::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingChapterAcquisitionHost.ets#ReaderReadingChapterAcquisitionHost.requestPageTurnChapter::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingChapterAcquisitionHost.ets",
+      "owner": "ReaderReadingChapterAcquisitionHost",
       "member": "requestPageTurnChapter",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -900,9 +900,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.selectBookmarkAnchor::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryOperationsHost.ets#ReaderControlDirectoryOperationsHost.selectBookmarkAnchor::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryOperationsHost.ets",
+      "owner": "ReaderControlDirectoryOperationsHost",
       "member": "selectBookmarkAnchor",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -911,9 +911,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.showAppearanceFailure::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingPreferencesHost.ets#ReaderReadingPreferencesHost.showAppearanceFailure::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingPreferencesHost.ets",
+      "owner": "ReaderReadingPreferencesHost",
       "member": "showAppearanceFailure",
       "family": "shared.transient",
       "category": "外观读取或新修改准入明确失败的普通短反馈；已接受保存未确认由原Store恢复宿主呈现",
@@ -922,9 +922,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.showReaderSettingsFailure::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingPreferencesHost.ets#ReaderReadingPreferencesHost.showReaderSettingsFailure::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingPreferencesHost.ets",
+      "owner": "ReaderReadingPreferencesHost",
       "member": "showReaderSettingsFailure",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -944,9 +944,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.toggleAutoPage::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingPlaybackFlowHost.ets#ReaderReadingPlaybackFlowHost.toggleAutoPage::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingPlaybackFlowHost.ets",
+      "owner": "ReaderReadingPlaybackFlowHost",
       "member": "toggleAutoPage",
       "family": "shared.transient",
       "category": "自动翻页接管时朗读暂停失败的短反馈",
@@ -2459,9 +2459,9 @@
     },
     {
       "id": "DEDICATED-BOOKMARK-GESTURE",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "bookmarkCornerFeedback",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderBookmarkInteractionHost.ets",
+      "owner": "ReaderBookmarkInteractionHost",
+      "member": "hintAlpha",
       "category": "书签下拉的纸面手势反馈",
       "effectiveHost": "当前 reader lifecycle/selection/pageBookmarkFeedbackAnchor 和实体；沿原 gesture arena。",
       "retireRule": "松手、回弹、当前页/实体代次变化或退场按原 gesture/feedback owner 清理，拒绝旧回调。",
@@ -2470,8 +2470,8 @@
     },
     {
       "id": "DEDICATED-TEXT-CHAPTER-BOUNDARY",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingSurfaceHost.ets",
+      "owner": "ReaderReadingSurfaceHost",
       "member": "onContinuousBoundaryDrag",
       "category": "小说章末/章首的拖动反馈",
       "effectiveHost": "当前 reader 的连续阅读边界、当前章和原拖动/换章 owner。",
