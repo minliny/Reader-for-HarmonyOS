@@ -38,8 +38,15 @@ import { resolveDrawerSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import type { MangaReadingScene } from './MangaReadingSurface';
-import { MangaDirectorySheet } from './MangaDirectoryDrawer';
+import { MangaDirectoryDrawer, MangaDirectorySheet } from './MangaDirectoryDrawer';
+import type { RemoteReadingBookSeed, RemoteReadingSession, RemoteReadingTocEntry } from '../../reading/application/RemoteReadingFlowGateway';
+import type { ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
+import type { ActionSheetSpecId } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import type { ReaderSettingsGateway } from '../../reading/application/ReaderSettingsGateway';
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import type { MangaDirectorySheetControls } from './MangaDirectoryDrawer';
+import type { MangaViewportChromeInput } from './MangaReadingViewportHost';
+import type { MangaBoundaryChromeControls } from './MangaChapterBoundaryHost';
 
 class MangaSheetFrame extends ReaderPostLayoutFrame {}
 @Observed
@@ -63,19 +70,166 @@ export class MangaChromeRenderState {
   @Track actionHeaderMeasuredHeight: number = 0;
 }
 
+export interface MangaChromeBook {
+  readonly sourceId: string;
+  readonly bookId: string;
+  readonly bookTitle: string;
+  readonly controller: MangaSessionController | undefined;
+  readonly remoteSession: RemoteReadingSession | undefined;
+  readonly remoteBookSeed: RemoteReadingBookSeed | undefined;
+  readonly offline: boolean;
+  readonly directoryCurrentChapterIndex: number;
+  readonly directoryRecovery: ReadingDirectoryRecovery;
+  readonly downloadEnabled: boolean;
+  readonly inBookshelf: boolean;
+  readonly moreMenuVariant: ActionSheetSpecId;
+  readonly isReaderIdentityCurrent: () => boolean;
+  readonly inputCurrent: (() => boolean) | undefined;
+  readonly settingsGateway: ReaderSettingsGateway | undefined;
+}
+
+export interface MangaChromeWindow {
+  readonly setBackgroundPreference: (value: 'paper' | 'white' | 'ink') => void;
+  readonly setPanel: (value: string) => void;
+  readonly setControlsVisible: (value: boolean) => void;
+  readonly getUIContext: () => UIContext;
+  readonly appForeground: boolean;
+  readonly appThemeScheme: string;
+  readonly backgroundPreference: 'paper' | 'white' | 'ink';
+  readonly controlsVisible: boolean;
+  readonly interactionBlocked: boolean;
+  readonly panel: string;
+  readonly reduceMotion: boolean;
+  readonly stageWidth: number;
+  readonly stageHeight: number;
+  readonly systemScheme: string;
+  readonly windowChromeActive: boolean;
+  readonly windowChromeOverlayActive: boolean;
+  readonly windowInteractiveInsets: (_revision: number) => ReaderInsetsVp;
+  readonly interactiveInsets: (revision: number) => ReaderInsetsVp;
+  readonly windowMetricsRevision: number;
+  readonly navigationPreferences: ReaderNavigationPreferences;
+}
+
+export interface MangaChromeChapter {
+  readonly reportError: (value: string) => void;
+  readonly setChapterEnd: (value: boolean) => void;
+  readonly mounted: boolean;
+  readonly exiting: boolean;
+  readonly chapterEnd: boolean;
+  readonly error: string;
+  readonly loggingIn: boolean;
+  readonly loginRequiredForControls: boolean;
+  readonly opened: boolean;
+  readonly openingRetry: boolean;
+  readonly presentationGeneration: number;
+  readonly recovering: boolean;
+  readonly refreshing: boolean;
+  readonly title: string;
+  readonly offlineProbeStatus: string;
+}
+
+export interface MangaChromeActions {
+  readonly confirmRecovery: () => Promise<void>;
+  readonly handleBack: (intent?: 'navigation') => Promise<void>;
+  readonly loginAndRetry: () => Promise<void>;
+  readonly onContinueOffline: (generation: number, presentationId: string) => void;
+  readonly onDetail: () => void;
+  readonly onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number) => Promise<void>;
+  readonly onDownloadBook: () => void;
+  readonly onDownloadChapter: () => void;
+  readonly onLoadDownloadActions: (chapterIndex?: number) => Promise<MangaDownloadAction[]>;
+  readonly onOpenDownloads: () => void;
+  readonly onReconcileOffline: (generation: number, presentationId: string) => void;
+  readonly onSwitchSource: (focusId?: string) => void;
+  readonly onToggleShelf: () => void;
+  readonly openSourceSwitch: () => Promise<void>;
+  readonly refreshImages: () => Promise<void>;
+}
+
+export interface MangaChromeNativeSlots {
+  readonly topBarBack: () => void;
+  readonly topBarActions: () => void;
+  readonly actionPanelHeader: (opening: number) => void;
+  readonly actionPanelBody: (opening: number) => void;
+}
+
+export interface MangaChromeDirectory {
+  beginSheetOpening(): void;
+  persistentDirectory(): boolean;
+  settleSheetOpening(): void;
+  directoryOuterIdentity(): string;
+}
+
+export interface MangaChromeReaderControls {
+  clearPageSliderPreview(): void;
+  saveVisible(): Promise<boolean>;
+  readonly horizontal: boolean;
+  readonly viewportWidth: number;
+  readonly viewportHeight: number;
+  toggleDirection(persist?: boolean): void;
+  changeFit(requestedFit?: 'source' | 'width' | 'contain', persist?: boolean): Promise<void>;
+  pageOrdinal(): number;
+  presentedPage(): number;
+  readonly pageCount: number;
+  stepPage(direction: number): Promise<void>;
+  selectorTouchCancelled(): void;
+  changePageSlider(value: number, mode: SliderChangeMode): void;
+  readonly fit: 'source' | 'width' | 'contain';
+}
+
+export interface MangaChromeChapterNavigation {
+  readonly busy: boolean;
+  cancelBoundaryChapter(): Promise<void>;
+  readonly boundaryDragging: boolean;
+  readonly presentingCandidate: boolean;
+  adjacentLabel(): string;
+  finalBoundaryConfirmed(): boolean;
+  chapterEndLabel(): string;
+  adjacentChapter(direction: number): RemoteReadingTocEntry | undefined;
+  resumeFromChapterEnd(): void;
+  selectAdjacentChapter(direction: number, fromDirectory?: boolean): Promise<void>;
+}
+
+export interface MangaChromeMount {
+  readonly book: MangaChromeBook;
+  readonly window: MangaChromeWindow;
+  readonly chapter: MangaChromeChapter;
+  readonly actions: MangaChromeActions;
+  readonly slots: MangaChromeNativeSlots;
+  readonly directory: () => MangaChromeDirectory;
+  readonly reader: () => MangaChromeReaderControls;
+  readonly navigation: () => MangaChromeChapterNavigation;
+}
+
 /** Control and recovery presentation, sheet admission, focus, fonts and preference intents. */
-export class MangaReaderChrome {
+export class MangaReaderChrome implements MangaDirectorySheetControls, MangaViewportChromeInput, MangaBoundaryChromeControls {
   private readonly transientFeedback: ReaderTransientFeedback;
-  readonly scene: MangaReadingScene;
+  readonly scene: MangaChromeMount;
   private readonly readState: () => MangaChromeRenderState;
 
-  constructor(scene: MangaReadingScene, readState: () => MangaChromeRenderState, transientFeedback: ReaderTransientFeedback) {
+  constructor(scene: MangaChromeMount, readState: () => MangaChromeRenderState, transientFeedback: ReaderTransientFeedback) {
     this.scene = scene;
     this.readState = readState;
     this.transientFeedback = transientFeedback;
   }
 
   get state(): MangaChromeRenderState { return this.readState(); }
+
+  loadInitialPreferences(): void {
+    this.state.showPageNumbers = this.scene.book.settingsGateway?.current()?.mangaPageNumbers !== false;
+    this.loadBrightness();
+  }
+
+  get showsPageNumbers(): boolean { return this.state.showPageNumbers; }
+
+  get phase(): string { return this.state.panelPhase; }
+  get panelFontsReady(): boolean { return this.state.panelFontsReady; }
+  get panelFontsLoading(): boolean { return this.state.panelFontsLoading; }
+  get panelFontsFailed(): boolean { return this.state.panelFontsFailed; }
+  get panelOffset(): number { return this.state.panelOffset; }
+  get panelOpacity(): number { return this.state.panelOpacity; }
+  get actionPanelPresentationGeneration(): number { return this.state.actionPanelPresentationGeneration; }
 
   downloadActionsChapterIndex: number | undefined = undefined;
   panelGeneration: number = 0;
@@ -91,7 +245,7 @@ export class MangaReaderChrome {
   private brightnessGeneration: number = 0;
   releasePanel(): void {
     this.invalidatePanelMotion();
-    this.scene.window.panel = ''; this.state.panelPhase = 'closed'; this.state.panelOffset = 0; this.state.panelScrimOpacity = 0;
+    this.scene.window.setPanel(''); this.state.panelPhase = 'closed'; this.state.panelOffset = 0; this.state.panelScrimOpacity = 0;
     this.panelReturnFocusTarget = '';
     this.panelFontGeneration++; this.state.panelFontsReady = false;
     this.state.panelFontsLoading = false; this.state.panelFontsFailed = false;
@@ -117,14 +271,14 @@ export class MangaReaderChrome {
   refreshProgressVisible(): boolean {
     return this.scene.chapter.refreshing && this.scene.chapter.opened && this.readerPanelForeground() &&
       this.scene.window.panel.length === 0 && this.state.panelPhase === 'closed' &&
-      !this.scene.chapter.chapterEnd && !this.scene.boundary().state.boundaryBusy;
+      !this.scene.chapter.chapterEnd && !this.scene.navigation().busy;
   }
 
   toggleControls(): void {
-    if (this.scene.boundary().state.boundaryBusy) { void this.scene.boundary().cancelBoundaryChapter().catch((): void => {}); return; }
+    if (this.scene.navigation().busy) { void this.scene.navigation().cancelBoundaryChapter().catch((): void => {}); return; }
     if (this.scene.window.panel.length > 0 || this.scene.chapter.chapterEnd) return;
-    this.scene.window.controlsVisible = !this.scene.window.controlsVisible;
-    if (!this.scene.window.controlsVisible) this.scene.viewport().clearPageSliderPreview();
+    this.scene.window.setControlsVisible(!this.scene.window.controlsVisible);
+    if (!this.scene.window.controlsVisible) this.scene.reader().clearPageSliderPreview();
   }
   controlsPresentedForWindow(): boolean {
     return !this.scene.chapter.chapterEnd && (this.scene.window.controlsVisible || (!this.scene.chapter.opened && this.scene.chapter.error.length > 0) || this.scene.chapter.openingRetry ||
@@ -136,7 +290,7 @@ export class MangaReaderChrome {
   }
   async openPanel(panel: string, returnFocusTarget: string = '', focusSearch: boolean = false): Promise<void> {
     if (!this.readerPanelForeground()) return;
-    this.scene.viewport().clearPageSliderPreview();
+    this.scene.reader().clearPageSliderPreview();
     const sourceId = this.scene.book.sourceId, bookId = this.scene.book.bookId;
     const focusTarget = returnFocusTarget || (this.scene.window.panel.length > 0 ? this.panelReturnFocusTarget : '') ||
       this.panelTriggerFocusId(panel === 'downloads' ? 'directory' : panel);
@@ -144,11 +298,11 @@ export class MangaReaderChrome {
     this.panelReturnFocusTarget = focusTarget;
     const generation = this.panelGeneration;
     this.state.panelPhase = 'preparing';
-    if (this.scene.boundary().state.boundaryBusy || this.scene.boundary().boundaryDragging) await this.scene.boundary().cancelBoundaryChapter();
+    if (this.scene.navigation().busy || this.scene.navigation().boundaryDragging) await this.scene.navigation().cancelBoundaryChapter();
     if (!this.panelOpeningCurrent(generation)) return;
     // Saving still belongs to the existing position owner, and does not delay
     // the presentation while storage is slow. Its failure receipt is retained.
-    void this.scene.viewport().saveVisible();
+    void this.scene.reader().saveVisible();
     await this.dismissPanelKeyboard();
     if (!this.panelOpeningCurrent(generation)) return;
     const fontTask = this.preparePanelFonts();
@@ -173,10 +327,10 @@ export class MangaReaderChrome {
       return;
     }
     if (!this.panelOpeningCurrent(generation)) return;
-    this.scene.window.controlsVisible = true; this.scene.chapter.chapterEnd = false;
-    if (panel === 'directory') { this.scene.directory().state.directoryQuery = ''; this.scene.directory().state.directoryOpenRevision += 1; this.scene.directory().resetDirectoryOuterLayout(); }
+    this.scene.window.setControlsVisible(true); this.scene.chapter.setChapterEnd(false);
+    if (panel === 'directory') this.scene.directory().beginSheetOpening();
     this.state.actionPanelPresentationGeneration = generation;
-    this.scene.window.panel = panel;
+    this.scene.window.setPanel(panel);
     this.state.panelPhase = 'opening';
     this.state.panelOffset = this.scene.window.reduceMotion ? 0 : this.panelTravel();
     this.state.panelOpacity = this.scene.window.reduceMotion ? 0 : 1;
@@ -202,7 +356,7 @@ export class MangaReaderChrome {
     if (this.state.panelPhase !== 'preparing' && this.state.panelPhase !== 'opening') return;
     this.invalidatePanelMotion();
     this.state.panelPhase = 'closed';
-    this.scene.window.panel = '';
+    this.scene.window.setPanel('');
     this.state.panelOffset = 0;
     this.state.panelScrimOpacity = 0;
   }
@@ -273,7 +427,7 @@ export class MangaReaderChrome {
     const finish = (): void => {
       if (this.state.panelPhase === 'opening' && this.panelOpeningCurrent(generation)) {
         this.state.panelPhase = 'open';
-        this.scene.directory().scheduleDirectoryOuterPosition(this.scene.directory().directoryOuterIdentity());
+        this.scene.directory().settleSheetOpening();
         if (focusOnOpen) this.requestPanelFocus(focusSearch ? `reader-manga-directory-query:${this.scene.directory().directoryOuterIdentity()}` :
           this.panelCloseFocusId(this.state.actionPanelPresentationGeneration), generation, true);
       }
@@ -305,7 +459,7 @@ export class MangaReaderChrome {
       this.panelCloseResolve = resolve;
       const finish = (): void => {
         if (!this.scene.chapter.mounted || generation !== this.panelGeneration) { resolve(false); return; }
-        this.scene.window.panel = ''; this.state.panelOffset = 0; this.state.panelPhase = 'closed';
+        this.scene.window.setPanel(''); this.state.panelOffset = 0; this.state.panelPhase = 'closed';
         this.panelCloseResolve = undefined; this.panelCloseTask = undefined;
         if (restoreFocus) {
           this.panelReturnFocusTarget = '';
@@ -332,7 +486,7 @@ export class MangaReaderChrome {
     const request = ++this.panelActionGeneration;
     const focusTarget = this.panelReturnFocusTarget;
     const controller = this.scene.book.controller; const chapter = controller?.chapter;
-    const saving = this.scene.viewport().saveVisible();
+    const saving = this.scene.reader().saveVisible();
     const closing = this.closePanel(false); const generation = this.panelGeneration;
     const closed = await closing;
     const saved = await saving;
@@ -382,8 +536,8 @@ export class MangaReaderChrome {
   greenColor(scheme: 'day' | 'night' = this.chromeScheme()): string { return readerAppColor('TOK_PRIMARY_DARK', scheme); }
   accentColor(scheme: 'day' | 'night'): string { return mangaDirectoryColor('accent', scheme); }
   isSheetChoiceSelected(kind: string): boolean {
-    if (kind === 'vertical') return !this.scene.viewport().state.horizontal;
-    if (kind === 'horizontal') return this.scene.viewport().state.horizontal;
+    if (kind === 'vertical') return !this.scene.reader().horizontal;
+    if (kind === 'horizontal') return this.scene.reader().horizontal;
     if (kind === 'sun') return this.scene.window.backgroundPreference !== 'ink';
     return this.scene.window.backgroundPreference === 'ink';
   }
@@ -395,9 +549,9 @@ export class MangaReaderChrome {
     if (kind === 'sun') return selected ? $r('app.media.manga_sheet_sun_active') : night ? $r('app.media.manga_sheet_sun_theme_night') : $r('app.media.manga_sheet_sun');
     return selected ? $r('app.media.manga_sheet_moon_active') : night ? $r('app.media.manga_sheet_moon_theme_night') : $r('app.media.manga_sheet_moon');
   }
-  widePanel(): boolean { return this.scene.directory().persistentDirectory() || readerIsExpandedWidth(Math.max(this.scene.window.stageWidth, this.scene.viewport().state.viewportWidth)); }
+  widePanel(): boolean { return this.scene.directory().persistentDirectory() || readerIsExpandedWidth(Math.max(this.scene.window.stageWidth, this.scene.reader().viewportWidth)); }
   panelWidth(): number | string {
-    if (!this.widePanel()) return this.isActionPanel() ? Math.min(resolveDrawerSpec('reader-action-sheet').maxWidth, this.scene.window.stageWidth > 0 ? this.scene.window.stageWidth : this.scene.viewport().state.viewportWidth) : '100%';
+    if (!this.widePanel()) return this.isActionPanel() ? Math.min(resolveDrawerSpec('reader-action-sheet').maxWidth, this.scene.window.stageWidth > 0 ? this.scene.window.stageWidth : this.scene.reader().viewportWidth) : '100%';
     if (this.scene.window.panel === 'directory') return 336;
     return this.scene.window.stageWidth <= 700 ? Math.min(320, this.scene.window.stageWidth * 0.85) :
       Math.max(240, Math.min(this.scene.directory().persistentDirectory() ? 340 : 320, this.scene.window.stageWidth * 0.45));
@@ -412,7 +566,7 @@ export class MangaReaderChrome {
   // The demo snap is a maximum, not a forced empty sheet height.
   panelHeight(): number {
     const snap = this.scene.window.panel === 'directory' ? 0.78 : this.scene.window.panel === 'more' ? 0.75 : this.scene.window.panel === 'mode' || this.scene.window.panel === 'settings' ? 0.67 : 0.5;
-    return this.widePanel() ? Math.max(this.scene.viewport().state.viewportHeight, this.scene.window.stageHeight) : Math.min(this.scene.viewport().state.viewportHeight, Math.max(260, Math.round(this.scene.viewport().state.viewportHeight * snap)));
+    return this.widePanel() ? Math.max(this.scene.reader().viewportHeight, this.scene.window.stageHeight) : Math.min(this.scene.reader().viewportHeight, Math.max(260, Math.round(this.scene.reader().viewportHeight * snap)));
   }
   panelContentHeight(): number {
     const insets = this.panelInsets(this.scene.window.windowMetricsRevision);
@@ -422,7 +576,7 @@ export class MangaReaderChrome {
     const insets = this.scene.window.interactiveInsets(revision);
     // A right-side sheet does not touch the window's left cutout band.
     if (this.widePanel()) {
-      insets.left = Math.max(0, insets.left - Math.max(0, this.scene.viewport().state.viewportWidth - Number(this.panelWidth())));
+      insets.left = Math.max(0, insets.left - Math.max(0, this.scene.reader().viewportWidth - Number(this.panelWidth())));
     }
     return insets;
   }
@@ -498,7 +652,7 @@ export class MangaReaderChrome {
       // Index owns operation feedback; the current reading content remains.
     });
   }
-  loadBrightness(): void {
+  private loadBrightness(): void {
     this.brightnessOwner = ReaderWindowCoordinator.brightness().claim();
     const owner = this.brightnessOwner;
     const generation = this.brightnessGeneration;
@@ -506,7 +660,7 @@ export class MangaReaderChrome {
       if (!this.scene.chapter.mounted || owner !== this.brightnessOwner || generation !== this.brightnessGeneration || !result.applied) return;
       this.state.automaticBrightness = result.value < 0;
       if (result.value >= 0) this.state.brightnessPercent = readerBrightnessControlPercent(result.value);
-    }).catch((error: Error): void => { if (this.scene.chapter.mounted) this.scene.chapter.error = error.message; });
+    }).catch((error: Error): void => { if (this.scene.chapter.mounted) this.scene.chapter.reportError(error.message); });
   }
   setBrightness(percent: number, automatic: boolean = false): void {
     if (this.brightnessOwner === 0 || !this.scene.chapter.mounted) return;
@@ -515,7 +669,7 @@ export class MangaReaderChrome {
     this.state.automaticBrightness = automatic;
     this.state.brightnessPercent = Math.max(1, Math.min(100, percent));
     void ReaderWindowCoordinator.brightness().request(owner, automatic ? -1 : readerBrightnessWindowValue(this.state.brightnessPercent))
-      .catch((error: Error): void => { if (this.scene.chapter.mounted && owner === this.brightnessOwner && generation === this.brightnessGeneration) this.scene.chapter.error = error.message; });
+      .catch((error: Error): void => { if (this.scene.chapter.mounted && owner === this.brightnessOwner && generation === this.brightnessGeneration) this.scene.chapter.reportError(error.message); });
   }
   changeBrightnessSlider(value: number, mode: SliderChangeMode, opening: number): void {
     if (!this.preferencePanelInputCurrent(opening, 'settings') || !Number.isFinite(value)) return;
@@ -523,7 +677,7 @@ export class MangaReaderChrome {
     if (this.state.automaticBrightness || value !== this.state.brightnessPercent) this.setBrightness(value);
   }
   synchronizePaper(): void {
-    this.scene.window.backgroundPreference = this.scene.window.appThemeScheme === 'night' ? 'ink' : 'paper';
+    this.scene.window.setBackgroundPreference(this.scene.window.appThemeScheme === 'night' ? 'ink' : 'paper');
   }
   setBackground(background: 'paper' | 'ink', opening: number): void {
     const current = (): boolean => this.preferencePanelInputCurrent(opening, 'settings');
@@ -536,12 +690,12 @@ export class MangaReaderChrome {
   setPageNumbers(enabled: boolean): void {
     this.state.showPageNumbers = enabled;
     this.scene.book.settingsGateway?.updateMangaPreferences({ mangaPageNumbers: enabled })
-      .catch((error: Error): void => { if (this.scene.chapter.mounted) this.scene.chapter.error = error.message; });
+      .catch((error: Error): void => { if (this.scene.chapter.mounted) this.scene.chapter.reportError(error.message); });
   }
   async resetMangaPreferences(): Promise<void> {
     if (this.scene.chapter.exiting || this.scene.book.isReaderIdentityCurrent?.() === false) return;
-    if (this.scene.viewport().state.horizontal) this.scene.viewport().toggleDirection(false);
-    const layout = this.scene.viewport().changeFit('width', false);
+    if (this.scene.reader().horizontal) this.scene.reader().toggleDirection(false);
+    const layout = this.scene.reader().changeFit('width', false);
     this.state.showPageNumbers = true;
     this.setBrightness(this.state.brightnessPercent, true);
     const paper = ReaderThemeHost.selectManga(this.scene.window.appThemeScheme === 'night' ? 'night' : 'day',
@@ -561,17 +715,17 @@ export class MangaReaderChrome {
   }
   bottomControlsPosition(): Edges {
     const insets = this.scene.window.interactiveInsets(this.scene.window.windowMetricsRevision);
-    return { left: (this.scene.viewport().state.viewportWidth - this.dockWidth(insets) + insets.left - insets.right) / 2,
+    return { left: (this.scene.reader().viewportWidth - this.dockWidth(insets) + insets.left - insets.right) / 2,
       bottom: insets.bottom + 12 };
   }
   recoveryOverlayIdentity(): string {
     return JSON.stringify([this.scene.book.sourceId, this.scene.book.bookId, this.scene.chapter.presentationGeneration]);
   }
   recoveryOverlayCurrent(identity: string): boolean {
-    return this.scene.chapter.opened && this.scene.chapter.recovering && this.scene.viewport().state.viewportWidth > 1 && this.scene.viewport().state.viewportHeight > 1 && this.recoveryNoticeHeight() > 0 &&
+    return this.scene.chapter.opened && this.scene.chapter.recovering && this.scene.reader().viewportWidth > 1 && this.scene.reader().viewportHeight > 1 && this.recoveryNoticeHeight() > 0 &&
       identity === this.recoveryOverlayIdentity() && this.readerPanelForeground() &&
       !this.scene.window.controlsVisible && this.scene.window.panel.length === 0 && this.state.panelPhase === 'closed' && !this.scene.chapter.chapterEnd &&
-      !this.scene.chapter.openingRetry && !this.scene.chapter.loginRequiredForControls && !this.scene.boundary().state.boundaryBusy;
+      !this.scene.chapter.openingRetry && !this.scene.chapter.loginRequiredForControls && !this.scene.navigation().busy;
   }
   private mangaTopBarRevision: number = -1;
   private mangaTopBarMeasuredHeight: number = 52;
@@ -592,18 +746,18 @@ export class MangaReaderChrome {
   dockActionHeight(): number { return Math.max(58, 22 + 4 + 16.5 * this.controlFontScale() + 12); }
   dockHeight(): number { return this.dockPageRowHeight() + 4 + this.dockActionHeight() + 1 + 24; }
   dockWidth(insets: ReaderInsetsVp): number {
-    return Math.min(560, Math.max(1, this.scene.viewport().state.viewportWidth - 60 - insets.left - insets.right));
+    return Math.min(560, Math.max(1, this.scene.reader().viewportWidth - 60 - insets.left - insets.right));
   }
   recoveryNoticeHeight(): number {
     const insets = this.scene.window.interactiveInsets(this.scene.window.windowMetricsRevision);
-    const available = this.scene.viewport().state.viewportHeight - insets.top - insets.bottom;
+    const available = this.scene.reader().viewportHeight - insets.top - insets.bottom;
     return Math.max(0, Math.min(available / 3, available - 20));
   }
   bottomControlViewportHeight(): number {
     const insets = this.scene.window.interactiveInsets(this.scene.window.windowMetricsRevision);
     const top = this.mangaTopBarHeight() + 10 +
       (this.scene.chapter.loginRequiredForControls ? 52 : 0) + (this.scene.chapter.offlineProbeStatus.length > 0 ? 60 * this.controlFontScale() + 8 : 0);
-    return Math.max(0, Math.min(this.dockHeight() + 12, this.scene.viewport().state.viewportHeight - insets.top - insets.bottom - top));
+    return Math.max(0, Math.min(this.dockHeight() + 12, this.scene.reader().viewportHeight - insets.top - insets.bottom - top));
   }
   sheetActionHeight(): number { return Math.max(44, 18 * this.controlFontScale() + 16); }
   isActionPanel(): boolean { return this.scene.window.panel === 'more' || this.scene.window.panel === 'downloads' || this.scene.window.panel === 'mode' || this.scene.window.panel === 'settings'; }
@@ -628,7 +782,7 @@ export class MangaReaderChrome {
     const refreshSecondary = this.scene.chapter.refreshing ? '正在更新本章' : !this.scene.chapter.opened ? '章节尚未打开' : this.scene.book.offline ? '离线时不可用' : '';
     const scheme = this.sheetScheme();
     const canSaveImage = this.scene.chapter.opened && !this.scene.chapter.refreshing && !this.scene.chapter.chapterEnd && !this.state.savingPageImage &&
-      this.scene.boundary().pendingChapterTransition === undefined && this.scene.book.controller?.pageAt(this.scene.viewport().pageOrdinal()) !== undefined;
+      !this.scene.navigation().presentingCandidate && this.scene.book.controller?.pageAt(this.scene.reader().pageOrdinal()) !== undefined;
     const actions: ReaderMenuActionView[] = [
       new ReaderMenuActionView('source', '更换书源', true, readerActionIcon('source', scheme), '更换书源',
         '阅读', '', '', 'default', true),
@@ -668,7 +822,7 @@ export class MangaReaderChrome {
     }
     if (id === 'detail') { void this.performMorePanelAction(generation, (): void => this.scene.actions.onDetail()); return; }
     if (id === 'saveImage') {
-      const ordinal = this.scene.viewport().pageOrdinal();
+      const ordinal = this.scene.reader().pageOrdinal();
       const controller = this.scene.book.controller;
       if (controller !== undefined) {
         void this.performMorePanelAction(generation, (): Promise<void> => this.savePageImage(controller, ordinal));
@@ -687,7 +841,7 @@ export class MangaReaderChrome {
     const current = (): boolean => this.scene.chapter.mounted && !this.scene.chapter.exiting && this.scene.window.windowChromeActive &&
       !this.scene.window.windowChromeOverlayActive && this.scene.book.isReaderIdentityCurrent() && this.scene.book.controller === controller &&
       controller.chapter === chapter && controller.pageAt(ordinal)?.pageId === page.pageId &&
-      this.scene.boundary().pendingChapterTransition === undefined && this.scene.viewport().pageOrdinal() === ordinal;
+      !this.scene.navigation().presentingCandidate && this.scene.reader().pageOrdinal() === ordinal;
     if (!current()) return;
     const context = this.scene.window.getUIContext().getHostContext() as common.UIAbilityContext | undefined;
     this.state.savingPageImage = true;
@@ -710,9 +864,9 @@ export class MangaReaderChrome {
     });
   }
   chapterEndActionLabel(): string {
-    const next = this.scene.boundary().adjacentLabel();
+    const next = this.scene.navigation().adjacentLabel();
     if (next.length > 0) return `点击进入下一话：${next}`;
-    return this.scene.boundary().finalBoundaryConfirmed() ? '已读至最新一话 · 返回继续' : '返回继续阅读';
+    return this.scene.navigation().finalBoundaryConfirmed() ? '已读至最新一话 · 返回继续' : '返回继续阅读';
   }
 }
 
@@ -793,14 +947,14 @@ export function MangaRecoveryOverlay($$: MangaRecoveryOverlayInput) {
     if ($$.host.scene.chapter.recovering) {
       ForEach([$$.host.recoveryOverlayIdentity()], (identity: string): void => {
         Column() {
-          ReaderRecoveryNotice({ tag: '内容更新', layoutWidthVp: Math.max(0, $$.host.scene.viewport().state.viewportWidth - 16 -
+          ReaderRecoveryNotice({ tag: '内容更新', layoutWidthVp: Math.max(0, $$.host.scene.reader().viewportWidth - 16 -
             $$.host.scene.window.interactiveInsets($$.host.scene.window.windowMetricsRevision).left - $$.host.scene.window.interactiveInsets($$.host.scene.window.windowMetricsRevision).right),
             maxHeightVp: $$.host.recoveryNoticeHeight(),
             view: { visible: true, generation: $$.host.scene.chapter.presentationGeneration, canRetry: true,
               message: $$.host.scene.book.controller?.replacementRecoveryRequired === true ? '内容已更新，需从新版首图开始。' : '内容已更新，需确认阅读位置。' },
             actionLabel: $$.host.scene.book.controller?.replacementRecoveryRequired === true ? '从首图开始' : '从当前页继续',
             onReconcile: (): void => { if ($$.host.recoveryOverlayCurrent(identity)) void $$.host.scene.actions.confirmRecovery(); } });
-        }.width(Math.max(0, $$.host.scene.viewport().state.viewportWidth - 16 - $$.host.scene.window.interactiveInsets($$.host.scene.window.windowMetricsRevision).left -
+        }.width(Math.max(0, $$.host.scene.reader().viewportWidth - 16 - $$.host.scene.window.interactiveInsets($$.host.scene.window.windowMetricsRevision).left -
           $$.host.scene.window.interactiveInsets($$.host.scene.window.windowMetricsRevision).right))
           .constraintSize({ maxHeight: $$.host.recoveryNoticeHeight() })
           .position({ x: 8 + $$.host.scene.window.interactiveInsets($$.host.scene.window.windowMetricsRevision).left,
@@ -866,7 +1020,7 @@ interface MangaPageBadgeInput {
 @Builder
 export function MangaPageBadge($$: MangaPageBadgeInput) {
     Stack({ alignContent: Alignment.BottomStart }) {
-      Text(`${$$.host.scene.boundary().chapterEndLabel()} · ${$$.host.scene.viewport().presentedPage()} / ${$$.host.scene.viewport().state.horizontalPageCount}`)
+      Text(`${$$.host.scene.navigation().chapterEndLabel()} · ${$$.host.scene.reader().presentedPage()} / ${$$.host.scene.reader().pageCount}`)
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(11).fontFeature('"tnum" 1').fontColor(readerAppColor('TOK_INK', $$.host.chromeScheme()))
         .padding({ left: 10, right: 10, top: 5, bottom: 5 }).constraintSize({ maxWidth: 230 })
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -889,22 +1043,22 @@ function MangaBottomControls($$: MangaBottomControlsInput) {
         ReaderIconButton({ scheme: $$.host.floatingChromeScheme('floatingDock'), specId: 'manga-dock-step',
           icon: $$.host.floatingChromeScheme('floatingDock') === 'night' ? $r('app.media.rc_chevron_left_theme_night') :
             $r('app.media.rc_chevron_left'), accessibilityLabel: '上一页',
-          actionEnabled: $$.host.scene.chapter.opened && $$.host.scene.viewport().pageOrdinal() > 0, onTap: (): void => { void $$.host.scene.viewport().stepPage(-1); } });
+          actionEnabled: $$.host.scene.chapter.opened && $$.host.scene.reader().pageOrdinal() > 0, onTap: (): void => { void $$.host.scene.reader().stepPage(-1); } });
         Column({ space: 3 }) {
-          Slider({ value: $$.host.scene.viewport().presentedPage(), min: 1, max: Math.max(1, $$.host.scene.viewport().state.horizontalPageCount), step: 1 })
+          Slider({ value: $$.host.scene.reader().presentedPage(), min: 1, max: Math.max(1, $$.host.scene.reader().pageCount), step: 1 })
             .attributeModifier(new ReaderPaperMaterial())
             .height(44).selectedColor(readerAppColor('TOK_ACCENT', $$.host.floatingChromeScheme('floatingDock')))
             .blockColor($$.host.greenColor($$.host.floatingChromeScheme('floatingDock'))).trackColor($$.host.lineColor($$.host.floatingChromeScheme('floatingDock')))
-            .enabled($$.host.scene.chapter.opened && $$.host.scene.viewport().state.horizontalPageCount > 1)
+            .enabled($$.host.scene.chapter.opened && $$.host.scene.reader().pageCount > 1)
             .accessibilityText('漫画页码')
             .onTouch((event: TouchEvent): void => {
-              if (event.type === TouchType.Cancel && $$.host.scene.viewport().pageSliderCommitted < 0) $$.host.scene.viewport().clearPageSliderPreview();
+              if (event.type === TouchType.Cancel) $$.host.scene.reader().selectorTouchCancelled();
             })
             .onChange((value: number, mode: SliderChangeMode): void => {
-              $$.host.scene.viewport().changePageSlider(value, mode);
+              $$.host.scene.reader().changePageSlider(value, mode);
             });
           Row() {
-            Text($$.host.scene.chapter.opened ? `${$$.host.scene.viewport().presentedPage()} / ${$$.host.scene.viewport().state.horizontalPageCount}` : '—')
+            Text($$.host.scene.chapter.opened ? `${$$.host.scene.reader().presentedPage()} / ${$$.host.scene.reader().pageCount}` : '—')
               .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(10).fontFeature('"tnum" 1').fontColor($$.host.mutedColor($$.host.floatingChromeScheme('floatingDock')));
             if ($$.host.scene.chapter.opened) {
               Text(' 页').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(10).fontColor($$.host.mutedColor($$.host.floatingChromeScheme('floatingDock')));
@@ -914,7 +1068,7 @@ function MangaBottomControls($$: MangaBottomControlsInput) {
         ReaderIconButton({ scheme: $$.host.floatingChromeScheme('floatingDock'), specId: 'manga-dock-step',
           icon: $$.host.floatingChromeScheme('floatingDock') === 'night' ? $r('app.media.rc_chevron_right_theme_night') :
             $r('app.media.rc_chevron_right'), accessibilityLabel: '下一页',
-          actionEnabled: $$.host.scene.chapter.opened, onTap: (): void => { void $$.host.scene.viewport().stepPage(1); } });
+          actionEnabled: $$.host.scene.chapter.opened, onTap: (): void => { void $$.host.scene.reader().stepPage(1); } });
       }.width('100%').height($$.host.dockPageRowHeight()).alignItems(VerticalAlign.Top);
       Row() {
         MangaFooterAction($$.host, (): Resource => ($$.host.floatingChromeScheme('floatingDock') === 'night' ? $r('app.media.reader_directory_directory_theme_night') : $r('app.media.reader_directory_directory')), '目录', 'directory');
@@ -943,7 +1097,7 @@ function MangaFooterAction(host: MangaReaderChrome, icon: () => Resource, label:
   }
 
 @Builder
-export function MangaPanelOverlay(host: MangaReaderChrome, directoryIdentity: string, opening: number) {
+export function MangaPanelOverlay(host: MangaReaderChrome, directory: MangaDirectoryDrawer, directoryIdentity: string, opening: number) {
     Stack({ alignContent: host.widePanel() ? Alignment.End : Alignment.Bottom }) {
       Column().width('100%').height('100%')
         .backgroundColor(host.widePanel() && host.scene.window.panel !== 'directory' ? Color.Transparent : host.scene.window.panel === 'directory' ?
@@ -956,7 +1110,7 @@ export function MangaPanelOverlay(host: MangaReaderChrome, directoryIdentity: st
           // become an outside dismissal while the surface is moving.
           if (host.state.panelPhase === 'open' && host.panelInputCurrent(opening)) void host.closePanel();
         });
-      if (host.scene.window.panel === 'directory') { MangaDirectorySheet(host.scene.directory(), directoryIdentity, opening); }
+      if (host.scene.window.panel === 'directory') { MangaDirectorySheet(directory, directoryIdentity, opening); }
       else { MangaActionPanelSurface(host, opening); }
     }.width('100%').height('100%')
       .accessibilityLevel((host.widePanel() && host.scene.window.panel !== 'directory') || host.state.panelPhase === 'open' || host.state.panelPhase === 'dragging' ?
@@ -1040,23 +1194,23 @@ function MangaModePanel(host: MangaReaderChrome, opening: number) {
       MangaSectionTitle(host, '阅读模式');
       Row({ space: 8 }) {
         MangaSheetChoice(host, 'vertical', '竖向连续', (): void => {
-          if (host.preferencePanelInputCurrent(opening, 'mode') && host.scene.viewport().state.horizontal) host.scene.viewport().toggleDirection();
+          if (host.preferencePanelInputCurrent(opening, 'mode') && host.scene.reader().horizontal) host.scene.reader().toggleDirection();
         });
         MangaSheetChoice(host, 'horizontal', '横向分页', (): void => {
-          if (host.preferencePanelInputCurrent(opening, 'mode') && !host.scene.viewport().state.horizontal) host.scene.viewport().toggleDirection();
+          if (host.preferencePanelInputCurrent(opening, 'mode') && !host.scene.reader().horizontal) host.scene.reader().toggleDirection();
         });
       }.width('100%');
     }.width('100%');
     Column() {
       Text('图片适配').fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).lineHeight(21).fontColor(host.inkColor(host.sheetScheme())).width('100%').margin({ bottom: 12 });
       MangaFitLine(host, '跟随书源', 'source', (): void => {
-        if (host.preferencePanelInputCurrent(opening, 'mode')) void host.scene.viewport().changeFit('source');
+        if (host.preferencePanelInputCurrent(opening, 'mode')) void host.scene.reader().changeFit('source');
       });
       MangaFitLine(host, '适合屏幕', 'width', (): void => {
-        if (host.preferencePanelInputCurrent(opening, 'mode')) void host.scene.viewport().changeFit('width');
+        if (host.preferencePanelInputCurrent(opening, 'mode')) void host.scene.reader().changeFit('width');
       });
       MangaFitLine(host, '完整图片', 'contain', (): void => {
-        if (host.preferencePanelInputCurrent(opening, 'mode')) void host.scene.viewport().changeFit('contain');
+        if (host.preferencePanelInputCurrent(opening, 'mode')) void host.scene.reader().changeFit('contain');
       });
     }.width('100%');
   }
@@ -1087,12 +1241,12 @@ function MangaFitLine(host: MangaReaderChrome, label: string, fit: string, actio
     Row({ space: 12 }) {
       Text(label).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).lineHeight(18)
         .halfLeading(true).fontColor(host.inkColor(host.sheetScheme())).layoutWeight(1);
-      if (host.scene.viewport().state.fitPreference === fit) { Image(host.sheetScheme() === 'night' ? $r('app.media.manga_sheet_check_theme_night') : $r('app.media.manga_sheet_check')).width(14).height(14); }
+      if (host.scene.reader().fit === fit) { Image(host.sheetScheme() === 'night' ? $r('app.media.manga_sheet_check_theme_night') : $r('app.media.manga_sheet_check')).width(14).height(14); }
     }.width('100%').height('100%').accessibilityLevel('no-hide-descendants');
     }.width('100%').height(host.sheetActionHeight()).padding(0)
       .attributeModifier(new ReaderPressFeedback(Color.Transparent, host.sheetScheme()))
       .border({ width: { bottom: 1 }, color: host.lineColor(host.sheetScheme()) }).onClick(action)
-      .accessibilityText(`${label}，${host.scene.viewport().state.fitPreference === fit ? '已选择' : '未选择'}`);
+      .accessibilityText(`${label}，${host.scene.reader().fit === fit ? '已选择' : '未选择'}`);
   }
 
 @Builder
@@ -1160,7 +1314,7 @@ function MangaSettingsPanel(host: MangaReaderChrome, opening: number) {
         if (!host.preferencePanelInputCurrent(opening, 'settings')) return;
         const motion = host.panelGeneration;
         void host.resetMangaPreferences().catch((error: Error): void => {
-          if (motion === host.panelGeneration && host.preferencePanelInputCurrent(opening, 'settings')) host.scene.chapter.error = error.message;
+          if (motion === host.panelGeneration && host.preferencePanelInputCurrent(opening, 'settings')) host.scene.chapter.reportError(error.message);
         });
       });
   }
@@ -1185,7 +1339,7 @@ export function MangaChapterEndContent($$: MangaChapterEndContentInput) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Row({ space: 8 }) {
             Image($$.host.chromeScheme() === 'night' ? $r('app.media.reader_chevron_down_primary_theme_night') :
-              $r('app.media.reader_chevron_down_primary')).rotate({ angle: $$.host.scene.boundary().adjacentChapter(1) === undefined ? 90 : 270 })
+              $r('app.media.reader_chevron_down_primary')).rotate({ angle: $$.host.scene.navigation().adjacentChapter(1) === undefined ? 90 : 270 })
               .width(16).height(16).flexShrink(0).accessibilityLevel('no');
             Text($$.host.chapterEndActionLabel()).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13).lineHeight(20).halfLeading(true).fontWeight(500).maxLines(3)
               .fontColor($$.host.greenColor()).textAlign(TextAlign.Center);
@@ -1197,10 +1351,10 @@ export function MangaChapterEndContent($$: MangaChapterEndContentInput) {
           .accessibilityText($$.host.chapterEndActionLabel())
           .onClick((): void => {
             if (!$$.host.readerPanelForeground() || !$$.host.scene.chapter.chapterEnd || $$.host.scene.window.panel.length > 0) return;
-            if ($$.host.scene.boundary().adjacentChapter(1) === undefined) $$.host.scene.boundary().resumeFromChapterEnd();
-            else void $$.host.scene.boundary().selectAdjacentChapter(1);
+            if ($$.host.scene.navigation().adjacentChapter(1) === undefined) $$.host.scene.navigation().resumeFromChapterEnd();
+            else void $$.host.scene.navigation().selectAdjacentChapter(1);
           });
-      }.width('100%').constraintSize({ maxHeight: Math.max(56, $$.host.scene.viewport().state.viewportHeight - $$.host.scene.window.windowInteractiveInsets($$.host.scene.window.windowMetricsRevision).top) })
+      }.width('100%').constraintSize({ maxHeight: Math.max(56, $$.host.scene.reader().viewportHeight - $$.host.scene.window.windowInteractiveInsets($$.host.scene.window.windowMetricsRevision).top) })
         .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None);
     }.width('100%').height('100%').padding($$.host.scene.window.interactiveInsets($$.host.scene.window.windowMetricsRevision));
   }
