@@ -37,4 +37,4 @@ runs:
         "$temp/tools/actionlint" -color
         git archive HEAD | tar -xf - -C "$temp/source"
         cd "$temp/source"
-        "$temp/tools/gitleaks" dir . --redact=100
+        "$temp/tools/gitleaks" dir . --redact=100 -v
