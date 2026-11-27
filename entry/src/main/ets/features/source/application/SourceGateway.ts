@@ -12,6 +12,7 @@ import { RulesMutationOwner, type RulesMutationSnapshot } from '../../settings/a
 import type { RuleSubscriptionStep } from '../../settings/application/RulesMutationIntentStore';
 import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
 import { sourceVerificationOfflineDetectFixture } from '../ui/SourceManagementVerification';
+import { storedSourceTransferEvidence, type StoredSourceTransferEvidence } from './SourceTransferPublication';
 
 export type BookSource = {
   sourceId: string;
@@ -835,6 +836,15 @@ export class SourceGateway {
       hasRawBookSource: raw !== undefined && raw !== null, text,
       identity: JSON.stringify([sourceId, source['sourceVersion'] ?? null, source['name'] ?? null,
         source['baseUrl'] ?? null, source['enabled'] ?? null, source['enabledExplore'] ?? null, text]) };
+  }
+
+  async readTransferredSourceEvidence(sourceIds: string[], admitted: () => boolean):
+    Promise<Map<string, StoredSourceTransferEvidence>> {
+    const active = (): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner) && admitted();
+    if (sourceIds.length === 0 || !active()) return new Map<string, StoredSourceTransferEvidence>();
+    const result = await this.runtimeOwner.request('source.list', {}, { canDispatch: active, canContinue: active });
+    if (!active()) return new Map<string, StoredSourceTransferEvidence>();
+    return storedSourceTransferEvidence(result.data['sources'], new Set(sourceIds));
   }
 
   /**

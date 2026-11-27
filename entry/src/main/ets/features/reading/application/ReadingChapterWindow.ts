@@ -25,6 +25,7 @@ export type ReadingSessionChapter = {
   readonly contentVersion: string;
   /** Core canonical/processing evidence, distinct from the Host document hash. */
   readonly directoryTargetProof?: ReaderDirectoryTargetProof;
+  readonly catalogRevision?: string;
   readonly bodyVersion?: string;
   readonly processingVersion?: string;
   readonly positionMigration?: RemoteReadingPositionMigration;
@@ -45,6 +46,8 @@ export type ReadingSessionImage = {
   readonly fileUri: string;
   readonly intrinsicWidth: number;
   readonly intrinsicHeight: number;
+  readonly displayWidth?: number;
+  readonly displayHeight?: number;
   readonly imageWidthBasisPoints?: number;
   readonly revision: string;
 };
@@ -281,9 +284,9 @@ export function readingChapterRetainedBytes(chapter: ReadingSessionChapter): num
     (chapter.bodyVersion?.length ?? 0) + (chapter.processingVersion?.length ?? 0));
   for (const item of chapter.images) {
     bytes += 128 + 2 * (item.source.length + (item.baseUrl?.length ?? 0) + item.fileUri.length + item.revision.length);
-    if (item.pixelMap !== undefined) {
-      const pixels = item.intrinsicWidth * item.intrinsicHeight;
-      if (!Number.isFinite(pixels) || pixels <= 0) return Number.POSITIVE_INFINITY;
+    if (item.pixelMap !== undefined || (item.state === 'ready' && item.fileUri.length > 0)) {
+      const pixels = (item.displayWidth ?? item.intrinsicWidth) * (item.displayHeight ?? item.intrinsicHeight);
+      if (!Number.isSafeInteger(pixels) || pixels <= 0) return Number.POSITIVE_INFINITY;
       bytes += pixels * 4;
     }
   }
@@ -311,7 +314,8 @@ function copyChapter(chapter: ReadingSessionChapter): ReadingSessionChapter {
     textLayoutIdentity: readingChapterTextIdentity(chapter),
     images: chapter.images.map(copyImage),
     contentVersion: chapter.contentVersion,
-    directoryTargetProof: chapter.directoryTargetProof, bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion,
+    directoryTargetProof: chapter.directoryTargetProof, catalogRevision: chapter.catalogRevision,
+    bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion,
     positionMigration: chapter.positionMigration === undefined ? undefined : { ...chapter.positionMigration,
       anchors: chapter.positionMigration.anchors.map((anchor) => ({ ...anchor })),
       progress: chapter.positionMigration.progress === undefined ? undefined : { ...chapter.positionMigration.progress } },
@@ -332,6 +336,8 @@ function copyImage(image: ReadingSessionImage): ReadingSessionImage {
     fileUri: image.fileUri,
     intrinsicWidth: image.intrinsicWidth,
     intrinsicHeight: image.intrinsicHeight,
+    displayWidth: image.displayWidth,
+    displayHeight: image.displayHeight,
     imageWidthBasisPoints: image.imageWidthBasisPoints,
     revision: image.revision,
   };

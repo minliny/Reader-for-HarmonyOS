@@ -230,3 +230,28 @@ test('non-control TTS and progress requests retain their dispatch rules without 
   assert.equal(f.loads[0].requestedProgress, 0.35);
   assert.equal(f.owner.recover(new Error('background'), 2), false);
 });
+
+test('a matching Core directory proof opens an unlisted chapter without waiting for the catalog', () => {
+  const f = fixture();
+  f.state.known = false;
+  f.state.pending = true;
+  const proof = { sourceId: f.scope.sourceId, bookId: f.scope.bookId, chapterIndex: 50,
+    catalogRevision: 'catalog', structureRevision: 'structure', nodeId: 'node-50', url: 'chapter-50' };
+  const context = { anchors: [], directoryTargetProof: proof };
+  f.owner.select(new ReaderDeferredChapterSelection(50, 0, true, true, undefined, -2, true, false, context));
+  assert.equal(f.deferred.length, 0);
+  assert.equal(f.loads[0]?.positionContext?.directoryTargetProof, proof);
+  assert.equal(f.owner.ticket?.targetChapterIndex, 50);
+});
+
+test('a proof from another catalog identity cannot bypass the unlisted chapter gate', () => {
+  const f = fixture();
+  f.state.known = false;
+  f.state.pending = true;
+  const proof = { sourceId: f.scope.sourceId, bookId: 'different', chapterIndex: 50,
+    catalogRevision: 'catalog', structureRevision: 'structure', nodeId: 'node-50', url: 'chapter-50' };
+  const context = { anchors: [], directoryTargetProof: proof };
+  f.owner.select(new ReaderDeferredChapterSelection(50, 0, true, true, undefined, -2, true, false, context));
+  assert.equal(f.loads.length, 0);
+  assert.equal(f.deferred.length, 1);
+});

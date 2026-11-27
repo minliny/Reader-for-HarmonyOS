@@ -19,20 +19,33 @@ class DirectoryListDataSource implements IDataSource {
     this.listeners = this.listeners.filter((value: DataChangeListener): boolean => value !== listener);
   }
   replace(entries: LocalReadingTocEntry[]): void {
-    if (sameReaderDirectoryData(this.admittedSnapshot, entries)) return;
     const previous = new Map<number, LocalReadingTocEntry>();
     for (const entry of this.admittedSnapshot) previous.set(entry.index, entry);
     const revisions = new Map<number, number>();
-    for (const entry of entries) {
+    const snapshots: LocalReadingTocEntry[] = [];
+    const changed: number[] = [];
+    let reload = entries.length !== this.admittedSnapshot.length;
+    entries.forEach((entry: LocalReadingTocEntry, index: number): void => {
+      if (entry.index !== this.admittedSnapshot[index]?.index) reload = true;
       const admitted = previous.get(entry.index);
       const revision = this.rowRevisions.get(entry.index);
-      revisions.set(entry.index, admitted !== undefined && revision !== undefined && sameReaderDirectoryData([admitted], [entry]) ?
-        revision : ++this.rowRevision);
-    }
+      if (admitted !== undefined && revision !== undefined && sameReaderDirectoryData([admitted], [entry])) {
+        revisions.set(entry.index, revision);
+        snapshots.push(admitted);
+      } else {
+        revisions.set(entry.index, ++this.rowRevision);
+        snapshots.push(snapshotReaderDirectoryData([entry])[0]);
+        changed.push(index);
+      }
+    });
+    if (!reload && changed.length === 0) return;
     this.rowRevisions = revisions;
-    this.admittedSnapshot = snapshotReaderDirectoryData(entries);
+    this.admittedSnapshot = snapshots;
     this.entries = entries.slice();
-    for (const listener of this.listeners) listener.onDataReloaded();
+    for (const listener of this.listeners) {
+      if (reload) listener.onDataReloaded();
+      else for (const index of changed) listener.onDataChange(index);
+    }
   }
 }
 
@@ -222,6 +235,7 @@ export struct ReaderDirectoryList {
     .scrollBarWidth(this.naturalRowHeight ? 4 : undefined)
     .scrollBarColor(this.naturalRowHeight ? readerAppColor('TOK_SS_SCROLLBAR', this.appThemeScheme) : undefined)
     .edgeEffect(this.edgeEffectMode)
+    .cachedCount(4)
     // API 21 drag ownership is reported even before a positive scroll delta.
     // A Scroller.scrollTo callback is not evidence of user scroll intent.
     .onWillStartDragging((): void => this.onUserScrollIntent())

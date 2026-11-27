@@ -10,6 +10,7 @@ import {
 import { SourceInitialMembershipUnconfirmed } from './SourceInitialMembershipUnconfirmed';
 import type { SourceV9ImportedReport } from './SourceV9TransferState';
 import { projectSourceV9Check, retainSourceV9Check, sourceV9AuthenticationDenied, sourceV9Supports } from '../presentation/SourceManagementV9';
+import { SourceListIndex, SourceListPublication, SourceToggleAdmission, type SourceToggleTicket } from '../presentation/SourceListPublication';
 import type { BookSourceJsonSelection } from '../../../app/ReaderHostRegistry';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
@@ -65,6 +66,12 @@ interface PendingImportReadback {
   readonly confirmedParts: number;
 }
 
+interface ConfirmedSourceToggle {
+  id: string;
+  confirmation: CommitConfirmationKind;
+  cleanupWarning: string;
+}
+
 export interface SourceManagementProjection {
   action: string;
   sourceId: string;
@@ -105,10 +112,8 @@ function isPendingTransactionError(error: Error): boolean {
  * guards on every write-back. Emits typed `BookSource[]` snapshots; Index only
  * forwards them.
  *
- * The toggle chain deliberately outlives a single page entry: a queued toggle
- * is the user's last intent and is still submitted even if they leave before
- * it runs; re-entering awaits this chain so the fresh list reflects the
- * persisted truth.
+ * A dispatched write can outlive the page. Queued intents still need the
+ * original presentation at dispatch, and re-entry waits for accepted writes.
  */
 export class SourceOrchestrator {
   private static readonly owners: WeakMap<ReaderRuntimeOwner, SourceOrchestrator> = new WeakMap();
@@ -143,6 +148,7 @@ export class SourceOrchestrator {
   detachPresentation(identity: string): void {
     if (this.presentationIdentity !== identity) return;
     this.presentationIdentity = undefined; this.session += 1;
+    this.sourcePublication.cancelDeferred();
     this.isCurrent = (): boolean => false;
     this.emit = (): void => {}; this.emitStatus = (): void => {}; this.emitProjection = (): void => {};
   }
@@ -157,10 +163,13 @@ export class SourceOrchestrator {
   private isCurrent: () => boolean = (): boolean => false;
   /** Authoritative mirror, projected through the current presentation lease. */
   private sources: BookSource[] = [];
+  private sourceIndex = new SourceListIndex([]);
+  private readonly sourcePublication = new SourceListPublication();
   /** Bumped on every entry; stale-entry loads/write-backs are dropped. */
   private session: number = 0;
   /** Bumped per toggle; an older toggle's reload must not overwrite a newer. */
   private toggleSeq: number = 0;
+  private readonly toggleAdmission = new SourceToggleAdmission();
   /** Serializes Core source operations across entries. */
   private operationChain: Promise<void> = Promise.resolve();
   private exportInFlight: boolean = false;
@@ -380,25 +389,37 @@ export class SourceOrchestrator {
    * completion never repaints a re-entry or a newer toggle.
    */
   toggleSource(id: string, enabled: boolean): void {
+    this.enqueueToggles([id], enabled);
+  }
+
+  toggleSources(ids: string[], enabled: boolean): void {
+    this.enqueueToggles(this.selectedSourceIds(ids), enabled);
+  }
+
+  private enqueueToggles(ids: string[], enabled: boolean): void {
+    if (ids.length === 0) return;
     if (!this.isCurrentSession(this.session) || (this.latestProjection.receipt?.receipt.confirmation === 'unknown' || this.originalBlocked())) return;
-    this.toggleSeq += 1;
-    const seq = this.toggleSeq;
     const session = this.session;
-    const observation = this.observeToggleAdmission(id, enabled, seq);
+    const tickets: SourceToggleTicket[] = [];
+    for (const id of ids) {
+      const ticket = this.toggleAdmission.admit(id, enabled, session);
+      if (ticket !== undefined) tickets.push(ticket);
+    }
+    if (tickets.length === 0) return;
+    const seq = ++this.toggleSeq;
+    const observation = ids.length === 1 ? this.observeToggleAdmission(tickets[0].id, enabled, seq) : undefined;
     this.operationChain = this.operationChain
-      .then((): Promise<void> => this.applyToggle(id, enabled, seq, session, observation))
+      .then((): Promise<void> => this.applyToggles(tickets, enabled, seq, session, observation))
       .catch((error: Error): void => {
         if (this.isCurrentSession(session)) {
           this.publishStatus('error', `书源启停失败：${error.message}`);
         }
         hilog.error(DOMAIN, 'Reader',
-          'Source toggle failed; row unchanged: sourceId=%{private}s enabled=%{private}s err=%{private}s',
-          id, enabled, error.message);
+          'Source toggle failed: count=%{public}d enabled=%{public}s err=%{private}s',
+          tickets.length, `${enabled}`, error.message);
+      }).finally((): void => {
+        for (const ticket of tickets) this.toggleAdmission.release(ticket);
       });
-  }
-
-  toggleSources(ids: string[], enabled: boolean): void {
-    for (const id of this.selectedSourceIds(ids)) this.toggleSource(id, enabled);
   }
 
   deleteSources(ids: string[]): void {
@@ -407,7 +428,7 @@ export class SourceOrchestrator {
     const session = this.session;
     this.operationChain = this.operationChain.then(async (): Promise<void> => {
       if (!this.isCurrentSession(session) || this.originalBlocked()) return;
-      const result = await this.gateway.deleteSources(selected);
+      const result = await this.gateway.deleteSources(selected).finally((): void => this.publishOriginal(session));
       const pending = this.pendingImportReadback;
       if (pending !== undefined) {
         // A confirmed, idempotent delete leaves all selected IDs absent.
@@ -423,11 +444,17 @@ export class SourceOrchestrator {
           this.pendingImportReadback = { identity: pending.identity, sourceIds: remaining, confirmedParts: pending.confirmedParts };
         }
       }
-      await this.loadList(session);
+      const readGeneration = this.latestProjection.readFacts?.generation;
+      await this.loadList(session, false);
       if (!this.isCurrentSession(session)) return;
       if (this.pendingImportReadback !== undefined &&
         this.latestProjection.receipt?.receipt.fact === 'confirmedRefreshFailed') return;
       const message = `已删除 ${result.deletedCount} 个书源`;
+      const read = this.latestProjection.readFacts;
+      if (read === undefined || read.generation === readGeneration || (read.fact !== 'current' && read.fact !== 'empty')) {
+        this.publishStatus('warning', `${message}，书源列表刷新未确认`);
+        return;
+      }
       this.publishStatus(result.cookieCleanupFailures === 0 ? 'success' : 'warning',
         result.cookieCleanupFailures === 0 ? message : `${message}，${result.cookieCleanupFailures} 个登录会话清理失败`);
     }).catch((error: Error): void => {
@@ -873,44 +900,80 @@ export class SourceOrchestrator {
     }
   }
 
-  private async applyToggle(
-    id: string, enabled: boolean, seq: number, session: number, observation?: SourceToggleObservationIdentity,
-  ): Promise<void> {
+  private async applyToggles(tickets: SourceToggleTicket[], enabled: boolean, seq: number, session: number,
+    observation: SourceToggleObservationIdentity | undefined): Promise<void> {
+    const changed = new Set<string>();
+    let last: ConfirmedSourceToggle | undefined;
+    let cleanupWarning = '';
+    let incomplete = false;
+    for (const ticket of tickets) {
+      if (!this.isCurrentSession(session) || this.latestProjection.receipt?.receipt.confirmation === 'unknown' ||
+        this.originalBlocked()) break;
+      const current = (): boolean => this.isCurrentSession(session) && this.toggleAdmission.current(ticket, session);
+      if (!current()) continue;
+      const result = await this.applyToggle(ticket.id, enabled, session, changed, tickets.length === 1, observation, current);
+      if (result === undefined) {
+        if (current()) incomplete = true;
+        continue;
+      }
+      last = result;
+      if (result.cleanupWarning.length > 0) cleanupWarning = result.cleanupWarning;
+    }
+    if (last === undefined) return;
+    const confirmed = last;
+    const blocked = this.latestProjection.receipt?.receipt.confirmation === 'unknown' || this.originalBlocked();
+    if (!this.isCurrentSession(session)) {
+      if (!blocked && seq === this.toggleSeq)
+        this.publishReceipt(session, 'toggle', confirmed.id, confirmed.confirmation, 'failed', '列表尚未刷新');
+      return;
+    }
+    if (tickets.length > 1) this.presentToggledSources(changed, enabled);
+    // Do not overwrite an unconfirmed original write with a later read.
+    if (seq !== this.toggleSeq || blocked) return;
+    let sources: BookSource[];
+    try {
+      sources = await this.gateway.loadSources(undefined, true, (): boolean => this.isCurrentSession(session));
+    } catch (error) {
+      if (seq === this.toggleSeq)
+        this.publishToggleReceipt(session, confirmed.id, confirmed.confirmation, 'failed', observation, (error as Error).message);
+      hilog.warn(DOMAIN, 'Reader',
+        'Source toggle persisted but list reload failed: sourceId=%{private}s enabled=%{private}s err=%{private}s',
+        confirmed.id, enabled, (error as Error).message);
+      return;
+    }
+    if (this.isCurrentSession(session) && seq === this.toggleSeq) {
+      this.presentSources(sources);
+      this.hasRead = true;
+      this.publishToggleReceipt(session, confirmed.id, confirmed.confirmation, 'succeeded', observation, undefined, sources);
+      if (cleanupWarning.length > 0) this.publishStatus('warning', cleanupWarning);
+      else if (incomplete) this.publishStatus('warning', '部分书源未完成启停');
+    }
+  }
+
+  private async applyToggle(id: string, enabled: boolean, session: number, changed: Set<string>,
+    publishImmediately: boolean, observation: SourceToggleObservationIdentity | undefined,
+    current: () => boolean): Promise<ConfirmedSourceToggle | undefined> {
     // A toggle can be rejected while an unrelated Host operation (search,
     // check, sync) is in flight, because Core refuses to start `source.update`
     // until the bus is free. Wait until Core reports idle, then retry once —
     // the serial chain means this retry only waits out the external operation,
     // never a concurrent toggle.
-    if (!ReaderRuntimeOwner.isCurrent(this.owner) || (this.latestProjection.receipt?.receipt.confirmation === 'unknown' || this.originalBlocked())) return;
-    const enabledSource = this.sources.find((source: BookSource): boolean => source.sourceId === id);
+    const enabledSource = this.sourceIndex.get(id);
     const clearLoginReport = !enabled && (enabledSource?.loginUrl?.trim().length ?? 0) > 0;
     const evidence = new ReaderWriteEvidence();
     this.gateway.observeWrites(evidence);
-    try { await this.updateSourceWithRetry(id, enabled); }
+    try { await this.updateSourceWithRetry(id, enabled, current); }
     catch (error) {
-      this.publishToggleReceipt(session, id, evidence.confirmation(), 'failed', observation, (error as Error).message);
-      return;
+      if (current() || evidence.confirmation() !== 'undispatched')
+        this.publishToggleReceipt(session, id, evidence.confirmation(), 'failed', observation, (error as Error).message);
+      return undefined;
     }
     finally { this.gateway.observeWrites(undefined); }
     this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'reading');
     if (clearLoginReport) this.resetLoginProjection(id);
     if (!enabled) this.deniedLoginReports.delete(id);
-    if (this.isCurrentSession(session)) {
-      // The toggle is already confirmed. Publish the cleared projection before
-      // cookie/report cleanup or list readback can wait on I/O.
-      this.presentSources(this.sources.map((source: BookSource): BookSource => {
-        if (source.sourceId !== id) return source;
-        const updated: BookSource = {
-          sourceId: source.sourceId, name: source.name, baseUrl: source.baseUrl, enabled,
-          enabledExplore: source.enabledExplore, group: source.group, sourceVersion: source.sourceVersion,
-          category: source.category, loginUrl: source.loginUrl, loginState: source.loginState,
-          checkState: source.checkState, checkLevels: source.checkLevels, checkMessage: source.checkMessage,
-          checkReports: source.checkReports, lastCheckSummary: source.lastCheckSummary,
-          offlineDetectReportVersion: source.offlineDetectReportVersion,
-        };
-        return updated;
-      }));
-    }
+    changed.add(id);
+    if (publishImmediately && this.isCurrentSession(session)) this.presentToggledSources(changed, enabled);
     if (!enabled && !this.gateway.handlesSourceCleanup()) {
       try {
         // Security policy: disabling a source removes both session and
@@ -932,26 +995,21 @@ export class SourceOrchestrator {
         hilog.warn(DOMAIN, 'Reader', 'Disabled source report cleanup failed: %{private}s', errorMessageOf(error));
       }
     }
-    if (!this.isCurrentSession(session)) {
-      this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'failed', '列表尚未刷新');
-      return;
-    }
-    let sources: BookSource[];
-    try {
-      sources = await this.gateway.loadSources(undefined, true, (): boolean => this.isCurrentSession(session));
-    } catch (error) {
-      this.publishToggleReceipt(session, id, evidence.confirmation(), 'failed', observation, (error as Error).message);
-      hilog.warn(DOMAIN, 'Reader',
-        'Source toggle persisted but list reload failed: sourceId=%{private}s enabled=%{private}s err=%{private}s',
-        id, enabled, (error as Error).message);
-      return;
-    }
-    if (this.isCurrentSession(session) && seq === this.toggleSeq) {
-      this.presentSources(sources);
-      this.hasRead = true;
-      this.publishToggleReceipt(session, id, evidence.confirmation(), 'succeeded', observation, undefined, sources);
-      if (reportCleanupWarning.length > 0) this.publishStatus('warning', reportCleanupWarning);
-    }
+    return { id, confirmation: evidence.confirmation(), cleanupWarning: reportCleanupWarning };
+  }
+
+  private presentToggledSources(changed: Set<string>, enabled: boolean): void {
+    this.presentSources(this.sources.map((source: BookSource): BookSource => {
+      if (!changed.has(source.sourceId)) return source;
+      return {
+        sourceId: source.sourceId, name: source.name, baseUrl: source.baseUrl, enabled,
+        enabledExplore: source.enabledExplore, group: source.group, sourceVersion: source.sourceVersion,
+        category: source.category, loginUrl: source.loginUrl, loginState: source.loginState,
+        checkState: source.checkState, checkLevels: source.checkLevels, checkMessage: source.checkMessage,
+        checkReports: source.checkReports, lastCheckSummary: source.lastCheckSummary,
+        offlineDetectReportVersion: source.offlineDetectReportVersion,
+      };
+    }));
   }
 
   private publishToggleReceipt(session: number, id: string, confirmation: CommitConfirmationKind,
@@ -1125,18 +1183,21 @@ export class SourceOrchestrator {
     message: string,
     entry?: SourceCheckHistoryEntry,
   ): void {
-    const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === id);
+    const source = this.checkResults.get(id) ?? this.sourceIndex.get(id);
     if (source === undefined) return;
     const history = entry === undefined ? source.checkReports :
       [entry].concat((source.checkReports ?? []).filter((existing: SourceCheckHistoryEntry): boolean =>
         existing.report.traceId !== entry.report.traceId));
     this.checkResults.set(id, retainSourceV9Check(source, state, levels, message, history));
-    this.presentSources(this.sources);
+    const session = this.session;
+    this.sourcePublication.defer((): void => {
+      if (this.isCurrentSession(session)) this.presentSources(this.sources);
+    });
   }
 
-  private async updateSourceWithRetry(id: string, enabled: boolean): Promise<void> {
+  private async updateSourceWithRetry(id: string, enabled: boolean, current: () => boolean): Promise<void> {
     try {
-      await this.gateway.updateSource(id, { enabled }, (): boolean => ReaderRuntimeOwner.isCurrent(this.owner));
+      await this.gateway.updateSource(id, { enabled }, current);
       return;
     } catch (error) {
       const err = error as Error;
@@ -1146,9 +1207,9 @@ export class SourceOrchestrator {
       // A pending external Host operation blocked the toggle. Wait until Core
       // reports idle, then retry once; a genuine mismatch echo is rethrown
       // above and never retried.
-      await this.waitForCoreIdle(5000);
-      if (!ReaderRuntimeOwner.isCurrent(this.owner)) throw new Error('Source runtime owner retired');
-      await this.gateway.updateSource(id, { enabled }, (): boolean => ReaderRuntimeOwner.isCurrent(this.owner));
+      await this.waitForCoreIdle(5000, current);
+      if (!current()) throw new Error('书源启停意图已退役');
+      await this.gateway.updateSource(id, { enabled }, current);
     }
   }
 
@@ -1174,13 +1235,14 @@ export class SourceOrchestrator {
    * (bounded). `runtime.status` is exempt from the persistence-transaction
    * gate, so it stays responsive while other commands are rejected.
    */
-  private async waitForCoreIdle(maxMillis: number): Promise<void> {
+  private async waitForCoreIdle(maxMillis: number,
+    current: () => boolean = (): boolean => ReaderRuntimeOwner.isCurrent(this.owner)): Promise<void> {
     const deadline = Date.now() + maxMillis;
     while (Date.now() < deadline) {
-      if (!ReaderRuntimeOwner.isCurrent(this.owner)) throw new Error('书源原 Runtime 已退役');
+      if (!current()) throw new Error('书源原操作已退役');
       try {
         const result = await this.owner.request('runtime.status', {}, {
-          canDispatch: (): boolean => ReaderRuntimeOwner.isCurrent(this.owner),
+          canDispatch: current,
         });
         const pending = result.data['pendingHostOperationCount'] as number | undefined;
         if (pending === 0) {
@@ -1201,19 +1263,22 @@ export class SourceOrchestrator {
   }
 
   private presentSources(sources: BookSource[]): void {
+    this.sourcePublication.cancelDeferred();
+    const byId = sources === this.sources ? this.sourceIndex : new SourceListIndex(sources);
     this.verifiedLoginSources.forEach((signature: string, id: string): void => {
-      if (!sources.some((source: BookSource): boolean => source.sourceId === id &&
-        this.sourceCheckSignature(source) === signature)) this.verifiedLoginSources.delete(id);
+      const source = byId.get(id);
+      if (source === undefined || this.sourceCheckSignature(source) !== signature) this.verifiedLoginSources.delete(id);
     });
     this.checkingSourceIds.forEach((capture: SourceCheckCapture, id: string): void => {
-      if (capture.session !== this.session || !sources.some((source: BookSource): boolean =>
-        source.sourceId === id && this.sourceCheckSignature(source) === capture.signature)) this.checkingSourceIds.delete(id);
+      const source = byId.get(id);
+      if (capture.session !== this.session || source === undefined ||
+        this.sourceCheckSignature(source) !== capture.signature) this.checkingSourceIds.delete(id);
     });
     this.checkResults.forEach((checked: BookSource, id: string): void => {
-      if (!sources.some((source: BookSource): boolean => source.sourceId === id &&
-        this.sourceCheckSignature(source) === this.sourceCheckSignature(checked))) this.checkResults.delete(id);
+      const source = byId.get(id);
+      if (source === undefined || this.sourceCheckSignature(source) !== this.sourceCheckSignature(checked)) this.checkResults.delete(id);
     });
-    this.sources = sources.map((source: BookSource): BookSource => {
+    const rows = sources.map((source: BookSource): BookSource => {
       const previous = this.checkResults.get(source.sourceId);
       const clearedAt = this.reportClearTimes.get(source.sourceId) ?? 0;
       const history = (source.checkReports ?? []).filter((entry: SourceCheckHistoryEntry): boolean =>
@@ -1237,6 +1302,10 @@ export class SourceOrchestrator {
       if (projected.loginState === 'expired') this.verifiedLoginSources.delete(source.sourceId);
       return projected;
     });
+    const next = this.sourcePublication.accept(rows);
+    if (next === this.sources) return;
+    this.sources = next;
+    this.sourceIndex = new SourceListIndex(next);
     if (this.isCurrentSession(this.session)) { try { this.emit(this.sources); } catch (_) {} }
   }
 

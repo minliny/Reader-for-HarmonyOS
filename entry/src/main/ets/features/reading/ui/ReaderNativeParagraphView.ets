@@ -1,6 +1,6 @@
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderNativeParagraphController, ReaderNativeParagraphRecipe, ReaderNativeParagraphResource, ReaderNativeParagraphPosition, readerNativeParagraphResource } from './ReaderNativeParagraph';
-import { ReaderDynamicHighlightRect, readerHighlightCanvasColor } from './ReaderDynamicHighlight';
+import { ReaderDynamicHighlightRect, readerHighlightCanvasColor, readerLocalHighlightProjection } from './ReaderDynamicHighlight';
 import { ReadingSurfaceLayoutMap } from '../application/ReadingSurfaceLayoutMap';
 import { readerSelectedOriginalText } from './ReaderTextSelectionProjection';
 import { readerSelectionShareAnchor, readerShareMessage, readerSystemShareActions } from './ReaderSharePresentation';
@@ -15,6 +15,7 @@ export struct ReaderNativeParagraphView {
   private readonly selectionShareAnchor: string = readerSelectionShareAnchor();
   @Prop @Watch('prepare') recipe: ReaderNativeParagraphRecipe;
   resourceProvider: (() => ReaderNativeParagraphResource | undefined) | undefined = undefined;
+  @Prop reuseSharedParagraphResources: boolean = true;
   @Prop @Watch('prepare') gapVp: number = 0;
   @Prop @Watch('updateInk') inkColor: ResourceColor = '#222222';
   @Prop @Watch('updateSelection') selectionEnabled: boolean = false;
@@ -35,7 +36,8 @@ export struct ReaderNativeParagraphView {
   queueHighlightMeasurement: ((action: () => void) => void) | undefined = undefined;
   onHighlightGeometry: (rects: ReaderDynamicHighlightRect[]) => void = (_rects): void => {};
   @Prop localHighlights: boolean = false;
-  @Prop localHighlightViewportHeight: number = 0;
+  @Prop @Watch('updateHighlight') localHighlightViewportTop: number = 0;
+  @Prop @Watch('updateHighlight') localHighlightViewportHeight: number = 0;
   onPositionResolver: (position: ReaderNativeParagraphPosition | undefined) => void = (_position): void => {};
   @State private heightVp: number = 0;
   private readonly controller: ReaderNativeParagraphController = new ReaderNativeParagraphController();
@@ -69,7 +71,8 @@ export struct ReaderNativeParagraphView {
     if (key === this.preparedKey) return;
     this.onSelectionActivity?.(this.selectionShareAnchor, false);
     this.epoch += 1;
-    const resource = this.resourceProvider?.() ?? readerNativeParagraphResource(this.recipe.key);
+    const resource = this.reuseSharedParagraphResources ?
+      (this.resourceProvider?.() ?? readerNativeParagraphResource(this.recipe.key)) : undefined;
     this.controller.prepare(context, this.recipe, this.gapVp, resource);
     this.map = resource?.layoutMap ?? new ReadingSurfaceLayoutMap(this.recipe.text);
     this.heightVp = this.controller.heightVp();
@@ -159,14 +162,11 @@ export struct ReaderNativeParagraphView {
       }
       this.onHighlightGeometry(rects);
       if (this.localHighlights) {
-        this.localRects = rects.filter((rect: ReaderDynamicHighlightRect): boolean =>
-          rect.bottom > 0 && rect.top < this.localHighlightViewportHeight);
-        const top = this.localRects.reduce((value: number, rect: ReaderDynamicHighlightRect): number =>
-          Math.min(value, Math.max(0, rect.top)), this.localHighlightViewportHeight);
-        const bottom = this.localRects.reduce((value: number, rect: ReaderDynamicHighlightRect): number =>
-          Math.max(value, Math.min(this.localHighlightViewportHeight, rect.bottom)), 0);
-        this.localHighlightTop = Math.max(0, top - this.y);
-        this.localHighlightHeight = Math.max(0, bottom - top);
+        const visible = readerLocalHighlightProjection(rects, this.y,
+          this.localHighlightViewportTop, this.localHighlightViewportHeight);
+        this.localRects = visible.rects;
+        this.localHighlightTop = visible.top;
+        this.localHighlightHeight = visible.height;
         this.drawLocalHighlights();
       }
     };
@@ -205,6 +205,7 @@ export struct ReaderNativeParagraphView {
           .translate({ y: this.localHighlightTop })
           .blendMode(this.underline ? BlendMode.SRC_OVER : BlendMode.MULTIPLY)
           .hitTestBehavior(HitTestMode.None)
+          .onAreaChange((): void => this.drawLocalHighlights())
           .onReady((): void => this.drawLocalHighlights());
       }
     }.width('100%').height(this.heightVp);

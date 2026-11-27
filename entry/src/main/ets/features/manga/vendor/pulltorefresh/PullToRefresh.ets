@@ -37,6 +37,7 @@ export struct PullToRefresh {
   @Prop @Watch('handleAdmissionChange') hasPrevious: boolean = true;
   @Prop @Watch('handleAdmissionChange') hasNext: boolean = true;
   @Prop @Watch('handleResetToken') resetToken: number = 0;
+  @Prop requestViewportFixed: boolean = false;
   @Prop animationDuration: number = 180;
   @Prop reduceMotion: boolean = false;
   animationCurve: Curve | curves.ICurve | string | undefined = undefined;
@@ -89,7 +90,9 @@ export struct PullToRefresh {
       (this.pullDirection() === 'next' && !this.hasNext)) this.cancelPull(true);
   }
 
-  private handleResetToken(): void { this.cancelPull(true); }
+  private handleResetToken(): void {
+    if (this.requestPending || this.state !== IS_FREE) this.cancelPull(true, true);
+  }
 
   private triggerDistance(): number {
     return Math.max(120, Math.min(180, this.mHeightNumber * 0.2));
@@ -209,8 +212,11 @@ export struct PullToRefresh {
     }
   }
 
-  private cancelPull(deferParent: boolean = false): void {
+  private cancelPull(deferParent: boolean = false, retireRequest: boolean = false): void {
     this.gestureCancelled = true;
+    // Disabling admission or changing a chapter edge cannot erase an
+    // accepted request's loading strip. Its result or owner reset retires it.
+    if (this.requestPending && !retireRequest) return;
     this.requestGeneration++;
     this.requestPending = false;
     this.resetPull(this.alive, deferParent);
@@ -252,7 +258,7 @@ export struct PullToRefresh {
       Column() { this.customList(); }
       .width('100%')
       .height('100%')
-      .translate({ y: this.reduceMotion ? 0 : this.displayedPull })
+      .translate({ y: this.reduceMotion || this.requestViewportFixed ? 0 : this.displayedPull })
       Stack({ alignContent: Alignment.Bottom }) {
         Stack({ alignContent: Alignment.Top }) {
           if (this.customLoad !== undefined) this.customLoad();

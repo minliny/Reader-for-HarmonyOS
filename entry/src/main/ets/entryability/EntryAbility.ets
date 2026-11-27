@@ -551,6 +551,7 @@ export default class EntryAbility extends UIAbility {
     AppStorage.setOrCreate('readerAppForeground', false);
     ReaderDocumentPickerActivity.setForeground(false);
     this.runtimeOwner?.setReadingPreparationContext(false, false);
+    this.runtimeOwner?.trimMemory('background');
     this.runtimeOwner?.releaseMangaOfflineProbe();
     this.eventLoopProbe?.stop('background');
     this.capacityProbe?.stop();
@@ -559,8 +560,17 @@ export default class EntryAbility extends UIAbility {
     });
   }
 
-  onMemoryLevel(_level: AbilityConstant.MemoryLevel): void {
-    this.runtimeOwner?.releaseOptionalReadingEntryMemory();
+  onMemoryLevel(level: AbilityConstant.MemoryLevel): void {
+    switch (level) {
+      case AbilityConstant.MemoryLevel.MEMORY_LEVEL_CRITICAL:
+        this.runtimeOwner?.trimMemory('critical'); break;
+      case AbilityConstant.MemoryLevel.MEMORY_LEVEL_LOW:
+        this.runtimeOwner?.trimMemory('low'); break;
+      case AbilityConstant.MemoryLevel.MEMORY_LEVEL_MODERATE:
+        this.runtimeOwner?.trimMemory('moderate'); break;
+      default:
+        this.runtimeOwner?.trimMemory('background');
+    }
   }
 
   onDestroy(): void {

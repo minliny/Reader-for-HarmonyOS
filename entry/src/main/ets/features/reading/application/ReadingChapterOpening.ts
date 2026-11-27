@@ -44,6 +44,19 @@ export interface ReadingChapterOpeningHost {
 }
 
 /** Shared cache admission for chapter acquisition and the presentation's loading policy. */
+export function readingChapterMatchesDirectoryProof(chapter: ReadingSessionChapter,
+  context: RemoteReadingPositionContext): boolean {
+  const proof = context.directoryTargetProof;
+  return proof !== undefined && chapter.catalogRevision !== undefined &&
+    chapter.catalogRevision === proof.catalogRevision && chapter.sourceId === proof.sourceId &&
+    chapter.bookId === proof.bookId && chapter.chapterIndex === proof.chapterIndex &&
+    chapter.documentRange === undefined && chapter.positionMigration === undefined &&
+    chapter.sourceCorrectionRequired !== true &&
+    (context.bodyVersion === undefined && context.processingVersion === undefined && context.anchors.length === 0 ||
+      chapter.bodyVersion === context.bodyVersion && chapter.processingVersion === context.processingVersion &&
+        context.bodyVersion !== undefined && context.processingVersion !== undefined);
+}
+
 export function findReusableReadingWindowChapter(
   window: ReadingChapterWindow,
   chapterIndex: number,
@@ -51,9 +64,11 @@ export function findReusableReadingWindowChapter(
   context?: RemoteReadingPositionContext,
 ): ReadingSessionChapter | undefined {
   const cached = window.get(chapterIndex);
-  if (context?.directoryTargetProof === undefined && cached !== undefined &&
+  if (cached !== undefined &&
     cached.sourceCorrectionRequired !== true && cached.documentRange === undefined && !forceRefresh &&
-    (context === undefined || cached.bodyVersion === context.bodyVersion && cached.processingVersion === context.processingVersion)) {
+    (context === undefined || (context.directoryTargetProof === undefined ?
+      cached.bodyVersion === context.bodyVersion && cached.processingVersion === context.processingVersion :
+      readingChapterMatchesDirectoryProof(cached, context)))) {
     return cached;
   }
   return undefined;

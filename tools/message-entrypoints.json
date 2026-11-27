@@ -763,8 +763,8 @@
       "member": "saveOriginalBook",
       "family": "shared.transient",
       "category": "原书另存完成或明确失败",
-      "effectiveHost": "当前仍可操作的书籍详情和已保留原书，沿用详情展示与书籍身份。",
-      "retireRule": "取消不发消息。详情退役后停止写入及反馈，失败保留原书。",
+      "effectiveHost": "当前仍可操作的书籍详情、已保留原书和当次另存代次，沿用详情展示与书籍身份。",
+      "retireRule": "取消不发消息。另存回执只能更新发起代次的忙态和反馈，详情退役或另存意图被替换后忽略旧回执，失败保留原书。",
       "status": "registered-source-entry"
     },
     {
@@ -2485,8 +2485,8 @@
       "owner": "MangaReadingSurface",
       "member": "boundaryHint",
       "category": "漫画章末/章首拖动提示",
-      "effectiveHost": "当前 reader boundaryGeneration、current chapter/原 ChapterTransitions 与真实拖动。",
-      "retireRule": "不足阈值回弹，阈值合格松手才换章；退场/新边界代次清理旧提示，失败保留原章节回退。",
+      "effectiveHost": "当前 reader boundaryGeneration、当前章节、原 ChapterTransitions 和实际手势。已派发切章保留原边界加载反馈。",
+      "retireRule": "不足阈值回弹，阈值合格松手派发切章。边界终态释放加载反馈；退场或新边界使旧回执失效，失败保留原章节回退。",
       "reason": "章边界手势提示保持当前已确认模式，不纳入普通 Toast/常驻通知布局。",
       "status": "dedicated-existing-surface"
     },
@@ -2496,8 +2496,8 @@
       "owner": "MangaReadingSurface",
       "member": "imageViewport",
       "category": "漫画单图/多图不可用占位",
-      "effectiveHost": "当前 controller/manifest/逻辑图像行 renderKey；按原默认图像单元格和边界逐格绘制。",
-      "retireRule": "图像新请求/renderKey/章节变化后重绘；单图失败不触发全局消息，书源/整章失败由 ReaderPageState。",
+      "effectiveHost": "当前 controller、manifest、可见逻辑图像行和 renderKey。按原默认图像单元格和边界逐格呈现失败及就地重试。",
+      "retireRule": "行退出视口或 controller、manifest、renderKey 变化后旧重试动作失效。当前行重试使用新请求代次。单图失败在原占位呈现，书源和整章失败由 ReaderPageState 承载。",
       "reason": "已认可的透明背景不可用图标与逐单元格反馈必须保留。",
       "status": "dedicated-existing-surface"
     },

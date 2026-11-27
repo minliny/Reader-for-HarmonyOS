@@ -47,6 +47,7 @@ export function BookTurnTextureBuilder(input: BookTurnTextureBuildInput) {
   Stack({ alignContent: Alignment.TopStart }) {
     ReadingSurface({
       snapshotSynchronousImages: true,
+      reuseSharedParagraphResources: false,
       chapterTitle: input.page.chapterTitle,
       showChapterTitle: input.page.showChapterTitle,
       pageFragments: input.page.fragments,

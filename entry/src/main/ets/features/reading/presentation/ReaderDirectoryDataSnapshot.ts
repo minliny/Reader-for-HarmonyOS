@@ -6,15 +6,37 @@ import type { LocalReadingTocEntry, LocalReadingBookmark } from '../application/
  * the published snapshot and keep their existing business-owner checks. */
 export class ReaderDirectoryDataPublication {
   private entries: LocalReadingTocEntry[] = [];
+  private byIndex: Map<number, LocalReadingTocEntry> = new Map<number, LocalReadingTocEntry>();
+  private readableRanks: Map<number, number> = new Map<number, number>();
+  private readableCount: number = 0;
   private revision: number = 0;
-  publish(entries: LocalReadingTocEntry[]): number {
+  private lastSourceRef: LocalReadingTocEntry[] | undefined;
+  private lastSourceRevision: number | undefined;
+
+  publish(entries: LocalReadingTocEntry[], sourceRevision?: number): number {
+    // An explicit owner's revision covers in-place changes. Legacy callers
+    // without that guarantee still compare values even on the same array.
+    if (sourceRevision !== undefined && entries === this.lastSourceRef &&
+      sourceRevision === this.lastSourceRevision) return this.revision;
     if (!sameReaderDirectoryData(this.entries, entries)) {
       this.entries = snapshotReaderDirectoryData(entries);
+      this.byIndex.clear();
+      this.readableRanks.clear();
+      this.readableCount = 0;
+      for (const entry of this.entries) {
+        this.byIndex.set(entry.index, entry);
+        if (entry.navigable !== false) this.readableRanks.set(entry.index, this.readableCount++);
+      }
       this.revision += 1;
     }
+    this.lastSourceRef = sourceRevision === undefined ? undefined : entries;
+    this.lastSourceRevision = sourceRevision;
     return this.revision;
   }
   entriesAt(_revision: number): LocalReadingTocEntry[] { return this.entries; }
+  entryAt(_revision: number, index: number): LocalReadingTocEntry | undefined { return this.byIndex.get(index); }
+  readableRankAt(_revision: number, index: number): number | undefined { return this.readableRanks.get(index); }
+  readableCountAt(_revision: number): number { return this.readableCount; }
 }
 
 /** Independent values, not retained aliases: detect same-reference in-place edits too. */

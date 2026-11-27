@@ -1,5 +1,4 @@
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
-import { ReaderBottomNavigation } from '../../../app/navigation/ReaderBottomNavigation';
 import { publishReaderMainViewport } from '../../shell/MainNavigationSpec';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
@@ -25,7 +24,6 @@ export struct ReaderWideSettingsShell {
   @State private paneWidth: number = 0;
   onToggle: () => void = (): void => {};
   onPane: (pane: SettingsPane) => void = (_pane: SettingsPane): void => {};
-  onMainTab: (tab: string) => void = (_tab: string): void => {};
   @BuilderParam content: (width: number) => void;
 
   build() {
@@ -44,9 +42,6 @@ export struct ReaderWideSettingsShell {
         .padding({ left: this.safeLeft(this.metricsRevision), right: this.safeRight(this.metricsRevision), top: 12, bottom: 12 });
       if (this.sharedBottomNavigationHeight >= 0) {
         Row().height(this.sharedBottomNavigationHeight).hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
-      } else {
-        ReaderBottomNavigation({ current: 'settings', inputEnabled: this.interactive,
-          onSelect: (tab: string): void => this.onMainTab(tab) });
       }
     }.width('100%').height('100%')
       .backgroundColor(readerAppColor('TOK_PAPER', this.scheme))

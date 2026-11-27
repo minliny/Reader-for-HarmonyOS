@@ -36,6 +36,7 @@ const DEFAULT_GLOBAL_MAX_BYTES = 128 * 1024 * 1024;
 export class MangaRetainedTileCache {
   private static readonly liveCaches: Set<MangaRetainedTileCache> = new Set();
   private static clock: number = 0;
+  private static budgetDivisor: number = 1;
 
   private readonly completed: Map<string, MangaTile> = new Map();
   private readonly records: Map<string, RetainedTileRecord> = new Map();
@@ -61,6 +62,10 @@ export class MangaRetainedTileCache {
   private static limit(value: number | undefined, fallback: number): number {
     return value === undefined || value === Infinity ? fallback :
       Number.isFinite(value) && value > 0 ? Math.max(1, Math.floor(value)) : fallback;
+  }
+
+  private static pressureLimit(limit: number): number {
+    return Math.max(1, Math.floor(limit / MangaRetainedTileCache.budgetDivisor));
   }
 
   private static bytes(tile: MangaTile): number {
@@ -123,17 +128,21 @@ export class MangaRetainedTileCache {
     }
     const record: RetainedTileRecord = { key, tile, bytes: MangaRetainedTileCache.bytes(tile), ordinal: tile.ordinal,
       lastUsed: ++MangaRetainedTileCache.clock };
-    if (record.bytes > this.chapterMaxBytes || record.bytes > this.globalMaxBytes) return false;
+    const chapterCount = MangaRetainedTileCache.pressureLimit(this.chapterMaxCount);
+    const chapterBytes = MangaRetainedTileCache.pressureLimit(this.chapterMaxBytes);
+    const globalBytes = MangaRetainedTileCache.pressureLimit(this.globalMaxBytes);
+    if (record.bytes > chapterBytes || record.bytes > globalBytes) return false;
     const extraCount = previous === undefined ? 1 : 0;
     const extraBytes = record.bytes - (previous?.bytes ?? 0);
-    while (this.completed.size + extraCount > this.chapterMaxCount || this.retainedBytes + extraBytes > this.chapterMaxBytes) {
+    while (this.completed.size + extraCount > chapterCount || this.retainedBytes + extraBytes > chapterBytes) {
       const candidate = this.oldestUnprotected(key);
       if (candidate === undefined) return false;
       this.remove(candidate.key, true);
     }
     while (true) {
       const limits = MangaRetainedTileCache.globalLimits();
-      const count = Math.min(limits.count, this.globalMaxCount), bytes = Math.min(limits.bytes, this.globalMaxBytes);
+      const count = MangaRetainedTileCache.pressureLimit(Math.min(limits.count, this.globalMaxCount));
+      const bytes = MangaRetainedTileCache.pressureLimit(Math.min(limits.bytes, this.globalMaxBytes));
       if (MangaRetainedTileCache.totalCount() + extraCount <= count && MangaRetainedTileCache.totalBytes() + extraBytes <= bytes) break;
       const owner = MangaRetainedTileCache.globalCandidate(this, key);
       const candidate = owner?.oldestUnprotected(owner === this ? key : undefined);
@@ -164,6 +173,20 @@ export class MangaRetainedTileCache {
     this.completed.clear(); this.records.clear(); this.ordinals.clear(); this.retainedBytes = 0;
     this.unregisterIfEmpty();
     for (const record of records) this.releaseTile(record.tile);
+  }
+
+  static trimUnprotectedAll(): void {
+    for (const cache of Array.from(MangaRetainedTileCache.liveCaches)) {
+      for (const record of Array.from(cache.records.values())) {
+        if (cache.records.get(record.key) === record && !cache.isProtected(record.tile, record.key))
+          cache.remove(record.key, true);
+      }
+    }
+  }
+
+  /** Protected leases can outlive a budget change. New leases obey the reduced budget. */
+  static setMemoryBudget(level: 'normal' | 'low' | 'critical'): void {
+    MangaRetainedTileCache.budgetDivisor = level === 'critical' ? 4 : level === 'low' ? 2 : 1;
   }
 
   private removeRecord(record: RetainedTileRecord): void {

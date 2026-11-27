@@ -11,10 +11,11 @@ import { prepareMangaSheetFonts } from '../../../ui/foundation/ReaderFonts';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderDirectoryNavigationGateway, type ReaderDirectoryNavigationPort, type ReaderDirectoryNavigationPortFactory, readerDirectoryScopeKey,
-  backfillRetainedReaderDirectoryNavigation, readerDirectoryNoteMissingNavigation,
+  backfillRetainedReaderDirectoryNavigation, isReaderDirectoryViewStale, readerDirectoryNoteMissingNavigation,
   type ReaderDirectoryBackfillResult, type ReaderDirectoryNavigationNode, type ReaderDirectoryNavigationReady,
   type ReaderDirectoryNavigationPreparedPage } from '../application/ReaderDirectoryNavigation';
 import { openReaderDirectoryNavigation, readerDirectoryToggleCollapsed } from '../presentation/ReaderDirectoryNavigationSession';
+import { ReaderDirectoryLocalPreparation } from '../application/ReaderDirectoryBackfill';
 import { ReaderDirectoryNavigationList, cacheReaderDirectoryNavigationPage } from './ReaderDirectoryNavigationList';
 import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
 import { readerDirectoryObserveScrollIntent, readerDirectoryViewportAnchor } from '../presentation/ReaderDirectoryViewport';
@@ -131,6 +132,9 @@ export struct ReaderDirectoryNavigationSurface {
   private locateExpectsQueryClear: boolean = false;
   private acceptedCatalogFilter: string | undefined = undefined;
   private scrollIntentUnsubscribe: (() => void) | undefined = undefined;
+  private readonly localPreparation: ReaderDirectoryLocalPreparation = new ReaderDirectoryLocalPreparation();
+  private staleRetryInput: string = '';
+  private neighborPages: number[] = [];
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -372,37 +376,30 @@ export struct ReaderDirectoryNavigationSurface {
     const anchor = ready.locateCurrent || ready.startAtCatalogTop ? undefined :
       readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId));
     const sameRevision = anchor?.navigationRevision === ready.navigationRevision;
-    const target = ready.startAtCatalogTop ? 0 :
-      (sameRevision && ready.anchorVisibleIndex !== undefined ? ready.anchorVisibleIndex : (ready.currentVisibleIndex ?? 0));
-    const offsets: Set<number> = new Set<number>();
-    const includeWindow = (index: number): void => {
-      const center = Math.floor(index / pageSize) * pageSize;
-      for (const offset of [center - pageSize, center, center + pageSize]) {
-        if (offset > 0 && offset < ready.visibleTotal) offsets.add(offset);
-      }
-    };
-    includeWindow(target);
-    // onDataReloaded may ask the old physical viewport before the saved node
-    // is repositioned. Keep that window resolved as well, never as placeholders.
-    if (this.view?.viewId === anchor?.viewId &&
-      anchor !== undefined && anchor.visibleIndex < ready.visibleTotal)
-      includeWindow(anchor.visibleIndex);
+    const anchorIndex = sameRevision ?
+      ready.anchorVisibleIndex ?? (anchor?.viewId === ready.viewId ? anchor?.visibleIndex : undefined) : undefined;
+    const target = ready.startAtCatalogTop ? 0 : (anchorIndex ?? ready.currentVisibleIndex ?? 0);
+    const offset = Math.floor(target / pageSize) * pageSize;
+    this.neighborPages = [offset - pageSize, offset + pageSize]
+      .filter((candidate: number): boolean => candidate > 0 && candidate < ready.visibleTotal);
+    if (offset === 0) return [];
     const isCurrent = (): boolean => this.mounted && generation === this.generation && this.bookId === bookId;
-    return Promise.all(Array.from(offsets).map(async (offset: number): Promise<ReaderDirectoryNavigationPreparedPage> => {
-      const page = await gateway.page(bookId, ready.viewId, offset, isCurrent);
-      if (!isCurrent() || page.viewId !== ready.viewId || page.visibleTotal !== ready.visibleTotal ||
-        page.nodes.length !== Math.min(pageSize, ready.visibleTotal - offset))
-        throw new Error('directory prepared page is stale or incomplete');
-      return { offset, page: cacheReaderDirectoryNavigationPage(ready, offset, page) };
-    }));
+    const page = await gateway.page(bookId, ready.viewId, offset, isCurrent);
+    if (!isCurrent() || page.viewId !== ready.viewId || page.visibleTotal !== ready.visibleTotal ||
+      page.nodes.length !== Math.min(pageSize, ready.visibleTotal - offset))
+      throw new Error('directory prepared page is stale or incomplete');
+    return [{ offset, page: cacheReaderDirectoryNavigationPage(ready, offset, page) }];
   }
 
-  private openTree(first: boolean, reason: string = 'open', pendingTrace?: ReaderDirectoryTrace): void {
+  private openTree(first: boolean, reason: string = 'open', pendingTrace?: ReaderDirectoryTrace,
+    automaticRetry: boolean = false): void {
     const gateway = this.gateway;
     const bookId = this.bookId;
     const sourceId = this.sourceId;
     if (gateway === undefined || bookId.length === 0) return;
     this.openedInputKey = this.currentReadInputKey();
+    if (!automaticRetry) this.staleRetryInput = '';
+    this.neighborPages = [];
     const generation = ++this.generation;
     this.loadPending = false;
     this.loadFailed = false;
@@ -435,6 +432,7 @@ export struct ReaderDirectoryNavigationSurface {
       readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId))?.nodeId;
     const chapterIndex = this.currentChapterIndex >= 0 ? this.currentChapterIndex : undefined;
     const runtimeOwner = this.runtimeOwner;
+    const displayEpoch = this.openRevision;
     let unavailableReason = '';
     let backfill: Promise<ReaderDirectoryBackfillResult> | undefined;
     const current = (): boolean => this.mounted && generation === this.generation &&
@@ -448,8 +446,10 @@ export struct ReaderDirectoryNavigationSurface {
         // The standalone catalog can be opened before the book ever reaches a
         // readable frame. Only its explicit TXT open may prepare from stored text.
         if (this.prepareLocalTxt && runtimeOwner !== undefined) {
-          backfill = backfillRetainedReaderDirectoryNavigation(runtimeOwner, bookId,
-            (): boolean => current() && ReaderRuntimeOwner.isCurrent(runtimeOwner), 'txt');
+          backfill = this.localPreparation.run(bookId, displayEpoch,
+            (): Promise<ReaderDirectoryBackfillResult> => backfillRetainedReaderDirectoryNavigation(runtimeOwner, bookId,
+              (): boolean => this.mounted && this.bookId === bookId && this.sourceId === sourceId &&
+                this.openRevision === displayEpoch && ReaderRuntimeOwner.isCurrent(runtimeOwner), 'txt'));
         } else {
           backfill = readerDirectoryNoteMissingNavigation(bookId, failure, reason === 'retry');
         }
@@ -540,16 +540,26 @@ export struct ReaderDirectoryNavigationSurface {
         this.locateCurrentPending = false;
         this.onTreeStateChange(true);
         trace.step('published');
-        if (trace.isEnabled()) try {
+        const neighborPages = this.neighborPages;
+        if (trace.isEnabled() || neighborPages.length > 0) try {
           this.getUIContext().postFrameCallback(new ReaderDirectoryTraceFrame((): void => {
             trace.step('frame-callback', this.mounted && generation === this.generation && this.view?.viewId === ready.viewId
               ? 'ready' : 'stale');
+            if (!current() || this.view?.viewId !== ready.viewId) return;
+            for (const offset of neighborPages) {
+              void gateway.page(bookId, ready.viewId, offset, current).then((page): void => {
+                if (current() && this.view?.viewId === ready.viewId && page.viewId === ready.viewId &&
+                  page.visibleTotal === ready.visibleTotal && page.nodes.length === Math.min(256, ready.visibleTotal - offset))
+                  cacheReaderDirectoryNavigationPage(ready, offset, page);
+              }).catch((): void => { /* Actual viewport admission owns retry and stale recovery. */ });
+            }
           }));
         } catch (_error) { trace.step('frame-callback', 'unavailable'); }
       }).catch((_error: Error): void => {
         const current = this.mounted && generation === this.generation && this.bookId === bookId && this.sourceId === sourceId;
         trace.step('response', current ? 'failed' : 'cancelled');
         if (!current) return;
+        if (isReaderDirectoryViewStale(_error) && this.reopenStale(first)) return;
         this.openingGeneration = -1;
         this.loadPending = false;
         this.loadFailed = true;
@@ -590,7 +600,17 @@ export struct ReaderDirectoryNavigationSurface {
     this.openTree(false, 'fold');
   }
 
-  private invalidate(): void {
+  private reopenStale(first: boolean): boolean {
+    const key = this.currentReadInputKey();
+    if (this.staleRetryInput === key) return false;
+    this.staleRetryInput = key;
+    this.cancelQueryTimer();
+    this.openTree(first, 'stale-view', undefined, true);
+    return true;
+  }
+
+  private invalidate(stale: boolean = false): void {
+    if (stale && this.reopenStale(false)) return;
     this.cancelQueryTimer();
     this.generation += 1;
     this.openingGeneration = -1;
@@ -754,7 +774,7 @@ export struct ReaderDirectoryNavigationSurface {
               onFirstLayout: (): void => { if (this.mounted) this.onFirstLayout(); },
               onScrollOffset: (offset: number): void => this.onScrollOffset(offset),
               onClearSearch: (): void => this.onClearSearch(),
-              onInvalidated: (): void => { if (!this.awaitingRulesRefresh) this.invalidate(); },
+              onInvalidated: (stale: boolean): void => { if (!this.awaitingRulesRefresh && !this.loadPending) this.invalidate(stale); },
               onDeleteBookmarks: (times: number[]): void => {
                 if (this.directoryInputCurrent() && this.bookmarkActionsEnabled) this.onDeleteBookmarks(times);
               },

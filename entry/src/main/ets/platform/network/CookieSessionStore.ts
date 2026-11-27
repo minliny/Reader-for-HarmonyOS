@@ -4,6 +4,7 @@ import url from '@ohos.url';
 import util from '@ohos.util';
 import type { JsonObject } from '@reader/core-harmony';
 import { isCookieVisibleToScript, isExactCookieDomainScope } from './CookieSecurityPolicy';
+import { CookiePersistenceQueue } from './CookiePersistenceQueue';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import { READER_PUBLIC_FIXTURE_IDS, type ReaderPublicFixtureId, type ReaderPublicFixtureScope } from '../../app/diagnostics/ReaderPublicFixtureScope';
 
@@ -102,7 +103,10 @@ export class CookieSessionStore {
 
   private readonly cookies: StoredCookie[] = [];
   private loadPromise: Promise<void> | null = null;
-  private writeTail: Promise<void> = Promise.resolve();
+  private readonly writes = new CookiePersistenceQueue(
+    (): Promise<void> => this.persist(),
+    (): void => hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store persistence failed'),
+  );
   private creationSequence: number = Date.now();
   private persistedChunkCount: number = 0;
   private persistedGeneration: string | undefined = undefined;
@@ -130,7 +134,7 @@ export class CookieSessionStore {
     const normalizedSessionId = this.requireSessionId(sessionId);
     const parsed = this.parseHttpUrl(requestUrl);
     const now = Date.now();
-    await this.removeExpiredAndPersist(now);
+    if (this.removeExpired(now)) void this.schedulePersist();
     const matched = this.cookies.filter((cookie: StoredCookie): boolean => {
       return cookie.sessionId === normalizedSessionId &&
         this.cookieMatchesUrl(cookie, parsed, now);
@@ -455,23 +459,18 @@ export class CookieSessionStore {
   }
 
   private schedulePersist(required: boolean = false): Promise<void> {
-    const next = this.writeTail.then((): Promise<void> => this.persist());
-    // Keep the serialization chain usable after a fault, while a user's
-    // explicit clear receives the original rejection.
-    this.writeTail = next.catch((): void => {
-      hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store persistence failed');
-    });
-    return required ? next : this.writeTail;
+    return this.writes.schedule(required);
   }
 
   private async persist(): Promise<void> {
-    await this.recoverPendingWrite();
+    const now = Date.now();
     const persistent = this.cookies.filter((cookie: StoredCookie): boolean => {
-      return cookie.expiresAtMs !== null && cookie.expiresAtMs > Date.now();
+      return cookie.expiresAtMs !== null && cookie.expiresAtMs > now;
     });
     if (persistent.length > MAX_PERSISTED_COOKIES) { throw new Error('cookie count limit exceeded'); }
     const payload = this.utf8(JSON.stringify({ formatVersion: FORMAT_VERSION, cookies: persistent }));
     if (payload.length > MAX_PERSISTED_BYTES) { throw new Error('cookie byte limit exceeded'); }
+    await this.recoverPendingWrite();
     const chunks = persistent.length === 0 ? [] : this.chunkPayload(payload);
     this.generationSequence += 1;
     const generation = `${Date.now().toString(36)}-${this.generationSequence.toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -856,6 +855,10 @@ export class CookieSessionStore {
   }
 
   private async removeExpiredAndPersist(now: number): Promise<void> {
+    if (this.removeExpired(now)) await this.schedulePersist();
+  }
+
+  private removeExpired(now: number): boolean {
     let persistentChanged = false;
     for (let index = this.cookies.length - 1; index >= 0; index -= 1) {
       const cookie = this.cookies[index];
@@ -865,9 +868,7 @@ export class CookieSessionStore {
       persistentChanged = true;
       this.cookies.splice(index, 1);
     }
-    if (persistentChanged) {
-      await this.schedulePersist();
-    }
+    return persistentChanged;
   }
 
   private cookieMatchesUrl(cookie: StoredCookie, parsed: url.URL, now: number): boolean {

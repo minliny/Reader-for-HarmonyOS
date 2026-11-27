@@ -4,6 +4,7 @@ import { UIContext } from '@ohos.arkui.UIContext';
 import { RectShape } from '@ohos.arkui.shape';
 import { text as graphicsText } from '@kit.ArkGraphics2D';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { ReaderNativeLineExtents, type ReaderNativeLineBounds } from './ReaderNativeLineExtents';
 import { ReaderNativeTextStyle, readerNativeTextGeometryKey, readerNativeTextNodeGeometry, readerNativeTextNodeContent,
   readerNativeTextPunctuationOverhang } from './ReaderNativeTextMeasurement';
 
@@ -11,15 +12,22 @@ export interface ReaderNativeGlyphRect { left: number; top: number; right: numbe
 
 /** Native ink extents for page admission before transferring node ownership. */
 export function readerNativeParagraphHeight(manager: LayoutManager, firstLine: number, lastLine: number): number {
-  const first = manager.getLineMetrics(firstLine), last = manager.getLineMetrics(lastLine);
-  let top = first.topHeight, bottom = last.topHeight + last.height;
-  for (const box of manager.getRectsForRange({ start: first.startIndex, end: last.endIndex },
-    graphicsText.RectWidthStyle.TIGHT, graphicsText.RectHeightStyle.TIGHT)) {
-    top = Math.min(top, box.rect.top); bottom = Math.max(bottom, box.rect.bottom);
-  }
-  if (!Number.isFinite(top) || !Number.isFinite(bottom) || bottom <= top)
-    throw new Error('NATIVE_TEXT_WINDOW_GEOMETRY_INVALID');
-  return bottom - top;
+  return readerNativeParagraphLineExtents(manager).height(firstLine, lastLine);
+}
+
+/** Keep native glyph overhang in each measured line, including fallback runs. */
+export function readerNativeParagraphLineExtents(manager: LayoutManager): ReaderNativeLineExtents {
+  return new ReaderNativeLineExtents((index: number): ReaderNativeLineBounds => {
+    const line = manager.getLineMetrics(index);
+    let top = line.topHeight, bottom = line.topHeight + line.height;
+    if (line.endIndex > line.startIndex) {
+      for (const box of manager.getRectsForRange({ start: line.startIndex, end: line.endIndex },
+        graphicsText.RectWidthStyle.TIGHT, graphicsText.RectHeightStyle.TIGHT)) {
+        top = Math.min(top, box.rect.top); bottom = Math.max(bottom, box.rect.bottom);
+      }
+    }
+    return { top, bottom };
+  });
 }
 
 /** A viewport of one shaped native paragraph. The caller transfers its Text

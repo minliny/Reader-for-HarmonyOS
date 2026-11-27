@@ -3,7 +3,7 @@ import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvalu
 import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
-import { bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
+import { bookCoverDisplayUrl, rememberBookCoverFailure } from '../../../app/library/BookCoverDisplay';
 import { BOOKSHELF_GRID_TEXT_GAP, BOOKSHELF_GRID_TITLE_LINES } from './BookshelfGridSpec';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
@@ -201,6 +201,7 @@ export struct BookshelfPage {
   @State private paneWidth: number = 0;
   private viewportRestored: boolean = false;
   @State private failedCoverUrls: string[] = [];
+  private coverFailureGeneration: number = 0;
   private projectedWideLayout: boolean = false;
   private viewportRestoreGeneration: number = 0;
   private detailReturnFocus: BookshelfDetailReturnFocus | undefined;
@@ -611,6 +612,8 @@ export struct BookshelfPage {
         Image(this.coverUrl(bookProvider()) ?? '')
           .width(this.continueCardFrame(expandedLayout).coverWidth)
           .height(this.continueCardFrame(expandedLayout).coverHeight)
+          .autoResize(true).sourceSize({ width: this.continueCardFrame(expandedLayout).coverWidth,
+            height: this.continueCardFrame(expandedLayout).coverHeight })
           .objectFit(ImageFit.Cover).borderRadius(8)
           .onError(this.coverErrorHandler(this.coverUrl(bookProvider())));
       } else {
@@ -1278,6 +1281,8 @@ export struct BookshelfPage {
         Image(this.coverUrl(book) as string)
           .width(this.shelfBookCardWidth(expandedLayout))
           .height(this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout))
+          .autoResize(true).sourceSize({ width: this.shelfBookCardWidth(expandedLayout),
+            height: this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout) })
           .objectFit(ImageFit.Cover)
           .borderRadius(this.projectionCoverRadius(expandedLayout, index()))
           .onError(this.coverErrorHandler(this.coverUrl(book)));
@@ -1887,6 +1892,10 @@ export struct BookshelfPage {
   }
 
   private onBooksChanged(): void {
+    if (this.failedCoverUrls.length > 0) {
+      this.coverFailureGeneration++;
+      this.failedCoverUrls = [];
+    }
     if (this.actionBook !== undefined && this.currentVisibleBook(this.actionBook) === undefined) {
       this.dismissBookActionSheet(this.actionSheetId, this.actionBook);
     }
@@ -2234,9 +2243,11 @@ export struct BookshelfPage {
   }
 
   private coverErrorHandler(url: string | undefined): () => void {
+    const generation = this.coverFailureGeneration;
     return (): void => {
-      if (!this.mounted || url === undefined || this.failedCoverUrls.includes(url)) return;
-      this.failedCoverUrls = [...this.failedCoverUrls, url];
+      if (!this.mounted || generation !== this.coverFailureGeneration || url === undefined) return;
+      const next = rememberBookCoverFailure(this.failedCoverUrls, url);
+      if (next !== this.failedCoverUrls) this.failedCoverUrls = next;
     };
   }
 }

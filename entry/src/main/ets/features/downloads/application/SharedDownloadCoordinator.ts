@@ -8,6 +8,7 @@ import { RemoteReadingFlowGateway, type RemoteReadingSession, type RemoteReading
 import { MangaDownloadActionsGateway } from '../../manga/application/MangaDownloadActionsGateway';
 import { CacheClearOperationIntentStore } from '../../reading/application/ReadingOperationIntents';
 import { SharedDownloadIntentPreferences } from './SharedDownloadIntentPreferences';
+import { SharedDownloadIntentWriteQueue } from './SharedDownloadIntentWriteQueue';
 import { readingOfflineFailureHint } from '../../reading/presentation/ReadingOfflineFailurePresentation';
 import { classifyReaderSource } from '../../source/application/ReaderSourceCategory';
 
@@ -107,7 +108,7 @@ export class SharedDownloadCoordinator {
   private readonly listeners: Set<(snapshot: SharedDownloadCoordinatorSnapshot) => void> = new Set();
   private restoreWork?: Promise<void>;
   private intentsAdmitted: boolean = false;
-  private writeTail: Promise<void> = Promise.resolve();
+  private readonly intentWrites: SharedDownloadIntentWriteQueue<SharedDownloadIntent[]>;
   private restoring: boolean = false;
   private error: string = '';
   private closed: boolean = false;
@@ -119,6 +120,8 @@ export class SharedDownloadCoordinator {
       if (runtime.getUIAbilityContext === undefined) throw new Error('下载记录存储尚未就绪');
       this.persistence = new SharedDownloadIntentPreferences(runtime.getUIAbilityContext());
     }
+    this.intentWrites = new SharedDownloadIntentWriteQueue((): SharedDownloadIntent[] => this.intentSnapshot(),
+      (snapshot: SharedDownloadIntent[]): Promise<void> => this.persistence.save(snapshot));
   }
 
   books(): ShelfBook[] { return Array.from(this.intents.values()).map(intent => ({ ...intent.book })); }
@@ -287,12 +290,13 @@ export class SharedDownloadCoordinator {
         const requested = new Set(intent.requestedIndexes);
         intent.pausedIndexes = this.union(intent.pausedIndexes, selected.filter(index => requested.has(index)));
       } else if (action === 'resume') {
-        intent.requestedIndexes = this.union(intent.requestedIndexes, selected);
-        intent.retainedIndexes = this.union(intent.retainedIndexes, selected);
-        intent.pausedIndexes = intent.pausedIndexes.filter(index => !selectedSet.has(index));
         stage = 'resume-control';
         await this.control(intent, 'resume', selected);
         lastConfirmed = 'queue-controlled';
+        // A different book may request a journal write while queue control is pending.
+        intent.requestedIndexes = this.union(intent.requestedIndexes, selected);
+        intent.retainedIndexes = this.union(intent.retainedIndexes, selected);
+        intent.pausedIndexes = intent.pausedIndexes.filter(index => !selectedSet.has(index));
       } else {
         intent.requestedIndexes = intent.requestedIndexes.filter(index => !selectedSet.has(index));
         intent.pausedIndexes = intent.pausedIndexes.filter(index => !selectedSet.has(index));
@@ -824,10 +828,19 @@ export class SharedDownloadCoordinator {
       intent.pausedIndexes.some(index => !requested.has(index))) throw new Error('下载记录无法验证，原记录已保留');
   }
   private persist(): Promise<void> {
-    const encoded = JSON.stringify(Array.from(this.intents.values()));
-    const work = this.writeTail.then((): Promise<void> => this.persistence.save(JSON.parse(encoded) as SharedDownloadIntent[]));
-    this.writeTail = work.then((): void => {}, (): void => {});
-    return work;
+    return this.intentWrites.request();
+  }
+  private intentSnapshot(): SharedDownloadIntent[] {
+    return Array.from(this.intents.values(), (intent: SharedDownloadIntent): SharedDownloadIntent => {
+      const book = intent.book;
+      const position = book.readingPosition;
+      return { version: intent.version, key: intent.key,
+        book: { ...book, readingPosition: position === undefined ? undefined : { ...position } },
+        session: this.persistedSession(intent.session), requestedIndexes: intent.requestedIndexes.slice(),
+        retainedIndexes: intent.retainedIndexes.slice(), preservedRetentions: intent.preservedRetentions.map(row =>
+          ({ chapterIndex: row.chapterIndex, chapterId: row.chapterId })),
+        pausedIndexes: intent.pausedIndexes.slice(), status: intent.status, error: intent.error, updatedAt: intent.updatedAt };
+    });
   }
   private serialized<T>(key: string, operation: () => Promise<T>): Promise<T> {
     const prior = this.operations.get(key) ?? Promise.resolve();

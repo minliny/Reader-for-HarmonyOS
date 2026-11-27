@@ -19,6 +19,14 @@ export interface MangaImageMetadataProof {
 }
 export type MangaImageMetadataInspector = (bytes: Uint8Array, sha256: string, current: () => boolean) => Promise<MangaImageMetadataProof>;
 
+/** A display admission failure carries no evidence of damaged original bytes. */
+export class ReadingImagePresentationPolicyError extends Error {
+  constructor(code: 'READING_IMAGE_DECODE_WORKING_BUDGET' | 'READING_IMAGE_FRAME_COUNT_INVALID') {
+    super(code);
+    this.name = 'ReadingImagePresentationPolicyError';
+  }
+}
+
 export type ReadingBodyImagePayload = {
   /**
    * Kept optional for the shared DTO boundary. Production Harmony rendering
@@ -51,6 +59,9 @@ const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
 // or the synchronous platform decoder sees a source-controlled string.
 const MAX_READING_IMAGE_DATA_URI_CHARS = Math.ceil(MAX_READING_IMAGE_BYTES / 3) * 4 + 4096;
 const MAX_READING_IMAGE_PIXELS = 4 * 1024 * 1024;
+const MAX_NOVEL_IMAGE_SOURCE_DIMENSION = 16 * 1024;
+const MAX_NOVEL_IMAGE_WORKING_BYTES = 64 * 1024 * 1024;
+const NOVEL_IMAGE_DECODE_CONCURRENCY = 2;
 // Conservative codec-surface admission, independently tunable from the fixed
 // 1Mi-pixel manga output budget. This is not a total-process memory guarantee.
 const MAX_MANGA_DECODE_WORKING_BYTES = 4 * 1024 * 1024;
@@ -92,10 +103,16 @@ export class ReadingBodyImageHost {
   private mangaMetadataInspector: MangaImageMetadataInspector | undefined;
   private mangaMetadataProofs: util.LRUCache<string, MangaImageMetadataProof> | undefined;
   private mangaMetadataGeneration: number = 0;
+  private mangaMetadataProofEpoch: number = 0;
+
+  trimMangaMetadataProofs(): void {
+    this.mangaMetadataProofEpoch++;
+    this.mangaMetadataProofs?.clear();
+  }
 
   setMangaMetadataInspector(inspector?: MangaImageMetadataInspector): void {
     this.mangaMetadataGeneration++;
-    this.mangaMetadataProofs?.clear();
+    this.trimMangaMetadataProofs();
     this.mangaMetadataInspector = inspector;
     if (inspector !== undefined && this.mangaMetadataProofs === undefined) this.mangaMetadataProofs = new util.LRUCache<string, MangaImageMetadataProof>(128);
   }
@@ -115,12 +132,19 @@ export class ReadingBodyImageHost {
   private resourceGeneration: number = 0;
   private displayCacheCleanupGeneration: number = 0;
   private nextTemporaryFile: number = 0;
+  private novelDecodeActive: number = 0;
+  private readonly novelDecodeWaiters = new Array<() => void>();
   private mangaDisplay: MangaDisplayRetention | undefined;
   private mangaDisplayReserve: ((chapter: MangaStorageChapter, bytes: number, priority: 'foreground' | 'chapter' | 'background' | 'download') => Promise<{ release(): void }>) | undefined;
+  private mangaDisplayPublication: ((files?: MangaDisplayInventoryFile[]) => Promise<void>) | undefined;
 
   setMangaDisplayReserve(reserve: (chapter: MangaStorageChapter, bytes: number,
     priority: 'foreground' | 'chapter' | 'background' | 'download') => Promise<{ release(): void }>): void {
     this.mangaDisplayReserve = reserve;
+  }
+
+  setMangaDisplayPublication(publish: (files?: MangaDisplayInventoryFile[]) => Promise<void>): void {
+    this.mangaDisplayPublication = publish;
   }
 
   async mangaDisplayInventory(): Promise<MangaDisplayInventoryFile[]> {
@@ -132,8 +156,11 @@ export class ReadingBodyImageHost {
    * Original manga files and Core manifests are owned by ReadingImageDiskCache;
    * this method only touches the versioned display namespace. */
   async clearRebuildableMangaDisplay(current: () => boolean = (): boolean => true): Promise<number> {
-    await this.recoverMangaTemporaryFiles();
-    return this.mangaDisplay?.clearRebuildable(current) ?? 0;
+    const publish = this.mangaDisplayPublication;
+    try {
+      await this.recoverMangaTemporaryFiles();
+      return await this.mangaDisplay?.clearRebuildable(current) ?? 0;
+    } finally { await publish?.(); }
   }
 
   private async recoverMangaTemporaryFiles(): Promise<void> {
@@ -187,6 +214,7 @@ export class ReadingBodyImageHost {
     const generation = this.resourceGeneration;
     const retention = this.mangaDisplay;
     const reserve = this.mangaDisplayReserve;
+    const publish = this.mangaDisplayPublication;
     const current = (): boolean => generation === this.resourceGeneration &&
       retention === this.mangaDisplay && reserve === this.mangaDisplayReserve && isCurrent?.() !== false;
     this.assertCurrent(current);
@@ -209,13 +237,15 @@ export class ReadingBodyImageHost {
     // An unscaled small image reuses its bounded encoded original; a tile
     // packs at most the existing 1Mi-pixel output plus metadata overhead.
     const reservation = await reserve?.(chapter,
-      Math.max(MAX_READING_IMAGE_BYTES, MAX_MANGA_OUTPUT_BYTES) + 65536, priority);
+      Math.max(bytes.byteLength, MAX_MANGA_OUTPUT_BYTES) + 65536, priority);
     let payload: ReadingBodyImagePayload | undefined;
     try {
       payload = await this.decodeBytes(bytes, current, mangaPosition, mangaPreview, key);
-      await retention.store(key, chapter, payload, current);
+      const files = await retention.store(key, chapter, payload, current);
+      await publish?.(files);
       return payload;
     } catch (error) {
+      await publish?.();
       if (payload !== undefined) this.release(payload.fileUri);
       throw error;
     } finally { reservation?.release(); }
@@ -412,7 +442,7 @@ export class ReadingBodyImageHost {
   releaseAllDisplayFiles(): void {
     this.resourceGeneration += 1;
     this.mangaMetadataGeneration++;
-    this.mangaMetadataProofs?.clear();
+    this.trimMangaMetadataProofs();
     this.resourcePayloads.clear();
     this.resourceReads.clear();
     for (const path of this.displayFileReferences.keys()) {
@@ -486,6 +516,7 @@ export class ReadingBodyImageHost {
     const inspector = this.mangaMetadataInspector;
     if (inspector === undefined) throw new Error('MANGA_REGION_METADATA_UNAVAILABLE');
     const generation = this.mangaMetadataGeneration;
+    const proofEpoch = this.mangaMetadataProofEpoch;
     const current = (): boolean => generation === this.mangaMetadataGeneration && isCurrent?.() !== false;
     const key = `${sha256}:${bytes.byteLength}`;
     try {
@@ -498,7 +529,7 @@ export class ReadingBodyImageHost {
           (proof.status !== 'present' && proof.status !== 'absent') ||
           (proof.status === 'absent' && proof.orientation !== null) ||
           (proof.orientation !== null && (!Number.isSafeInteger(proof.orientation) || proof.orientation < 1 || proof.orientation > 8))) throw new Error('MANGA_METADATA_PROOF_INVALID');
-        this.mangaMetadataProofs?.put(key, proof);
+        if (proofEpoch === this.mangaMetadataProofEpoch) this.mangaMetadataProofs?.put(key, proof);
       }
       return proof;
     } catch (error) {
@@ -531,16 +562,17 @@ export class ReadingBodyImageHost {
     mangaPreview: boolean = false,
   ): Promise<T> {
     if (mangaPreview && mangaPosition === undefined) throw new Error('MANGA_REGION_OUT_OF_RANGE');
-    // Metadata proof hashes exactly this view. Native ImageSource accepts an
-    // ArrayBuffer, so slice only partial views; full image buffers stay zero-copy.
-    const encoded = bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength ? bytes.buffer : bytes.slice().buffer;
-    const imageSource = image.createImageSource(encoded);
-    if (imageSource === undefined) {
-      throw new Error('reading body image format is not supported by this device');
-    }
-    if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'body', event: 'open', resource: 'source' });
+    if (mangaPosition === undefined) await this.enterNovelImageDecode();
+    let imageSource: image.ImageSource | undefined = undefined;
     let pixelMap: image.PixelMap | undefined = undefined;
     try {
+      this.assertCurrent(isCurrent);
+      // Metadata proof hashes this view. Native ImageSource accepts an
+      // ArrayBuffer, so slice only partial views.
+      const encoded = bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength ? bytes.buffer : bytes.slice().buffer;
+      imageSource = image.createImageSource(encoded);
+      if (imageSource === undefined) throw new Error('reading body image format is not supported by this device');
+      if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'body', event: 'open', resource: 'source' });
       const info = await imageSource.getImageInfo(0);
       const metadata = mangaPosition === undefined ? undefined : await this.assertMangaImageMetadata(imageSource, info.mimeType, bytes, byteHash ?? await this.sha256(bytes), isCurrent);
       const orientation = metadata?.orientation ?? 1;
@@ -617,6 +649,17 @@ export class ReadingBodyImageHost {
       } else if (target.width !== intrinsicWidth || target.height !== intrinsicHeight) {
         options.desiredSize = target;
       }
+      if (mangaPosition === undefined) {
+        // Bound full-resolution codec surfaces even when a smaller output
+        // was requested. An animated original would bypass the decode lane
+        // after publishing its file URI, so admit only single-frame bodies.
+        const workingBytes = sourceWidth * sourceHeight * 8 + target.width * target.height * 4;
+        if (sourceWidth > MAX_NOVEL_IMAGE_SOURCE_DIMENSION || sourceHeight > MAX_NOVEL_IMAGE_SOURCE_DIMENSION ||
+          !Number.isSafeInteger(workingBytes) || workingBytes > MAX_NOVEL_IMAGE_WORKING_BYTES)
+          throw new ReadingImagePresentationPolicyError('READING_IMAGE_DECODE_WORKING_BUDGET');
+        if (await imageSource.getFrameCount() !== 1)
+          throw new ReadingImagePresentationPolicyError('READING_IMAGE_FRAME_COUNT_INVALID');
+      }
       if (mangaPosition !== undefined) {
         const profile = metadata?.decodeProfile;
         const format = info.mimeType.slice('image/'.length);
@@ -686,7 +729,9 @@ export class ReadingBodyImageHost {
       if (regionHeight !== undefined && (width !== intrinsicWidth || height !== regionHeight)) {
         throw new Error('MANGA_REGION_TRANSFORM_MISMATCH');
       }
-      return await consume(pixelMap, width, height, options.desiredSize !== undefined || regionY !== undefined, intrinsicWidth, intrinsicHeight, regionY);
+      const wholeUnchanged = orientation === 1 && width === sourceWidth && height === sourceHeight &&
+        (regionY === undefined || (regionY === 0 && regionHeight === intrinsicHeight));
+      return await consume(pixelMap, width, height, !wholeUnchanged, intrinsicWidth, intrinsicHeight, regionY);
     } finally {
       if (pixelMap !== undefined) {
         try {
@@ -696,15 +741,31 @@ export class ReadingBodyImageHost {
           if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'body', event: 'release-error', resource: 'pixel' });
         }
       }
-      try {
-        await imageSource.release();
-        if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'body', event: 'release', resource: 'source' });
-      } catch (_) {
-        if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'body', event: 'release-error', resource: 'source' });
-        // The decoded PixelMap is already released and no native handle is
-        // published. A platform release error must not orphan the display URI.
+      if (imageSource !== undefined) {
+        try {
+          await imageSource.release();
+          if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'body', event: 'release', resource: 'source' });
+        } catch (_) {
+          if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'body', event: 'release-error', resource: 'source' });
+          // The decoded PixelMap is already released and no native handle is published.
+        }
       }
+      if (mangaPosition === undefined) this.leaveNovelImageDecode();
     }
+  }
+
+  private async enterNovelImageDecode(): Promise<void> {
+    if (this.novelDecodeActive < NOVEL_IMAGE_DECODE_CONCURRENCY) {
+      this.novelDecodeActive++;
+      return;
+    }
+    await new Promise<void>((resolve): void => { this.novelDecodeWaiters.push(resolve); });
+  }
+
+  private leaveNovelImageDecode(): void {
+    const next = this.novelDecodeWaiters.shift();
+    if (next === undefined) this.novelDecodeActive--;
+    else next();
   }
 
   /**

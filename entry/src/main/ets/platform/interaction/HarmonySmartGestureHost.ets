@@ -79,9 +79,11 @@ export class ReaderSmartGestureShortcut implements AttributeModifier<CommonAttri
 
   applyNormalAttribute(attribute: CommonAttribute): void {
     if (deviceInfo.distributionOSApiVersion >= 260000) {
-      if (deviceInfo.apiAvailable('26.0.0')) {
-        attribute.smartGestureShortcut({ enabled: this.enabled, selectable: false, action: GestureShortcut.PRIMARY });
-      }
+      try {
+        if (deviceInfo.apiAvailable('26.0.0')) {
+          attribute.smartGestureShortcut({ enabled: this.enabled, selectable: false, action: GestureShortcut.PRIMARY });
+        }
+      } catch (_) { /* The normal touch and keyboard inputs remain available. */ }
     }
   }
 }

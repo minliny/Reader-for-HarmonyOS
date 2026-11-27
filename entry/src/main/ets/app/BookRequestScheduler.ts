@@ -2,7 +2,7 @@ import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/
 
 export type BookRequestPriority = 'foreground' | 'search' | 'background';
 export type BookRequestExecutor = (
-  method: string, params: JsonObject, options: RequestOptions,
+  method: string, params: JsonObject, options: BookRequestOptions,
 ) => Promise<ReaderCoreResultEvent>;
 
 export interface BookRequestOptions extends RequestOptions {
@@ -34,6 +34,10 @@ type RequestJob = {
 };
 
 export class BookRequestNotDispatchedError extends Error {}
+
+export function usesBackgroundSourceCheckLane(method: string): boolean {
+  return method === 'source.check.run' || method === 'source.check.ephemeral.run';
+}
 
 function priorityRank(priority: BookRequestPriority): number {
   return priority === 'foreground' ? 0 : priority === 'search' ? 1 : 2;
@@ -78,9 +82,11 @@ export class BookRequestScheduler {
     version: string, priority: BookRequestPriority): Promise<ReaderCoreResultEvent> {
     if (this.closed) return Promise.reject(new Error('书籍任务已关闭'));
     // Preserve rule variables and all semantic parameters in the sharing key.
-    // Diagnostic/replay Host overrides are intentionally not shared.
-    const key = JSON.stringify([method, version, params]);
-    let job = options.hostRequest === undefined ? this.jobs.get(key) : undefined;
+    // Each check owns its original Core request and diagnostics, even when
+    // two callers happen to select the same sources and capability levels.
+    const shareable = options.hostRequest === undefined && !usesBackgroundSourceCheckLane(method);
+    const key = shareable ? JSON.stringify([method, version, params]) : '';
+    let job = shareable ? this.jobs.get(key) : undefined;
     // Once Core has observed cancellation, a later same-key caller must start
     // a new request instead of reviving an operation already being unwound.
     if (job !== undefined && this.cancelled(job)) job = undefined;
@@ -102,7 +108,7 @@ export class BookRequestScheduler {
       consumers: [{ cancelled: options.shouldCancel, canContinue: options.canContinue,
         canDispatch: options.canDispatch, onDispatch: options.onDispatch }],
       promise, resolve: resolveResult, reject: rejectResult };
-    if (options.hostRequest === undefined) this.jobs.set(key, job);
+    if (shareable) this.jobs.set(key, job);
     this.queue.push(job);
     this.drain();
     return promise;
@@ -193,8 +199,9 @@ export class BookRequestScheduler {
       for (const consumer of job.consumers) {
         if (consumer.cancelled?.() !== true && consumer.canContinue?.() !== false) consumer.onDispatch?.();
       }
-      const requestOptions: RequestOptions = { timeoutMs: job.options.timeoutMs,
+      const requestOptions: BookRequestOptions = { timeoutMs: job.options.timeoutMs,
         pollMs: job.options.pollMs, hostRequest: job.options.hostRequest,
+        onSourceCheckStage: job.options.onSourceCheckStage,
         shouldCancel: (): boolean => this.cancelled(job) };
       // Convert a synchronous adapter throw to the same completion path so
       // occupied slots are always released.

@@ -69,19 +69,15 @@ export function completeReadingEntryWindow(
     await host.firstPagePersistence();
     if (!isCurrent()) return;
     const expanded = retainReadingEntryImageHandles(full, currentChapter);
-    const map = readingChapterLayoutMap(expanded);
-    const utf16Ranges = await prepareReadingParagraphUtf16Ranges(expanded.content, host.boundaryMode(), isCurrent);
-    if (utf16Ranges === undefined || !isCurrent()) return;
-    const ranges: ParagraphRange[] = [];
-    for (let index = 0; index < utf16Ranges.length; index += 1) {
-      if (index > 0 && index % 512 === 0) {
-        await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
-        if (!isCurrent()) return;
-      }
-      ranges.push(projectParagraph(utf16Ranges[index], index, map));
+    let projection: ReadingChapterMeasurementProjection;
+    try {
+      projection = await prepareReadingChapterMeasurement(expanded, host.boundaryMode, isCurrent);
+    } catch (error) {
+      if (!isCurrent()) return;
+      throw error as Error;
     }
     if (!isCurrent()) return;
-    host.admit(expanded, ranges, map);
+    host.admit(expanded, projection.ranges, projection.map);
   });
 }
 

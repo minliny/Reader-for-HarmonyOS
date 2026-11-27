@@ -19,15 +19,17 @@ export class ReaderAccessibilityActions implements AttributeModifier<CommonAttri
 
   applyNormalAttribute(attribute: CommonAttribute): void {
     if (deviceInfo.distributionOSApiVersion >= 260000) {
-      if (deviceInfo.apiAvailable('26.0.0')) {
-        const actions = this.current() && this.actions.length > 0 ? this.actions.map(
-          (action: ReaderAccessibleAction): AccessibilityCustomAction => ({
-            name: action.label,
-            onAction: (): void => { if (this.current()) action.run(); },
-          })) : undefined;
-        attribute.accessibilityCustomActions(actions);
-        attribute.accessibilityNextFocusId(this.current() ? this.nextId : '', { isConsiderDescendants: true });
-      }
+      try {
+        if (deviceInfo.apiAvailable('26.0.0')) {
+          const actions = this.current() && this.actions.length > 0 ? this.actions.map(
+            (action: ReaderAccessibleAction): AccessibilityCustomAction => ({
+              name: action.label,
+              onAction: (): void => { if (this.current()) action.run(); },
+            })) : undefined;
+          attribute.accessibilityCustomActions(actions);
+          attribute.accessibilityNextFocusId(this.current() ? this.nextId : '', { isConsiderDescendants: true });
+        }
+      } catch (_) { /* Retain the underlying control's standard accessibility action. */ }
     }
   }
 }

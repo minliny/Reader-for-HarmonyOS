@@ -1,6 +1,7 @@
 import { readingChapterLayoutMap, prepareReadingChapterLayoutMap } from './ReadingSurfaceLayoutMap';
 import type { ReadingParagraphBoundaryMode } from './ReadingParagraphProjection';
 import { readingSessionDocuments } from './ReadingSessionDocuments';
+import { readingChapterMatchesDirectoryProof } from './ReadingChapterOpening';
 import { extendReadingParagraphWindow, readReadingDocumentWindow, type ReadingDocumentWindow, type ReadingParagraphWindowDirection } from './ReadingDocumentWindow';
 import { BookRequestNotDispatchedError, type BookRequestPriority, type BookRequestOptions } from '../../../app/BookRequestScheduler';
 import { readReadingCatalog, readReadingEntrySnapshot, qualifyReadingEntryWindow, type ReadingEntrySnapshot } from './ReadingEntrySnapshot';
@@ -13,6 +14,7 @@ import {
   type LocalReadingAnchor,
   type LocalReadingChapter,
   type LocalReadingContentMetrics,
+  type LocalReadingDownloadState,
   type LocalReadingLayout,
   type LocalReadingProgress,
   type LocalReadingProgressState,
@@ -219,13 +221,14 @@ export class ReadingSessionFlowGateway implements ReadingInitialEntryGateway {
 
   /** A cached document is usable before an optional remote fetch session exists. */
   async loadEntrySnapshot(chapterIndex: number | undefined, isCurrent: () => boolean,
-    positionContext?: RemoteReadingPositionContext, windowMode?: ReadingParagraphBoundaryMode): Promise<ReadingEntrySnapshot | undefined> {
+    positionContext?: RemoteReadingPositionContext, windowMode?: ReadingParagraphBoundaryMode,
+    knownDownloadState?: LocalReadingDownloadState): Promise<ReadingEntrySnapshot | undefined> {
     if (this.hasPendingSourceSwitch()) return undefined;
     await this.progressOwner.restorePendingState().catch((): void => {});
     const pending = chapterIndex === undefined ? this.progressOwner.pendingProgress() : undefined;
     if (pending?.kind === 'restored') chapterIndex = pending.progress.chapterIndex;
     let snapshot = await readReadingEntrySnapshot(this.runtimeOwner, this.sourceId, this.bookId,
-      chapterIndex, isCurrent, positionContext, windowMode === undefined ? undefined : 8192);
+      chapterIndex, isCurrent, positionContext, windowMode === undefined ? undefined : 8192, knownDownloadState);
     if (snapshot === undefined) {
       // Missing includes sourceSwitchPending. Resolve the original transaction
       // before any catalog/session fallback can select or persist its target.
@@ -314,6 +317,7 @@ export class ReadingSessionFlowGateway implements ReadingInitialEntryGateway {
 
   private entryPositionMatches(chapter: ReadingSessionChapter, context?: RemoteReadingPositionContext): boolean {
     if (context === undefined) return true;
+    if (context.directoryTargetProof !== undefined && !readingChapterMatchesDirectoryProof(chapter, context)) return false;
     try {
       decodeRemotePositionMigration(chapter.positionMigration, this.sourceId, this.bookId,
         chapter.bodyVersion, chapter.processingVersion, context);
@@ -645,22 +649,26 @@ export class ReadingSessionFlowGateway implements ReadingInitialEntryGateway {
   }
 
   async loadChapter(bookId: string, chapterIndex: number, isCurrent?: () => boolean,
-    forceRefresh: boolean = false, positionContext?: RemoteReadingPositionContext): Promise<ReadingSessionChapter> {
+    forceRefresh: boolean = false, positionContext?: RemoteReadingPositionContext,
+    knownDownloadState?: LocalReadingDownloadState): Promise<ReadingSessionChapter> {
     this.assertBook(bookId);
     if (isCurrent?.() === false) throw new Error('reading chapter request was cancelled');
     if (this.pendingSourceSwitchResolver !== undefined) await this.ensureSourceSwitchAdmission(isCurrent);
     const context = captureRemotePositionContext(positionContext);
     const documents = readingSessionDocuments(this.runtimeOwner);
-    // A fresh narrow snapshot owns the current request's position proof. The
-    // process window only supplies subsequent/remounted body reads.
-    if (context?.directoryTargetProof === undefined && !forceRefresh && !this.hasPendingSourceSwitch() && this.retainedEntrySnapshot === undefined) {
+    // Match an explicit directory proof against the admitted body revision.
+    // Core still validates that proof on the first durable position commit.
+    if (!forceRefresh && !this.hasPendingSourceSwitch() && this.retainedEntrySnapshot === undefined) {
       const retained = documents.read(this.sourceId, bookId, chapterIndex, context);
       if (retained !== undefined && retained.sourceCorrectionRequired !== true) { documents.admit(retained, true); return retained; }
     }
-    const chapter = await this.loadChapterFresh(bookId, chapterIndex, isCurrent, forceRefresh, context);
+    const loaded = await this.loadChapterFresh(bookId, chapterIndex, isCurrent, forceRefresh, context, knownDownloadState);
     if (isCurrent?.() === false) throw new Error('reading chapter request was cancelled');
+    const proof = context?.directoryTargetProof;
+    const chapter: ReadingSessionChapter = proof === undefined ? loaded :
+      { ...loaded, catalogRevision: proof.catalogRevision };
     if (!this.hasPendingSourceSwitch()) documents.admit(chapter, true);
-    return context?.directoryTargetProof === undefined ? chapter : { ...chapter, directoryTargetProof: context.directoryTargetProof };
+    return proof === undefined ? chapter : { ...chapter, directoryTargetProof: proof };
   }
 
   private async loadChapterFresh(
@@ -669,9 +677,10 @@ export class ReadingSessionFlowGateway implements ReadingInitialEntryGateway {
     isCurrent?: () => boolean,
     forceRefresh: boolean = false,
     positionContext?: RemoteReadingPositionContext,
+    knownDownloadState?: LocalReadingDownloadState,
   ): Promise<ReadingSessionChapter> {
     this.assertBook(bookId);
-    if (positionContext?.directoryTargetProof === undefined && this.source.kind === 'local' && !forceRefresh) {
+    if (this.source.kind === 'local' && !forceRefresh) {
       const retained = this.retainedEntrySnapshot;
       if (retained !== undefined && retained.chapter.chapterIndex === chapterIndex && retained.isCurrent() &&
         this.entryPositionMatches(retained.chapter, positionContext)) {
@@ -683,25 +692,26 @@ export class ReadingSessionFlowGateway implements ReadingInitialEntryGateway {
       positionContext = captureRemotePositionContext(positionContext);
       if (!forceRefresh && !this.hasPendingSourceSwitch()) {
         const retained = this.retainedEntrySnapshot;
-        if (positionContext?.directoryTargetProof === undefined && retained !== undefined && retained.chapter.chapterIndex === chapterIndex && retained.isCurrent() &&
+        if (retained !== undefined && retained.chapter.chapterIndex === chapterIndex && retained.isCurrent() &&
           this.entryPositionMatches(retained.chapter, positionContext)) {
           this.retainedEntrySnapshot = undefined;
           return retained.chapter;
         }
         if (this.source.session === undefined) {
-          const snapshot = await this.loadEntrySnapshot(chapterIndex, isCurrent ?? ((): boolean => true), positionContext);
+          const snapshot = await this.loadEntrySnapshot(chapterIndex, isCurrent ?? ((): boolean => true), positionContext,
+            undefined, knownDownloadState);
           if (snapshot !== undefined) return snapshot.chapter;
         }
       }
       const session = await this.ensureRemoteSession(isCurrent);
       const prepared = session.preparedChapter;
       const coordinator = this.runtimeOwner.bookAcquisitions?.();
-      if (positionContext?.directoryTargetProof === undefined && !forceRefresh && !this.preparedChapterConsumed && prepared !== undefined && prepared.chapter.sourceCorrectionRequired !== true &&
-        preparedRemoteChapterPositionMatches(prepared, positionContext) &&
+      if (!forceRefresh && !this.preparedChapterConsumed && prepared !== undefined && prepared.chapter.sourceCorrectionRequired !== true &&
+        this.preparedPositionMatches(prepared, positionContext) &&
         preparedRemoteChapterMatches(prepared, session, chapterIndex, coordinator?.readingProjectionRevision() ?? 0)) {
         const version = coordinator === undefined ? session.sourceVersion : await coordinator.currentSourceVersion(this.sourceId);
         if (isCurrent?.() === false) throw new Error('reading chapter request was cancelled');
-        if (version === session.sourceVersion && preparedRemoteChapterPositionMatches(prepared, positionContext) &&
+        if (version === session.sourceVersion && this.preparedPositionMatches(prepared, positionContext) &&
           preparedRemoteChapterMatches(prepared, session, chapterIndex, coordinator?.readingProjectionRevision() ?? 0)) {
           this.preparedChapterConsumed = true;
           return prepared.chapter;
@@ -734,6 +744,12 @@ export class ReadingSessionFlowGateway implements ReadingInitialEntryGateway {
     decodeRemotePositionMigration(undefined, this.sourceId, bookId,
       chapter.bodyVersion, chapter.processingVersion, positionContext);
     return this.materializeLocalChapter(chapter, isCurrent);
+  }
+
+  private preparedPositionMatches(prepared: NonNullable<RemoteReadingSession['preparedChapter']>,
+    context?: RemoteReadingPositionContext): boolean {
+    return context?.directoryTargetProof === undefined ?
+      preparedRemoteChapterPositionMatches(prepared, context) : readingChapterMatchesDirectoryProof(prepared.chapter, context);
   }
 
   private async materializeLocalChapter(chapter: LocalReadingChapter,
@@ -812,6 +828,8 @@ export class ReadingSessionFlowGateway implements ReadingInitialEntryGateway {
         fileUri: payload.fileUri,
         intrinsicWidth: payload.intrinsicWidth ?? payload.width,
         intrinsicHeight: payload.intrinsicHeight ?? payload.height,
+        displayWidth: payload.width,
+        displayHeight: payload.height,
         imageWidthBasisPoints: image.imageWidthBasisPoints,
         revision: payload.revision,
       };

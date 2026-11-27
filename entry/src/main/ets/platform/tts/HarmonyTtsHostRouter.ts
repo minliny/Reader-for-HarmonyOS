@@ -11,6 +11,8 @@ import type {
   ReaderTtsPublishedPlaybackState,
 } from './HarmonyTtsMediaSession.ts';
 
+const MEDIA_RELEASE_TIMEOUT_MS = 1500;
+
 export interface ReaderTtsClosableHost extends ReaderTtsHost {
   close(): Promise<void>;
 }
@@ -38,6 +40,9 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   private foregroundSessionActive: boolean = false;
   private foregroundActivation: Promise<void> | undefined = undefined;
   private mediaActivationGeneration: number = -1;
+  private mediaCallbackGeneration: number = 0;
+  private mediaControlsAdmitted: boolean = false;
+  private mediaPauseRetained: boolean = false;
   private backgroundActivationAttempted: boolean = false;
   private backgroundActivation: Promise<void> | undefined = undefined;
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
@@ -73,7 +78,9 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     this.system.setEventListener((event: ReaderTtsHostEvent): void => this.forward(this.system, event), 'router');
     this.http.setEventListener((event: ReaderTtsHostEvent): void => this.forward(this.http, event), 'router');
     this.mediaSession.setEventListener((event: ReaderTtsHostEvent): void => {
-      if (!this.closed) this.listener?.(event);
+      if (!this.closed && this.mediaControlsAdmitted && (this.foregroundSessionActive || this.mediaPauseRetained)) {
+        this.listener?.(event);
+      }
     });
   }
 
@@ -107,6 +114,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     this.foregroundSessionActive = false;
     this.foregroundActivation = undefined;
     this.backgroundActivationAttempted = false;
+    this.retireMediaControls();
     this.publishMediaBackgroundMode();
     void this.active.deactivateAudioSession().catch((): void => {});
     void this.backgroundSession?.deactivate().catch((): void => {});
@@ -141,6 +149,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
         throw new Error('Reader TTS foreground audio admission retired');
       }
       this.foregroundSessionActive = true;
+      this.mediaPauseRetained = false;
       this.activateOptionalSessions();
     } finally {
       if (this.foregroundActivation === activation) this.foregroundActivation = undefined;
@@ -160,7 +169,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     this.publishMediaBackgroundMode();
   }
 
-  async deactivateAudioSession(): Promise<void> {
+  async deactivateAudioSession(intent?: 'pause'): Promise<void> {
     const operationId = this.traceOperationId;
     this.traceRequest = undefined;
     this.audioGeneration += 1;
@@ -168,11 +177,36 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     this.foregroundActivation = undefined;
     this.backgroundActivationAttempted = false;
     this.publishMediaBackgroundMode();
+    this.mediaPauseRetained = intent === 'pause';
+    const mediaRelease = this.mediaPauseRetained ? Promise.resolve() : this.releaseMediaSession();
     await Promise.all([
       this.active.deactivateAudioSession(),
       this.backgroundSession?.deactivate() ?? Promise.resolve(),
+      mediaRelease,
     ]);
     if (operationId !== undefined) ReaderStartupTrace.currentTts()?.markTts('tts.audio-release', operationId, 'ready');
+  }
+
+  private retireMediaControls(): void {
+    this.mediaCallbackGeneration += 1;
+    this.mediaControlsAdmitted = false;
+    this.mediaPauseRetained = false;
+  }
+
+  private async releaseMediaSession(): Promise<void> {
+    this.retireMediaControls();
+    this.mediaSession.publish('stopped');
+    let timer: number | undefined = undefined;
+    try {
+      await Promise.race([this.mediaSession.deactivate(), new Promise<void>((resolve): void => {
+        timer = setTimeout(resolve, MEDIA_RELEASE_TIMEOUT_MS);
+      })]);
+    } catch (_) {
+      // Optional native controls cannot strand the mandatory speech lease.
+      // The bridge logs failures and continues to own its exact session.
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
   }
 
   isBackgroundPlaybackActive(): boolean {
@@ -311,7 +345,11 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     // when the coordinator asks to keep the same audio focus for each slice.
     if (this.mediaActivationGeneration !== this.audioGeneration) {
       this.mediaActivationGeneration = this.audioGeneration;
-      void this.mediaSession.activate().catch((): void => {});
+      const generation = ++this.mediaCallbackGeneration;
+      this.mediaControlsAdmitted = false;
+      void this.mediaSession.activate().then((): void => {
+        if (!this.closed && generation === this.mediaCallbackGeneration) this.mediaControlsAdmitted = true;
+      }, (): void => {});
     }
     if (this.backgroundPlaybackEnabled && this.backgroundSession !== undefined &&
       !this.backgroundActivationAttempted) {

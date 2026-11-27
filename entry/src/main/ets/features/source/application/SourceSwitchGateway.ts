@@ -22,6 +22,7 @@ import {
   type ReaderSourceCategory,
 } from './ReaderSourceCategory';
 import { sourceSwitchProviderFamilyKey } from './SourceSwitchProviderFamily';
+import { SourceSwitchPublicationFlush } from './SourceSwitchPublicationFlush';
 import { decodeBookSearchResult, type SearchSource } from '../../search/application/SearchGateway';
 
 // Legado caps ChangeBookSourceDialog at nine workers. Keep one lane in reserve
@@ -274,6 +275,7 @@ export class SourceSwitchGateway {
   private confirmedScope: string = '';
   private confirmedCandidates = new Set<string>();
   private discoveryGeneration: number = 0;
+  private discoveryFlush: SourceSwitchPublicationFlush | undefined;
   private discoveryScope: string = '';
   private discoverySamplesCurrent: boolean = false;
   private readonly discoveryPages: Map<string, BookSearchPageProgress> = new Map();
@@ -581,9 +583,12 @@ export class SourceSwitchGateway {
     onProgress: ((candidates: SourceSwitchCandidate[], sweep?: SourceSwitchSweepProgress) => void) | undefined = undefined,
     initialCandidates: SourceSwitchCandidate[] = [],
     restartSweep: boolean = false,
+    notification: SourceSwitchPublicationFlush = new SourceSwitchPublicationFlush(),
   ): Promise<SourceSwitchDiscoveryOutcome> {
     this.validateProbeQuery(query);
     if (isCurrent?.() === false) return { kind: 'noSources' };
+    this.discoveryFlush?.cancel();
+    this.discoveryFlush = notification;
     const generation = ++this.discoveryGeneration;
     if (restartSweep) this.discoveryPages.clear();
     const scope = sourceSwitchCandidateKey(query.sourceId, query.bookId);
@@ -591,7 +596,8 @@ export class SourceSwitchGateway {
     this.discoverySamplesCurrent = true;
     this.discoveryScope = scope;
     let finished = false;
-    const current = (): boolean => !finished && generation === this.discoveryGeneration && isCurrent?.() !== false;
+    const current = (): boolean => !finished && !notification.isRetired() &&
+      generation === this.discoveryGeneration && isCurrent?.() !== false;
     const candidateMap = new Map<string, SourceSwitchCandidate>();
     for (const candidate of initialCandidates) {
       if (!this.admitsCandidate(candidate, query)) continue;
@@ -603,8 +609,7 @@ export class SourceSwitchGateway {
     const pendingIdentityValues = new Map<string, { sourceId: string; bookId: string }>();
     let debounceTimer: ReturnType<typeof setTimeout> | undefined;
     let flushInFlight: Promise<void> = Promise.resolve();
-    let flushWaiters: Array<{ resolve: () => void; active: boolean }> = [];
-    let cancelled = false;
+    let queuedFlushes = 0;
     let sweep: SourceSwitchSweepProgress | undefined;
 
     const publish = (): void => {
@@ -647,28 +652,14 @@ export class SourceSwitchGateway {
       }
     };
 
-    const settleFlushWaiters = (): void => {
-      if (!cancelled && (debounceTimer !== undefined || pendingIdentityKeys.size > 0)) return;
-      const waiters = flushWaiters;
-      flushWaiters = [];
-      for (const waiter of waiters) {
-        if (!waiter.active) continue;
-        waiter.active = false;
-        waiter.resolve();
-      }
-    };
-
     // A source sweep can be retired while the debounce timer or a batch RPC is
     // pending. Clear queued identities and release every waiter immediately;
     // the in-flight request still observes requestOptions(current) and is
     // allowed to settle independently.
-    const cancelFlush = (): void => {
-      if (cancelled) return;
-      cancelled = true;
+    notification.onCancel((): void => {
       if (debounceTimer !== undefined) { clearTimeout(debounceTimer); debounceTimer = undefined; }
       pendingIdentityKeys.clear(); pendingIdentityValues.clear();
-      settleFlushWaiters();
-    };
+    });
 
     const flushDelta = async (): Promise<void> => {
       if (!current() || pendingIdentityKeys.size === 0) return;
@@ -721,12 +712,14 @@ export class SourceSwitchGateway {
 
     let scheduleFlush: () => void = (): void => {};
     const runFlush = (): void => {
+      queuedFlushes += 1;
       flushInFlight = flushInFlight.then(flushDelta).catch((): void => {
         // Partial acquisition failures retain the last known candidate. The
         // final complete relation check remains authoritative for deletion.
       }).finally((): void => {
+        queuedFlushes -= 1;
         if (current() && pendingIdentityKeys.size > 0) scheduleFlush();
-        settleFlushWaiters();
+        notification.changed();
       });
     };
 
@@ -739,33 +732,10 @@ export class SourceSwitchGateway {
     };
 
     const awaitFlush = async (): Promise<void> => {
-      while (!cancelled && (debounceTimer !== undefined || pendingIdentityKeys.size > 0)) {
-        if (!current()) { cancelFlush(); return; }
-        await new Promise<void>((resolve): void => {
-          const waiter = { resolve, active: true };
-          flushWaiters.push(waiter);
-          const poll = (): void => {
-            if (!waiter.active) return;
-            if (!current()) { waiter.active = false; cancelFlush(); resolve(); return; }
-            setTimeout(poll, 16);
-          };
-          setTimeout(poll, 16);
-        });
+      while (current() && (debounceTimer !== undefined || pendingIdentityKeys.size > 0 || queuedFlushes > 0)) {
+        await notification.waitForChange();
       }
-      if (cancelled || !current()) { cancelFlush(); return; }
-      let watching = true;
-      const cancellation = new Promise<void>((resolve): void => {
-        const poll = (): void => {
-          if (!watching) return;
-          if (!current()) { cancelFlush(); resolve(); return; }
-          setTimeout(poll, 16);
-        };
-        setTimeout(poll, 16);
-      });
-      await Promise.race([flushInFlight, cancellation]);
-      watching = false;
-      if (!cancelled && !current()) cancelFlush();
-      if (!cancelled && (debounceTimer !== undefined || pendingIdentityKeys.size > 0)) await awaitFlush();
+      if (!current()) notification.cancel();
     };
 
     const projectInitial = async (): Promise<void> => {
@@ -808,6 +778,7 @@ export class SourceSwitchGateway {
         });
       if (!current()) return { kind: 'noSources' };
       await awaitFlush();
+      if (!current()) return { kind: 'noSources' };
       // One complete relation read at the end owns membership/deletion. A
       // source completion never performs this read, so N source results do not
       // become N full relation scans.
@@ -824,8 +795,8 @@ export class SourceSwitchGateway {
       throw error;
     } finally {
       finished = true;
-      if (isCurrent?.() === false || generation !== this.discoveryGeneration) cancelFlush();
-      if (debounceTimer !== undefined) { clearTimeout(debounceTimer); debounceTimer = undefined; }
+      notification.cancel();
+      if (this.discoveryFlush === notification) this.discoveryFlush = undefined;
       unsubscribe?.();
     }
   }

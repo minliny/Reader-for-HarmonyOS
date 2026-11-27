@@ -41,8 +41,11 @@ export struct ReaderBottomSheet {
   private coverReady: boolean = false;
   private coverAppearance: number = 0;
   private frameAttached: boolean = false;
+  private frameGeneration: number = 0;
+  private visibilityGeneration: number = 0;
   private opened: boolean = false;
-  private layoutModalId: number = 0;
+  private readonly layoutModalId: number = newReaderLayoutModalId();
+  private closeTimeout: number | undefined = undefined;
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -52,25 +55,53 @@ export struct ReaderBottomSheet {
   aboutToDisappear(): void {
     this.mounted = false;
     this.coverAppearance += 1;
-    if (this.layoutModalId > 0) publishReaderLayoutModal(this.layoutModalId, false, false, 0);
+    this.frameGeneration += 1;
+    this.clearCloseTimeout();
+    if (typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD) {
+      publishReaderLayoutModal(this.layoutModalId, false, false, 0);
+    }
   }
 
   private onVisibilityChanged(): void {
     if (!this.mounted) return;
+    const visibility = ++this.visibilityGeneration;
+    this.clearCloseTimeout();
     if (this.visible) {
       this.coverVisible = true;
+      if (this.coverReady) this.presentFrame();
     } else {
       this.frameVisible = false;
       if (this.coverReady && !this.frameAttached) this.coverVisible = false;
+      if (this.coverVisible) {
+        const frame = this.frameGeneration;
+        this.closeTimeout = setTimeout((): void => {
+          if (this.visibilityGeneration === visibility) this.finishMotion(false, frame);
+        }, this.closeDurationMs() + 120);
+      }
     }
     this.reportLayoutModal();
   }
 
   private reportLayoutModal(): void {
     if (typeof READER_LAYOUT_DEBUG_BUILD !== 'boolean' || !READER_LAYOUT_DEBUG_BUILD) return;
-    if (this.layoutModalId === 0) this.layoutModalId = newReaderLayoutModalId();
-    publishReaderLayoutModal(this.layoutModalId, this.visible, this.coverVisible || this.coverReady,
-      this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS);
+    publishReaderLayoutModal(this.layoutModalId, this.visible, this.coverVisible || this.coverReady, this.closeDurationMs());
+  }
+
+  private closeDurationMs(): number {
+    return this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS;
+  }
+
+  private clearCloseTimeout(): void {
+    if (this.closeTimeout === undefined) return;
+    clearTimeout(this.closeTimeout);
+    this.closeTimeout = undefined;
+  }
+
+  private presentFrame(): void {
+    if (this.frameVisible) return;
+    this.frameGeneration += 1;
+    this.frameAttached = false;
+    this.frameVisible = true;
   }
 
   private coverOptions(): ContentCoverOptions {
@@ -86,7 +117,7 @@ export struct ReaderBottomSheet {
         // The native cover may announce appearance during its first render.
         void Promise.resolve().then((): void => {
           if (!this.mounted || appearance !== this.coverAppearance || !this.coverVisible) return;
-          if (this.visible) this.frameVisible = true;
+          if (this.visible) this.presentFrame();
           else this.coverVisible = false;
         });
       },
@@ -94,13 +125,23 @@ export struct ReaderBottomSheet {
         if (this.mounted && this.visible) this.onRequestClose();
       },
       onDisappear: (): void => {
-        this.coverAppearance += 1;
+        const appearance = ++this.coverAppearance;
+        this.clearCloseTimeout();
         this.coverReady = false;
         this.frameVisible = false;
+        this.frameGeneration += 1;
         this.frameAttached = false;
         this.opened = false;
+        this.coverVisible = false;
         this.reportLayoutModal();
-        if (this.mounted) this.onClosed();
+        if (!this.mounted) return;
+        if (!this.visible) this.onClosed();
+        else {
+          // Reopen after native retirement if visibility changed during dismissal.
+          void Promise.resolve().then((): void => {
+            if (this.mounted && this.visible && appearance === this.coverAppearance) this.onVisibilityChanged();
+          });
+        }
       },
     };
   }
@@ -130,7 +171,10 @@ export struct ReaderBottomSheet {
           .transition(TransitionEffect.OPACITY.animation(this.reduceMotion ? readerMotionReducedFadeParam() :
             readerMotionAnimateParam('app.sheet.scrim', false)));
         if (this.frameViewport().width > 0 && this.frameViewport().height > 0) {
-          Stack({ alignContent: Alignment.Bottom }) { this.frame(); }
+          Stack({ alignContent: Alignment.Bottom }) {
+            ForEach([this.frameGeneration], (generation: number): void => { this.frame(generation); },
+              (generation: number): string => generation.toString());
+          }
             .width(this.frameViewport().width).height(this.frameViewport().height)
             .position({ x: this.frameViewport().left, y: this.frameViewport().top })
             .hitTestBehavior(HitTestMode.Transparent);
@@ -142,11 +186,11 @@ export struct ReaderBottomSheet {
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.ALL])
       .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
         ? { role: 'modal-overlay', id: 'bottom-sheet', active: this.visible,
-          intercepts: this.coverVisible, closeDurationMs: this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS } as LayoutInvariantTag : undefined);
+          intercepts: this.coverVisible, closeDurationMs: this.closeDurationMs() } as LayoutInvariantTag : undefined);
   }
 
   @Builder
-  private frame() {
+  private frame(generation: number) {
     Column() {
       if (this.specId === 'bookshelf-book-action') {
         Scroll() { this.content(); }.width('100%').align(Alignment.TopStart).scrollBar(BarState.Auto);
@@ -163,8 +207,9 @@ export struct ReaderBottomSheet {
       .shadow(this.frameMaterial().native ? undefined : this.frameShadow())
       .attributeModifier(new ReaderImmersiveMaterialModifier(this.frameMaterial(), readerNativeSurfaceOutline(this.scheme,
         { topLeft: this.spec().borderRadius, topRight: this.spec().borderRadius }, 'top'))).clip(true)
-      .hitTestBehavior(HitTestMode.Default).focusable(true).focusScopeId(this.nativeId, true, false)
+      .hitTestBehavior(HitTestMode.Default).focusable(true).focusScopeId(this.transitionNativeId(), true, false)
       .onAppear((): void => {
+        if (!this.mounted || generation !== this.frameGeneration) return;
         this.frameAttached = true;
         if (readerTransitionsEnabled()) {
           const id = this.transitionNativeId();
@@ -172,26 +217,32 @@ export struct ReaderBottomSheet {
             scope: id, nodes: [id], axis: this.reduceMotion ? 'none' : 'y' });
         }
       })
+      .onDisAppear((): void => {
+        if (!this.mounted || generation !== this.frameGeneration) return;
+        this.frameAttached = false;
+        if (!this.visible && this.coverVisible) this.finishMotion(false, generation);
+      })
       .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) :
         TransitionEffect.asymmetric(
           TransitionEffect.move(TransitionEdge.BOTTOM).animation(readerMotionAnimateParam('app.sheet.open', false)),
           TransitionEffect.move(TransitionEdge.BOTTOM).animation(readerMotionAnimateParam('app.sheet.close', false))),
-        (entering: boolean): void => this.finishMotion(entering));
+        (entering: boolean): void => this.finishMotion(entering, generation));
   }
 
   private transitionNativeId(): string {
-    return this.nativeId.length > 0 || !readerTransitionsEnabled() ? this.nativeId : `reader-transition-sheet:${this.layoutModalId}`;
+    return this.nativeId.length > 0 ? this.nativeId : `reader-transition-sheet:${this.layoutModalId}`;
   }
 
-  private finishMotion(entering: boolean): void {
-    if (!this.mounted) return;
+  private finishMotion(entering: boolean, generation: number): void {
+    if (!this.mounted || generation !== this.frameGeneration) return;
     if (!entering && !this.visible) {
+      this.clearCloseTimeout();
+      this.frameAttached = false;
       this.coverVisible = false;
-    } else if (entering && this.visible) {
+      this.reportLayoutModal();
+    } else if (entering && this.visible && this.coverVisible && this.coverReady && !this.opened) {
       this.opened = true;
-      if (this.nativeId.length > 0) {
-        try { this.getUIContext().getFocusController().requestFocus(this.nativeId); } catch (_) {}
-      }
+      try { this.getUIContext().getFocusController().requestFocus(this.transitionNativeId()); } catch (_) {}
       this.onOpened();
     }
   }

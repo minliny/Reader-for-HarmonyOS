@@ -91,6 +91,22 @@ test('a retired entry observes its pending save without publishing a chapter', a
   await expansion;
 });
 
+test('a large resumed entry yields before paragraph projection and ignores a retired selection', async () => {
+  const full = chapter('😀'.repeat(32768));
+  let ownsSelection = true;
+  let beganParagraphProjection = false;
+  const expansion = completeReadingEntryWindow(Promise.resolve(full), chapter('😀'), () => ownsSelection, {
+    firstPagePersistence: () => Promise.resolve(),
+    boundaryMode: () => { beganParagraphProjection = true; return 'lineSeparated'; },
+    admit: () => assert.fail('retired layout attempted to publish'),
+  });
+  await Promise.resolve();
+  await Promise.resolve();
+  ownsSelection = false;
+  await expansion;
+  assert.equal(beganParagraphProjection, false);
+});
+
 test('measurement extension preserves absolute offsets and rejects mismatched content', async () => {
   const currentWindow = chapter('😀', { startScalar: 10, endScalar: 11, totalScalars: 30 });
   const expanded = chapter('A\n😀', { startScalar: 8, endScalar: 11, totalScalars: 30 });

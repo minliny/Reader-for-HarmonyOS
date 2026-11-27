@@ -645,6 +645,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     });
     const hostStopTask = this.stopHostTransportImmediately();
     const transaction = this.enqueue(async (): Promise<void> => {
+      let pauseFailed = false;
       try {
         const hostStopError = await hostStopTask;
         if (hostStopError !== undefined) throw hostStopError;
@@ -655,11 +656,12 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
           if (snapshot !== undefined && currentPause()) this.applyCoreSnapshot(snapshot, undefined, reason);
         }
       } catch (error) {
+        pauseFailed = true;
         if (currentPause()) this.host.publishPlaybackState('error');
         throw error;
       } finally {
         // The serialized owner releases platform leases even if pause cannot be acknowledged.
-        await this.host.deactivateAudioSession();
+        await this.host.deactivateAudioSession(!pauseFailed && currentPause() ? 'pause' : undefined);
         this.transport = { ...this.transport, audioSession: 'inactive', focus: systemPause ? 'interrupted' : 'none' };
       }
     });
@@ -1240,7 +1242,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     const paused = await this.gateway.pause(active.input.chapter);
     if (!this.isSessionCurrent(active.identity)) return true;
     this.applyCoreSnapshot(paused, undefined, 'user');
-    await this.host.deactivateAudioSession();
+    await this.host.deactivateAudioSession('pause');
     if (!this.isSessionCurrent(active.identity)) return true;
     this.transport = { ...this.transport, audioSession: 'inactive', focus: 'none' };
     if (!this.desiredPlaying) return true;
@@ -1307,6 +1309,10 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       await activation;
       trace?.markTtsCapsule('tts.host-audio.ready', active.traceOperationId);
     } catch (error) {
+      if (voice !== undefined) {
+        this.utterances.delete(token.requestId);
+        throw new Error(`音频会话启动失败：${errorMessageOf(error)}`);
+      }
       await this.handleSessionUtteranceFailure(active, token,
         `音频会话启动失败：${errorMessageOf(error)}`);
       return false;
@@ -1330,9 +1336,14 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
         pitch: active.input.pitch ?? 1,
         language: voice?.language ?? active.input.language ?? 'zh-CN',
         person: voice?.person ?? active.input.person ?? 0,
+        exactVoice: voice === undefined ? undefined : true,
         engine: active.config?.engine,
       });
     } catch (error) {
+      if (voice !== undefined) {
+        this.utterances.delete(token.requestId);
+        throw error;
+      }
       await this.handleSessionUtteranceFailure(active, token, errorMessageOf(error));
       return false;
     }

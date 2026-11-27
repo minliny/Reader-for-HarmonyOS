@@ -1,4 +1,4 @@
-import type { ShelfBook } from '../../../app/ReaderCoreGateway';
+import type { ShelfBook, ShelfReadingPosition } from '../../../app/ReaderCoreGateway';
 import type { LocalReadingDownloadState } from '../../reading/application/LocalReadingFlowGateway';
 import type { SharedDownloadExpectedChapter } from '../application/SharedDownloadCoordinator';
 
@@ -102,6 +102,53 @@ export interface DownloadBookView {
   chapters: DownloadChapterView[];
   projectionStatus: DownloadProjectionStatus;
   projectionError?: string;
+}
+
+export function sameDownloadBookView(left: DownloadBookView, right: DownloadBookView): boolean {
+  return left === right || (
+    left.key === right.key && left.sourceId === right.sourceId && left.bookId === right.bookId &&
+    left.coverUrl === right.coverUrl && left.title === right.title && left.author === right.author &&
+    left.sourceLabel === right.sourceLabel && left.contentKind === right.contentKind &&
+    left.totalChapters === right.totalChapters && left.downloadedChapters === right.downloadedChapters &&
+    left.state === right.state && left.statusAction === right.statusAction && left.stateLabel === right.stateLabel &&
+    left.downloadError === right.downloadError && left.progressPercent === right.progressPercent &&
+    left.bytes === right.bytes && left.recentRead === right.recentRead && left.projectionStatus === right.projectionStatus &&
+    left.projectionError === right.projectionError && sameDownloadShelfBook(left.shelfBook, right.shelfBook) &&
+    (left.chapters === right.chapters || (left.chapters.length === right.chapters.length &&
+      left.chapters.every((chapter, index) => sameDownloadChapterView(chapter, right.chapters[index]))))
+  );
+}
+
+function sameDownloadChapterView(left: DownloadChapterView, right: DownloadChapterView): boolean {
+  return left === right || (
+    left.key === right.key && left.sourceId === right.sourceId && left.bookId === right.bookId &&
+    left.index === right.index && left.title === right.title && left.chapterId === right.chapterId &&
+    left.navigable === right.navigable && left.level === right.level && left.localComplete === right.localComplete &&
+    left.stateLabel === right.stateLabel && left.queueState === right.queueState && left.cachedBytes === right.cachedBytes &&
+    left.mangaManifestVersion === right.mangaManifestVersion && left.mangaTotalPages === right.mangaTotalPages &&
+    left.mangaSavedPages === right.mangaSavedPages
+  );
+}
+
+function sameDownloadShelfBook(left: ShelfBook, right: ShelfBook): boolean {
+  return left === right || (
+    left.sourceId === right.sourceId && left.sourceName === right.sourceName && left.bookId === right.bookId &&
+    left.title === right.title && left.author === right.author && left.kind === right.kind &&
+    left.contentKind === right.contentKind && left.coverUrl === right.coverUrl && left.intro === right.intro &&
+    left.lastChapter === right.lastChapter && left.addedAt === right.addedAt && left.lastReadAt === right.lastReadAt &&
+    left.group === right.group && left.sortIndex === right.sortIndex && left.unreadCount === right.unreadCount &&
+    left.lastCheckAt === right.lastCheckAt && left.currentChapterTitle === right.currentChapterTitle &&
+    left.currentChapterIndex === right.currentChapterIndex && left.chapterCount === right.chapterCount &&
+    left.readProgress === right.readProgress && left.localOriginalMissing === right.localOriginalMissing &&
+    sameDownloadReadingPosition(left.readingPosition, right.readingPosition)
+  );
+}
+
+function sameDownloadReadingPosition(left?: ShelfReadingPosition, right?: ShelfReadingPosition): boolean {
+  return left === right || (left !== undefined && right !== undefined &&
+    left.chapterIndex === right.chapterIndex && left.chapterOffset === right.chapterOffset &&
+    left.updatedAt === right.updatedAt && left.locationRevision === right.locationRevision &&
+    left.bodyVersion === right.bodyVersion && left.processingVersion === right.processingVersion);
 }
 
 export interface SharedDownloadFilters {

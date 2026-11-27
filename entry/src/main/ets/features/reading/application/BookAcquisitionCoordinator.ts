@@ -6,7 +6,7 @@ import type { image } from '@kit.ImageKit';
 import { MangaAdmissionGateway } from '../../manga/application/MangaAdmissionGateway';
 import { acquisitionFailureCategoryConfirmed } from '../../../app/library/BookAcquisitionPresentation';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
-import { BookRequestScheduler, type BookRequestExecutor, type BookRequestPriority, type BookRequestOptions } from '../../../app/BookRequestScheduler';
+import { BookRequestScheduler, usesBackgroundSourceCheckLane, type BookRequestExecutor, type BookRequestPriority, type BookRequestOptions } from '../../../app/BookRequestScheduler';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import { ReadingPreparationRunner, decodeReadingPreparationIntents, type ReadingPreparationIntent } from '../../../app/ReadingPreparationRunner';
 import { isRemoteSourceFailureKind, remoteReadingFailureKindOf, RemoteReadingSourceError } from './RemoteContentAdmission';
@@ -270,7 +270,9 @@ export class BookAcquisitionCoordinator {
       const sourceId = typeof params['sourceId'] === 'string' ? params['sourceId'] as string : '';
       const network = method === 'book.search' || method === 'book.detail' || method === 'book.toc' ||
         method === 'chapter.content' || method === 'manga.chapter.get' || method === 'cache.book.prefetch' || method === 'change.bookSource';
-      const actualPriority = priority ?? (method === 'book.search' || method === 'change.bookSource' ? 'search' : 'foreground');
+      const sourceCheck = usesBackgroundSourceCheckLane(method);
+      const actualPriority = sourceCheck ? 'background' :
+        priority ?? (method === 'book.search' || method === 'change.bookSource' ? 'search' : 'foreground');
       foregroundRequest = network && actualPriority === 'foreground';
       if (foregroundRequest) {
         this.foregroundRequests += 1;
@@ -290,7 +292,7 @@ export class BookAcquisitionCoordinator {
       // Cached-only preparation also consumes the single Core/SQLite resource.
       // A background label must reach the scheduler, not bypass it merely
       // because this work has no HTTP. Keep ordinary writes out of deduplication.
-      const scheduled = network || (actualPriority === 'background' &&
+      const scheduled = sourceCheck || network || (actualPriority === 'background' &&
         (method === 'reading.entry.prepare' || method === 'reading.entry.snapshot' || method === 'reading.preparation' ||
           method === 'bookshelf.get' || method === 'bookshelf.list'));
       const operation = scheduled ? this.scheduler.request(method, params, options,

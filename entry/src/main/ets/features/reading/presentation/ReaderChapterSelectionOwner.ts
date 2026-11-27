@@ -123,9 +123,16 @@ export class ReaderChapterSelectionOwner<Display, Origin extends Display, Candid
 
   select(request: ReaderDeferredChapterSelection): void {
     if (!this.dispatch.prepare(request)) return;
+    const scope = this.dispatch.scope();
+    const proof = request.positionContext?.directoryTargetProof;
+    const hasExactProof = proof !== undefined && proof.sourceId === scope.sourceId &&
+      proof.bookId === scope.bookId && proof.chapterIndex === request.chapterIndex;
     if (!this.dispatch.isKnown(request.chapterIndex)) {
-      if (this.dispatch.catalogPending()) this.deferSelection(request);
-      return;
+      if (!this.dispatch.catalogPending()) return;
+      if (!hasExactProof) {
+        this.deferSelection(request);
+        return;
+      }
     }
     const existing = this.dispatch.chapterAt(request.chapterIndex);
     let context = request.positionContext;
@@ -136,7 +143,7 @@ export class ReaderChapterSelectionOwner<Display, Origin extends Display, Candid
     const controlRevision = this.selectionControlRevision(request);
     const admitted = this.withPosition(request, controlRevision, context);
     if (this.dispatch.queueOnSettlement(admitted)) return;
-    const lifecycleToken = this.dispatch.scope().lifecycleToken;
+    const lifecycleToken = scope.lifecycleToken;
     const origin = controlRevision >= 0 ? this.captureOrigin() : undefined;
     this.dispatch.interruptPlayback(admitted.stopTts);
     const selectionToken = this.dispatch.nextSelection();

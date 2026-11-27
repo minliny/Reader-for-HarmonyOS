@@ -192,7 +192,12 @@ export struct ReaderControlDirectoryContent {
     readerControlDirectorySnapshot([], 'directory', '', true, -1);
   @State private navigationInteracted: boolean = false;
   @State private navigationActive: boolean = false;
+  @State private locateCurrentRevision: number = 0;
   @State private query: string = '';
+  private flatRefreshTimer: number = -1;
+  private pendingFlatTop: boolean = false;
+  private readonly fallbackDirectory: ReaderDirectoryDataPublication = new ReaderDirectoryDataPublication();
+  private fallbackDirectoryRevision: number = 0;
   private adoptedPrepared: ReaderControlPreparedModuleProfile | undefined = undefined;
   private presentationPrepared(): ReaderControlPreparedModuleProfile | undefined {
     const current = this.preparedMinimum;
@@ -209,6 +214,7 @@ export struct ReaderControlDirectoryContent {
     return this.preparedMinimumRequired ? this.preparedProfile() : this.preparedProfile() ?? this.minimumProfiles.get(this.minimumKey);
   }
   private displaySnapshot(): ReaderControlDirectorySnapshot {
+    if (this.tab === 'directory' && this.navigationActive) return this.snapshot;
     return this.displayedFacts()?.readViewSnapshot() ?? this.snapshot;
   }
   private displayCatalogComplete(): boolean { return this.displayedFacts()?.viewCatalogComplete ?? this.catalogComplete; }
@@ -226,7 +232,7 @@ export struct ReaderControlDirectoryContent {
       !readerControlModuleProfileMatches(prepared.moduleData, 'directory') || !readerControlModuleFactsMatch(prepared.facts, 'directory')) return;
     this.adoptedPrepared = prepared;
     const rows = this.displaySnapshot().rows;
-    if (rows !== this.displayedRows) {
+    if (!this.navigationActive && rows !== this.displayedRows) {
       this.displayedRows = rows;
       this.dataSource.replace(rows);
     }
@@ -281,6 +287,7 @@ export struct ReaderControlDirectoryContent {
     if (this.preparedMinimumRequired) this.onPreparedMinimumChanged();
   }
   aboutToDisappear(): void {
+    this.cancelFlatRefresh();
     this.adoptedPrepared = undefined;
     this.adoptedPreparedKey = '';
     this.displayedRows = undefined;
@@ -410,11 +417,62 @@ export struct ReaderControlDirectoryContent {
     this.previousRowHeight = this.rowHeight();
     this.navigationInteracted = false;
     this.navigationActive = false;
-    this.refreshData();
+    this.pendingFlatTop = false;
+    this.refreshData(true, false);
   }
 
-  private refreshData(): void {
+  private cancelFlatRefresh(): void {
+    if (this.flatRefreshTimer < 0) return;
+    clearTimeout(this.flatRefreshTimer);
+    this.flatRefreshTimer = -1;
+  }
+
+  private refreshData(immediate: boolean = false, treeActive: boolean = this.navigationActive): void {
     if (!this.mounted) return;
+    this.cancelFlatRefresh();
+    if (this.directoryPublication === undefined)
+      this.fallbackDirectoryRevision = this.fallbackDirectory.publish(this.entries);
+    if (this.tab === 'directory' && treeActive) {
+      this.pendingFlatTop = false;
+      this.refreshTreeDirectoryHeader();
+      return;
+    }
+    if (immediate) { this.publishFlatData(); return; }
+    const lifecycle = this.lifecycle;
+    this.flatRefreshTimer = setTimeout((): void => {
+      this.flatRefreshTimer = -1;
+      if (this.mounted && lifecycle === this.lifecycle && !this.navigationActive) this.publishFlatData();
+    }, 150);
+  }
+
+  private directoryChapterEntry(index: number): LocalReadingTocEntry | undefined {
+    return this.directoryPublication === undefined ? this.fallbackDirectory.entryAt(this.fallbackDirectoryRevision, index) :
+      this.directoryPublication.entryAt(this.directoryEntriesRevision, index);
+  }
+
+  private refreshTreeDirectoryHeader(): void {
+    const publication = this.directoryPublication ?? this.fallbackDirectory;
+    const revision = this.directoryPublication === undefined ? this.fallbackDirectoryRevision : this.directoryEntriesRevision;
+    const current = publication.entryAt(revision, this.currentChapterIndex);
+    const representative = current ?? publication.entriesAt(revision)[0];
+    const count = this.catalogComplete ? publication.readableCountAt(revision) : this.catalogReadableChapterCount;
+    const rank = this.catalogComplete ? publication.readableRankAt(revision, this.currentChapterIndex) : this.catalogReadablePosition;
+    const catalogState: 'ready' | 'partial' | 'loading' | 'failed' = this.catalogComplete ? 'ready' :
+      this.catalogLoading ? 'loading' : this.catalogLoadFailed ? 'failed' : 'partial';
+    const title = current?.title ?? '';
+    const position = rank !== undefined && rank >= 0 && rank < count ? `${rank + 1} / ${count}` : '';
+    const before = this.snapshot;
+    if (!before.loading && before.catalogState === catalogState && before.currentTitle === title &&
+      before.currentPosition === position && before.rows.length <= 1 &&
+      before.rows[0]?.chapter === representative && before.targetRow === 0) return;
+    const rows: ReaderControlDirectoryRow[] = representative === undefined ? [] :
+      [{ key: `chapter:${representative.index}`, chapter: representative, bookmark: undefined }];
+    this.snapshot = { rows, loading: false, catalogState, bookmarkFilteredEmpty: false,
+      currentTitle: title, currentPosition: position, targetRow: 0 };
+    this.publishMinimumMeasurer();
+  }
+
+  private publishFlatData(): void {
     const next = readerControlDirectorySnapshot(this.currentDirectoryEntries(), this.tab, this.query,
       this.ascending, this.currentChapterIndex, this.bookmarkIdentity, {
         complete: this.catalogComplete, chapterCount: this.catalogChapterCount,
@@ -430,6 +488,10 @@ export struct ReaderControlDirectoryContent {
     this.publishMinimumMeasurer();
     if (!this.navigationActive) this.queuePosition();
     if (this.leadingRow !== undefined) this.queueLeadingCorrection();
+    if (this.pendingFlatTop) {
+      this.pendingFlatTop = false;
+      try { this.scroller.scrollEdge(Edge.Top); } catch (_) {}
+    }
     if (this.catalogComplete && this.pendingCatalogAction.length > 0) {
       const lifecycle = this.lifecycle, key = this.sessionKey;
       this.getUIContext().postFrameCallback(new ControlDirectoryFrame((): void => {
@@ -771,7 +833,14 @@ export struct ReaderControlDirectoryContent {
     this.clearAppliedSearch();
   }
   private clearAppliedSearch(): void {
-    this.draft = ''; this.query = ''; this.cancelPendingPlacement(); this.refreshData();
+    this.draft = ''; this.query = ''; this.cancelPendingPlacement();
+    this.navigationInteracted = false;
+    if (this.tab === 'directory' && this.currentChapterIndex >= 0) {
+      const revision = this.locateCurrentRevision + 1;
+      this.locateCurrentRevision = revision;
+      this.placement.open(`${this.sessionKey}:${this.tab}:${revision}`);
+    }
+    this.refreshData();
     this.editingHost.refresh();
   }
   private tabWidth(): number {
@@ -783,17 +852,18 @@ export struct ReaderControlDirectoryContent {
     if (this.deferCatalogAction('search')) return;
     const query = this.draft.trim();
     if (query === this.query) return;
+    if (query.length === 0) { this.clearAppliedSearch(); return; }
+    this.pendingFlatTop = !this.navigationActive;
     this.query = query; this.cancelPendingPlacement(); this.refreshData();
-    this.scroller.scrollEdge(Edge.Top);
   }
   private sort(): void {
     if (this.deferCatalogAction('sort')) return;
+    this.pendingFlatTop = !this.navigationActive;
     this.ascending = !this.ascending; this.cancelPendingPlacement(); this.refreshData();
-    this.scroller.scrollEdge(Edge.Top);
   }
 
   private deferCatalogAction(action: string): boolean {
-    if (this.tab !== 'directory' || this.catalogComplete) return false;
+    if (this.tab !== 'directory' || this.catalogComplete || this.navigationActive) return false;
     this.pendingCatalogAction = action;
     this.onRequireCompleteCatalog();
     return true;
@@ -873,7 +943,7 @@ export struct ReaderControlDirectoryContent {
         onTextChange: (value: string): void => {
           if (!this.currentContent(presentation) || !this.queryInteractive()) return;
           this.draft = value;
-          if (this.tab === 'bookmarks' || this.catalogComplete) this.search();
+          if (this.tab === 'bookmarks' || this.catalogComplete || this.navigationActive) this.search();
           else if (value.trim().length === 0 && this.query.length > 0) this.clearAppliedSearch();
         },
         onSearch: (): void => { if (this.currentContent(presentation) && this.toolbarInteractive()) this.search(); },
@@ -921,7 +991,7 @@ export struct ReaderControlDirectoryContent {
 
   private chapterIsCurrent(entry: LocalReadingTocEntry, presentation: number): boolean {
     if (!this.directoryInputCurrent(presentation) || entry.navigable === false) return false;
-    const current = this.currentDirectoryEntries().find((chapter: LocalReadingTocEntry): boolean => chapter.index === entry.index);
+    const current = this.directoryChapterEntry(entry.index);
     return current !== undefined && sameReaderDirectoryData([entry], [current]);
   }
 
@@ -1111,7 +1181,7 @@ export struct ReaderControlDirectoryContent {
           prefixRevealRevision: this.prefixRevealRevision, prefixBuilder: (): void => { this.shortHeader(); },
           sourceId: this.bookmarkIdentity.sourceId, bookId: this.bookmarkIdentity.bookId, query: this.query, ascending: this.ascending,
           currentChapterIndex: this.currentChapterIndex, openRevision: this.sessionKey,
-          interacted: this.navigationInteracted, rowHeight: this.rowHeight(),
+          interacted: this.navigationInteracted, locateCurrentRevision: this.locateCurrentRevision, rowHeight: this.rowHeight(),
           listPaddingX: this.rowPadding(), listPaddingY: 0,
           edgeEffectMode: EdgeEffect.Spring, interactionEnabled: this.currentInputEnabled(),
           showLoadStatus: this.displayCatalogComplete(),
@@ -1134,6 +1204,8 @@ export struct ReaderControlDirectoryContent {
             if (!this.currentContent(presentation)) return;
             this.navigationActive = active;
             this.leadingRow = undefined; this.leadingKey = undefined; this.leadingPrefixOffset = undefined;
+            this.correctionQueued = false;
+            this.refreshData(true, active);
           },
           onDeleteBookmarks: (times: number[]): void => {
             if (this.directoryInputCurrent(presentation) && this.bookmarkWriteEnabled()) this.onDeleteBookmarks(times);

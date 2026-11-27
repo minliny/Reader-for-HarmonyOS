@@ -33,7 +33,8 @@ import { HarmonyTtsHostRouter } from '../platform/tts/HarmonyTtsHostRouter';
 import { HarmonyTtsMediaSession } from '../platform/tts/HarmonyTtsMediaSession';
 import { HarmonyTtsBackgroundSession } from '../platform/tts/HarmonyTtsBackgroundSession';
 import { LocalEpubResourceHost } from '../platform/reading-resources/LocalEpubResourceHost';
-import { ReadingBodyImageHost, type ReadingBodyImagePayload, type MangaImageMetadataProof } from '../platform/reading-resources/ReadingBodyImageHost';
+import { ReadingBodyImageHost, ReadingImagePresentationPolicyError, type ReadingBodyImagePayload,
+  type MangaImageMetadataProof } from '../platform/reading-resources/ReadingBodyImageHost';
 import { MangaImageDecodeHost } from '../platform/reading-resources/MangaImageDecodeHost';
 import { MangaImageMetadataHost } from '../platform/reading-resources/MangaImageMetadataHost';
 import {
@@ -63,6 +64,9 @@ import { ReaderPreparationNetworkHost } from './ReaderPreparationNetworkHost';
 import { ReaderStartupTrace } from './ReaderStartupTrace';
 import { MangaOfflineNetworkProbe, type MangaOfflineProbeScope, type MangaProbeSelectionMode } from './MangaOfflineNetworkProbe';
 import { MangaChapterPreparationCoordinator } from '../features/manga/application/MangaChapterPreparationCoordinator';
+import { MangaRetainedTileCache } from '../features/manga/application/MangaRetainedTileCache';
+import { MangaDisplayLeaseCache } from './MangaDisplayLeaseCache';
+import { MangaNeighborMemoryAdmission, notifyReaderMemoryTrim } from './ReaderMemoryTrim';
 import type { MangaStorageChapter, MangaStorageGrant } from '../platform/reading-resources/ReadingImageDiskCache';
 import type { MangaDisplaySessionScope } from '../features/reading/application/ReadingGatewayRuntime';
 import { SharedDownloadCoordinator } from '../features/downloads/application/SharedDownloadCoordinator';
@@ -82,10 +86,7 @@ type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 type MangaImageWork = { drain?: Promise<void> };
 type MangaImagePriority = 'foreground' | 'chapter' | 'background' | 'download';
 type MangaImageQueuedWork = { priority: MangaImagePriority; run: () => Promise<void> };
-type MangaPreparedDisplayPage = { intrinsicHeight: number; tileHeight: number; regions: Map<number, ReadingBodyImagePayload>; };
-type MangaDisplaySession = { scope: MangaDisplaySessionScope; current: () => boolean;
-  aliases: Map<string, MangaPreparedDisplayPage>; files: Map<string, ReadingBodyImagePayload>;
-  fileAliasCounts: Map<string, number>; };
+type MangaDisplaySession = { scope: MangaDisplaySessionScope; current: () => boolean; leases: MangaDisplayLeaseCache; };
 
 // Local import and materialized chapter reads may perform file and parsing I/O.
 // The SDK's generic 2s default is unsuitable; callers may still opt into a
@@ -178,8 +179,8 @@ export class ReaderRuntimeOwner {
   private mangaImageActive: boolean = false;
   private mangaImageUrgentStreak: number = 0;
   private mangaImageIdle: (() => void) | undefined;
-  /** Chapter/session ownership, not an eviction cache. No encoded bytes or
-   * PixelMaps survive here; each physical display has one owner lease. */
+  /** Each live chapter keeps a bounded set of optional prepared aliases.
+   * Visible tiles borrow independent physical file leases from this owner. */
   private readonly mangaDisplaySessions: Map<number, MangaDisplaySession> = new Map<number, MangaDisplaySession>();
   private nextMangaDisplaySession: number = 0;
   /** Lets concurrent Ability teardown callers await the same cleanup. */
@@ -232,6 +233,7 @@ export class ReaderRuntimeOwner {
   private deepReadingPrefetchObservers?: Set<() => void>;
   private preparationWakeTimer: number = -1;
   private preparationForeground: boolean = false;
+  private readonly mangaNeighborMemory: MangaNeighborMemoryAdmission = new MangaNeighborMemoryAdmission();
   private preparationCatalogAllowed: boolean = false;
   private preparationIntentEpoch: number = 0;
   /** Number of live UIAbility instances sharing this process runtime. */
@@ -344,12 +346,14 @@ export class ReaderRuntimeOwner {
     const body = ReadingBodyImageHost.instance;
     body.configureMangaDisplayCache(readerHostFilesDirectory(this.host.getContext().filesDir));
     this.readingImageDiskCache.setMangaExternalStorage({
+      tracksPublishedFiles: true,
       inventory: () => body.mangaDisplayInventory(),
       remove: (grant, files) => body.removeMangaDisplay(grant, files),
       removeDerived: (chapter, files, current) => body.removeMangaDerived(chapter, files, current),
     });
     body.setMangaDisplayReserve((chapter, bytes, priority) =>
       this.readingImageDiskCache.reserveExternalWrite(chapter, bytes, priority === 'foreground' ? 'foreground' : 'background', 'derived'));
+    body.setMangaDisplayPublication(files => this.readingImageDiskCache.recordMangaDisplayPublication(files));
   }
 
   static install(context: common.UIAbilityContext, disableOptionalEntryMemory: boolean = false,
@@ -625,8 +629,13 @@ export class ReaderRuntimeOwner {
     return this.bookAcquisitions().request(method, params, options, priority);
   }
 
-  allowOptionalMangaPreparation(): boolean {
-    return this.state === 'ready' && this.preparationForeground && this.preparationNetwork?.allowed() === true;
+  allowOptionalMangaPreparation(allowUnderMemoryPressure: boolean = false): boolean {
+    return (allowUnderMemoryPressure || this.mangaNeighborMemory.allows()) &&
+      this.state === 'ready' && this.preparationForeground && this.preparationNetwork?.allowed() === true;
+  }
+
+  captureOptionalMangaPreparation(): () => boolean {
+    return this.mangaNeighborMemory.capture((): boolean => this.allowOptionalMangaPreparation());
   }
 
   /** Deep text preparation may observe the same network lifecycle without
@@ -814,6 +823,25 @@ export class ReaderRuntimeOwner {
   releaseOptionalReadingEntryMemory(): void {
     this.entryPreparations?.releaseOptionalMemory();
     releaseReadingEntryMemory(this);
+  }
+
+  trimMemory(level: 'background' | 'moderate' | 'low' | 'critical'): void {
+    if (!ReaderRuntimeOwner.isCurrent(this) || this.state === 'closing' || this.state === 'closed') return;
+    this.releaseOptionalReadingEntryMemory();
+    if (level !== 'background') {
+      this.mangaNeighborMemory.update(level);
+      MangaRetainedTileCache.setMemoryBudget(level === 'moderate' ? 'normal' : level);
+      if (level !== 'moderate') {
+        MangaChapterPreparationCoordinator.forRuntime(this).trimOptionalAdjacentPreparation();
+        for (const [sessionId, session] of this.mangaDisplaySessions) {
+          if (!session.current()) this.endMangaDisplaySession(sessionId);
+        }
+      }
+    }
+    MangaRetainedTileCache.trimUnprotectedAll();
+    notifyReaderMemoryTrim();
+    ReadingBodyImageHost.instance.trimMangaMetadataProofs();
+    this.readingImageDiskCache.trimVerifiedDigests();
   }
 
   captureReadingContentValidity(sourceId: string, bookId: string): () => boolean {
@@ -1128,7 +1156,7 @@ export class ReaderRuntimeOwner {
         // loadResource already verified manga original bytes. Native decoding,
         // display I/O and allocation failures are not proof of corruption and
         // must never erase durable originals, including permanent downloads.
-        if (identity.resourceRef !== undefined) throw error;
+        if (identity.resourceRef !== undefined || error instanceof ReadingImagePresentationPolicyError) throw error;
         if (mangaPosition !== undefined && error instanceof Error && error.message.startsWith('MANGA_REGION_')) throw error;
         await this.readingImageDiskCache.removeResource(identity, cacheCurrent);
         if (!allowNetwork) {
@@ -1234,9 +1262,9 @@ export class ReaderRuntimeOwner {
         else await ReadingBodyImageHost.instance.prepareMangaDisplay(cachedBytes, this.mangaStorageChapter(identity), cacheCurrent, priority, onPrepared);
         return;
       } catch (error) {
-        // Corruption repair belongs to the explicit digest check above. A
-        // display-preparation failure preserves verified downloaded content.
-        if (identity.resourceRef !== undefined) throw error;
+        // Digest corruption is handled above. A display-policy rejection or
+        // a verified manga preparation failure preserves the original.
+        if (identity.resourceRef !== undefined || error instanceof ReadingImagePresentationPolicyError) throw error;
         await this.readingImageDiskCache.removeResource(identity, cacheCurrent);
       }
     }
@@ -1265,9 +1293,12 @@ export class ReaderRuntimeOwner {
     const current = (): boolean => storageCurrent() && isCurrent();
     this.assertReadingImageCurrent(current);
     const sessionId = ++this.nextMangaDisplaySession;
-    this.mangaDisplaySessions.set(sessionId, { scope: { ...scope }, current,
-      aliases: new Map<string, MangaPreparedDisplayPage>(), files: new Map<string, ReadingBodyImagePayload>(),
-      fileAliasCounts: new Map<string, number>() });
+    const sessionScope: MangaDisplaySessionScope = { sourceId: scope.sourceId, bookId: scope.bookId, chapterId: scope.chapterId,
+      contentVersion: scope.contentVersion, sourceRuleVersion: scope.sourceRuleVersion, decodeRevision: scope.decodeRevision,
+      preview: scope.preview };
+    const body = ReadingBodyImageHost.instance;
+    this.mangaDisplaySessions.set(sessionId, { scope: sessionScope, current,
+      leases: new MangaDisplayLeaseCache(payload => body.retainMangaDisplay(payload), uri => body.release(uri)) });
     return sessionId;
   }
 
@@ -1275,8 +1306,7 @@ export class ReaderRuntimeOwner {
     const session = this.mangaDisplaySessions.get(sessionId);
     if (session === undefined) return;
     this.mangaDisplaySessions.delete(sessionId);
-    for (const payload of session.files.values()) ReadingBodyImageHost.instance.release(payload.fileUri);
-    session.aliases.clear(); session.files.clear(); session.fileAliasCounts.clear();
+    session.leases.close();
   }
 
   tryAcquireMangaPreparedImage(sessionId: number, scope: MangaDisplaySessionScope, resourceRef: string,
@@ -1287,17 +1317,8 @@ export class ReaderRuntimeOwner {
     if (!session.current()) { this.endMangaDisplaySession(sessionId); return undefined; }
     if (this.mangaDisplaySessionKey(scope) !== this.mangaDisplaySessionKey(session.scope) ||
       !Number.isFinite(mangaPosition) || mangaPosition < 0 || mangaPosition > 1) return undefined;
-    const page = session.aliases.get(resourceRef);
-    if (page === undefined) return undefined;
-    // Match Body's normalized region coordinates, including its rounding
-    // tolerance at y/height boundaries. Lookup examines metadata only.
-    const targetY = Math.min(page.intrinsicHeight - 1, Math.floor(mangaPosition * page.intrinsicHeight + 0.000001));
-    const regionY = session.scope.preview ? 0 : Math.floor(targetY / page.tileHeight) * page.tileHeight;
-    const payload = page.regions.get(regionY);
-    if (payload === undefined) return undefined;
-    if (!session.scope.preview && (targetY < (payload.regionY ?? 0) || targetY >= (payload.regionY ?? 0) + payload.height)) return undefined;
-    const acquired = ReadingBodyImageHost.instance.retainMangaDisplay(payload);
-    if (acquired === undefined) { this.endMangaDisplaySession(sessionId); return undefined; }
+    const acquired = session.leases.acquire(resourceRef, mangaPosition, session.scope.preview);
+    if (acquired === undefined) return undefined;
     try { this.assertReadingImageCurrent(isCurrent); }
     catch (error) { ReadingBodyImageHost.instance.release(acquired.fileUri); throw error; }
     return acquired;
@@ -1319,32 +1340,7 @@ export class ReaderRuntimeOwner {
     for (const [sessionId, session] of this.mangaDisplaySessions) {
       if (!session.current()) { this.endMangaDisplaySession(sessionId); continue; }
       if (this.mangaDisplaySessionKey(session.scope) !== scopeKey) continue;
-      if (!session.files.has(payload.fileUri)) {
-        const retained = ReadingBodyImageHost.instance.retainMangaDisplay(payload);
-        if (retained === undefined) continue;
-        session.files.set(payload.fileUri, retained);
-      }
-      let page = session.aliases.get(identity.resourceRef);
-      if (page === undefined) {
-        page = { intrinsicHeight: payload.intrinsicHeight,
-          tileHeight: Math.min(payload.intrinsicHeight, 2048, Math.max(1, Math.floor(1024 * 1024 / payload.intrinsicWidth))),
-          regions: new Map<number, ReadingBodyImagePayload>() };
-        session.aliases.set(identity.resourceRef, page);
-      }
-      const regionY = preview ? 0 : payload.regionY ?? 0;
-      const previous = page.regions.get(regionY);
-      page.regions.set(regionY, { ...payload, pixelMap: undefined });
-      if (previous?.fileUri !== payload.fileUri) {
-        session.fileAliasCounts.set(payload.fileUri, (session.fileAliasCounts.get(payload.fileUri) ?? 0) + 1);
-        if (previous !== undefined) {
-          const count = (session.fileAliasCounts.get(previous.fileUri) ?? 1) - 1;
-          if (count > 0) session.fileAliasCounts.set(previous.fileUri, count);
-          else {
-            session.fileAliasCounts.delete(previous.fileUri); session.files.delete(previous.fileUri);
-            ReadingBodyImageHost.instance.release(previous.fileUri);
-          }
-        }
-      }
+      session.leases.publish(identity.resourceRef, payload, preview);
     }
   }
 

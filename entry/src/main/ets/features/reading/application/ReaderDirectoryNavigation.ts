@@ -284,6 +284,11 @@ export interface ReaderDirectoryNavigationPort {
 }
 export type ReaderDirectoryNavigationPortFactory = () => ReaderDirectoryNavigationPort;
 
+/** Only Core's stale identity and the Host's matching eviction are reopenable. */
+export function isReaderDirectoryViewStale(error: Error): boolean {
+  return error.message === 'directory view or target is stale' || error.message === 'directory view was evicted';
+}
+
 export class ReaderDirectoryNavigationGateway implements ReaderDirectoryNavigationPort {
   private readonly runtime: ReadingGatewayRuntime;
   private static views: Map<string, ReaderDirectoryIdentity> = new Map<string, ReaderDirectoryIdentity>();

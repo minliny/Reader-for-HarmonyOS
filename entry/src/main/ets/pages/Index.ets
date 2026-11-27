@@ -123,6 +123,7 @@ import { motionAnimateParam, motionSpecGet, readerMotionStandardCurve } from '..
 import { ReaderRouteStackSurface, type ReaderRouteSurfaceKey } from '../app/navigation/ReaderRouteStackSurface';
 import { ReaderBottomNavigation } from '../app/navigation/ReaderBottomNavigation';
 import { readerMainNavigationMode } from '../features/shell/MainNavigationSpec';
+import { readerSettingsPresentationPlan, type ReaderSettingsPresentationPlan } from '../app/navigation/ReaderSettingsPresentationPolicy';
 import { readerLayoutCarrierResponseRegion } from '../ui/layout/ReaderPageNativeAttributes';
 import { ReaderPostLayoutFrame } from '../ui/layout/ReaderPostLayoutFrame';
 import { ReaderLayoutDebugOverlay } from '../app/composition/ReaderLayoutDebugOverlay';
@@ -1164,10 +1165,12 @@ struct Index {
   }
 
   private showsPrimaryBottomNavigation(): boolean {
-    if (!this.usesBottomMainNavigation()) return false;
-    if (this.route === 'bookshelf') return true;
-    if (this.expandedLayout()) return this.wideSettingsPane() !== undefined;
-    return this.route === 'settings' && this.settingsSection === 'home';
+    return this.settingsViewportPlan().primaryFooter;
+  }
+
+  private settingsViewportPlan(): ReaderSettingsPresentationPlan {
+    return readerSettingsPresentationPlan(this.route, this.navigationOwner.settingsPane() !== undefined, this.expandedLayout(),
+      this.settingsSection === 'home', this.usesBottomMainNavigation());
   }
 
   private primaryBottomNavigationInputAllowed(): boolean {
@@ -1242,6 +1245,7 @@ struct Index {
         ReaderRouteStackSurface({
           route: this.appRouteLane(), routeMotion: this.searchAppForeground ? this.visibleRouteMotion : 'none',
           surfaceId: 'reader-app-route-stack',
+          wideSettingsLayout: this.expandedLayout(), settingsPresentationRoot: this.settingsViewportPlan().settingsRoot,
           extendsToWindowEdges: true,
           viewportWidth: this.routeViewportWidth(), reduceMotion: this.appReduceMotion,
           readerDetailActive: this.readerDetailScene !== undefined,
@@ -1346,8 +1350,7 @@ struct Index {
     if (retainedReaderRoute(this.route, this.directoryReturnTarget) !== undefined) {
       return this.navigationOwner.returns.snapshot().readingOrigin;
     }
-    if (this.wideSettingsPane() !== undefined) return 'settings';
-    return this.route;
+    return this.settingsViewportPlan().lane;
   }
 
   private appRouteSafeTop(route: ReaderRoute): number {
@@ -1410,12 +1413,11 @@ struct Index {
     ReaderWideSettingsShell({
       pane: this.wideSettingsSelection(), collapsed: this.wideSettingsCollapsed,
       interactive: this.wideSettingsInputAllowed(),
-      sharedBottomNavigationHeight: this.usesBottomMainNavigation() ? this.primaryTabFooterHeight : -1,
+      sharedBottomNavigationHeight: this.settingsViewportPlan().reserveSharedFooter ? this.primaryTabFooterHeight : -1,
       onToggle: (): void => {
         if (this.wideSettingsInputAllowed()) this.wideSettingsCollapsed = !this.wideSettingsCollapsed;
       },
       onPane: (pane: SettingsPane): void => this.requestWideSettingsPane(pane),
-      onMainTab: (tab: string): void => this.requestWideSettingsMainTab(tab),
       content: (width: number): void => { this.secondaryRouteStack(width); },
     });
   }
