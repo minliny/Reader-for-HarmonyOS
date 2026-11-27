@@ -706,7 +706,9 @@ export const journeys = {
         }
       }
       if (field === 'engine') {
-        await ui.tap('进入在线 TTS 管理表单', { ...action('管理在线 TTS'), within: picker }, {
+        const manageOnline = { type: 'Text', originalText: '管理在线 TTS', enabled: 'true',
+          within: [picker, { type: 'Button', enabled: 'true', clickable: 'true' }] };
+        await ui.tap('进入在线 TTS 管理表单', manageOnline, {
           route: 'reading', all: [manager, id('reader-tts-manager-form'), { ...closeTtsOverlay, within: manager }],
           requiredRules: ['R9', 'R10', 'R14'], features: ['online-tts-editor'],
           transition: surface(manager.id), screenCapture: true,
@@ -776,12 +778,41 @@ export const journeys = {
     await waitAutoPageCountdown(ui, mode, 1, '核对继续自动翻页后的倒计时');
     await waitAutoPageCountdown(ui, mode, 2, '核对继续自动翻页后进入下一轮倒计时');
     await returnFromPlaybackCapsule(ui, mode, 'autoPage', '自动翻页', toggle);
+    const pauseAction = { type: 'Text', originalText: '暂停', within: toggle };
+    const resumeAction = { type: 'Text', originalText: '继续', within: toggle };
+    await ui.tap('暂停自动计时后验证手动切章', pauseAction, {
+      route: 'reading', all: [auto, resumeAction, stop], modalOpen: true,
+    });
+    const chapterLabel = { type: 'Text', text: /测试编号 \d+ · 本地书籍$/u, within: controlTopBar };
+    const chapterBefore = /测试编号 (\d+) · 本地书籍$/u.exec(ui.value(chapterLabel) ?? '');
+    if (!chapterBefore) ui.block('暂停后未取得当前本地章节编号');
+    const chapterNumber = Number(chapterBefore[1]);
+    const reader = steadyReader(mode);
+    const chapterReturn = { ...reader,
+      all: [...reader.all, ...capsuleState('自动翻页', false)], none: [auto],
+      transition: chapterAdvance('reader-chapter-local'),
+    };
+    const reopenAutoPage = async expectedChapter => {
+      await ui.tap('切章后从正文重新打开阅读控制', stageMode(mode), {
+        route: 'reading', all: [{ ...controlTopBar, enabled: 'true' }], modalOpen: true,
+      });
+      if (!ui.has(auto)) {
+        await ui.tap('重新进入自动翻页模块', entry('autoPage'), {
+          route: 'reading', all: [auto, resumeAction, stop], modalOpen: true,
+        });
+      }
+      const chapter = { ...chapterLabel,
+        text: new RegExp(`测试编号 ${String(expectedChapter).padStart(2, '0')} · 本地书籍$`, 'u') };
+      await ui.wait('核对相邻章节和暂停的自动翻页控制', {
+        route: 'reading', all: [auto, resumeAction, stop, chapter], modalOpen: true,
+      });
+    };
     await ui.tap('从自动翻页模块切换下一章并检查保留帧', next, {
-      route: 'reading', all: [auto, previous, stop], transition: chapterAdvance('reader-chapter-local'), filmstrip: true,
+      ...chapterReturn, filmstrip: true,
     });
-    await ui.tap('从自动翻页模块切回上一章', previous, {
-      route: 'reading', all: [auto, next, stop], transition: chapterAdvance('reader-chapter-local'),
-    });
+    await reopenAutoPage(chapterNumber + 1);
+    await ui.tap('从自动翻页模块切回上一章', previous, chapterReturn);
+    await reopenAutoPage(chapterNumber);
     await ui.tap('停止并核对自动翻页回到可启动状态', stop, {
       route: 'reading', all: [toggle, stopDisabled], none: [stop],
       requiredRules: ['R14'], features: ['auto-page-transport'], screenCapture: true,
@@ -995,7 +1026,8 @@ export const journeys = {
     await ui.tap('恢复新源原启用状态', switchSource, { route: 'source', all: [{ ...switchSource, [state]: original }] });
     const item = action(importedSource);
     const remove = id('reader-source-batch-delete');
-    await ui.tap('进入批量管理以仅选择测试样本', action('批量管理'), { route: 'source', all: [item, remove] });
+    const batchMode = { ...enabled(/^source-back:\d+:tools:footer$/u), type: 'Button', clickable: 'true' };
+    await ui.tap('进入批量管理以仅选择测试样本', batchMode, { route: 'source', all: [item, remove] });
     await ui.tap('选定独立样本', item, { route: 'source', all: [selected(item), enabled(remove.id)] });
     await ui.tap('打开删除确认，要求只有一个公开样本', enabled(remove.id), {
       route: 'source', all: [text(/^确定删除所选 1 个书源/u), action('删除')], requiredRules: ['R9', 'R10'],
