@@ -16,6 +16,7 @@ import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { ReaderSegmentedControl } from '../../../ui/controls/ReaderSegmentedControl';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
+import { ReaderIslandSwitchRow } from './ReaderIslandControlStyle';
 import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
 import { ReaderControlSettingsOptionModifier } from './ReaderControlSettingsOptionModifier';
 import { createDefaultReaderSettingsSnapshot, isReaderPageTurnStyleAvailable,
@@ -387,18 +388,18 @@ export struct ReaderControlSettingsContent {
             this.widePageLayoutRow();
           }
         }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
-        Column() {
+        Column({ space: 5 }) {
           this.islandHeading('状态栏与显示');
           this.islandToggle('隐藏状态栏', 'hideStatusBar');
           this.islandToggle('隐藏底部导航栏', 'hideNavigationBar');
           this.islandToggle('拓展到刘海（灵动岛）', 'extendIntoCutout');
         }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
-        Column() {
+        Column({ space: 5 }) {
           this.islandHeading('正文排版');
           this.islandToggle('文字两端对齐', 'justifyText');
           this.islandToggle('底部对齐', 'alignPageBottom');
         }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
-        Column() {
+        Column({ space: 5 }) {
           this.islandHeading('阅读操作');
           this.islandToggle('音量键翻页', 'volumeKeysTurnPage');
           this.islandToggle('息屏终止朗读', 'stopTtsOnScreenOff');
@@ -422,7 +423,8 @@ export struct ReaderControlSettingsContent {
       Flex({ wrap: FlexWrap.Wrap }) {
         ForEach(this.groupOptions(group), (option: string) => {
           ReaderButton({ scheme: this.appThemeScheme, label: this.optionLabel(group, option),
-            visualSize: 'small', variant: this.isSegmentActive(group, option) ? 'primary' : 'reader-tonal',
+            visualSize: 'small',
+            variant: this.isSegmentActive(group, option) ? 'reader-island-selected' : 'reader-island',
             focusId: `reader-control-settings-${group}-${option}`,
             actionEnabled: this.currentInputEnabled() && this.isSegmentAvailable(group, option),
             actionAccessibilityLabel: this.segmentAccessibilityText(group, option),
@@ -436,22 +438,15 @@ export struct ReaderControlSettingsContent {
 
   @Builder
   private islandToggle(label: string, key: ReaderSettingsToggleKey) {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Row({ space: 8 }) {
-        Text(label).layoutWeight(1).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
-        ReaderControlSwitchTrack({ value: key === 'justifyText' ? this.justifyText : this.toggleValue(key) });
-      }.width('100%').accessibilityLevel('no-hide-descendants');
-    }.width('100%').constraintSize({ minHeight: 44 }).padding({ left: 2, right: 2 })
-      .backgroundColor(Color.Transparent).borderRadius(0)
-      .border({ width: { top: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-      .enabled(this.currentInputEnabled() && (key === 'justifyText' || isReaderSettingsToggleAvailable(key)))
-      .opacity(key === 'justifyText' || isReaderSettingsToggleAvailable(key) ? 1 : .45)
-      .accessibilitySelected(key === 'justifyText' ? this.justifyText : this.toggleValue(key))
-      .accessibilityText(key === 'justifyText' ? label : this.toggleAccessibilityText(label, key))
-      .onClick((): void => {
+    ReaderIslandSwitchRow({ scheme: this.appThemeScheme, label,
+      accessibleLabel: key === 'justifyText' ? label : this.toggleAccessibilityText(label, key),
+      value: key === 'justifyText' ? this.justifyText : this.toggleValue(key),
+      actionReady: this.currentInputEnabled() && (key === 'justifyText' || isReaderSettingsToggleAvailable(key)),
+      onChange: (): void => {
         if (key === 'justifyText') this.handleJustify();
         else this.handleToggle(key);
-      });
+      },
+    });
   }
 
   @Builder

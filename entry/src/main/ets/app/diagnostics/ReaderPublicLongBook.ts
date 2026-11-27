@@ -8,6 +8,7 @@ import type { ReaderRuntimeOwner } from '../ReaderRuntimeOwner';
 import { LocalBookImportGateway } from '../../features/bookshelf/application/LocalBookImportGateway';
 import { SourceGateway } from '../../features/source/application/SourceGateway';
 import { buildReaderPublicFixtureDirectory, isReaderNamedPublicFixture, type ReaderPublicFixtureScope } from './ReaderPublicFixtureScope';
+import { READER_VM_LOCAL_SHA256, READER_VM_LOCAL_TITLE } from './ReaderVmJourneyData';
 
 interface PublicLocalBook {
   rawFile: string;
@@ -17,8 +18,8 @@ interface PublicLocalBook {
 }
 
 const LONG_BOOK: PublicLocalBook = {
-  rawFile: 'reader-public-fixture-long-book-v1.txt', title: 'Reader Phase 1 公共长目录', bytes: 3362,
-  sha256: '27792a0e5906b59c33ecf8fd5a9984654aadbdcf46d668dd61ad7a6a623b48df',
+  rawFile: 'reader-public-fixture-long-book-v1.txt', title: READER_VM_LOCAL_TITLE, bytes: 3362,
+  sha256: READER_VM_LOCAL_SHA256,
 };
 
 const SCROLLED_BOOKS: PublicLocalBook[] = [

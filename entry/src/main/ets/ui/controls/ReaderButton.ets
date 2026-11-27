@@ -300,6 +300,7 @@ export struct ReaderButton {
         .attributeModifier(new ReaderPressFeedback(
           readerAppColor(this.matrixPaint().surface, this.scheme),
           this.scheme, 999, 999, this.actionEnabled, this.pressPointer >= 0))
+        .border(this.matrixBorder())
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
       .layoutWeight(this.layout === 'equal' ? 1 : undefined)
@@ -328,6 +329,12 @@ export struct ReaderButton {
   }
   private matrixPaint(): ReaderButtonMatrixPaint { return resolveReaderButtonMatrixPaint(this.matrixVariant(), this.actionEnabled); }
 
+  private matrixBorder(): BorderOptions {
+    const border = this.matrixPaint().border;
+    return { width: border === undefined ? 0 : 1,
+      color: border === undefined ? Color.Transparent : readerAppColor(border, this.scheme) };
+  }
+
   private matrixLabelStyle() {
     return this.matrixVariant() === 'subtle' || !this.actionEnabled ? TYPE_APP_SEGMENT_LABEL : TYPE_APP_COMPACT_PRIMARY_ACTION;
   }
@@ -350,7 +357,7 @@ export struct ReaderButton {
 
   private matrixOpacity(): number {
     const busyOpacity = this.isBusy ? resolveReaderButtonSpec(this.specId).busyOpacity : 1;
-    return !this.actionEnabled && busyOpacity === 1 ? 0.45 : busyOpacity;
+    return !this.actionEnabled && busyOpacity === 1 && this.matrixPaint().border === undefined ? 0.45 : busyOpacity;
   }
 
   private fontScale(): number {

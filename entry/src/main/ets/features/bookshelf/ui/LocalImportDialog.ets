@@ -1,4 +1,4 @@
-import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
+import { readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
@@ -21,7 +21,7 @@ import { READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS } from './LocalImportMotion
 import { readerMotionCurve, readerMotionDurationMs, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
-import { localImportResultLayout, LocalImportResultLayout } from './LocalImportLayout';
+import { localImportPanelHeight } from './LocalImportLayout';
 import type { LocalImportDialogState } from '../presentation/LocalImportPresentationOwner';
 import type { LocalImportBatch, LocalImportItem } from '../application/LocalBookImportGateway';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
@@ -31,12 +31,7 @@ import {
   resolveHorizontalFrame,
 } from '../../../ui/layout/SurfaceHorizontalGeometry';
 import { DialogSurfaceSpec, resolveDialogSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { readerSurfaceMaxHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
-import {
-  readerInteractiveSafeLeft,
-  readerInteractiveSafeRight,
-  readerInteractiveSafeTop,
-} from '../../../ui/foundation/ReaderWindowMetrics';
+import { ReaderInsetsVp, ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import {
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_MD,
@@ -80,19 +75,16 @@ export struct LocalImportDialog {
   @Prop @Watch('onPresentationChanged') reduceMotion: boolean = false;
   @Prop failureMessage: string = '';
   @Prop @Watch('onSelectionEligibilityChanged') selectionEnabled: boolean = true;
+  @Prop embeddedPreview: boolean = false;
   @Prop selectionBlockedMessage: string = '';
   @Prop originalPending: boolean = false;
   @Prop @Watch('onRecoveryChanged') recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   @StorageLink('readerAppForeground') @Watch('onForegroundChanged') private foreground: boolean = true;
-  @State private viewportHeight: number = -1;
-  @State private viewportOriginY: number = 0;
-  @State private measuredItemsHeight: number = 0;
-  @State private measuredHeaderHeight: number = 61.75;
-  @State private measuredSummaryHeight: number = 68;
-  @State private measuredFooterHeight: number = 76;
-  @State private shellHeight: number = 228;
-  @State private measuredImportingHeight: number = 228;
+  @State private previewHost: ReaderRectVp = new ReaderRectVp();
+  @State private measuredResultHeight: number = 0;
+  @State private shellHeight: number = 0;
+  @State private measuredImportingHeight: number = 0;
   @State private importingOpacity: number = 1;
   @State private resultOpacity: number = 0;
   @State private resultInputReady: boolean = false;
@@ -104,9 +96,7 @@ export struct LocalImportDialog {
   private pendingHandoff: boolean = false;
   private handoffEndsAt: number = 0;
   private handoffReduced: boolean = false;
-  private resultMeasured: boolean = false;
   private wasImporting: boolean = false;
-  @State private viewportWidth: number = 0;
   onSelectFiles: (mayOpenPicker: () => boolean) => void = (_mayOpenPicker: () => boolean): void => {};
   onClose: () => void = (): void => {};
 
@@ -176,25 +166,27 @@ export struct LocalImportDialog {
       Stack().width('100%').height('100%')
         .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
           readerAppColor('app.scrim.modal', this.appThemeScheme)))
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
         .accessibilityLevel('no');
 
-      Stack({ alignContent: Alignment.Center }) {
+      if (this.panelFrame().width > 0 && this.availableHeight() > 0) {
         Stack({ alignContent: Alignment.Center }) {
-          if (this.state === 'fileSelection' || this.state === 'pickerOpening') {
-            this.fileSelectionPanel();
-          } else {
-            // One persistent opaque shell owns the importing -> result handoff.
-            ReaderBoundedSurface({ specId: 'local-import-progress', surfaceWidth: this.panelFrame().width,
-              surfaceHeight: this.state === 'importing' ? this.importingPanelHeight() : this.shellHeight, body: (): void => { this.progressLayers(); } });
-          }
-        }.width(this.panelFrame().width).transition(readerImportCardTransition(this.reduceMotion));
+          Stack({ alignContent: Alignment.Center }) {
+            if (this.state === 'fileSelection' || this.state === 'pickerOpening') {
+              this.fileSelectionPanel();
+            } else {
+              // One persistent opaque shell owns the importing -> result handoff.
+              ReaderBoundedSurface({ specId: 'local-import-progress', surfaceWidth: this.panelFrame().width,
+                surfaceHeight: this.progressShellHeight(), maxSurfaceHeight: this.availableHeight(),
+                body: (): void => { this.progressLayers(); } })
+                .opacity(this.state === 'importing' || this.wasImporting || this.resultOpacity > 0 ? 1 : 0);
+            }
+          }.width(this.panelFrame().width).transition(readerImportCardTransition(this.reduceMotion));
+        }.width('100%').height('100%')
+          .padding({ left: this.panelFrame().left, right: this.panelFrame().right,
+            top: this.contentSafeTop(), bottom: this.contentBottomInset() });
       }
-      .width('100%')
-      .height('100%')
-      .padding({ left: this.panelFrame().left, right: this.panelFrame().right,
-        top: this.contentSafeTop(), bottom: this.contentBottomInset() });
-      if (this.pendingImport()) {
+      if (this.pendingImport() && this.recoveryMaxHeight() > 0) {
         Column() {
           ReaderRecoveryNotice({ maxHeightVp: this.recoveryMaxHeight(), view: this.recovery, tag: '导入待确认', actionLabel: '核对导入结果',
             onReconcile: (generation: number): void => this.reconcilePendingImport(generation) });
@@ -208,19 +200,16 @@ export struct LocalImportDialog {
     .clip(true)
     .transition(readerImportOverlayTransition(this.reduceMotion))
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
-      const originY = this.numericAreaLength(newValue.globalPosition?.y ?? 0);
-      const originChanged = Number.isFinite(originY) && Math.abs(originY - this.viewportOriginY) >= .1;
-      if (originChanged) this.viewportOriginY = originY;
-      const height = this.numericAreaLength(newValue.height);
-      if (Number.isFinite(height) && height >= 0 && (originChanged || Math.abs(height - this.viewportHeight) >= .1)) {
-        this.viewportHeight = height;
-        if (this.state === 'importing') this.shellHeight = this.importingPanelHeight();
-        if (this.state === 'result' && !this.pendingHandoff) this.shellHeight = this.resultPanelHeight();
-      }
+      if (!this.embeddedPreview) return;
+      const originX = newValue.globalPosition.x;
+      const originY = newValue.globalPosition.y;
+      if (originX === undefined || originY === undefined) return;
+      const left = this.numericAreaLength(originX);
+      const top = this.numericAreaLength(originY);
       const width = this.numericAreaLength(newValue.width);
-      if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
-        this.viewportWidth = width;
-      }
+      const height = this.numericAreaLength(newValue.height);
+      if (this.previewHost.left !== left || this.previewHost.top !== top || this.previewHost.width !== width ||
+        this.previewHost.height !== height) this.previewHost = new ReaderRectVp(left, top, width, height);
     });
   }
 
@@ -230,20 +219,15 @@ export struct LocalImportDialog {
   @Builder
   private fileSelectionPanel() {
     ReaderBoundedSurface({ specId: 'local-import-selection', surfaceWidth: this.panelFrame().width,
-      surfaceHeight: this.selectionPanelHeight(), body: (): void => { this.selectionDocument(); } });
+      surfaceHeight: 0, maxSurfaceHeight: this.availableHeight(), body: (): void => { this.selectionDocument(); } });
   }
 
   @Builder
   private selectionDocument() {
     Scroll() {
       Column() { this.fileSelectionHeader(); this.fileSelectionBody(); this.fileSelectionActions(); }.width('100%');
-    }.width('100%').height(this.selectionPanelHeight()).align(Alignment.Top).scrollBar(BarState.Auto);
-  }
-
-  private selectionPanelHeight(): number {
-    this.readerWindowMetricsRevision;
-    const scale = Math.max(1, ReaderWindowCoordinator.metrics().systemFontScale);
-    return Math.min(this.availableHeight(), 399.75 * scale);
+    }.width('100%').constraintSize({ maxHeight: this.documentHeightLimit() })
+      .align(Alignment.Top).scrollBar(BarState.Auto).onAppear((): void => this.requestSelectionFocus());
   }
 
   @Builder
@@ -368,16 +352,13 @@ export struct LocalImportDialog {
             .lineHeight(MESSAGE_BODY.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
         }.width('100%').padding({ left: 17, right: 17, top: 23, bottom: 14 });
-      }.width('100%').constraintSize({ minHeight: 228 }).alignItems(HorizontalAlign.Start)
-        .onAreaChange(this.importingHeightChangeHandler());
-    }.width(this.panelFrame().width).height(this.importingPanelHeight()).align(Alignment.Top)
+      }.width('100%').constraintSize({ minHeight: 228 }).alignItems(HorizontalAlign.Start);
+    }.width('100%').height(this.state === 'result' && this.measuredImportingHeight > 0 ? this.measuredImportingHeight : undefined)
+      .constraintSize({ maxHeight: this.documentHeightLimit() }).align(Alignment.Top)
+      .onAreaChange(this.importingHeightChangeHandler())
       .scrollBar(BarState.Auto).opacity(this.importingOpacity)
       .hitTestBehavior(this.state === 'importing' ? HitTestMode.Default : HitTestMode.None)
       .accessibilityLevel(this.resultInputReady ? 'no-hide-descendants' : 'auto');
-  }
-
-  private importingPanelHeight(): number {
-    return Math.min(this.availableHeight(), Math.max(228, this.measuredImportingHeight));
   }
 
   private importingHeightChangeHandler(): (oldValue: Area, area: Area) => void {
@@ -387,7 +368,7 @@ export struct LocalImportDialog {
       const height = this.numericAreaLength(area.height);
       if (!Number.isFinite(height) || height <= 0 || Math.abs(height - this.measuredImportingHeight) < .1) return;
       this.measuredImportingHeight = height;
-      this.shellHeight = this.importingPanelHeight();
+      this.shellHeight = localImportPanelHeight(this.availableHeight(), height);
     };
   }
 
@@ -401,8 +382,25 @@ export struct LocalImportDialog {
 
   @Builder
   private resultPanel() {
-    ReaderBoundedSurface({ specId: 'local-import-result-content', surfaceWidth: this.panelFrame().width,
-      surfaceHeight: this.resultPanelHeight(), header: (): void => { this.resultBoundedHeader(); }, body: (): void => { this.resultBody(); }, actions: (): void => { this.resultFooter(); } })
+    Scroll() {
+      Column() {
+        this.importHeader((): string => this.summaryTitle());
+        this.resultSummary();
+        Column() {
+          ForEach(this.resultItems(), (item: LocalImportItem, index: number): void => {
+            this.resultItem((): LocalImportItem => this.currentResultItem(item, index));
+          }, (item: LocalImportItem, index: number): string => `${item.fileName}-${item.state}-${index}`);
+        }.width('100%').padding({ left: 17, right: 17 });
+        this.resultFooter();
+      }.width('100%').onAreaChange((_old: Area, next: Area): void => {
+        const height = this.numericAreaLength(next.height);
+        if (height > 0 && Math.abs(height - this.measuredResultHeight) >= 0.1) {
+          this.measuredResultHeight = height;
+          this.updateMeasuredResult();
+        }
+      });
+    }.width('100%').constraintSize({ maxHeight: this.documentHeightLimit() })
+      .align(Alignment.Top).scrollBar(BarState.Auto)
       .opacity(this.resultOpacity).enabled(this.resultAcceptsInput())
       .accessibilityLevel(this.resultAcceptsInput() ? 'auto' : 'no-hide-descendants')
       .hitTestBehavior(this.resultAcceptsInput() ? HitTestMode.Default : HitTestMode.None);
@@ -413,39 +411,11 @@ export struct LocalImportDialog {
   }
 
   @Builder
-  private resultBoundedHeader() { if (!this.resultLayout().compact) this.resultHeader(); }
-
-  @Builder
-  private resultBody() {
-      if (this.resultLayout().compact) {
-        Scroll() {
-          Column() { this.resultHeader(); this.resultSummary(); this.resultItemsNatural(); }
-            .width('100%');
-        }.width('100%').height(Math.max(0, this.resultPanelHeight() - this.measuredFooterHeight))
-          .align(Alignment.Top).scrollBar(BarState.Off);
-      } else {
-        this.resultSummary();
-        this.resultItemsPanel();
-      }
-  }
-
-  @Builder
-  private resultHeader() {
-    Column() { this.importHeader((): string => this.summaryTitle()); }.width('100%')
-      .onAreaChange((_old: Area, next: Area): void => {
-        this.measuredHeaderHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
-      });
-  }
-
-  @Builder
   private resultFooter() {
     Column() {
       ReaderRecoveryAction({ label: '完成', actionEnabled: this.resultAcceptsInput(),
         onReconcile: (): void => { if (this.resultAcceptsInput()) this.onClose(); } }).width('100%');
-    }.width('100%').padding(17)
-      .onAreaChange((_old: Area, next: Area): void => {
-        this.measuredFooterHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
-      });
+    }.width('100%').padding(17);
   }
 
   @Builder
@@ -453,44 +423,11 @@ export struct LocalImportDialog {
     Text(this.resultCountText()).width('100%').fontFamily(MESSAGE_BODY.fontFamily)
       .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
       .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
-      .padding({ left: 17, right: 17, bottom: 15 })
-      .onAreaChange((_old: Area, next: Area): void => {
-        this.measuredSummaryHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
-      });
+      .padding({ left: 17, right: 17, bottom: 15 });
   }
 
   @Builder
-  private resultItemsPanel() {
-    Column() {
-      Scroll() {
-        this.resultItemsNatural();
-      }
-      .width('100%')
-      .height(this.resultItemsPanelHeight())
-      .padding(1)
-
-      .scrollBar(BarState.Off);
-    }
-    .width('100%')
-    .padding({ left: 17, right: 17 });
-  }
-
-  @Builder
-  private resultItemsNatural() {
-    Column() {
-      ForEach(this.resultItems(), (item: LocalImportItem, index: number): void => {
-        this.resultItem((): LocalImportItem => this.currentResultItem(item, index),
-          (): boolean => index !== this.resultItems().length - 1);
-      }, (item: LocalImportItem, index: number): string => `${item.fileName}-${item.state}-${index}`);
-    }.width('100%').onAreaChange((_old: Area, next: Area): void => {
-      this.measuredItemsHeight = this.numericAreaLength(next.height);
-      this.resultMeasured = true;
-      this.updateMeasuredResult();
-    });
-  }
-
-  @Builder
-  private resultItem(item: () => LocalImportItem, hasDivider: () => boolean) {
+  private resultItem(item: () => LocalImportItem) {
     Column({ space: 0 }) {
       Row({ space: 9 }) {
         Image(this.appThemeScheme === 'night' ? $r('app.media.import_doc_theme_night') : $r('app.media.import_doc'))
@@ -544,67 +481,48 @@ export struct LocalImportDialog {
     return current !== undefined && current.fileName === snapshot.fileName && current.state === snapshot.state ? current : snapshot;
   }
 
+  private host(): ReaderRectVp {
+    this.readerWindowMetricsRevision;
+    return this.embeddedPreview ? this.previewHost : ReaderWindowCoordinator.metrics().windowRect;
+  }
+
+  private viewport(): ReaderRectVp {
+    return readerOverlayViewport(ReaderWindowCoordinator.metrics(), this.host(), new ReaderInsetsVp(0, 20, 0, 20));
+  }
+
   private panelFrame(): SurfaceHorizontalFrame {
-    if (this.readerWindowMetricsRevision < 0) {
-      return new SurfaceHorizontalFrame(0, 0, 0);
-    }
-    const metrics = ReaderWindowCoordinator.metrics();
-    const containerWidth = this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width;
-    return resolveHorizontalFrame(
-      containerWidth,
-      readerInteractiveSafeLeft(metrics),
-      readerInteractiveSafeRight(metrics),
-      new SurfaceWidthSpec(
-        this.surfaceSpec().maxWidth,
-        this.surfaceSpec().edgeGap,
-        this.surfaceSpec().edgeGap,
-      ),
-    );
+    const host = this.host();
+    const viewport = this.viewport();
+    const left = viewport.left - host.left;
+    const right = Math.max(0, host.width - left - viewport.width);
+    const spec = this.surfaceSpec();
+    return resolveHorizontalFrame(host.width, left, right, new SurfaceWidthSpec(spec.maxWidth, spec.edgeGap, spec.edgeGap));
   }
 
-  private resultButtonWidth(): number {
-    return Math.max(0, this.panelFrame().width - 32);
+  private resultPanelHeight(): number { return localImportPanelHeight(this.availableHeight(), this.measuredResultHeight); }
+
+  private progressShellHeight(): number {
+    if (this.state === 'importing') return 0;
+    return this.resultInputReady ? this.resultPanelHeight() : Math.min(this.availableHeight(), this.shellHeight);
   }
 
-  private resultItemsPanelHeight(): number {
-    return this.resultLayout().listHeight;
-  }
+  private availableHeight(): number { return this.viewport().height; }
 
-  private resultPanelHeight(): number { return this.resultLayout().height; }
-
-  private resultLayout(): LocalImportResultLayout {
-    return localImportResultLayout(this.availableHeight(), this.measuredHeaderHeight,
-      this.measuredSummaryHeight, this.measuredFooterHeight, this.measuredItemsHeight + 2);
-  }
-
-  private availableHeight(): number {
-    return readerSurfaceMaxHeight(this.contentBottom(), this.contentSafeTop() + 40);
+  private documentHeightLimit(): number {
+    return Math.max(0, this.availableHeight() - 2 * TOK_BORDER_W);
   }
 
   private contentSafeTop(): number {
-    this.readerWindowMetricsRevision;
-    return Math.max(0, readerInteractiveSafeTop(ReaderWindowCoordinator.metrics()) - this.viewportOriginY);
-  }
-
-  private contentBottom(): number {
-    this.readerWindowMetricsRevision;
-    const metrics = ReaderWindowCoordinator.metrics();
-    const height = this.viewportHeight >= 0 ? this.viewportHeight : metrics.windowRect.height;
-    return readerKeyboardHostBottom(metrics, this.viewportOriginY, height);
+    return Math.max(0, this.viewport().top - this.host().top);
   }
 
   private contentBottomInset(): number {
-    const height = this.viewportHeight >= 0 ? this.viewportHeight : ReaderWindowCoordinator.metrics().windowRect.height;
-    return Math.max(0, height - this.contentBottom());
+    return Math.max(0, this.host().height - this.contentSafeTop() - this.availableHeight());
   }
 
-  private recoveryTop(): number {
-    return this.contentSafeTop() + 8;
-  }
+  private recoveryTop(): number { return this.contentSafeTop(); }
 
-  private recoveryMaxHeight(): number {
-    return readerSurfaceMaxHeight(this.contentBottom(), this.recoveryTop() + 8);
-  }
+  private recoveryMaxHeight(): number { return this.availableHeight(); }
 
   private allSucceeded(): boolean {
     return this.resultItems().length > 0 && this.resultItems().every((item: LocalImportItem): boolean => item.state === 'success');
@@ -621,8 +539,6 @@ export struct LocalImportDialog {
   }
 
   private onBatchChanged(): void {
-    this.resultMeasured = this.batch !== undefined && this.batch.items.length === 0;
-    this.measuredItemsHeight = 0;
     this.onPresentationChanged();
   }
 
@@ -642,7 +558,6 @@ export struct LocalImportDialog {
     }
     if (this.state === 'importing') {
       this.wasImporting = true;
-      this.shellHeight = this.importingPanelHeight();
       this.importingOpacity = 1;
       this.resultOpacity = 0;
       return;
@@ -665,7 +580,7 @@ export struct LocalImportDialog {
   }
 
   private updateMeasuredResult(): void {
-    if (!this.mounted || this.state !== 'result' || this.batch === undefined || !this.resultMeasured) return;
+    if (!this.mounted || this.state !== 'result' || this.batch === undefined || this.measuredResultHeight <= 0) return;
     const height = this.resultPanelHeight();
     if (!this.pendingHandoff) {
       const remaining = Math.max(0, this.handoffEndsAt - readerMotionNowMs());

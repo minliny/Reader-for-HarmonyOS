@@ -6,7 +6,11 @@ import { TYPE_READER_PANEL_LABEL, TYPE_READER_PANEL_NUMBER, TYPE_APP_ROW_DETAIL,
 
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
-import { ReaderIslandAction, READER_ISLAND_PLAYBACK_HEIGHT_VP } from './ReaderIslandControlStyle';
+import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
+import { ReaderIslandAction, ReaderIslandControlFrame, ReaderIslandSwitchRow, readerIslandTransportLayout }
+  from './ReaderIslandControlStyle';
+import { READER_ISLAND_PLAYBACK_INSET_X, READER_ISLAND_PLAYBACK_INSET_Y, READER_ISLAND_PLAYBACK_ACTION_GAP,
+  READER_ISLAND_PLAYBACK_STATUS_GAP, type ReaderIslandPlaybackLayout } from './ReaderIslandPlaybackLayout';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderControlQuickBack } from './ReaderControlQuickBack';
@@ -46,6 +50,8 @@ class ReaderAutoPageProfileFrame extends FrameCallback {
   onFrame(): void { this.action(); }
   onIdle(): void {}
 }
+
+type ReaderAutoPageIslandTransport = 'previous' | 'next' | 'stop' | 'toggle';
 
 /** Restored 1938:6245 content-only actor tree. No Full-sheet adapter, local
  * animation clock, background, grabber or Full header. Existing playback,
@@ -109,6 +115,7 @@ export struct ReaderControlAutoPageContent {
   private minimumScrollPath: ReaderControlMorphScrollPath | undefined = undefined;
   private minimumLastProgress: number = 0;
   @Prop @Watch('onSourceDetachedChanged') sourceDetached: boolean = false;
+  @Prop sourceHandoffPending: boolean = false;
   onMorphActorVisible: (kind: ReaderSessionMorphSourceKind) => void =
     (_kind: ReaderSessionMorphSourceKind): void => {};
 
@@ -539,7 +546,12 @@ export struct ReaderControlAutoPageContent {
     }
   }
 
-  private islandPlaybackHeight(): number { return READER_ISLAND_PLAYBACK_HEIGHT_VP; }
+  private islandPlaybackLayout(): ReaderIslandPlaybackLayout {
+    this.readerWindowMetricsRevision;
+    return readerIslandTransportLayout(this.availableWidth, ReaderWindowCoordinator.metrics().systemFontScale, 3);
+  }
+
+  private islandPlaybackHeight(): number { return this.islandPlaybackLayout().height; }
 
   @Builder
   private islandContent() {
@@ -548,6 +560,11 @@ export struct ReaderControlAutoPageContent {
         Column({ space: 6 }) {
           if (!this.sourceDetached) {
             this.islandPlayback();
+          } else if (this.sourceHandoffPending) {
+            Blank().width(this.availableWidth).height(this.islandPlaybackHeight())
+              .onVisibleAreaChange([0, .01, 1], (visible: boolean, ratio: number): void => {
+                if (visible && ratio > 0) this.onMorphActorVisible(readerControlPlaybackSourceKind('autoPage', this.form));
+              });
           } else {
             Blank().height(this.islandPlaybackHeight());
           }
@@ -560,15 +577,19 @@ export struct ReaderControlAutoPageContent {
                 .fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
               this.islandStep('speed', 1, this.effectiveSpeedSeconds() < READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS);
             }.width('100%');
-            Slider({ value: this.effectiveSpeedSeconds(), min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
-              max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, step: 1 })
-              .attributeModifier(new ReaderPaperMaterial())
-              .width('100%').height(44)
-              .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
-              .trackColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme))
-              .enabled(this.sharedInput()).accessibilityText('自动翻页间隔')
-              .onChange((value: number, mode: SliderChangeMode): void => this.changeSpeedSlider(value, mode));
-          }.width('100%').padding({ left: 10, right: 10 }).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
+            Row() {
+              Slider({ value: this.effectiveSpeedSeconds(), min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
+                max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, step: 1 })
+                .attributeModifier(new ReaderPaperMaterial())
+                .width('100%').height(44)
+                .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
+                .trackColor(readerAppColor('app.readerIsland.controlBorder', this.appScheme))
+                .enabled(this.sharedInput()).accessibilityText('自动翻页间隔')
+                .onChange((value: number, mode: SliderChangeMode): void => this.changeSpeedSlider(value, mode));
+            }.width('100%')
+              .attributeModifier(new ReaderIslandControlFrame(this.appScheme, this.sharedInput(), 'normal', 8, false));
+          }.width('100%').padding({ left: 10, right: 10, bottom: 8 })
+            .attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
           Column() {
             Row() {
               Text('定时停止').layoutWeight(1).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
@@ -578,15 +599,12 @@ export struct ReaderControlAutoPageContent {
             this.islandTimerRow(true);
             this.islandTimerRow(false);
           }.width('100%').padding({ left: 10, right: 10 }).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
-          Button({ type: ButtonType.Normal, stateEffect: false }) {
-            Row() {
-              Text('跟随高亮').layoutWeight(1).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
-              ReaderControlSwitchTrack({ value: this.followHighlight });
-            }.width('100%');
-          }.width('100%').height(44).padding({ left: 10, right: 10 }).backgroundColor(Color.Transparent)
-            .attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme))
-            .accessibilitySelected(this.followHighlight).accessibilityText('跟随高亮')
-            .onClick((): void => { if (this.currentInputEnabled()) this.onFollowHighlightChange(!this.followHighlight); });
+          Column() {
+            ReaderIslandSwitchRow({ scheme: this.appScheme, label: '跟随高亮', value: this.followHighlight,
+              actionReady: this.currentInputEnabled(),
+              onChange: (value: boolean): void => { if (this.currentInputEnabled()) this.onFollowHighlightChange(value); },
+            });
+          }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
         }.width('100%').padding({ bottom: 2 });
       }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).edgeEffect(EdgeEffect.None)
           .onDidScroll((): void => this.reportMorphActor());
@@ -605,7 +623,7 @@ export struct ReaderControlAutoPageContent {
 
   @Builder
   private islandPlaybackContents() {
-    Column({ space: 2 }) {
+    Column({ space: READER_ISLAND_PLAYBACK_STATUS_GAP }) {
       Row({ space: 6 }) {
         Text('自动翻页').layoutWeight(1).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
@@ -619,25 +637,51 @@ export struct ReaderControlAutoPageContent {
             });
         }
         Text(this.headerMeta('control')).fontFamily(TYPE_READER_PANEL_META.fontFamily).fontWeight(TYPE_READER_PANEL_META.fontWeight).fontSize(TYPE_READER_PANEL_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme));
-      }.width('100%').height(22);
-      Row({ space: 6 }) {
-        this.islandTransport('上一章', 'reader_auto_full_chevron_left', this.canPreviousChapter, 'previous');
-        this.islandTransport(this.status === 'running' ? '暂停' : this.status === 'paused' ? '继续' : '开始',
-          this.status === 'running' ? 'reader_session_pause' : 'reader_auto_full_play', true, 'toggle');
-        this.islandTransport('停止', 'reader_auto_full_stop', this.status !== 'stopped', 'stop');
-        this.islandTransport('下一章', 'reader_auto_full_chevron_right', this.canNextChapter, 'next');
+      }.width('100%').height(this.islandPlaybackLayout().statusHeight);
+      Column({ space: READER_ISLAND_PLAYBACK_ACTION_GAP }) {
+        if (this.islandPlaybackLayout().columns === 4) {
+          this.islandTransportRow(['previous', 'toggle', 'stop', 'next']);
+        } else if (this.islandPlaybackLayout().columns === 2) {
+          this.islandTransportRow(['previous', 'toggle']);
+          this.islandTransportRow(['stop', 'next']);
+        } else {
+          this.islandTransportRow(['previous']);
+          this.islandTransportRow(['toggle']);
+          this.islandTransportRow(['stop']);
+          this.islandTransportRow(['next']);
+        }
       }.width('100%');
     }.width('100%').height('100%')
-      .padding({ left: 10, right: 10, top: 6, bottom: 6 });
+      .padding({ left: READER_ISLAND_PLAYBACK_INSET_X, right: READER_ISLAND_PLAYBACK_INSET_X,
+        top: READER_ISLAND_PLAYBACK_INSET_Y, bottom: READER_ISLAND_PLAYBACK_INSET_Y });
+  }
+
+  @Builder
+  private islandTransportRow(actions: ReaderAutoPageIslandTransport[]) {
+    Row({ space: READER_ISLAND_PLAYBACK_ACTION_GAP }) {
+      ForEach(actions, (action: ReaderAutoPageIslandTransport): void => {
+        if (action === 'previous') {
+          this.islandTransport('上一章', 'reader_tts_make_previous', this.canPreviousChapter, action, actions.length === 4);
+        } else if (action === 'next') {
+          this.islandTransport('下一章', 'reader_tts_make_next', this.canNextChapter, action, actions.length === 4);
+        } else if (action === 'stop') {
+          this.islandTransport('停止', 'reader_auto_full_stop', this.status !== 'stopped', action, actions.length === 4);
+        } else {
+          this.islandTransport(this.status === 'running' ? '暂停' : this.status === 'paused' ? '继续' : '开始',
+            this.status === 'running' ? 'reader_session_pause' : 'reader_auto_full_play', true, action, actions.length === 4);
+        }
+      }, (action: ReaderAutoPageIslandTransport): string => action);
+    }.width('100%').height(this.islandPlaybackLayout().rowHeight);
   }
 
   @Builder
   private islandTransport(label: string, asset: string, available: boolean,
-    action: 'previous' | 'next' | 'stop' | 'toggle') {
+    action: ReaderAutoPageIslandTransport, emphasizeToggle: boolean) {
     ReaderIslandAction({
       scheme: this.appScheme, kind: 'transport', label,
-      tone: action === 'toggle' ? 'selected' : 'normal',
-      icon: $r(`app.media.${asset}${this.appScheme === 'night' ? '_theme_night' : ''}`),
+      tone: action === 'toggle' ? 'selected' : action === 'stop' ? 'stop' : 'normal',
+      nativeId: this.sourceOnly === 'none' ? 'reader-control-auto-page-transport-' + action : '',
+      icon: $r(`app.media.${asset}`),
       actionReady: this.sourceOnly === 'none' && this.currentInputEnabled() && available,
       visualAvailable: available,
       onAction: (): void => {
@@ -647,7 +691,8 @@ export struct ReaderControlAutoPageContent {
         else if (action === 'stop') this.onStop();
         else { this.reportMorphActor(); this.onToggleRunning(); }
       },
-    }).layoutWeight(action === 'toggle' ? 1.25 : 1);
+    }).layoutWeight(emphasizeToggle && action === 'toggle' ? 1.25 : 1)
+      .height(this.islandPlaybackLayout().rowHeight);
   }
 
   @Builder

@@ -13,6 +13,7 @@ import { FrameCallback } from '@kit.ArkUI';
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
+import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -48,9 +49,11 @@ import {
 } from './ReaderControlPlaybackGeometry';
 import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
 import { readerTtsPlayGradientStart } from './ReaderControlTtsStyle';
-import { ReaderIslandAction, readerIslandTtsPlaybackLayout, type ReaderIslandTtsPlaybackLayout,
-  READER_ISLAND_PLAYBACK_INSET_X, READER_ISLAND_PLAYBACK_INSET_Y, READER_ISLAND_PLAYBACK_STATUS_GAP,
-  READER_ISLAND_PLAYBACK_ACTION_GAP } from './ReaderIslandControlStyle';
+import { ReaderIslandAction, ReaderIslandControlFrame, ReaderIslandSwitchRow, readerIslandTransportLayout }
+  from './ReaderIslandControlStyle';
+import { READER_ISLAND_PLAYBACK_INSET_X, READER_ISLAND_PLAYBACK_INSET_Y, READER_ISLAND_PLAYBACK_STATUS_GAP,
+  READER_ISLAND_PLAYBACK_ACTION_GAP, type ReaderIslandPlaybackLayout } from './ReaderIslandPlaybackLayout';
+import { readerIslandControlPaint } from '../../../ui/foundation/ReaderIslandControlPaint';
 import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionOutlineOpacity,
   readerControlMotionClipRects, readerControlMotionClipPath,
   type ReaderControlMotionPresentation } from './ReaderControlMotionPresentation';
@@ -69,6 +72,11 @@ interface ReaderTtsConfigurationReturnFocus {
   identity: string;
   generation: number;
   origin: ReaderTtsConfigField | 'manage';
+}
+
+interface ReaderTtsInlineConfigurationGeometry {
+  host: ReaderRectVp | undefined;
+  anchor: ReaderRectVp | undefined;
 }
 
 let ttsConfigurationFocusSequence = 0;
@@ -167,7 +175,7 @@ class ReaderTtsNaturalRangeFrame implements AttributeModifier<TextAttribute> {
 @Component
 export struct ReaderControlTtsContent {
   @StorageLink('readerAppScheme') @Watch('reportMorphActor') private appScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') @Watch('onMinimumInputsChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerWindowMetricsRevision') @Watch('onWindowMetricsChanged') private readerWindowMetricsRevision: number = 0;
 
   // Pure retained source projections have no Scroll, IDs, callbacks or modal hosts.
   @Prop fixedIsland: boolean = false;
@@ -184,6 +192,7 @@ export struct ReaderControlTtsContent {
   @Prop reduceMotion: boolean = false;
   @Prop waveformActive: boolean = true;
   @Prop @Watch('onSourceDetachedChanged') sourceDetached: boolean = false;
+  @Prop sourceHandoffPending: boolean = false;
   onMorphActorVisible: (kind: ReaderSessionMorphSourceKind) => void =
     (_kind: ReaderSessionMorphSourceKind): void => {};
 
@@ -322,6 +331,7 @@ export struct ReaderControlTtsContent {
   private committedSliderSeek: number = -1;
   @State private configField: ReaderTtsConfigField | 'manage' | '' = '';
   @State private configIdentity: string = '';
+  @State private inlineConfigurationGeometry: ReaderTtsInlineConfigurationGeometry | undefined = undefined;
   @State private managerBusy: boolean = false;
   @State @Watch('onMinimumInputsChanged') private serviceTab: string = '';
   @State private serviceBusy: boolean = false;
@@ -436,6 +446,15 @@ export struct ReaderControlTtsContent {
     this.cachedProgress = -1;
     this.publishMinimumMeasurer();
   }
+  private onWindowMetricsChanged(): void {
+    this.onMinimumInputsChanged();
+    const field = this.configField;
+    if (this.fixedIsland || !this.configMounted || field === '' || field === 'manage') return;
+    const identity = this.configIdentity;
+    this.getUIContext().postFrameCallback(new ReaderTtsConfigurationFocusFrame((): void => {
+      if (this.configMounted && this.configIdentity === identity) this.captureInlineConfigurationGeometry(field);
+    }));
+  }
   private onMinimumKeyChanged(): void {
     this.cachedProgress = -1;
     if (this.configMounted) this.syncMorphScroll();
@@ -530,6 +549,7 @@ export struct ReaderControlTtsContent {
     this.configGeneration += 1;
     this.configField = '';
     this.configIdentity = '';
+    this.inlineConfigurationGeometry = undefined;
     this.managerBusy = false;
     if (origin === 'voice') this.onAuditionStop();
     this.onTemporaryLayerChange(false);
@@ -543,6 +563,7 @@ export struct ReaderControlTtsContent {
     this.islandConfigurationReturnFocus = undefined;
     if (field === 'manage') this.managerFocusOrigin = this.configField === '' ? 'manage' : this.configField;
     if (this.configField === 'voice') this.onAuditionStop();
+    if (!this.fixedIsland && field !== 'manage') this.captureInlineConfigurationGeometry(field);
     this.configField = field;
     this.configIdentity = `${field}:${++this.configGeneration}`;
     this.onTemporaryLayerChange(true);
@@ -823,9 +844,9 @@ export struct ReaderControlTtsContent {
     }
   }
 
-  private islandPlaybackLayout(): ReaderIslandTtsPlaybackLayout {
+  private islandPlaybackLayout(): ReaderIslandPlaybackLayout {
     this.readerWindowMetricsRevision;
-    return readerIslandTtsPlaybackLayout(this.availableWidth, ReaderWindowCoordinator.metrics().systemFontScale,
+    return readerIslandTransportLayout(this.availableWidth, ReaderWindowCoordinator.metrics().systemFontScale,
       Math.max(this.controlText('previous').length, this.controlText('next').length));
   }
 
@@ -839,6 +860,11 @@ export struct ReaderControlTtsContent {
           Column({ space: 6 }) {
             if (!this.sourceDetached) {
               this.islandPlayback();
+            } else if (this.sourceHandoffPending) {
+              Blank().width(this.availableWidth).height(this.islandPlaybackHeight())
+                .onVisibleAreaChange([0, .01, 1], (visible: boolean, ratio: number): void => {
+                  if (visible && ratio > 0) this.onMorphActorVisible(readerControlPlaybackSourceKind('tts', this.form));
+                });
             } else {
               Blank().height(this.islandPlaybackHeight());
             }
@@ -849,16 +875,20 @@ export struct ReaderControlTtsContent {
                 .attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
             }
             if (this.displayState().totalSlices > 1) {
-              Column() {
+              Column({ space: 4 }) {
                 Text('朗读位置').width('100%').fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
                   .fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
-                Slider({ value: this.displayState().sliceIndex ?? 0, min: 0,
-                  max: this.displayState().totalSlices - 1, step: 1 })
-                  .attributeModifier(new ReaderPaperMaterial())
-                  .width('100%').height(44).selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
-                  .enabled(this.sharedInput()).accessibilityText('跳转朗读句子')
-                  .onChange((value: number, mode: SliderChangeMode): void => this.changeSeekSlider(value, mode));
-              }.width('100%').padding({ left: 10, right: 10, top: 8 })
+                Row() {
+                  Slider({ value: this.displayState().sliceIndex ?? 0, min: 0,
+                    max: this.displayState().totalSlices - 1, step: 1 })
+                    .attributeModifier(new ReaderPaperMaterial())
+                    .width('100%').height(44).selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
+                    .trackColor(readerAppColor('app.readerIsland.controlBorder', this.appScheme))
+                    .enabled(this.sharedInput()).accessibilityText('跳转朗读句子')
+                    .onChange((value: number, mode: SliderChangeMode): void => this.changeSeekSlider(value, mode));
+                }.width('100%')
+                  .attributeModifier(new ReaderIslandControlFrame(this.appScheme, this.sharedInput(), 'normal', 8, false));
+              }.width('100%').padding(8)
                 .attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
             }
             this.islandRate();
@@ -889,9 +919,10 @@ export struct ReaderControlTtsContent {
         Text('朗读').fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
         if (this.state.status === 'playing') {
           ReaderTtsWaveform({ playing: true, appThemeScheme: this.appScheme,
+            slotWidth: 28, slotHeight: 12,
             frozen: this.sourceOnly !== 'none', frozenSample: this.frozenWaveformSample, reduceMotion: this.reduceMotion,
             active: this.waveformActive && this.currentInputEnabled() && !this.sourceDetached && this.configField === '' })
-            .width(28).height(12).hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+            .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
         }
         Blank().layoutWeight(1);
         Text(this.statusText()).fontFamily(TYPE_READER_PANEL_META.fontFamily).fontWeight(TYPE_READER_PANEL_META.fontWeight).fontSize(TYPE_READER_PANEL_META.fontSizeFp).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -920,8 +951,7 @@ export struct ReaderControlTtsContent {
     // Row resolves the fractional native width before distributing weights.
     Row({ space: READER_ISLAND_PLAYBACK_ACTION_GAP }) {
       ForEach(kinds, (kind: ReaderControlTransportKind): void => {
-        this.islandTransport(kind, kind === 'toggle' ? this.state.status !== 'stopping' : this.hasActiveQueue(),
-          kinds.length === 4);
+        this.islandTransport(kind, this.islandTransportAvailable(kind), kinds.length === 4);
       }, (kind: ReaderControlTransportKind): string => kind);
     }.width('100%').height(this.islandPlaybackLayout().rowHeight);
   }
@@ -933,6 +963,17 @@ export struct ReaderControlTtsContent {
     return this.isActivelySpeaking() ? 'reader_tts_make_pause' : 'reader_tts_make_play';
   }
 
+  private islandTransportAvailable(kind: ReaderControlTransportKind): boolean {
+    if (this.serviceBusy || (this.onlineServicePage() && !this.isHttpEngineSelected())) return false;
+    if (kind === 'toggle') return this.state.status !== 'stopping';
+    if (!this.hasActiveQueue()) return false;
+    if (kind === 'stop') return true;
+    const index = this.state.sliceIndex;
+    if (index === undefined) return false;
+    // Next on the final utterance uses the existing chapter advance or completion path.
+    return kind === 'next' || index > 0;
+  }
+
   @Builder
   private islandTransport(kind: ReaderControlTransportKind, available: boolean, emphasizeToggle: boolean) {
     ReaderIslandAction({
@@ -941,13 +982,11 @@ export struct ReaderControlTtsContent {
       accessibleLabel: this.controlText(kind),
       nativeId: this.sourceOnly === 'none' ? 'reader-control-tts-transport-' + kind : '',
       tone: kind === 'toggle' ? 'selected' : kind === 'stop' ? 'stop' : 'normal',
-      icon: $r(`app.media.${this.islandTransportAsset(kind)}${this.appScheme === 'night' ? '_theme_night' : ''}`),
+      icon: $r(`app.media.${this.islandTransportAsset(kind)}`),
       visualAvailable: available,
-      actionReady: this.sourceOnly === 'none' && this.currentInputEnabled() && available && !this.serviceBusy &&
-        !(this.onlineServicePage() && !this.isHttpEngineSelected()),
+      actionReady: this.sourceOnly === 'none' && this.currentInputEnabled() && available,
       onAction: (): void => {
-        if (this.sourceOnly !== 'none' || !this.currentInputEnabled() || !available || this.serviceBusy ||
-          (this.onlineServicePage() && !this.isHttpEngineSelected())) return;
+        if (this.sourceOnly !== 'none' || !this.currentInputEnabled() || !this.islandTransportAvailable(kind)) return;
         if (kind === 'previous') this.onPrevious();
         else if (kind === 'next') this.onNext();
         else if (kind === 'stop') this.onStop();
@@ -959,15 +998,18 @@ export struct ReaderControlTtsContent {
 
   @Builder
   private islandRate() {
-    Column() {
+    Column({ space: 4 }) {
       this.sectionHeader({ title: '语速', meta: this.effectiveRate().toFixed(2) + '×' });
-      Slider({ value: this.effectiveRate(), min: READER_TTS_RATE_MIN, max: READER_TTS_RATE_MAX, step: READER_TTS_RATE_STEP })
-        .attributeModifier(new ReaderPaperMaterial())
-        .width('100%').height(44).selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
-        .enabled(this.sharedInput())
-        .trackColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme))
-        .accessibilityText('朗读语速').onChange((value: number, mode: SliderChangeMode): void => this.changeRateSlider(value, mode));
-    }.width('100%').padding({ left: 6, right: 6 }).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
+      Row() {
+        Slider({ value: this.effectiveRate(), min: READER_TTS_RATE_MIN, max: READER_TTS_RATE_MAX, step: READER_TTS_RATE_STEP })
+          .attributeModifier(new ReaderPaperMaterial())
+          .width('100%').height(44).selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
+          .enabled(this.sharedInput())
+          .trackColor(readerAppColor('app.readerIsland.controlBorder', this.appScheme))
+          .accessibilityText('朗读语速').onChange((value: number, mode: SliderChangeMode): void => this.changeRateSlider(value, mode));
+      }.width('100%')
+        .attributeModifier(new ReaderIslandControlFrame(this.appScheme, this.sharedInput(), 'normal', 8, false));
+    }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
   }
 
   @Builder
@@ -988,7 +1030,7 @@ export struct ReaderControlTtsContent {
   @Builder
   private islandTimerPreset(label: string, value: number | 'chapterEnd', selected: boolean) {
     ReaderButton({ scheme: this.appScheme, label,
-      layout: 'full', visualSize: 'small', variant: selected ? 'primary' : 'reader-tonal',
+      layout: 'full', visualSize: 'small', variant: selected ? 'reader-island-selected' : 'reader-island',
       primary: selected, selectionSemantic: true, actionEnabled: this.currentInputEnabled(),
       onAction: (): void => this.chooseTimerPreset(value),
     }).layoutWeight(1);
@@ -1011,27 +1053,80 @@ export struct ReaderControlTtsContent {
     ReaderIslandAction({
       scheme: this.appScheme, label: delta < 0 ? '−' : '+',
       accessibleLabel: `${delta < 0 ? '减少' : '增加'}朗读${minutes ? '分钟' : '秒钟'}`,
-      actionReady: this.currentInputEnabled(),
-      onAction: (): void => this.stepTimer(minutes, delta),
+      actionReady: this.currentInputEnabled() && this.islandTimerStepAvailable(minutes, delta),
+      visualAvailable: this.islandTimerStepAvailable(minutes, delta),
+      onAction: (): void => {
+        if (this.islandTimerStepAvailable(minutes, delta)) this.stepTimer(minutes, delta);
+      },
     });
+  }
+
+  private islandTimerStepAvailable(minutes: boolean, delta: number): boolean {
+    if (this.timerMode !== 'duration') return true;
+    const value = minutes ? this.timerMinutes : this.timerSeconds;
+    const maximum = minutes ? READER_TTS_TIMER_MAX_MINUTES : READER_TTS_TIMER_MAX_SECONDS;
+    return delta < 0 ? value > READER_TTS_TIMER_MIN : value < maximum;
   }
 
   @Builder
   private islandAudio() {
-    Column() {
+    Column({ space: 5 }) {
       this.sectionHeader({ title: '音频配置', meta: this.currentVoiceLabel() });
-      this.ttsClosedConfigRow('voice');
-      this.ttsClosedConfigRow('engine');
-      this.ttsClosedConfigRow('language');
-      this.ttsClosedConfigRow('session');
-      this.ttsClosedConfigRow('failure');
-      if (this.isHttpEngineSelected()) this.onlineServiceInfoRow();
-      this.toggleRow('followHighlight');
-      this.toggleRow('pauseOnInterruption');
-      this.toggleRow('allowMixing');
-      this.toggleRow('backgroundPlayback');
-      this.toggleRow('keepScreenOn');
-    }.width('100%').attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
+      this.islandConfigurationRow('voice');
+      this.islandConfigurationRow('engine');
+      this.islandConfigurationRow('language');
+      this.islandConfigurationRow('session');
+      this.islandConfigurationRow('failure');
+      if (this.isHttpEngineSelected()) this.islandConfigurationRow('manage');
+      this.islandAudioToggle('followHighlight');
+      this.islandAudioToggle('pauseOnInterruption');
+      this.islandAudioToggle('allowMixing');
+      this.islandAudioToggle('backgroundPlayback');
+      this.islandAudioToggle('keepScreenOn');
+    }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
+  }
+
+  @Builder
+  private islandConfigurationRow(kind: ReaderControlTtsField | 'manage') {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Row({ space: 8 }) {
+        Text(kind === 'manage' ? '服务信息' : this.fieldLabel(kind)).flexShrink(0)
+          .fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight)
+          .fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp)
+          .fontColor(this.islandConfigInk(kind));
+        Text(kind === 'manage' ? this.displayedFacts()?.manageLabel ??
+          (this.manageConfigured() ? '已配置 · 编辑' : '立即配置') : this.fieldValue(kind)).layoutWeight(1)
+          .fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp)
+          .fontColor(this.islandConfigInk(kind)).textAlign(TextAlign.End)
+          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
+        Image($r(this.appScheme === 'night' ? 'app.media.reader_appearance_make_chevron_theme_night' :
+          'app.media.reader_appearance_make_chevron')).width(14).height(14).flexShrink(0);
+      }.id('reader-control-tts-choice-' + kind).width('100%').alignItems(VerticalAlign.Center)
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+    }.id(`${this.configFocusId}:${kind}`).width('100%').constraintSize({ minHeight: 44 })
+      .padding({ left: 10, right: 10, top: 5, bottom: 5 }).opacity(1)
+      .attributeModifier(new ReaderIslandControlFrame(this.appScheme, this.islandConfigReady(kind)))
+      .enabled(this.islandConfigReady(kind))
+      .accessibilityText(kind === 'manage' ? (this.manageConfigured() ? '已配置在线 TTS，编辑服务信息' : '立即配置在线 TTS') :
+        `${this.fieldLabel(kind)}：${this.fieldValue(kind)}，选择配置`)
+      .onClick((): void => { if (this.islandConfigReady(kind)) this.openConfiguration(kind); });
+  }
+
+  private islandConfigReady(kind: ReaderControlTtsField | 'manage'): boolean {
+    return this.fullInput() && this.configField === '' && (kind !== 'manage' || !this.serviceBusy);
+  }
+
+  private islandConfigInk(kind: ReaderControlTtsField | 'manage'): string {
+    return readerAppColor(readerIslandControlPaint(this.islandConfigReady(kind)).ink, this.appScheme);
+  }
+
+  @Builder
+  private islandAudioToggle(kind: ReaderControlTtsToggle) {
+    ReaderIslandSwitchRow({ scheme: this.appScheme, label: this.toggleLabel(kind),
+      accessibleLabel: `${this.toggleLabel(kind)}，${this.toggleValue(kind) ? '已开启' : '已关闭'}`,
+      value: this.toggleValue(kind), actionReady: this.fullInput() && this.configField === '',
+      onChange: (): void => this.changeToggle(kind),
+    });
   }
 
   @Builder
@@ -1101,17 +1196,27 @@ export struct ReaderControlTtsContent {
         .opacity(1 - this.p()).hitTestBehavior(HitTestMode.None);
   }
 
-  private configurationAnchorY(): number {
-    const nativeOffset = this.scroller.currentOffset()?.yOffset;
-    const offset = nativeOffset !== undefined && Number.isFinite(nativeOffset) ?
-      nativeOffset : this.scrollMotion.nativeScrollOffset;
-    const header = (this.textMinimum()?.sectionHeader ?? 18) + 8;
-    if (this.configField === 'voice') return this.frame().detail.y + header + (this.textMinimum()?.voiceRow ?? 52) - offset;
-    if (this.configField === 'failure') return this.frame().detail.y +
-      (this.textMinimum() === undefined ? 270 : header + (this.textMinimum()?.detailCard ?? 340)) - offset;
-    const row = this.configField === 'language' ? 1 : 0;
-    return this.frame().config.y + header + 14 + (this.textMinimum()?.serviceTab ?? 87) + 15 +
-      (row + 1) * (this.textMinimum()?.configRow ?? 48) - offset;
+  private nativeConfigurationRect(id: string): ReaderRectVp | undefined {
+    try {
+      const context = this.getUIContext();
+      const node = context.getFrameNodeById(id);
+      if (node === null) return undefined;
+      const position = node.getPositionToWindowWithTransform();
+      const size = context.getComponentUtils().getRectangleById(id).size;
+      const width = context.px2vp(size.width), height = context.px2vp(size.height);
+      if ([position.x, position.y, width, height].every(Number.isFinite) && width > 0 && height > 0) {
+        return new ReaderRectVp(position.x, position.y, width, height);
+      }
+    } catch (_) {
+      // The overlay remains bounded by the inline host if a native actor is retiring.
+    }
+    return undefined;
+  }
+
+  private captureInlineConfigurationGeometry(field: ReaderTtsConfigField): void {
+    const host = this.nativeConfigurationRect(this.actorId(false));
+    this.inlineConfigurationGeometry = { host, anchor: host === undefined ? undefined :
+      this.nativeConfigurationRect(`${this.configFocusId}:${field}`) };
   }
 
   private managerCurrent(identity: string): boolean {
@@ -1128,7 +1233,7 @@ export struct ReaderControlTtsContent {
       if (!this.configMounted || !this.fullInput()) return;
       let target: ReaderTtsConfigField | 'manage' | 'close' = 'close';
       if (origin === undefined) {
-        if (!this.managerCurrent(identity) || this.managerBusy) return;
+        if (this.configIdentity !== identity || this.configGeneration !== generation || this.configField === '' || this.managerBusy) return;
       } else {
         if (this.configField !== '' || this.configGeneration !== generation + 1) return;
         target = origin;
@@ -1148,7 +1253,7 @@ export struct ReaderControlTtsContent {
     const generation = this.configGeneration;
     const origin = this.managerFocusOrigin;
     return {
-      modalTransition: ModalTransition.NONE, backgroundColor: Color.Transparent,
+      modalTransition: ModalTransition.NONE, backgroundColor: Color.Transparent, enableSafeArea: false,
       onAppear: (): void => this.scheduleConfigurationFocus(identity, generation),
       onDisappear: (): void => this.scheduleConfigurationFocus(identity, generation, origin),
       onWillDismiss: (action: DismissContentCoverAction): void => {
@@ -1173,12 +1278,14 @@ export struct ReaderControlTtsContent {
 
   private islandCoverOptions(): ContentCoverOptions {
     return {
-      modalTransition: ModalTransition.NONE, backgroundColor: Color.Transparent, enableSafeArea: true,
+      // The content-cover root uses full-window coordinates. The panel owns the interactive safe bounds.
+      modalTransition: ModalTransition.NONE, backgroundColor: Color.Transparent, enableSafeArea: false,
       onWillDismiss: (action: DismissContentCoverAction): void => {
         if (!this.configMounted || this.configField === '') return;
         if (this.configField === 'manage' &&
           (this.consumeManagerKeyboardBack(action, this.configIdentity) || this.managerBusy)) return;
         this.dismissConfiguration(true);
+        action.dismiss();
       },
       onDisappear: (): void => {
         const focus = this.islandConfigurationReturnFocus;
@@ -1228,7 +1335,8 @@ export struct ReaderControlTtsContent {
           message: this.configurationMessage(), manager: false, windowModal: this.fixedIsland,
           showManage: this.configField === 'engine' || this.configurationMessage().length > 0,
           availableWidth: this.availableWidth, availableHeight: this.availableHeight,
-          anchorY: this.fixedIsland ? 0 : this.configurationAnchorY(), voicePicker: this.configField === 'voice',
+          inlineHost: this.inlineConfigurationGeometry?.host, inlineAnchor: this.inlineConfigurationGeometry?.anchor,
+          voicePicker: this.configField === 'voice',
           engines: this.httpEngines, engine: this.engine, selectionId: opening,
           closeFocusId: `${this.configFocusId}:close`,
           recoveryView: this.configurationRecovery,
@@ -1244,6 +1352,8 @@ export struct ReaderControlTtsContent {
             if (this.configField !== '' && identity === this.configIdentity) this.openConfiguration('manage');
           },
           onClose: (identity: string): void => { if (identity === this.configIdentity) this.dismissConfiguration(true); },
+        }).onAppear((): void => {
+          if (this.fixedIsland && this.configIdentity === opening) this.scheduleConfigurationFocus(opening, this.configGeneration);
         });
       }, (opening: string): string => opening);
     }
@@ -1427,9 +1537,9 @@ export struct ReaderControlTtsContent {
   @Builder
   private waveform() {
     ReaderTtsWaveform({ playing: this.state.status === 'playing', appThemeScheme: this.appScheme,
+      slotWidth: this.frame().waveform.width, slotHeight: this.frame().waveform.height,
       frozen: this.sourceOnly !== 'none', frozenSample: this.frozenWaveformSample, reduceMotion: this.reduceMotion,
       active: this.waveformActive && this.currentInputEnabled() && !this.sourceDetached })
-      .width(this.frame().waveform.width).height(this.frame().waveform.height)
       .position({ x: this.frame().waveform.x, y: this.frame().waveform.y })
       .opacity(this.frame().waveform.opacity).hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
   }

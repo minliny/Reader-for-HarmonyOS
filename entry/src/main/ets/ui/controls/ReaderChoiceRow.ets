@@ -7,7 +7,8 @@ import {
   TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_REGULAR, TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_SELECTED, TYPE_DOWNLOAD_BODY,
 } from '../foundation/ReaderTypography';
 
-import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
+import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
+import { readerOverlayChoiceRowHeight } from '../layout/ReaderOverlayGeometry';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { ReaderActionAccessibility } from './ReaderActionAccessibility';
@@ -187,7 +188,7 @@ function resolveReaderChoiceSpec(id: ReaderChoiceSpecId): ReaderChoiceSpec { ret
 
 export function readerSettingsTabletOptionHeight(fontScale: number): number {
   const spec = resolveReaderChoiceSpec('settings-tablet');
-  return readerScaledControlHeight(spec.height, spec.text.lineHeightFp ?? spec.text.fontSizeFp * 1.5, fontScale);
+  return readerOverlayChoiceRowHeight(spec.height, spec.text.lineHeightFp ?? spec.text.fontSizeFp * 1.5, fontScale, 10);
 }
 
 /** The finite row spec keeps AUTO attributes absent, rather than calling a
@@ -233,6 +234,7 @@ export struct ReaderChoiceRow {
   @Prop hideIcon: boolean = false;
   @Prop actionEnabled: boolean = true;
   @Prop wrapLabel: boolean = false;
+  @Prop minimumRowHeight: number = 0;
   /** Optional focus address on the wrapping option row. */
   @Prop focusId: string = '';
   textLayoutOptions: TextOptions | undefined = undefined;
@@ -247,19 +249,28 @@ export struct ReaderChoiceRow {
     if (this.specId === 'download-radio') {
       this.radioRow();
     } else if (this.wrapLabel || this.specId === 'source-group-selected') {
-      this.flowRow();
+      if (this.showDivider && this.spec().dividerRole !== undefined) {
+        Column({ space: 0 }) { this.flowRow(); this.optionDivider(); }.width('100%');
+      } else {
+        this.flowRow();
+      }
     } else {
     Column() {
       this.normalRow();
       if (this.showDivider && this.spec().dividerRole !== undefined) {
-        Row() {
-          Blank().layoutWeight(1).height(this.spec().dividerHeight)
-            .backgroundColor(readerAppColor(this.spec().dividerRole!, this.scheme));
-        }.width('100%').height(this.spec().dividerHeight)
-          .padding({ left: this.spec().padding, right: this.spec().padding });
+        this.optionDivider();
       }
     }.width('100%').height(this.outerHeight());
     }
+  }
+
+  @Builder
+  private optionDivider() {
+    Row() {
+      Blank().layoutWeight(1).height(this.spec().dividerHeight)
+        .backgroundColor(readerAppColor(this.spec().dividerRole!, this.scheme));
+    }.width('100%').height(this.spec().dividerHeight)
+      .padding({ left: this.spec().padding, right: this.spec().padding });
   }
 
   @Builder
@@ -299,8 +310,7 @@ export struct ReaderChoiceRow {
         }
       }.width('100%').alignItems(VerticalAlign.Center)
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-    }.width('100%').constraintSize({ minHeight: this.specId === 'default-selected' || this.specId === 'default-option' ||
-      this.specId === 'source-group-selected' || this.specId === 'source-group-option' ? 44 : this.spec().height })
+    }.width('100%').constraintSize({ minHeight: Math.max(this.spec().height, this.minimumRowHeight) })
       .padding({ left: this.spec().layout === 'positioned' ? this.spec().textLeft : this.spec().padding,
         right: this.spec().layout === 'positioned' ? this.spec().iconRight - this.spec().iconWidth : this.spec().padding,
         top: this.specId === 'appearance-library' ? 6 : 10, bottom: this.specId === 'appearance-library' ? 6 : 10 })
@@ -363,7 +373,7 @@ export struct ReaderChoiceRow {
   private spec(): ReaderChoiceSpec { return resolveReaderChoiceSpec(this.specId); }
   private rowHeight(): number {
     const divider = this.showDivider ? this.spec().dividerHeight : 0;
-    return readerScaledControlHeight(this.spec().height - divider,
+    return readerOverlayChoiceRowHeight(this.spec().height - divider,
       this.spec().text.lineHeightFp ?? this.spec().text.fontSizeFp * 1.5, this.fontScale());
   }
   private outerHeight(): number {

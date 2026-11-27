@@ -2,7 +2,8 @@ import { ReaderHttpTtsGateway, type ReaderHttpTtsRuntime } from './ReaderHttpTts
 import { ReaderTtsGateway, type ReaderTtsChapterRef, type ReaderTtsRuntime } from './ReaderTtsGateway.ts';
 import type { ReaderTtsHost } from './ReaderTtsHostContract';
 import {
-  ReaderTtsSessionCoordinator, type ReaderTtsChapterAdvanceInput, type ReaderTtsHostResumeOrigin, type ReaderTtsProgressCommit,
+  ReaderTtsSessionCoordinator, type ReaderTtsChapterAdvanceInput, type ReaderTtsChapterAdvanceRange,
+  type ReaderTtsHostResumeOrigin, type ReaderTtsProgressCommit,
 } from './ReaderTtsSessionCoordinator.ts';
 import type { ReaderTtsState } from './ReaderTtsState';
 import type { ReadingChapterWindow, ReadingSessionChapter } from './ReadingChapterWindow';
@@ -70,7 +71,7 @@ export class ReaderTtsTransportOwner {
 
 export interface ReaderTtsChapterAdvanceLease {
   current(): boolean;
-  select(chapterIndex: number): void;
+  select(chapterIndex: number, firstRange?: ReaderTtsChapterAdvanceRange): boolean | void;
 }
 
 export interface ReaderTtsChapterAdvanceHost {
@@ -100,5 +101,5 @@ export async function loadNextReaderTtsChapter(window: ReadingChapterWindow, hos
   host.admit(chapter);
   window.admitNeighbour(chapter);
   return { chapter: host.chapterRef(chapter), content: chapter.content, contentVersion: chapter.contentVersion,
-    onAdmitted: (): void => lease.select(target) };
+    onAdmitted: (firstRange?: ReaderTtsChapterAdvanceRange): boolean => current() && lease.select(target, firstRange) === true };
 }

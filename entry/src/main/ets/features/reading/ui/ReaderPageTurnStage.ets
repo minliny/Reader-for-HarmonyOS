@@ -1,4 +1,5 @@
 import { readerThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { FrameCallback } from '@kit.ArkUI';
 import type { ReaderQuoteCardAction } from '../application/ReaderShareActions';
@@ -59,6 +60,7 @@ export class ReaderPageTurnRenderPage implements BookTurnTexturePage {
   appearance: ReaderAppearanceSnapshot | undefined;
   bookmark: ReaderPageBookmarkSnapshot | undefined;
   facingChapter: ReaderFacingChapter | undefined;
+  chapterIndex: number;
   bottomJustifyGap: number;
   chromeTopStartText: string;
   chromeTopEndText: string;
@@ -80,6 +82,7 @@ export class ReaderPageTurnRenderPage implements BookTurnTexturePage {
     appearance?: ReaderAppearanceSnapshot,
     bookmark?: ReaderPageBookmarkSnapshot,
     facingChapter?: ReaderFacingChapter,
+    chapterIndex: number = -1,
   ) {
     this.identity = identity;
     this.textureIdentity = textureIdentity;
@@ -90,6 +93,7 @@ export class ReaderPageTurnRenderPage implements BookTurnTexturePage {
     this.appearance = appearance;
     this.bookmark = bookmark;
     this.facingChapter = facingChapter;
+    this.chapterIndex = chapterIndex;
     this.bottomJustifyGap = bottomJustifyGap;
     this.chromeTopStartText = chrome.topStartText;
     this.chromeTopEndText = chrome.topEndText;
@@ -124,6 +128,7 @@ export const READER_PAGE_TURN_SLOT_B = 'reader-page-slot-b';
 struct ReaderPageTurnSurface {
   /** Semantic page identity; retained for diagnostics/content revisions. */
   @Prop pageIdentity: string = '';
+  @Prop transitionChapterIndex: number = -1;
   @Prop staticSnapshotId: string = '';
   @Prop highlightTextureIdentity: string = '';
   onDynamicHighlights: (identity: string, rects: ReaderDynamicHighlightRect[]) => void =
@@ -206,6 +211,8 @@ struct ReaderPageTurnSurface {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
         ReadingSurface({
+          transitionBodyId: readerTransitionsEnabled() ? this.slotIdentity + ':transition-body' : '',
+          transitionChapterIndex: this.transitionChapterIndex,
           chapterTitle: this.chapterTitle,
           showChapterTitle: this.showChapterTitle,
           fragmentsProvider: (): ReadingSurfacePageFragment[] => this.pageFragmentsProvider(),
@@ -360,6 +367,7 @@ export struct ReaderPageTurnStage {
   private pageSurface(slot: ReaderPageTurnSlot) {
     ReaderPageTurnSurface({
       pageIdentity: this.slotPage(slot).identity,
+      transitionChapterIndex: readerTransitionsEnabled() ? this.slotPage(slot).chapterIndex : -1,
       slotIdentity: this.slotIdentity(slot),
       staticSnapshotId: this.slotSnapshotId(slot),
       highlightTextureIdentity: this.slotPage(slot).textureIdentity,

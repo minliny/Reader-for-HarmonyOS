@@ -14,7 +14,6 @@ export struct BookshelfGroupSelector {
 
   @Prop selectedGroup: string = '';
   @Prop groups: BookGroup[] = [];
-  @Prop maxOptionsHeight: number = 240;
   @Prop busy: boolean = false;
   @Prop focusId: string = '';
   onSelect: (group: string) => void = (_group: string): void => {};
@@ -33,15 +32,13 @@ export struct BookshelfGroupSelector {
             new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 999, 999, this.canClear()), 'nativeButton'))
           .onClick((): void => { if (this.canClear()) this.onSelect(''); });
       }.width('100%');
-      Scroll() {
-        Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
-          space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(4) } }) {
-          this.groupChip('', '默认', this.focusId);
-          ForEach(this.groups, (group: BookGroup): void => {
-            if (group.groupName.trim().length > 0) this.groupChip(group.groupName, group.groupName, '');
-          }, (group: BookGroup): string => `${group.groupId}:${group.groupName}`);
-        }.width('100%');
-      }.width('100%').constraintSize({ maxHeight: this.maxOptionsHeight }).scrollBar(BarState.Auto);
+      Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
+        space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(4) } }) {
+        this.groupChip('', '默认', this.focusId);
+        ForEach(this.groups, (group: BookGroup): void => {
+          if (group.groupName.trim().length > 0) this.groupChip(group.groupName, group.groupName, '');
+        }, (group: BookGroup): string => `${group.groupId}:${group.groupName}`);
+      }.width('100%');
     }.width('100%').padding({ top: 8, bottom: 8 }).alignItems(HorizontalAlign.Start);
   }
 

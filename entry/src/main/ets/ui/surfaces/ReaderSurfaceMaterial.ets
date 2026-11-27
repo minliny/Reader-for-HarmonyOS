@@ -1,6 +1,8 @@
 import deviceInfo from '@ohos.deviceInfo';
 import lazy { uiMaterial } from '@kit.ArkUI';
 import { readerHarmonyCapabilities } from '../../app/HarmonyCapabilityProbe';
+import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_NATIVE_MATERIAL } from '../foundation/ReaderLayoutInvariantSignals';
+import { readerSurfaceOutlinePaint } from './ReaderReadingPanelPaint';
 import {
   READER_MODAL_BLUR_RADIUS_VP,
   normalizeReaderNavigationPreferences,
@@ -100,21 +102,37 @@ function readerImmersiveMaterial(
 
 /** A fallback may clear material on API 26. Older SDKs have no dispatch entry. */
 export function applyReaderImmersiveMaterial(instance: CommonAttribute,
-  decision: ReaderSurfaceMaterialDecision | undefined): void {
-  if (deviceInfo.distributionOSApiVersion >= 260000) {
-    if (deviceInfo.apiAvailable('26.0.0')) instance.systemMaterial(readerImmersiveMaterial(decision));
+  decision: ReaderSurfaceMaterialDecision | undefined, applyShadow: boolean = true, inspectPanel: boolean = false): void {
+  if (READER_LAYOUT_DEBUG_BUILD && (inspectPanel || decision?.style === 'thick' || decision?.style === 'ultraThick')) {
+    // This classifies a native actor. The audit reads its actual SDK render
+    // properties independently; the marker carries no expected paint values.
+    instance.customProperty(READER_LAYOUT_NATIVE_MATERIAL, decision?.native === true);
   }
+  if (deviceInfo.distributionOSApiVersion >= 260000) {
+    if (deviceInfo.apiAvailable('26.0.0')) instance.systemMaterial(readerImmersiveMaterial(decision, applyShadow));
+  }
+}
+
+/** Independent outline stays on the node when system material owns border and shadow. */
+export function readerNativeSurfaceOutline(scheme: string, radius: OutlineRadiuses | number,
+  edge: 'all' | 'top' | 'left' = 'all'): OutlineOptions {
+  const paint = readerSurfaceOutlinePaint(scheme);
+  return { width: edge === 'top' ? { top: paint.width } : edge === 'left' ? { left: paint.width } : paint.width,
+    color: paint.color, radius };
 }
 
 export class ReaderImmersiveMaterialModifier implements AttributeModifier<CommonAttribute> {
   private readonly material: ReaderSurfaceMaterialDecision | undefined;
+  private readonly outline: OutlineOptions | undefined;
 
-  constructor(material: ReaderSurfaceMaterialDecision | undefined) {
+  constructor(material: ReaderSurfaceMaterialDecision | undefined, outline?: OutlineOptions) {
     this.material = material;
+    this.outline = outline;
   }
 
   applyNormalAttribute(instance: CommonAttribute): void {
     applyReaderImmersiveMaterial(instance, this.material);
+    if (this.outline !== undefined) instance.outline(this.material?.native === true ? this.outline : undefined);
   }
 }
 

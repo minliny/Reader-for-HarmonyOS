@@ -1,7 +1,7 @@
 import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
-import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
@@ -17,12 +17,15 @@ import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/f
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
-import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerNativeSurfaceOutline,
+  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { MeasureOptions } from '@ohos.measure';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { bookContentKindLabel, bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import { readerOverlayListHeight, readerOverlayPanel, readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
+import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput,
   resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
@@ -43,8 +46,8 @@ import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision, ReaderSurfaceMaterialRole } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
 import {
-  readerVisualSafeLeft,
-  readerVisualSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom,
+  ReaderInsetsVp, ReaderRectVp, readerVisualSafeLeft,
+  readerVisualSafeRight, readerInteractiveSafeTop, readerStableInteractiveSafeBottom,
 } from '../../../ui/foundation/ReaderWindowMetrics';
 import {
   SurfaceHorizontalFrame,
@@ -130,6 +133,8 @@ export struct LocalBookDetail {
   onCancelAdd: (identity?: string) => void = (_identity?: string): void => {};
   onBack: () => void = (): void => {};
   @State private viewportWidth: number = 0;
+  @State private viewportLeft: number = 0;
+  @State private viewportTop: number = 0;
   private viewportHeight: number = 0;
   @State private introExpanded: boolean = false;
   @State private introOverflow: boolean = false;
@@ -141,6 +146,7 @@ export struct LocalBookDetail {
   @State private detailPressedAction: string = '';
   private detailPressPointer: number = -1;
   @State private moreOpen: boolean = false;
+  @State private moreAnchor: ReaderRectVp | undefined = undefined;
   private moreLease: string = '';
   private moreRevision: number = 0;
   private shownBookIdentity: string = '';
@@ -273,6 +279,10 @@ export struct LocalBookDetail {
         if (!this.mounted) return;
         const width = readerPageAreaLength(area.width);
         const height = readerPageAreaLength(area.height);
+        const left = readerPageAreaLength(area.globalPosition.x);
+        const top = readerPageAreaLength(area.globalPosition.y);
+        if (Number.isFinite(left) && Math.abs(this.viewportLeft - left) > .1) this.viewportLeft = left;
+        if (Number.isFinite(top) && Math.abs(this.viewportTop - top) > .1) this.viewportTop = top;
         if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return;
         const widthChanged = Math.abs(this.viewportWidth - width) > .1;
         if (!widthChanged && Math.abs(this.viewportHeight - height) <= .1) return;
@@ -583,7 +593,16 @@ export struct LocalBookDetail {
       accessibilityLabel: '更多操作', focusId: this.moreFocusKey(), actionScope: this.admissionIdentity,
       actionEnabled: this.detailKindConfirmed() && this.acceptsDetailInput(),
       selectionState: this.moreOpen ? 'selected' : 'none',
-      onTap: (): void => { if (this.moreOpen) this.closeMore(true); else this.openMore(); } });
+      onTap: (): void => { if (this.moreOpen) this.closeMore(true); else this.openMore(); } })
+      .onAreaChange((_old: Area, area: Area): void => {
+        const left = readerPageAreaLength(area.globalPosition.x);
+        const top = readerPageAreaLength(area.globalPosition.y);
+        const width = readerPageAreaLength(area.width);
+        const height = readerPageAreaLength(area.height);
+        if (Number.isFinite(left) && Number.isFinite(top) && width > 0 && height > 0) {
+          this.moreAnchor = new ReaderRectVp(left, top, width, height);
+        }
+      });
   }
 
   private moreFocusKey(): string { return sourceSwitchTriggerFocusId(this.book.sourceId, this.book.bookId, 'detail-more'); }
@@ -649,7 +668,7 @@ export struct LocalBookDetail {
 
   @Builder
   private detailMoreMenu() {
-    Stack({ alignContent: Alignment.TopEnd }) {
+    Stack({ alignContent: Alignment.TopStart }) {
       Stack().width('100%').height('100%').opacity(.32)
         .attributeModifier(new ReaderModalScrimModifier(this.navigationAppearance, this.appThemeScheme,
           readerAppColor('app.scrim.select', this.appThemeScheme), this.surfaceMaterial('popoverMenu').native))
@@ -658,8 +677,8 @@ export struct LocalBookDetail {
       Stack({ alignContent: Alignment.TopEnd }) {
         Column() {
           ReaderActionMenuSurface({ nativeId: `${this.moreFocusKey()}-menu`,
-            scheme: this.appThemeScheme, availableWidth: DETAIL_MENU_WIDTH,
-            viewportHeight: Math.max(0, this.viewportHeight - this.geometry.content.startInset - 20),
+            scheme: this.appThemeScheme, availableWidth: this.detailMoreRect().width,
+            viewportHeight: Math.max(0, this.detailMoreRect().height - 14),
             reduceMotion: this.appReduceMotion, actions: this.detailMenuActions(),
             onAction: (id: string): void => this.chooseMoreAction(id) });
         }.width('100%').padding({ top: 6, bottom: 6 }).borderRadius(16)
@@ -669,18 +688,46 @@ export struct LocalBookDetail {
           .border({ width: this.surfaceMaterial('popoverMenu').native ? 0 : 1,
             color: this.surfaceMaterial('popoverMenu').native ? Color.Transparent : readerAppColor('TOK_LINE', this.appThemeScheme) })
           .shadow(this.surfaceMaterial('popoverMenu').native ? undefined : readerSurfaceElevation('dialog', this.appThemeScheme))
-          .attributeModifier(new ReaderImmersiveMaterialModifier(this.surfaceMaterial('popoverMenu')));
+          .attributeModifier(new ReaderImmersiveMaterialModifier(this.surfaceMaterial('popoverMenu'),
+            readerNativeSurfaceOutline(this.appThemeScheme, 16)));
         if (!this.surfaceMaterial('popoverMenu').native) {
-          Column().width(12).height(12).rotate({ angle: 45 })
+          Column().width(12).height(12).rotate({ angle: this.detailMoreAboveAnchor() ? 225 : 45 })
             .backgroundColor(readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))
             .border({ width: { top: 1, left: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-            .position({ x: DETAIL_MENU_WIDTH - 28, y: -6 }).zIndex(1)
+            .position({ x: this.detailMorePointerX(),
+              y: this.detailMoreAboveAnchor() ? this.detailMoreRect().height - 6 : -6 }).zIndex(1)
             .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
         }
-      }.width(DETAIL_MENU_WIDTH).clip(false)
-        .margin({ top: this.geometry.content.startInset, right: this.geometry.header.insetRight })
+      }.width(this.detailMoreRect().width).clip(false)
+        .position({ x: this.detailMoreRect().left - this.viewportLeft, y: this.detailMoreRect().top - this.viewportTop })
         .transition(this.detailMoreTransition());
     }.width('100%').height('100%');
+  }
+
+  private detailMoreAnchor(): ReaderRectVp {
+    return this.moreAnchor ?? new ReaderRectVp(this.viewportLeft + this.liveWidth() - this.geometry.header.insetRight - 44,
+      this.viewportTop + this.geometry.content.startInset - 50, 44, 44);
+  }
+
+  private detailMoreRect(): ReaderRectVp {
+    this.readerWindowMetricsRevision;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const anchor = this.detailMoreAnchor();
+    const host = this.viewportHeight > 0 ?
+      new ReaderRectVp(this.viewportLeft, this.viewportTop, this.liveWidth(), this.viewportHeight) : undefined;
+    const viewport = readerOverlayViewport(metrics, host, new ReaderInsetsVp(8, 6, 8, 6), anchor);
+    const spec = resolvePopupSpec('reader-more-menu');
+    const rowHeight = readerScaledControlHeight(spec.actionHeight, spec.actionLineHeight, metrics.systemFontScale);
+    const height = readerOverlayListHeight(0, rowHeight, this.detailMenuActions().length, 0, 6, 6, 1, 0);
+    return readerOverlayPanel(viewport, DETAIL_MENU_WIDTH, height, 'anchor-end', anchor, 8);
+  }
+
+  private detailMoreAboveAnchor(): boolean { return this.detailMoreRect().top < this.detailMoreAnchor().top; }
+
+  private detailMorePointerX(): number {
+    const panel = this.detailMoreRect();
+    const anchor = this.detailMoreAnchor();
+    return Math.max(6, Math.min(panel.width - 18, anchor.left + anchor.width / 2 - panel.left - 6));
   }
 
   private surfaceMaterial(role: ReaderSurfaceMaterialRole): ReaderSurfaceMaterialDecision {
@@ -1042,10 +1089,39 @@ export struct LocalBookDetail {
     return JSON.stringify(['detail-dock', this.footerMeasurementKey, this.book.sourceId, this.book.bookId, this.book.contentKind]);
   }
   private dockRequestedRadius(): number { return 999; }
+  private dockPadding(): number { return this.book.contentKind === 'manga' ? visual.detailDockPadding : 9; }
+  private dockGap(): number { return this.book.contentKind === 'manga' ? visual.detailDockGap : 12; }
+  private dockSecondaryWidth(): number { return this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94; }
   private currentDockShape(): ReaderRaisedShape | undefined { return this.mounted ? this.dockRaisedShape : undefined; }
   private dockNativeShape(): ReaderRaisedShape | undefined {
-    return this.currentDockShape() ?? resolveReaderRaisedShape(this.dockShapeIdentity(), this.liveWidth(),
-      this.book.contentKind === 'manga' ? visual.detailDockHeight : DETAIL_DOCK_HEIGHT, this.dockRequestedRadius());
+    return this.currentDockShape() ?? resolveReaderRaisedShape(this.dockShapeIdentity(), this.dockFrame().width,
+      this.geometry.footer.height, this.dockRequestedRadius());
+  }
+
+  private restingDockHeight(dockWidth: number): number {
+    const manga = this.book.contentKind === 'manga';
+    const baseline = manga ? visual.detailDockHeight : DETAIL_DOCK_HEIGHT;
+    if (this.wideDetail() || !this.detailKindConfirmed() || (manga && !this.mangaFontsReady)) return 0;
+    const border = this.surfaceMaterial('floatingDock').native ? 0 : 1;
+    const chrome = (this.dockPadding() + border) * 2;
+    const primaryWidth = Math.max(1, dockWidth - chrome - this.dockGap() - this.dockSecondaryWidth() - (manga ? 32 : 0));
+    const secondaryWidth = Math.max(1, this.dockSecondaryWidth() - (manga ? 12 : 0) - 2);
+    try {
+      const context = this.getUIContext();
+      const measure = context.getMeasureUtils();
+      // Match the footer's actual type recipes at its resolved content width.
+      const primary = measure.measureTextSize({ textContent: this.readingActionLabel(), constraintWidth: `${primaryWidth}vp`,
+        fontFamily: manga ? READER_FONT_NOTO_SANS_SC_UI_BOLD : TYPE_APP_PRIMARY_ACTION.fontFamily,
+        fontSize: manga ? visual.detailPrimaryFontSize : TYPE_CARD_SECTION_HEADING.fontSizeFp,
+        fontWeight: manga ? visual.groupFontWeight : TYPE_APP_PRIMARY_ACTION.fontWeight,
+        lineHeight: manga ? visual.detailPrimaryLineHeight : undefined });
+      const secondary = measure.measureTextSize({ textContent: this.shelfActionLabel(), constraintWidth: `${secondaryWidth}vp`,
+        fontFamily: TYPE_APP_SEGMENT_LABEL.fontFamily, fontWeight: TYPE_APP_SEGMENT_LABEL.fontWeight,
+        fontSize: manga ? visual.detailSecondaryFontSize : TYPE_APP_SEGMENT_LABEL.fontSizeFp,
+        lineHeight: manga ? visual.detailSecondaryLineHeight : undefined });
+      const textHeight = context.px2vp(Math.max(Number(primary.height), Number(secondary.height)));
+      return Number.isFinite(textHeight) ? Math.max(baseline, Math.max(44, textHeight) + chrome) : baseline;
+    } catch (_) { return baseline; }
   }
 
   @Builder
@@ -1053,7 +1129,7 @@ export struct LocalBookDetail {
     // The action row and painted dock grow together. The scaffold records
     // their actual height for the matching scroll clearance.
     Stack({ alignContent: Alignment.Center }) {
-      Row({ space: this.book.contentKind === 'manga' ? visual.detailDockGap : 12 }) {
+      Row({ space: this.dockGap() }) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
         Text(this.readingActionLabel()).width('100%')
           .constraintSize({ minHeight: 44 })
@@ -1081,7 +1157,7 @@ export struct LocalBookDetail {
         ForEach([this.admissionIdentity], (identity: string) => {
         Stack({ alignContent: Alignment.Center }) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Text(this.shelfActionLabel()).width(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94)
+        Text(this.shelfActionLabel()).width(this.dockSecondaryWidth())
           .constraintSize({ minHeight: 44 })
           .padding({ left: this.book.contentKind === 'manga' ? 6 : 0, right: this.book.contentKind === 'manga' ? 6 : 0 })
           .fontFamily(TYPE_APP_SEGMENT_LABEL.fontFamily)
@@ -1092,7 +1168,7 @@ export struct LocalBookDetail {
           .halfLeading(this.book.contentKind === 'manga').fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
           .textAlign(TextAlign.Center).fontColor(this.shelfActionColor())
           .accessibilityLevel('no');
-        }.width(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94)
+        }.width(this.dockSecondaryWidth())
           .id(`reader-detail-shelf-action:${this.shelfActionLabel()}`)
           .constraintSize({ minHeight: 44 })
           .padding(0).borderRadius(999)
@@ -1119,7 +1195,7 @@ export struct LocalBookDetail {
       .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
         ? { role: 'primary-dock', id: 'detail-dock' } as LayoutInvariantTag : undefined)
       .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailDockHeight : DETAIL_DOCK_HEIGHT })
-      .padding(this.book.contentKind === 'manga' ? visual.detailDockPadding : 9)
+      .padding(this.dockPadding())
       .attributeModifier(new ReaderPanelFrame('floating-action-dock', this.appThemeScheme, false, this.dockNativeShape(),
         this.surfaceMaterial('floatingDock')))
       .hitTestBehavior(HitTestMode.Default)
@@ -1203,7 +1279,6 @@ export struct LocalBookDetail {
   private refreshGeometry(): void {
     const metrics = ReaderWindowCoordinator.metrics();
     const manga = this.book.contentKind === 'manga';
-    const minimumDockHeight = manga ? visual.detailDockHeight : DETAIL_DOCK_HEIGHT;
     const input = new ReaderPageGeometryInput(metrics);
     input.viewportWidth = this.liveWidth();
     input.viewportHeight = this.viewportHeight;
@@ -1214,13 +1289,18 @@ export struct LocalBookDetail {
     input.headerHeight = Math.max(minimumHeaderHeight, this.measurements.readForGeneration('detail:header', this.measurementKey, minimumHeaderHeight));
     input.headerInsetLeft = Math.max(8, this.safeLeft());
     input.headerInsetRight = Math.max(8, this.safeRight());
-    input.footerBottom = readerInteractiveSafeBottom(metrics) + (manga ? visual.detailDockBottom : DETAIL_DOCK_BOTTOM_GAP);
-    input.footerHeight = Math.max(minimumDockHeight, this.measurements.readForGeneration('detail:dock', this.footerMeasurementKey, minimumDockHeight));
     input.contentGap = manga ? visual.contentTop - visual.headerHeight - this.headerSpec.topGap : this.headerSpec.contentGap;
     input.contentUnderlap = 0;
     input.contentMaxWidth = manga ? visual.contentWidthMax : TOK_CONTENT_MAX_W_TABLET;
     input.contentHorizontalPadding = manga ? 20 : 18;
-    input.contentEndInset = this.wideDetail() ? readerInteractiveSafeBottom(metrics) + 16 :
+    const dock = this.dockFrame(resolveReaderPageGeometry(input).content.frame);
+    const restingDockHeight = this.restingDockHeight(dock.width);
+    input.footerBottom = readerStableInteractiveSafeBottom(metrics) + (manga ? visual.detailDockBottom : DETAIL_DOCK_BOTTOM_GAP);
+    input.footerHeight = restingDockHeight > 0 ?
+      this.measurements.readForGeneration('detail:dock', this.footerMeasurementKey, restingDockHeight) : 0;
+    input.footerInsetLeft = dock.left;
+    input.footerInsetRight = dock.right;
+    input.contentEndInset = this.wideDetail() ? readerStableInteractiveSafeBottom(metrics) + 16 :
       input.footerBottom + input.footerHeight + this.dockContentGap();
     const geometry = resolveReaderPageGeometry(input);
     if (manga) {
@@ -1228,9 +1308,6 @@ export struct LocalBookDetail {
       geometry.header.insetLeft = Math.max(0, geometry.content.frame.left - expansion);
       geometry.header.insetRight = Math.max(0, geometry.content.frame.right - expansion);
     }
-    const dock = this.dockFrame(geometry.content.frame);
-    geometry.footer.insetLeft = dock.left;
-    geometry.footer.insetRight = dock.right;
     this.geometry = geometry;
   }
 

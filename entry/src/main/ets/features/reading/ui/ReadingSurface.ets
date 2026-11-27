@@ -311,6 +311,8 @@ export struct ReaderReadingTextFragment {
 
 @Component
 export struct ReadingSurface {
+  @Prop transitionBodyId: string = '';
+  @Prop transitionChapterIndex: number = -1;
   // Only the idle offscreen snapshot lane opts in; ordinary reading remains asynchronous.
   @Prop snapshotSynchronousImages: boolean = false;
   /** Core-materialized title for the current pagination-manifest page. */
@@ -529,6 +531,8 @@ export struct ReadingSurface {
           }
         }
         .width('100%')
+        .id(this.transitionBodyId.length > 0 ? this.transitionBodyId : undefined)
+        .customProperty('readerTransitionChapterIndex', this.transitionChapterIndex)
         .alignItems(HorizontalAlign.Start);
       }
       .width('100%')

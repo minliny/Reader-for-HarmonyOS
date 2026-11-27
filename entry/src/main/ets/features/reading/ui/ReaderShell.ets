@@ -88,6 +88,7 @@ export struct ReaderShell {
   @Prop reduceMotion: boolean = false;
   // 阅读会话可见性: route 决定 ReadingExperience 是否露出版面。
   @Prop visible: boolean = false;
+  @Prop ownsWindowChrome: boolean = true;
   @Prop route: PreparedReaderRoute = 'reading';
   @Prop inputAllowed: boolean = true;
   inputCurrent?: (readerIdentity: string) => boolean;
@@ -269,8 +270,8 @@ export struct ReaderShell {
           expandedLayout: this.expandedLayout,
           paneWidthHint: this.paneWidth,
           paneHeightHint: this.paneHeight,
-          windowChromeActive: this.visible,
-          windowChromeOverlayActive: this.visible &&
+          windowChromeActive: this.visible && this.ownsWindowChrome,
+          windowChromeOverlayActive: this.visible && this.ownsWindowChrome &&
             (this.route === 'directory' || this.sourceSwitchPresented),
           bookTitle: this.bookTitle,
           bookAuthor: this.bookAuthor,
@@ -426,8 +427,9 @@ export struct ReaderShell {
     ForEach([this.mangaIdentityKey()], (_identity: string) => {
       MangaReadingSurface({
         inputCurrent: (): boolean => this.acceptsMangaInput(_identity),
-        windowChromeActive: this.visible,
-        windowChromeOverlayActive: this.visible && (this.route === 'directory' || this.sourceSwitchPresented || this.sourceSwitchCovered),
+        windowChromeActive: this.visible && this.ownsWindowChrome,
+        windowChromeOverlayActive: this.visible && this.ownsWindowChrome &&
+          (this.route === 'directory' || this.sourceSwitchPresented || this.sourceSwitchCovered),
         interactionBlocked: !this.readingContentInputEnabled(),
         isReaderIdentityCurrent: (): boolean => this.isMangaSurfaceCurrent(_identity),
         retainPreparationOnDisappear: (): boolean => this.keepsMangaReadingSession(_identity),
@@ -559,7 +561,7 @@ export struct ReaderShell {
     // Sibling directory and source-switch surfaces can paint over the band's
     // child in ReadingExperience. Repaint above those surfaces with the same
     // owner-requested color; do not derive an independent application tone.
-    if (this.contentKind !== 'manga' && this.visible && (this.route === 'directory' || this.sourceSwitchPresented)) {
+    if (this.contentKind !== 'manga' && this.visible && this.ownsWindowChrome && (this.route === 'directory' || this.sourceSwitchPresented)) {
       ReaderStatusBarPaper({
         theme: this.chromePaperThemeId,
         fallbackColor: this.chromeUnderlayColor,

@@ -3,7 +3,8 @@ import { FrameCallback } from '@kit.ArkUI';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerHighlightColor } from './ReaderDynamicHighlight';
-import { ReaderTtsWaveformClock, createReaderTtsWaveformSample, type ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
+import { ReaderTtsWaveformClock, createReaderTtsWaveformSample, readerTtsWaveformBarHeight,
+  readerTtsWaveformBarWidth, type ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 
 const EASE = curves.cubicBezierCurve(.25, .1, .25, 1);
 const EASE_IN_OUT = curves.cubicBezierCurve(.42, 0, .58, 1);
@@ -23,6 +24,8 @@ class ReaderTtsWaveformFrame extends FrameCallback {
 @Component
 export struct ReaderTtsWaveform {
   @StorageProp('readerAppForeground') @Watch('onPlaybackChanged') private foreground: boolean = true;
+  @Prop slotWidth: number = 0;
+  @Prop slotHeight: number = 0;
   @Prop @Watch('onPlaybackChanged') playing: boolean = false;
   @Prop @Watch('onPlaybackChanged') active: boolean = true;
   @Prop @Watch('onPlaybackChanged') reduceMotion: boolean = false;
@@ -78,11 +81,12 @@ export struct ReaderTtsWaveform {
   build() {
     Row() {
       ForEach(this.sample().heights, (_height: number, index: number): void => {
-        Row().width(2.5).height(this.sample().heights[index]).borderRadius(2)
-          .scale({ x: 1, y: Math.min(1.05, this.sample().scales[index]), centerY: '50%' })
+        Row().width(readerTtsWaveformBarWidth(this.slotWidth))
+          .height(readerTtsWaveformBarHeight(this.sample().heights[index], this.sample().scales[index], this.slotHeight)).borderRadius(2)
           .backgroundColor(this.barColor()).opacity(this.sample().opacities[index]);
       }, (_height: number, index: number): string => index.toString());
-    }.width('100%').height(26).justifyContent(FlexAlign.SpaceBetween).alignItems(VerticalAlign.Center)
+    }.width(this.slotWidth).height(this.slotHeight).clip(true)
+      .justifyContent(FlexAlign.SpaceBetween).alignItems(VerticalAlign.Center)
       .hitTestBehavior(HitTestMode.None).accessibilityLevel('no')
       .onVisibleAreaChange([0, 0.01, 1], (visible: boolean, ratio: number): void => {
         this.visible = visible && ratio > 0;

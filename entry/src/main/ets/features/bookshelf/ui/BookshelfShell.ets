@@ -11,9 +11,7 @@ import { ReaderBottomSheet } from '../../../ui/surfaces/ReaderBottomSheet';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerScrimmedOpaqueColor } from '../../../ui/surfaces/ReaderScrimColor';
 import { SheetSurfaceSpec, resolveSheetSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { SurfaceWidthSpec, resolveHorizontalFrame } from '../../../ui/layout/SurfaceHorizontalGeometry';
-import { readerVisualSafeLeft, readerVisualSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
-import { readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerStableInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerSurfaceMaxHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { bookshelfHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
@@ -64,7 +62,6 @@ export struct BookshelfShell {
   @State private footerMeasurementKey: number = 0;
   @State private measuredFooterHeight: number = 0;
   @State private recoveryViewportHeight: number = -1;
-  @State private paneWidth: number = 0;
   @State private recoveryOriginY: number = 0;
   /** Presented header bottom (top + measured height), owned by the route. */
   @Prop headerBottom: number = bookshelfHeaderSpec().frameHeight;
@@ -196,14 +193,6 @@ export struct BookshelfShell {
 
   private moreSheetSpec(): SheetSurfaceSpec { return resolveSheetSpec('bookshelf-book-action'); }
 
-  private moreSheetWidth(): number {
-    this.readerWindowMetricsRevision;
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(this.paneWidth > 0 ? this.paneWidth : metrics.windowRect.width,
-      readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(this.moreSheetSpec().maxWidth)).width;
-  }
-
   private finishMoreSheet(presentationId: string): void {
     if (presentationId.length === 0 || presentationId !== this.moreSheetCurrentId) return;
     const current = this.isCurrentMoreSheet(presentationId) && this.isCurrentShelfInput?.(this.moreSheetNavigation) !== false;
@@ -248,7 +237,7 @@ export struct BookshelfShell {
       });
       if (this.moreSheetCurrentId.length > 0) {
         ForEach([this.moreSheetCurrentId], (id: string): void => {
-          ReaderBottomSheet({ visible: this.moreMenuVisible, specId: 'bookshelf-book-action', surfaceWidth: this.moreSheetWidth(),
+          ReaderBottomSheet({ visible: this.moreMenuVisible, specId: 'bookshelf-book-action', surfaceWidth: this.moreSheetSpec().maxWidth,
             scheme: this.appThemeScheme, reduceMotion: this.reduceMotion, nativeId: 'reader-bookshelf-more-sheet', drainPendingClose: true,
             content: (): void => { this.moreSheetContent(id); },
             onRequestClose: (): void => { if (this.isCurrentMoreSheet(id)) this.dismissMoreMenu(); },
@@ -260,10 +249,8 @@ export struct BookshelfShell {
     }
     .width('100%').height('100%')
     .onAreaChange((_old: Area, area: Area): void => {
-      const width = this.numericAreaLength(area.width);
       const height = this.numericAreaLength(area.height);
       const originY = this.numericAreaLength(area.globalPosition?.y ?? 0);
-      if (Number.isFinite(width) && width > 0) this.paneWidth = width;
       if (Number.isFinite(height) && height >= 0) this.recoveryViewportHeight = height;
       if (Number.isFinite(originY)) this.recoveryOriginY = originY;
     });
@@ -357,7 +344,7 @@ export struct BookshelfShell {
     const metrics = ReaderWindowCoordinator.metrics();
     const windowHeight = Math.max(0, metrics.windowRect.height - this.recoveryOriginY);
     const height = Math.min(this.recoveryViewportHeight >= 0 ? this.recoveryViewportHeight : windowHeight, windowHeight);
-    const bottom = Math.max(this.measuredFooterHeight, readerInteractiveSafeBottom(metrics, false));
+    const bottom = Math.max(this.measuredFooterHeight, readerStableInteractiveSafeBottom(metrics, false));
     return readerSurfaceMaxHeight(Math.min(height - bottom,
       readerKeyboardHostBottom(metrics, this.recoveryOriginY, height)), this.headerBottom + bookshelfHeaderSpec().contentGap + 8);
   }

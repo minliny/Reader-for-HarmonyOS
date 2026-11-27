@@ -2,6 +2,21 @@
 export const READER_TTS_WAVEFORM_HEIGHTS: number[] = [7, 13, 9, 18, 12, 22, 15, 10, 20, 14, 8, 17,
   11, 21, 13, 9, 16, 12, 19, 10, 14, 8, 15, 11];
 export const READER_TTS_WAVEFORM_BAR_COUNT = 24;
+const WAVEFORM_REFERENCE_HEIGHT_VP = 26;
+const WAVEFORM_BAR_WIDTH_VP = 2.5;
+const WAVEFORM_BAR_MAX_SCALE = 1.05;
+
+export function readerTtsWaveformBarHeight(height: number, scale: number, slotHeight: number): number {
+  if (!Number.isFinite(slotHeight) || slotHeight <= 0 || !Number.isFinite(height) || !Number.isFinite(scale)) return 0;
+  const sampleHeight = Math.max(0, height) * Math.max(0, Math.min(WAVEFORM_BAR_MAX_SCALE, scale));
+  return Math.min(slotHeight, sampleHeight * Math.min(1, slotHeight / WAVEFORM_REFERENCE_HEIGHT_VP));
+}
+
+export function readerTtsWaveformBarWidth(slotWidth: number): number {
+  if (!Number.isFinite(slotWidth) || slotWidth <= 0) return 0;
+  const reservedGapFraction = 1 / (WAVEFORM_BAR_WIDTH_VP + 1);
+  return Math.min(WAVEFORM_BAR_WIDTH_VP, slotWidth / READER_TTS_WAVEFORM_BAR_COUNT * (1 - reservedGapFraction));
+}
 /** Decorative waveform clock; owned here because the sampler is not an ArkUI animation. */
 export const READER_TTS_WAVEFORM_HEIGHT_MS = 300;
 export const READER_TTS_WAVEFORM_COLOR_MS = 350;

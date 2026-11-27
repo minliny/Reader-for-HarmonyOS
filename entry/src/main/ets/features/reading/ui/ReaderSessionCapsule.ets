@@ -136,6 +136,8 @@ export struct ReaderSessionCapsuleLeading {
   @Prop labelWidth: number = 42;
   @Prop labelHeight: number = 16;
   @Prop countdownSize: number = 16;
+  @Prop nativeIconId: string = '';
+  @Prop nativeLabelId: string = '';
 
   build() {
     Row({ space: 4 }) {
@@ -151,14 +153,16 @@ export struct ReaderSessionCapsuleLeading {
             // their ink centre to the circle; fp keeps the correction font-scaled.
             .baselineOffset('-0.65fp')
             .fontColor(this.effectiveOnPrimaryColor()).textAlign(TextAlign.Center).maxLines(1);
-        }.width(this.countdownSize).height(this.countdownSize).backgroundColor(this.effectivePrimaryColor()).borderRadius(this.countdownSize / 2);
+        }.id(this.nativeIconId.length > 0 ? this.nativeIconId : undefined).width(this.countdownSize).height(this.countdownSize)
+          .backgroundColor(this.effectivePrimaryColor()).borderRadius(this.countdownSize / 2);
       } else {
         Stack({ alignContent: Alignment.Center }) {
           Image(this.themeScheme === 'night' ? $r('app.media.reader_tts_headphones_theme_night') :
-            $r('app.media.reader_tts_headphones')).width(11).height(11);
+            $r('app.media.reader_tts_headphones')).id(this.nativeIconId.length > 0 ? this.nativeIconId : undefined).width(11).height(11);
         }.width(16).height(16);
       }
       Text(this.type === 'autoPage' ? '自动翻页' : '朗读')
+        .id(this.nativeLabelId.length > 0 ? this.nativeLabelId : undefined)
         .width(this.labelWidth)
         .height(this.labelHeight)
         .fontFamily(TYPE_READER_SESSION_LABEL.fontFamily)
@@ -193,6 +197,7 @@ export struct ReaderSessionCapsulePause {
   @Prop desiredPlaying: boolean = true;
   @Prop primaryColor: string = '';
   @Prop onPrimaryColor: string = '';
+  @Prop nativeId: string = '';
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
@@ -202,6 +207,7 @@ export struct ReaderSessionCapsulePause {
         (this.themeScheme === 'night' ? $r('app.media.reader_session_play_theme_night') : $r('app.media.reader_session_play')))
         .width(8).height(8);
     }
+    .id(this.nativeId.length > 0 ? this.nativeId : undefined)
     .width(16).height(16).backgroundColor(readerSessionCapsuleColor('primary', this.themeScheme, this.primaryColor)).borderRadius(8)
     .hitTestBehavior(HitTestMode.None);
   }

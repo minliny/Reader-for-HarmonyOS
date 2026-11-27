@@ -6,7 +6,9 @@ import { readerKeyboardViewport } from '../../../ui/layout/ReaderKeyboardGeometr
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
-import { ReaderRectVp, readerVisualSafeBottom, readerVisualSafeRight, readerVisualSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
+import { ReaderInsetsVp, ReaderRectVp, readerVisualSafeBottom, readerVisualSafeRight, readerVisualSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerOverlayListHeight, readerOverlayPanel, readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
+import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
 import { READER_FULL_PANEL_TOP, readerControlIslandHeight, type ReaderControlContentBudget } from './ReaderLayoutGeometry';
 import { measureReaderControlMinimum, readerControlModuleFactsGeometryKey, readerControlModuleFactsDisplayEqual,
@@ -34,7 +36,7 @@ import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../..
 import { readerControlIsDirectSheet } from './ReaderControlHostSession';
 import { readerPaperActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
-import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
+import type { ReaderSessionCapsuleState, ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { PopupSurfaceSpec, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
@@ -561,6 +563,8 @@ export struct ReaderControlPanel {
   @Prop bookDownloadEnabled: boolean = false;
   @Prop bookDownloadActive: boolean = false;
   @State private moreMenuVisible: boolean = false;
+  @State private moreTopAnchor: ReaderRectVp | undefined = undefined;
+  @State private moreShortAnchor: ReaderRectVp | undefined = undefined;
   private moreMenuGeneration: number = 0;
   private moreMenuRecoveryIdentity: string = '';
   private previousTopBarVisibility: boolean = true;
@@ -690,7 +694,7 @@ export struct ReaderControlPanel {
       !Number.isFinite(height) || width <= 0 || height <= 0) {
       return;
     }
-    if (this.launchOwnsControls) return;
+    if (this.launchOwnsControls || this.launchRecovering) return;
     this.onSessionLaunchShellMeasured(this.currentLayout().topBarTop + this.currentLayout().topBarHeight,
       this.currentLayout().viewportHeight - this.presentedDockTop() - this.frame().shell.y);
     const frame = this.frame();
@@ -1543,9 +1547,13 @@ export struct ReaderControlPanel {
     this.confirmLaunchSourceReady();
   }
 
+  private launchSourceDetached(type: ReaderSessionCapsuleType): boolean {
+    return this.launchSample?.type === type && (this.launchOwnsControls || this.launchRecovering);
+  }
+
   private confirmLaunchSourceReady(): void {
-    if (!this.launchRecovering || this.launchSourceVisibleGeneration !== this.launchGeneration ||
-      this.launchSourceVisibleKind !== this.capturedLaunchSourceKind ||
+    if (!this.launchRecovering || (this.fixedIsland && (this.launchSourceVisibleGeneration !== this.launchGeneration ||
+      this.launchSourceVisibleKind !== this.capturedLaunchSourceKind)) ||
       this.launchSourceReadyGeneration === this.launchGeneration || this.visualVisibilityProgress < 1 ||
       !this.launchSourceCurrent()) return;
     this.launchSourceReadyGeneration = this.launchGeneration;
@@ -2123,15 +2131,16 @@ export struct ReaderControlPanel {
           sample: this.launchSample, sessionState: this.launchBusinessStatus,
           desiredPlaying: this.launchDesiredPlaying, countdown: this.launchCountdown,
           interactionEnabled: this.launchInteractionEnabled,
+          ownsSourceRegion: this.launchSourceDetached(this.launchSample.type),
           material: this.surfaceMaterial('sessionCapsule'),
           sourceSurfaceColor: readerAppColor(this.fixedIsland ? 'TOK_READ_CARD_EMPHASIS' : this.launchSourceKind === 'fullAutoPagePlayback' ?
             'TOK_SURFACE_PANEL_SOFT' : this.launchSourceKind === 'fullTtsPlayback' ? 'TOK_TTS_CARD' :
               this.launchSourceKind === 'quickTts' ? 'TOK_TTS_QUICK_CARD' : 'TOK_SURFACE_PANEL', this.appScheme),
-          sourceBorderColor: readerAppColor(this.fixedIsland ? 'TOK_PRIMARY_BORDER' : this.launchSourceKind === 'quickTts' ?
+          sourceBorderColor: readerAppColor(this.fixedIsland ? 'TOK_LINE_STRONG' : this.launchSourceKind === 'quickTts' ?
             'app.control.paint.66B4A697' : this.launchSourceKind === 'fullTtsPlayback' ? 'TOK_TTS_LINE' : 'TOK_LINE', this.appScheme),
           sourceBorderWidth: this.fixedIsland || this.launchSample.type === 'autoPage' ? TOK_BORDER_W : 0.5,
-          sourceSurfaceTopInset: this.launchSourceKind === 'fullTtsPlayback' ? 27 : 0,
-          sourceHighlightColor: this.launchSourceKind === 'fullTtsPlayback' ? readerAppColor('app.control.paint.99FFFFFF', this.appScheme) : '#00000000',
+          sourceSurfaceTopInset: !this.fixedIsland && this.launchSourceKind === 'fullTtsPlayback' ? 27 : 0,
+          sourceHighlightColor: !this.fixedIsland && this.launchSourceKind === 'fullTtsPlayback' ? readerAppColor('app.control.paint.99FFFFFF', this.appScheme) : '#00000000',
           sourceGradientStart: !this.fixedIsland && this.launchSourceKind === 'quickTts' ? readerAppColor('app.control.paint.FFFAF4', this.appScheme) : '',
           sourceGradientEnd: !this.fixedIsland && this.launchSourceKind === 'quickTts' ? readerAppColor('app.control.paint.F6ECDD', this.appScheme) : '',
           themeScheme: this.appScheme,
@@ -2274,8 +2283,39 @@ export struct ReaderControlPanel {
         this.moreMenuMeasuredWidth = surface.width;
       }
     }
-    return Math.min(Math.max(surface.width, this.moreMenuMeasuredWidth),
-      Math.max(0, this.currentLayout().viewportWidth - 24));
+    return Math.max(surface.width, this.moreMenuMeasuredWidth);
+  }
+
+  private recordMoreAnchor(area: Area, shortWindow: boolean): void {
+    const left = Number(area.globalPosition.x);
+    const top = Number(area.globalPosition.y);
+    const width = Number(area.width);
+    const height = Number(area.height);
+    if (!Number.isFinite(left) || !Number.isFinite(top) || width <= 0 || height <= 0) return;
+    const current = shortWindow ? this.moreShortAnchor : this.moreTopAnchor;
+    if (current !== undefined && current.left === left && current.top === top &&
+      current.width === width && current.height === height) return;
+    const anchor = new ReaderRectVp(left, top, width, height);
+    if (shortWindow) this.moreShortAnchor = anchor;
+    else this.moreTopAnchor = anchor;
+  }
+
+  private readerMoreAnchor(): ReaderRectVp | undefined {
+    return this.currentLayout().topBarVisible ? this.moreTopAnchor : this.moreShortAnchor;
+  }
+
+  private readerMorePopupRect(): ReaderRectVp {
+    this.editingMetricsRevision;
+    const metrics = readerWindowMetrics();
+    const layout = this.currentLayout();
+    const host = new ReaderRectVp(this.rootScreenX, this.rootScreenY, layout.viewportWidth, layout.viewportHeight);
+    const anchor = this.readerMoreAnchor();
+    const viewport = readerOverlayViewport(metrics, host, new ReaderInsetsVp(12, 8, 12, 8), anchor);
+    const surface = this.readerMoreSurfaceSpec();
+    const actionHeight = readerScaledControlHeight(surface.actionHeight, surface.actionLineHeight, metrics.systemFontScale);
+    const height = readerOverlayListHeight(0, actionHeight, this.readerMoreActions().length, 0,
+      0, 0, surface.borderWidth, surface.pointerHeight);
+    return readerOverlayPanel(viewport, this.readerMoreMenuWidth(), height, 'anchor-end', anchor, 8);
   }
 
   private readerMoreSurfaceSpec(): PopupSurfaceSpec {
@@ -2286,10 +2326,13 @@ export struct ReaderControlPanel {
     const surface = this.readerMoreSurfaceSpec();
     const density = readerWindowMetrics().densityPixels;
     const material = this.surfaceMaterial('popoverMenu');
+    const anchor = this.readerMoreAnchor();
+    const rect = this.readerMorePopupRect();
     const options: CustomPopupOptions = {
       builder: (): void => { this.readerMoreMenu(generation); },
-      placement: Placement.BottomRight,
-      width: this.readerMoreMenuWidth(),
+      placement: anchor !== undefined && rect.top < anchor.top ? Placement.TopRight : Placement.BottomRight,
+      width: rect.width,
+      offset: anchor === undefined ? undefined : { x: rect.left - (anchor.left + anchor.width - rect.width), y: 0 },
       enableArrow: true, arrowWidth: surface.pointerWidth, arrowHeight: surface.pointerHeight,
       radius: surface.borderRadius,
       arrowPointPosition: ArrowPointPosition.CENTER,
@@ -2341,8 +2384,11 @@ export struct ReaderControlPanel {
   private readerMoreMenu(generation: number = this.moreMenuGeneration) {
     ReaderActionMenuSurface({
       specId: 'reader-more-menu', nativeId: 'reader-control-more-menu',
+      auditAnchoredPopup: true, auditPopupAnchor: this.readerMoreAnchor(),
+      nativePopupMaterial: this.surfaceMaterial('popoverMenu').native,
       scheme: this.appScheme, actions: this.readerMoreActions(),
-      viewportHeight: Math.max(0, this.currentLayout().viewportHeight - 36),
+      viewportHeight: Math.max(0, this.readerMorePopupRect().height - this.readerMoreSurfaceSpec().pointerHeight -
+        2 * this.readerMoreSurfaceSpec().borderWidth),
       onAction: (id: string): void => {
         if (id === 'info' || id === 'refresh' || id === 'download' || id === 'recovery') this.performMoreAction(id, generation);
       },
@@ -2564,10 +2610,11 @@ export struct ReaderControlPanel {
       Stack({ alignContent: Alignment.Center }) {
         Text('返回').fontFamily(this.headerActionStyle().fontFamily).fontWeight(this.headerActionStyle().fontWeight)
           .fontSize(this.headerActionStyle().fontSizeFp).maxLines(1)
-          .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
+          .fontColor(readerAppColor('app.readerIsland.controlInk', this.appScheme));
       }.width(this.headerPaintLayout().actionPaint.width).height(this.headerPaintLayout().actionPaint.height)
         .position({ x: this.headerPaintLayout().actionPaint.x, y: this.headerPaintLayout().actionPaint.y })
-        .backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme)).borderRadius(8)
+        .backgroundColor(readerAppColor('app.readerIsland.controlSurface', this.appScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('app.readerIsland.controlBorder', this.appScheme) }).borderRadius(8)
         .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     } else {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -2850,9 +2897,10 @@ export struct ReaderControlPanel {
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
       onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined,
         profileReader?: ReaderControlPlaybackProfileReader): void => this.bindModuleMinimum('tts', identity, measurer, profileReader),
-      sourceDetached: this.launchSample !== undefined && this.launchOwnsControls && this.launchSample.type === 'tts',
+      sourceDetached: this.launchSourceDetached('tts'),
+      sourceHandoffPending: this.launchRecovering,
       reduceMotion: this.reduceMotion,
-      waveformActive: this.frame().visibility > 0 && !this.launchOwnsControls && !this.controlObscured,
+      waveformActive: this.frame().visibility > 0 && !this.launchSourceDetached('tts') && !this.controlObscured,
       onMorphActorVisible: (kind: ReaderSessionMorphSourceKind): void => this.onLaunchSourceVisible(kind),
       dismissTemporaryRevision: this.dismissTemporaryRevision,
       onTemporaryLayerChange: this.moduleTemporaryLayerHandler('tts'),
@@ -2918,7 +2966,8 @@ export struct ReaderControlPanel {
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
           onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined,
             profileReader?: ReaderControlPlaybackProfileReader): void => this.bindModuleMinimum('autoPage', identity, measurer, profileReader),
-          sourceDetached: this.launchSample !== undefined && this.launchOwnsControls && this.launchSample.type === 'autoPage',
+          sourceDetached: this.launchSourceDetached('autoPage'),
+          sourceHandoffPending: this.launchRecovering,
           onMorphActorVisible: (kind: ReaderSessionMorphSourceKind): void => this.onLaunchSourceVisible(kind),
           fullViewportHeight: this.contentEndpointHeight(true),
           expandedLayout: this.isExpanded(), motionProgress: this.contentMotionProgress,
@@ -3067,6 +3116,7 @@ export struct ReaderControlPanel {
       this.topBarInputEnabled() && !this.controlObscured && (this.temporaryLayerKind === '' || this.moreMenuVisible), false, true,
       new ReaderPressFeedback(Color.Transparent, this.appScheme, 999), 'nativeButton'))
     .onClick(this.controlActionHandler((): void => { if (this.topBarInputEnabled()) this.setMoreMenuVisible(!this.moreMenuVisible); }))
+    .onAreaChange((_previous: Area, area: Area): void => this.recordMoreAnchor(area, false))
     .bindPopup(this.moreMenuVisible && this.currentLayout().topBarVisible, this.readerMorePopupOptions(this.moreMenuGeneration));
   }
 
@@ -3111,6 +3161,7 @@ export struct ReaderControlPanel {
         .onClick(this.controlActionHandler((): void => {
           if (this.shortWindowActionInput() && (this.temporaryLayerKind === '' || this.moreMenuVisible)) this.setMoreMenuVisible(!this.moreMenuVisible);
         }))
+        .onAreaChange((_previous: Area, area: Area): void => this.recordMoreAnchor(area, true))
         .bindPopup(this.moreMenuVisible && !this.currentLayout().topBarVisible, this.readerMorePopupOptions(this.moreMenuGeneration));
     }.width(Math.max(180, this.frame().content.width)).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).justifyContent(FlexAlign.End);
     }.width(this.frame().content.width).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).scrollable(ScrollDirection.Horizontal)

@@ -27,6 +27,7 @@ import type { ShelfBook } from '../../../app/ReaderCoreGateway';
 import { readerSourceCategoryIsText, readerMediaIdentity } from '../../source/application/ReaderSourceCategory';
 import { ReaderWindowChromeStyle, ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderBottomSheet } from '../../../ui/surfaces/ReaderBottomSheet';
+import { readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
 import { resolveSheetSpec, type SheetSpecId } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { readerScrimmedOpaqueColor } from '../../../ui/surfaces/ReaderScrimColor';
 import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
@@ -785,9 +786,7 @@ export struct SearchPage {
 
   private resultSheetWidth(id: SheetSpecId): number {
     this.readerWindowMetricsRevision;
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(metrics.windowRect.width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(resolveSheetSpec(id).maxWidth)).width;
+    return Math.min(resolveSheetSpec(id).maxWidth, readerOverlayViewport(ReaderWindowCoordinator.metrics()).width);
   }
 
   private openPanelAction(kind: SearchPanelKind, identity: string): () => void {

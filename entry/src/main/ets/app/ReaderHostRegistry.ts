@@ -26,7 +26,8 @@ import type { MangaOfflineNetworkProbe } from './MangaOfflineNetworkProbe';
 import { buildReaderPublicFixtureDirectory, type ReaderPublicFixtureScope } from './diagnostics/ReaderPublicFixtureScope';
 import { admitReaderPublicSearchHttpFixtureRequest, readerPublicSearchHttpFixtureMode,
   type ReaderPublicSearchHttpFixture } from './diagnostics/ReaderPublicSearchHttpFixture';
-import { readerVmJourneyImageDataUri, readerVmJourneyResponse } from './diagnostics/ReaderVmJourneyData';
+import { READER_VM_LOCAL_SHA256, READER_VM_LOCAL_TITLE, readerVmJourneyImageDataUri,
+  readerVmJourneyImportDocument, readerVmJourneyResponse } from './diagnostics/ReaderVmJourneyData';
 import { READER_LOCAL_BOOK_PICKER_FILTER, isReaderLocalBookFileName } from './ReaderLocalBookFormatAdmission';
 
 type SnapshotEncoding = 'value' | 'valueBase64';
@@ -339,6 +340,17 @@ export class ReaderHostRegistry {
   async selectLocalBookInputs(canOpenPicker: () => boolean): Promise<LocalBookPreparation[]> {
     const pickerWindowEpoch = ReaderDocumentPickerActivity.windowEpoch();
     await this.ensureStageRecovery();
+    if (this.fixtureDirectory !== undefined && this.publicSearchHttpFixture === 'vm-journeys') {
+      const current = (): boolean => canOpenPicker() && this.publicSearchHttpIsCurrent?.() === true;
+      if (!current()) throw new Error('Public local-book selection is no longer current');
+      const source = `${this.fixtureDirectory}/reader-import/books/${READER_VM_LOCAL_SHA256}.source`;
+      const input = await this.stageLocalBook(fileUri.getUriFromPath(source), `${READER_VM_LOCAL_TITLE}.txt`);
+      if (input.bookId !== `local:${READER_VM_LOCAL_SHA256}` || !current()) {
+        await this.discardLocalBookInput(input);
+        throw new Error('Public local-book selection identity changed');
+      }
+      return [{ state: 'ready', input }];
+    }
     const options = new picker.DocumentSelectOptions();
     options.fileSuffixFilters = [
       READER_LOCAL_BOOK_PICKER_FILTER,
@@ -453,6 +465,11 @@ export class ReaderHostRegistry {
    * source requests; feature gateways still own JSON schema and persistence.
    */
   async loadOnlineJsonDocument(onlineUrl: string): Promise<JsonImportDocument> {
+    if (this.fixtureDirectory !== undefined && this.publicSearchHttpFixture === 'vm-journeys') {
+      const text = this.publicSearchHttpIsCurrent?.() === true ? readerVmJourneyImportDocument(onlineUrl.trim()) : undefined;
+      if (text === undefined) throw new Error('PUBLIC_FIXTURE_NETWORK_DISABLED');
+      return { text, fileName: 'v9-source.json' };
+    }
     const response = await HttpExecuteHost.instance.executeBounded({
       url: onlineUrl.trim(),
       method: 'GET',

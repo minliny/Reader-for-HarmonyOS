@@ -6,6 +6,7 @@ import { ReaderSectionHeading } from '../../../ui/controls/ReaderSectionHeading'
 @Component
 export struct CategorySection {
   @Prop title: string = '';
+  @Prop nativeId: string = '';
   @Prop cardWidth: number = 0; // 0 = Fill 撑满父宽
   @BuilderParam content: () => void;
 
@@ -19,7 +20,7 @@ export struct CategorySection {
           this.content();
         }.width('100%');
       }
-    }.width(this.cardWidth > 0 ? this.cardWidth : '100%')
+    }.id(this.nativeId.length > 0 ? this.nativeId : undefined).width(this.cardWidth > 0 ? this.cardWidth : '100%')
       .constraintSize({ maxWidth: resolveReaderCardSpec('settings-category').maxWidth });
   }
 }

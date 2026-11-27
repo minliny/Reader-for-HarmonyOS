@@ -17,7 +17,7 @@ const testsByDomain = new Map(readdirSync(testRoot, { withFileTypes: true })
 const featureDomains = new Map([
   ['bookshelf', {
     hostDomains: ['bookshelf', 'contracts', 'search', 'detail-reading', 'downloads'],
-    vmJourneys: ['J1', 'J2', 'J3'],
+    vmJourneys: ['J1', 'J2', 'J3', 'J14'],
   }],
   ['discover', { hostDomains: ['search', 'bookshelf'], vmJourneys: ['J7', 'J8'] }],
   ['downloads', { hostDomains: ['downloads', 'manga', 'navigation-geometry'], vmJourneys: ['J5'] }],
@@ -27,19 +27,19 @@ const featureDomains = new Map([
   }],
   ['reading', {
     hostDomains: ['detail-reading', 'bookshelf', 'manga', 'downloads', 'source-switch', 'settings-sync-rss', 'navigation-geometry'],
-    vmJourneys: ['J2', 'J4', 'J6', 'J8'],
+    vmJourneys: ['J2', 'J4', 'J6', 'J8', 'J9', 'J10', 'J11', 'J12', 'J14'],
   }],
   ['rss', { hostDomains: ['settings-sync-rss', 'navigation-geometry'], vmJourneys: ['J7', 'J8'] }],
   ['search', {
     hostDomains: ['search', 'bookshelf', 'contracts', 'detail-reading', 'source-switch', 'navigation-geometry'],
     vmJourneys: ['J2', 'J3', 'J6', 'J8'],
   }],
-  ['settings', { hostDomains: ['settings-sync-rss', 'navigation-geometry'], vmJourneys: ['J7', 'J8'] }],
+  ['settings', { hostDomains: ['settings-sync-rss', 'navigation-geometry'], vmJourneys: ['J7', 'J8', 'J11', 'J12', 'J14'] }],
   ['source', {
     hostDomains: ['bookshelf', 'contracts', 'search', 'source-management', 'source-switch'],
-    vmJourneys: ['J2', 'J6', 'J7'],
+    vmJourneys: ['J2', 'J6', 'J7', 'J12', 'J13'],
   }],
-  ['sync', { hostDomains: ['settings-sync-rss'], vmJourneys: ['J7', 'J8'] }],
+  ['sync', { hostDomains: ['settings-sync-rss'], vmJourneys: ['J7', 'J8', 'J14'] }],
 ]);
 
 function git(args) {
@@ -97,7 +97,7 @@ export function suggestedVmJourneys(paths) {
     if (affected === undefined) return Object.keys(journeys);
     for (const journey of affected) selected.add(journey);
   }
-  return [...selected].sort();
+  return Object.keys(journeys).filter(journey => selected.has(journey));
 }
 
 const usage = 'Usage: node scripts/test-host.mjs --all | --domain <name> | --changed-from <baseRef> [--committed]';

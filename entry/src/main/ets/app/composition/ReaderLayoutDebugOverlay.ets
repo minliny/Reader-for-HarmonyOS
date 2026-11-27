@@ -2,13 +2,17 @@ import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../ui/foundation/ReaderFontFamilies';
 import { ReaderWindowCoordinator } from '../ReaderWindowCoordinator';
 import { ReaderUIVerificationProbe } from '../diagnostics/ReaderUIVerificationProbe';
+import { ReaderTransitionRecorder } from '../diagnostics/ReaderTransitionRecorder';
+import { ReaderNativeLayoutAudit, type ReaderNativeLayoutParent } from '../diagnostics/ReaderNativeLayoutAudit';
+import { readerJourneyEnvironment, type ReaderJourneyEnvironment } from '../diagnostics/ReaderJourneyEnvironment';
+import { observeReaderTransitions } from '../../ui/foundation/ReaderTransitionSignals';
 import { readerVisualSafeTop } from '../../ui/foundation/ReaderWindowMetrics';
 import type { ReaderWindowMetricsSnapshot } from '../../ui/foundation/ReaderWindowMetrics';
 import { ExpandMode, FrameNode } from '@ohos.arkui.node';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerMotionNowMs } from '../../ui/foundation/ReaderMotionClock';
 import { ReaderPostLayoutFrame } from '../../ui/layout/ReaderPostLayoutFrame';
-import { READER_LAYOUT_INVARIANT_PROPERTY, readerOwnedLayoutModals } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_LAYOUT_INVARIANT_PROPERTY, readerLayoutOverlayRoots, readerOwnedLayoutModals } from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import { evaluateLayoutInvariants, READER_PAGED_INPUT_SCOPE } from '../../ui/layout/LayoutInvariantEvaluator';
 import type { LayoutInvariantNode, LayoutInvariantTag, LayoutInvariantRect, LayoutInvariantResult } from '../../ui/layout/LayoutInvariantEvaluator';
 
@@ -70,6 +74,7 @@ interface ReaderDebugNodeVisit {
   clip: ReaderDebugRect | undefined;
   headers: ReaderDebugHeader | undefined;
   invariantHeaderId: string | undefined;
+  auditParent?: ReaderNativeLayoutParent;
 }
 
 interface LayoutInvariantInspectorAttributes {
@@ -90,6 +95,9 @@ interface LayoutInvariantReceipt extends LayoutInvariantResult {
   status: string;
   modalOpen: boolean;
   recoveryPending: boolean;
+  environment: ReaderJourneyEnvironment;
+  violationCount: number;
+  missingCount: number;
 }
 
 // 838 行书源页可达上万节点；每次全树扫描会挤占主线程，超出消费者需要。
@@ -138,7 +146,10 @@ export struct ReaderLayoutDebugOverlay {
   private frameScanHandle: number = -1;
   private lastWindowSample: string = '';
   private detachToastWindowReporter: (() => void) | undefined = undefined;
+  private detachTransitionRecorder: (() => void) | undefined = undefined;
+  private transitionRecorder: ReaderTransitionRecorder | undefined = undefined;
   private invariantNodes: LayoutInvariantNode[] = [];
+  private readonly nativeLayoutAudit: ReaderNativeLayoutAudit = new ReaderNativeLayoutAudit();
   private invariantFramePending: boolean = false;
   private mounted: boolean = false;
   private modalWasOpen: boolean = false;
@@ -153,6 +164,7 @@ export struct ReaderLayoutDebugOverlay {
 
   aboutToDisappear(): void {
     this.mounted = false;
+    this.retireTransitionRecorder();
     this.detachToastWindowReporter?.();
     this.detachToastWindowReporter = undefined;
     if (this.frameScanHandle >= 0) {
@@ -193,9 +205,17 @@ export struct ReaderLayoutDebugOverlay {
       this.frameScanHandle = -1;
     }
     if (this.diagnosticsActive()) {
+      if (this.transitionRecorder === undefined) {
+        const recorder = new ReaderTransitionRecorder(() => this.getUIContext(), () => this.route);
+        this.transitionRecorder = recorder;
+        this.detachTransitionRecorder = observeReaderTransitions(observation => recorder.start(observation));
+      }
       this.scheduleInvariantScan();
       this.frameScanHandle = setInterval((): void => this.scheduleInvariantScan(), 500);
-    } else this.scanFrameTree();
+    } else {
+      this.retireTransitionRecorder();
+      this.scanFrameTree();
+    }
     if (this.developerModeEnabled && this.appForeground) {
       this.detachToastWindowReporter = ReaderUIVerificationProbe.attachSourceImportToastWindowReporter(
         (windowId: number, windowRevision: number): boolean => {
@@ -207,6 +227,13 @@ export struct ReaderLayoutDebugOverlay {
           return true;
         });
     }
+  }
+
+  private retireTransitionRecorder(): void {
+    this.detachTransitionRecorder?.();
+    this.detachTransitionRecorder = undefined;
+    this.transitionRecorder?.retire();
+    this.transitionRecorder = undefined;
   }
 
   private reportInvariants(scanned: boolean): void {
@@ -232,11 +259,16 @@ export struct ReaderLayoutDebugOverlay {
       requiresHeader: this.requiresHeader, requiresControl: this.requiresControl,
       requiresFirstContent: this.requiresFirstContent, modalOpen, recoveryPending,
       checkRecovery: recovery || this.modalRecoveryVerified,
-      mainInputEnabled: this.mainInputEnabled, requiresNativeMainInput: this.route === 'reading' });
+      mainInputEnabled: this.mainInputEnabled, requiresNativeMainInput: this.route === 'reading',
+      native: this.nativeLayoutAudit.build(metrics, this.route, this.invariantNodes, scanned && !this.frameScanTruncated,
+        this.appThemeScheme) });
     const receipt: LayoutInvariantReceipt = {
-      schemaVersion: 1, sequence: ++layoutInvariantSequence, route: this.route, scheme: this.appThemeScheme,
+      schemaVersion: 2, sequence: ++layoutInvariantSequence, route: this.route, scheme: this.appThemeScheme,
       status: result.missing.length === 0 && !recoveryPending ? 'measured' : 'incomplete',
-      violations: result.violations, missing: result.missing, observedRules: result.observedRules, modalOpen, recoveryPending,
+      violations: result.violations.slice(0, 12), missing: result.missing.slice(0, 12),
+      violationCount: result.violations.length, missingCount: result.missing.length,
+      observedRules: result.observedRules, modalOpen, recoveryPending,
+      nativeAudit: result.nativeAudit, features: result.features, environment: readerJourneyEnvironment(metrics, this.appThemeScheme),
     };
     if (recovery && receipt.status === 'measured' && result.violations.length === 0) {
       this.modalRecoveryAfter = -1;
@@ -314,6 +346,7 @@ export struct ReaderLayoutDebugOverlay {
   private scanFrameTree(): void {
     this.opaqueHeaders.clear();
     this.invariantNodes = [];
+    this.nativeLayoutAudit.reset();
     if (!this.diagnosticsActive()) {
       this.lastWindowSample = '';
       this.frameBounds = [];
@@ -379,7 +412,24 @@ export struct ReaderLayoutDebugOverlay {
     const next: ReaderDebugBounds[] = [];
     this.scannedNodes = 0;
     this.childIndexQueries = 0;
-    this.collectFrameBounds(root, next, 0, 1, undefined, undefined);
+    const visited: Set<number> = new Set<number>();
+    this.collectFrameBounds(root, next, 0, 1, undefined, undefined, visited);
+    // A cover, a custom dialog or a popup can be attached outside the page.
+    // Each current root is registered by its mounted content in this window.
+    const context = this.getUIContext();
+    const windowId = context.getWindowId();
+    const unscopedOverlay = readerLayoutOverlayRoots(undefined)[0];
+    if (windowId === undefined || unscopedOverlay !== undefined) {
+      this.markFrameScanIncomplete('overlay-window-unresolved', unscopedOverlay ?? '', 0);
+    }
+    for (const id of windowId === undefined ? [] : readerLayoutOverlayRoots(windowId)) {
+      try {
+        const panel = context.getAttachedFrameNodeById(id);
+        if (panel === null || !panel.isAttached() || panel.isDisposed()) {
+          this.markFrameScanIncomplete('overlay-root-unresolved', id, 0);
+        } else this.collectMountedOverlay(panel, next, visited);
+      } catch (_) { this.markFrameScanIncomplete('native-surface-read', id, 0); }
+    }
     this.frameBounds = next;
     this.frameCount = next.length;
     this.reportInvariants(true);
@@ -389,11 +439,30 @@ export struct ReaderLayoutDebugOverlay {
     }
   }
 
+  private collectMountedOverlay(panel: FrameNode, output: ReaderDebugBounds[], visited: Set<number>): void {
+    const panelId = panel.getUniqueId();
+    if (visited.has(panelId)) return;
+    // Include the platform container when its attached branch is available.
+    // This preserves its clip and input hierarchy around the registered panel.
+    let root = panel;
+    let parent = panel.getParent();
+    let depth = 0;
+    while (parent !== null && !visited.has(parent.getUniqueId()) && depth < 128) {
+      root = parent;
+      parent = parent.getParent();
+      depth += 1;
+    }
+    if (depth >= 128) this.markFrameScanIncomplete('overlay-parent-depth-limit', this.debugNodeLabel(panel), depth);
+    this.collectFrameBounds(root, output, 0, 1, undefined, undefined, visited);
+    // Some native overlay containers do not enumerate their attached panel
+    // in the normal child range even when its id looks up successfully.
+    if (!visited.has(panelId)) this.collectFrameBounds(panel, output, 0, 1, undefined, undefined, visited);
+  }
+
   private collectFrameBounds(root: FrameNode, output: ReaderDebugBounds[], rootDepth: number, rootOpacity: number,
-    parentClip: ReaderDebugRect | undefined, parentHeaders: ReaderDebugHeader | undefined): void {
+    parentClip: ReaderDebugRect | undefined, parentHeaders: ReaderDebugHeader | undefined, visited: Set<number>): void {
     const queue: ReaderDebugNodeVisit[] = [{ node: root, depth: rootDepth, opacity: rootOpacity,
       clip: parentClip, headers: parentHeaders, invariantHeaderId: undefined }];
-    const visited: Set<number> = new Set<number>();
     let cursor = 0;
     while (cursor < queue.length) {
       const visit = queue[cursor];
@@ -476,10 +545,6 @@ export struct ReaderLayoutDebugOverlay {
           this.markFrameScanIncomplete('opacity-invalid', this.debugNodeLabel(node), visit.depth);
           continue;
         }
-        if (opacity === 0 && invariantTag?.role !== 'modal-overlay' && invariantTag?.role !== 'key-control') {
-          this.excludedTransparentBranches += 1;
-          continue;
-        }
         effectiveOpacity *= opacity;
       } catch (_) {
         this.markFrameScanIncomplete('opacity-read', this.debugNodeLabel(node), visit.depth);
@@ -513,6 +578,21 @@ export struct ReaderLayoutDebugOverlay {
         Number.isFinite(x) && Number.isFinite(y) && width > 0 && height > 0 ? { x, y, width, height } : undefined;
       const isHeader = invariantTag?.role === 'fixed-header' || invariantTag?.role === 'floating-header';
       const invariantHeaderId = isHeader ? `${invariantTag?.id}:${uniqueId}` : visit.invariantHeaderId;
+      let firstChildIndex: number = -1;
+      let lastChildIndex: number = -1;
+      try {
+        firstChildIndex = node.getFirstChildIndexWithoutExpand();
+        lastChildIndex = node.getLastChildIndexWithoutExpand();
+      } catch (_) {
+        this.markFrameScanIncomplete('child-index-read', this.debugNodeLabel(node), visit.depth);
+      }
+      const audit = this.nativeLayoutAudit.record(this.getUIContext(), node, uniqueId, nodeId, nodeType, effectiveOpacity,
+        invariantBounds, visit.clip, visit.auditParent, firstChildIndex < 0);
+      const suppressInput = visit.auditParent?.suppressInput === true || audit.enabled === false || audit.hitTest === 'none';
+      if (effectiveOpacity === 0 && suppressInput && invariantTag?.role !== 'modal-overlay' && invariantTag?.role !== 'key-control') {
+        this.excludedTransparentBranches += 1;
+        continue;
+      }
       // A clipped scroll carrier can retain every generated row in the mounted
       // tree. Rows wholly outside its actual native clip cannot paint, so do
       // not spend the observation budget walking their card descendants.
@@ -524,7 +604,7 @@ export struct ReaderLayoutDebugOverlay {
       if (invariantTag !== undefined) {
         this.recordInvariantNode(node, uniqueId, invariantTag, invariantBounds, visit.clip, visit.invariantHeaderId, effectiveOpacity);
       }
-      if (bounds !== undefined) {
+      if (bounds !== undefined && effectiveOpacity > 0) {
         if (opaqueHeader.length > 0 && effectiveOpacity === 1) {
           this.opaqueHeaders.set(opaqueHeader,
             visit.clip === undefined ? bounds : this.intersectBounds(bounds, visit.clip));
@@ -532,6 +612,7 @@ export struct ReaderLayoutDebugOverlay {
         output.push({ kind: nodeType, opacity: effectiveOpacity, x, y, width, height, clip: visit.clip, headers });
       }
       let childClip = visit.clip;
+      let scrollClip = visit.auditParent?.scrollClip === true;
       try {
         // ArkUI scroll containers clip their mounted content even when the
         // low-level FrameNode does not report the clip bit. Without this
@@ -548,19 +629,16 @@ export struct ReaderLayoutDebugOverlay {
             if (visit.clip === undefined) {
               this.markFrameScanIncomplete('clip-bounds-unavailable', this.debugNodeLabel(node), visit.depth);
             }
-          } else childClip = visit.clip === undefined ? bounds : this.intersectBounds(bounds, visit.clip);
+          } else {
+            childClip = visit.clip === undefined ? bounds : this.intersectBounds(bounds, visit.clip);
+            scrollClip = scrollContainer;
+          }
         }
       } catch (_) {
         this.markFrameScanIncomplete('clip-read', this.debugNodeLabel(node), visit.depth);
       }
-      let firstChildIndex: number = -1;
-      let lastChildIndex: number = -1;
-      try {
-        firstChildIndex = node.getFirstChildIndexWithoutExpand();
-        lastChildIndex = node.getLastChildIndexWithoutExpand();
-      } catch (_) {
-        this.markFrameScanIncomplete('child-index-read', this.debugNodeLabel(node), visit.depth);
-      }
+      const auditParent: ReaderNativeLayoutParent = { key: audit.key, type: nodeType, bounds: invariantBounds,
+        scrollClip, suppressInput };
       const childIds: Set<number> = new Set<number>();
       if (firstChildIndex >= 0 && lastChildIndex >= firstChildIndex) {
         const remainingBudget = Math.max(1, FRAME_NODE_SCAN_LIMIT - this.scannedNodes);
@@ -614,7 +692,7 @@ export struct ReaderLayoutDebugOverlay {
           }
           if (childUniqueId > 0) childIds.add(childUniqueId);
           queue.push({ node: child, depth: visit.depth + 1, opacity: effectiveOpacity,
-            clip: childClip, headers, invariantHeaderId });
+            clip: childClip, headers, invariantHeaderId, auditParent });
         }
       }
       // ArkUI's unqualified child and sibling cursors can build lazy rows
@@ -640,7 +718,7 @@ export struct ReaderLayoutDebugOverlay {
         }
         this.resolvedMountedIds += 1;
         queue.push({ node: mounted, depth: visit.depth + 1, opacity: effectiveOpacity,
-          clip: childClip, headers, invariantHeaderId });
+          clip: childClip, headers, invariantHeaderId, auditParent });
       }
     }
   }

@@ -1,7 +1,6 @@
-import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
-import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
-import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import { ReaderInsetsVp, ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { readerOverlayListHeight, readerOverlayPanel, readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
 import { ReaderChoiceRow, readerSettingsTabletOptionHeight } from '../../../ui/controls/ReaderChoiceRow';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
@@ -12,10 +11,10 @@ import {
   TYPE_SETTINGS_SELECT_TITLE,
 } from '../../../ui/foundation/ReaderTypography';
 import { PopupSurfaceSpec, readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerNativeSurfaceOutline,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
-import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerReadableFontScale, readerScaledBarHeight, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 
 export type SettingsSelectField = 'language' | 'startup';
@@ -25,7 +24,7 @@ const PHONE_BOTTOM_INSET = 20;
 const PHONE_OPTION_HEIGHT = 52;
 const PHONE_CANCEL_GAP = 10;
 const PHONE_RADIUS = 12;
-const PHONE_SHEET_CORNERS: BorderRadiuses = { topLeft: 24, topRight: 24 };
+const PHONE_SHEET_CORNERS: OutlineRadiuses = { topLeft: 24, topRight: 24 };
 
 /**
  * Settings-only responsive selector.
@@ -55,16 +54,12 @@ export struct SettingsSelectOverlay {
   @Prop @Watch('onFieldChanged') selectionId: string = '';
   @Prop value: string = '';
   @Prop options: string[] = [];
-  @Prop anchorRight: number = 0;
-  @Prop anchorBottom: number = 0;
+  @Prop hostGeometry: ReaderRectVp = new ReaderRectVp();
+  @Prop anchorGeometry: ReaderRectVp = new ReaderRectVp();
   onSelect: (option: string, identity?: string) => void = (_option: string, _identity?: string): void => {};
   onDismiss: (identity?: string) => void = (_identity?: string): void => {};
   onClosed: (identity: string) => void = (_identity: string): void => {};
 
-  @State private hostWidth: number = 0;
-  @State private hostHeight: number = -1;
-  @State private hostX: number = 0;
-  @State private hostY: number = 0;
   private mounted: boolean = false;
   private closed: boolean = false;
 
@@ -133,11 +128,6 @@ export struct SettingsSelectOverlay {
     .width('100%')
     .height('100%')
     .hitTestBehavior(HitTestMode.Transparent)
-    .onAreaChange((_old: Area, next: Area): void => {
-      if (!this.mounted) return;
-      this.hostWidth = readerPageAreaLength(next.width); this.hostHeight = readerPageAreaLength(next.height);
-      this.hostX = readerPageAreaLength(next.globalPosition.x); this.hostY = readerPageAreaLength(next.globalPosition.y);
-    })
     .zIndex(30);
   }
 
@@ -146,27 +136,33 @@ export struct SettingsSelectOverlay {
     Stack({ alignContent: Alignment.Bottom }) {
       if (this.visible) {
         Column() {
-          Scroll() { this.phoneSheet(); }
-            .width('100%').constraintSize({ maxHeight: this.safeHeight() }).scrollBar(BarState.Auto)
-            .borderRadius(PHONE_SHEET_CORNERS).clip(true);
+          if (this.phoneChoicesCapacity() > 0) {
+            this.phoneSheet(true);
+          } else {
+            Scroll() { this.phoneSheet(false); }
+              .width('100%').constraintSize({ maxHeight: this.viewport().height }).scrollBar(BarState.Auto);
+          }
         }.width('100%')
+          .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? `reader-settings-select-phone:${this.field}` : '')
           .backgroundEffect(undefined)
           .backgroundColor(Color.Transparent)
           .border({ width: 0, color: Color.Transparent })
           .borderRadius(PHONE_SHEET_CORNERS)
+          .clip(true)
           .shadow(this.panelMaterial('modalSheet').native ? undefined : readerSurfaceElevation('sheet', this.appThemeScheme))
-          .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial('modalSheet')))
+          .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial('modalSheet'),
+            readerNativeSurfaceOutline(this.appThemeScheme, PHONE_SHEET_CORNERS, 'top')))
           .transition(this.panelTransition(true), (entering: boolean): void => this.finishMotion(entering, identity));
       }
     }
-    .position({ x: this.safeLeft(), y: this.safeTop() })
-    .width(this.safeWidth())
-    .height(this.safeHeight())
+    .position({ x: this.viewport().left - this.hostGeometry.left, y: this.viewport().top - this.hostGeometry.top })
+    .width(this.viewport().width)
+    .height(this.viewport().height)
     .hitTestBehavior(HitTestMode.Transparent);
   }
 
   @Builder
-  private phoneSheet() {
+  private phoneSheet(scrollChoices: boolean) {
     Column() {
       Row() {
         Blank()
@@ -190,21 +186,16 @@ export struct SettingsSelectOverlay {
           .fontColor(readerAppColor('app.text.heading', this.appThemeScheme));
       }
       .width('100%')
-      .constraintSize({ minHeight: readerScaledControlHeight(26, TYPE_SETTINGS_SELECT_TITLE.lineHeightFp as number, this.fontScale()) })
+      .height(this.phoneTitleHeight())
       .padding({ left: 6, bottom: 12 })
       .alignItems(VerticalAlign.Top);
 
-      Column() {
-        ForEach(this.options, (option: string, index: number) => {
-          this.phoneOption(option, index);
-        }, (option: string): string => `settings-phone-option-${this.field}-${option}`);
+      if (scrollChoices) {
+        Scroll() { this.phoneChoices(); }
+          .width('100%').constraintSize({ maxHeight: this.phoneChoicesCapacity() }).scrollBar(BarState.Auto);
+      } else {
+        this.phoneChoices();
       }
-      .width('100%')
-      .backgroundColor(this.panelMaterial('modalSheet').native ? Color.Transparent :
-        readerAppColor('app.surface.menuSolid', this.appThemeScheme))
-      .border({ width: 1, color: readerAppColor('app.border.control', this.appThemeScheme) })
-      .borderRadius(PHONE_RADIUS)
-      .clip(true);
 
       Blank().width('100%').height(PHONE_CANCEL_GAP);
 
@@ -218,7 +209,8 @@ export struct SettingsSelectOverlay {
             .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme)).accessibilityLevel('no');
         }
         .width('100%')
-        .height(readerScaledControlHeight(PHONE_OPTION_HEIGHT, TYPE_SETTINGS_SELECT_PHONE_CANCEL.lineHeightFp as number, this.fontScale()))
+        .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? 'reader-settings-select-cancel' : '')
+        .height(this.phoneCancelHeight())
         .padding(0)
         .border({ width: 1, color: readerAppColor('app.border.control', this.appThemeScheme) })
         .attributeModifier(new ReaderPressFeedback(this.panelMaterial('modalSheet').native ? Color.Transparent :
@@ -242,6 +234,20 @@ export struct SettingsSelectOverlay {
   }
 
   @Builder
+  private phoneChoices() {
+    Column({ space: 0 }) {
+      ForEach(this.options, (option: string, index: number) => {
+        this.phoneOption(option, index);
+      }, (option: string): string => `settings-phone-option-${this.field}-${option}`);
+    }.width('100%')
+      .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? 'reader-settings-select-options' : '')
+      .backgroundColor(this.panelMaterial('modalSheet').native ? Color.Transparent :
+        readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+      .border({ width: 1, color: readerAppColor('app.border.control', this.appThemeScheme) })
+      .borderRadius(PHONE_RADIUS).clip(true);
+  }
+
+  @Builder
   private phoneOption(option: string, index: number) {
     ForEach([this.selectionId], (identity: string) => {
       ReaderChoiceRow({
@@ -260,9 +266,11 @@ export struct SettingsSelectOverlay {
         this.tabletOption(option, index);
       }, (option: string): string => `settings-tablet-option-${this.field}-${option}`);
     }
-    .width('100%');
+    .width('100%')
+      .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? 'reader-settings-select-options' : '');
     }
-    .width(this.tabletWidth()).constraintSize({ maxHeight: Math.max(0, this.safeTop() + this.safeHeight() - this.tabletTop()) }).scrollBar(BarState.Auto)
+    .width(this.tabletFrame().width).height(this.tabletFrame().height).scrollBar(BarState.Auto)
+    .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? `reader-settings-select-tablet:${this.field}` : '')
     .backgroundEffect(undefined)
     .backgroundColor(this.panelMaterial('popoverMenu').native ? Color.Transparent :
       readerAppColor(this.tabletSpec().surfaceBackgroundRole, this.appThemeScheme))
@@ -271,10 +279,11 @@ export struct SettingsSelectOverlay {
     .borderRadius(this.tabletSpec().borderRadius)
     .clip(true)
     .shadow(this.panelMaterial('popoverMenu').native ? undefined : readerSurfaceElevation('popover', this.appThemeScheme))
-    .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial('popoverMenu')))
+    .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial('popoverMenu'),
+      readerNativeSurfaceOutline(this.appThemeScheme, this.tabletSpec().borderRadius)))
     .position({
-      x: Math.max(this.safeLeft(), Math.min(this.anchorRight - this.tabletWidth(), this.safeLeft() + this.safeWidth() - this.tabletWidth())),
-      y: this.tabletTop(),
+      x: this.tabletFrame().left - this.hostGeometry.left,
+      y: this.tabletFrame().top - this.hostGeometry.top,
     }).transition(this.panelTransition(false), (entering: boolean): void => this.finishMotion(entering, identity));
   }
 
@@ -282,33 +291,35 @@ export struct SettingsSelectOverlay {
   private tabletOption(option: string, index: number) {
     ForEach([this.selectionId], (identity: string) => {
       ReaderChoiceRow({
-        specId: 'settings-tablet', wrapLabel: true, label: option, selected: this.isSelected(option),
+        specId: 'settings-tablet', wrapLabel: true, minimumRowHeight: readerSettingsTabletOptionHeight(this.fontScale()),
+        label: option, selected: this.isSelected(option),
         showDivider: index < this.options.length - 1, scheme: this.appThemeScheme,
         onChoose: (value: string): void => this.choose(value, identity),
       });
     }, (identity: string): string => identity);
   }
 
-  private safeLeft(): number { return Math.max(0, readerInteractiveSafeLeft(readerWindowMetrics(), true) - this.hostX); }
-  private safeTop(): number { return Math.max(0, readerInteractiveSafeTop(readerWindowMetrics(), true) - this.hostY); }
-  private safeWidth(): number {
-    const metrics = readerWindowMetrics();
-    return Math.max(0, Math.min(this.hostWidth > 0 ? this.hostWidth : metrics.windowRect.width,
-      metrics.windowRect.width - readerInteractiveSafeRight(metrics, true) - this.hostX) - this.safeLeft());
+  private viewport(): ReaderRectVp {
+    this.readerWindowMetricsRevision;
+    const host = this.hostGeometry.width > 0 && this.hostGeometry.height > 0 ? this.hostGeometry : undefined;
+    return readerOverlayViewport(ReaderWindowCoordinator.metrics(), host,
+      this.expandedLayout ? new ReaderInsetsVp(8, 4, 8, 4) : undefined);
   }
-  private safeHeight(): number {
-    if (this.readerWindowMetricsRevision < 0) return 0;
-    const metrics = readerWindowMetrics();
-    return Math.max(0, readerKeyboardHostBottom(metrics, this.hostY,
-      this.hostHeight >= 0 ? this.hostHeight : metrics.windowRect.height, this.hostX,
-      this.hostWidth > 0 ? this.hostWidth : metrics.windowRect.width) - this.safeTop());
+  private phoneTitleHeight(): number {
+    return readerScaledBarHeight(26, TYPE_SETTINGS_SELECT_TITLE.lineHeightFp as number, this.fontScale(), 0) + 12;
   }
-  private tabletWidth(): number { return Math.min(this.tabletSpec().width, this.safeWidth()); }
-  private tabletTop(): number {
-    const natural = this.options.length * readerSettingsTabletOptionHeight(this.fontScale());
-    const height = Math.min(this.safeHeight(), natural);
-    return Math.max(this.safeTop(), Math.min(this.anchorBottom + this.tabletSpec().anchorOverlap,
-      this.safeTop() + this.safeHeight() - height));
+  private phoneCancelHeight(): number {
+    return readerScaledControlHeight(PHONE_OPTION_HEIGHT, TYPE_SETTINGS_SELECT_PHONE_CANCEL.lineHeightFp as number, this.fontScale());
+  }
+  private phoneChoicesCapacity(): number {
+    return Math.max(0, this.viewport().height - 24 - this.phoneTitleHeight() - PHONE_CANCEL_GAP -
+      PHONE_BOTTOM_INSET - this.phoneCancelHeight());
+  }
+  private tabletFrame(): ReaderRectVp {
+    const spec = this.tabletSpec();
+    const natural = readerOverlayListHeight(0, readerSettingsTabletOptionHeight(this.fontScale()), this.options.length,
+      spec.dividerHeight, 0, 0, this.panelMaterial('popoverMenu').native ? 0 : spec.borderWidth, 0);
+    return readerOverlayPanel(this.viewport(), spec.width, natural, 'anchor-end', this.anchorGeometry, spec.anchorOverlap);
   }
 
   private tabletSpec(): PopupSurfaceSpec {

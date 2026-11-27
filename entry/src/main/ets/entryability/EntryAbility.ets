@@ -47,6 +47,8 @@ import { prepareReaderPublicLongBook, prepareReaderPublicScrolledBooks } from '.
 import { prepareReaderPublicSingleSource } from '../app/diagnostics/ReaderPublicSingleSource';
 import { prepareReaderPublicSourceRecipe } from '../app/diagnostics/ReaderPublicSourceRecipe';
 import { prepareReaderVmJourneyFixture } from '../app/diagnostics/ReaderVmJourneyFixture';
+import { enableReaderVmJourneyDocuments, readerVmJourneyDocumentsEnabled, readerVmJourneyInvalidBookUri }
+  from '../app/diagnostics/ReaderVmJourneyDocuments';
 import { readerPublicSearchHttpFixtureMode } from '../app/diagnostics/ReaderPublicSearchHttpFixture';
 import { CookieSessionStore } from '../platform/network/CookieSessionStore';
 import { ArkWebExecutor } from '../platform/network/ArkWebExecutor';
@@ -78,6 +80,8 @@ export default class EntryAbility extends UIAbility {
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
     try {
       this.admitPublicFixture(want.parameters);
+      if (DEBUG && BUILD_MODE_NAME === 'debug' && this.publicFixture?.id === 'vm-journeys' &&
+        want.parameters?.readerPublicFixtureRecovery === true) enableReaderVmJourneyDocuments(this.context.cacheDir);
     } catch (_) {
       this.fixtureAdmissionRejected = true;
       hilog.error(DOMAIN, 'Reader', 'Public UI fixture directory could not be isolated');
@@ -344,6 +348,17 @@ export default class EntryAbility extends UIAbility {
   }
 
   onNewWant(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
+    if (DEBUG && BUILD_MODE_NAME === 'debug' && this.publicFixture?.id === 'vm-journeys' &&
+      readerVmJourneyDocumentsEnabled() && want.parameters?.readerPublicFixtureInvalidBook === true) {
+      const owner = this.runtimeOwner;
+      void readerVmJourneyInvalidBookUri(this.context.cacheDir).then((uri: string): void => {
+        if (owner !== undefined && this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner)) {
+          const input: Want = { action: 'ohos.want.action.viewData', uri };
+          ReaderSystemFileOpenHost.receive(input);
+        }
+      }).catch((): void => { hilog.error(DOMAIN, 'Reader', 'VM invalid book fixture preparation failed'); });
+      return;
+    }
     if (this.coreCopyOnly || this.fixtureAdmissionRejected || this.publicFixture !== undefined ||
         want.parameters?.[READER_PUBLIC_FIXTURE_PARAMETER] !== undefined) return;
     this.frameworkCapture.start(DEBUG, BUILD_MODE_NAME, want.parameters?.readerFrameworkCaptureSeconds, this.context.cacheDir);

@@ -1,4 +1,5 @@
 import type { ReadingSessionChapter, ReadingSessionImage } from '../application/ReadingChapterWindow';
+import { readerTtsChapterKey, type ReaderTtsContentVersion, type ReaderTtsState } from '../application/ReaderTtsState';
 import type { ReaderParagraphLayoutRange } from './ReaderParagraphLayoutOwner';
 
 export interface ReaderContinuousFragmentSpan {
@@ -19,19 +20,28 @@ export interface ReaderContinuousVisibleRange {
   scalar: number;
 }
 
+export interface ReaderContinuousHighlight {
+  start: number;
+  end: number;
+}
+
 /** Owns the published fragment references and their scalar/index projection.
  * Native fragment construction and the revision observed by ArkUI are host-owned. */
 export class ReaderContinuousReadingProjection<T extends ReaderContinuousFragmentSpan> {
   private items: T[] = [];
   private readonly byStartScalar: Map<number, number> = new Map<number, number>();
   private identity: string = 'continuous:empty';
+  private committedChapterIndex: number = -1;
   private title: string = '';
   private layoutKey: string = '';
+  private ttsChapterKey: string = '';
+  private ttsContentVersion: ReaderTtsContentVersion | undefined = undefined;
   private firstVisible: number = 0;
   private lastVisible: number = 0;
 
   get fragments(): T[] { return this.items; }
   get chapterIdentity(): string { return this.identity; }
+  get chapterIndex(): number { return this.committedChapterIndex; }
   get chapterTitle(): string { return this.title; }
   get geometryKey(): string { return this.layoutKey; }
   get visibleStart(): number { return this.firstVisible; }
@@ -76,6 +86,9 @@ export class ReaderContinuousReadingProjection<T extends ReaderContinuousFragmen
     }
     this.focus(this.indexForScalar(visibleScalar));
     this.identity = `continuous:${JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterIndex, chapter.contentVersion])}`;
+    this.committedChapterIndex = chapter.chapterIndex;
+    this.ttsChapterKey = readerTtsChapterKey(chapter.sourceId, chapter.bookId, chapter.chapterIndex);
+    this.ttsContentVersion = chapter.contentVersion;
     this.title = (chapter.documentRange?.startScalar ?? 0) === 0 ? chapter.chapterTitle : '';
     this.layoutKey = geometryKey();
   }
@@ -100,7 +113,18 @@ export class ReaderContinuousReadingProjection<T extends ReaderContinuousFragmen
     this.items = [];
     this.byStartScalar.clear();
     this.identity = 'continuous:empty';
+    this.committedChapterIndex = -1;
     this.title = '';
+    this.ttsChapterKey = '';
+    this.ttsContentVersion = undefined;
+  }
+
+  ttsHighlight(state: ReaderTtsState, enabled: boolean): ReaderContinuousHighlight | undefined {
+    const start = state.charStart;
+    const end = state.charEnd;
+    if (!enabled || this.ttsChapterKey.length === 0 || this.ttsChapterKey !== state.chapterKey ||
+      this.ttsContentVersion !== state.contentVersion || start === undefined || end === undefined || end <= start) return undefined;
+    return { start, end };
   }
 
   anchor(scalar: number): ReaderContinuousAnchor {

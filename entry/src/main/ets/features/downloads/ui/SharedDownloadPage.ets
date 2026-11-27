@@ -16,6 +16,7 @@ import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderK
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
+import { ReaderDialogViewport } from '../../../ui/surfaces/ReaderDialogViewport';
 import { MESSAGE_TITLE, MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
@@ -45,7 +46,7 @@ import {
 } from './DownloadTypography';
 import { TYPE_APP_ROW_LABEL, TYPE_DOWNLOAD_BODY, TYPE_SELECT_DEFAULT_VALUE } from '../../../ui/foundation/ReaderTypography';
 import { ReaderWindowCoordinator, ReaderWindowChromeStyle } from '../../../app/ReaderWindowCoordinator';
-import { ReaderInsetsVp, ReaderWindowMetricsSnapshot, readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot, readerStableInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import type { DownloadBookView, DownloadChapterView, SharedDownloadFilters, DownloadReadingTarget, DownloadStorageSummary, DownloadStoragePolicyView } from '../presentation/SharedDownloadProjection';
 import { filterDownloadBooks, describeDownloadReadingTarget, downloadChapterDetailLabel, downloadChapterBookTitle,
   downloadsProvenEmpty, formatDownloadStorageBytes, canCleanDownloadStorage, currentDownloadReadingChapterIndex } from '../presentation/SharedDownloadProjection';
@@ -60,7 +61,7 @@ import { defaultNavigationPreferences, ReaderModalScrimModifier, readerSurfaceMa
   from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
-import { resolveDrawerSpec, resolveActionSheetSpec, readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { resolveDialogSpec, resolveDrawerSpec, readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { readerAvailableWindowHeight, readerDynamicSurfaceWidth, readerSurfaceMaxHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
@@ -172,6 +173,7 @@ export struct SharedDownloadPage {
   @State private fontsFailed: boolean = false;
   @State @Watch('onListGeometryChanged') private pageWidth: number = 0;
   @State private pageOriginX: number = 0;
+  @State private pageOriginY: number = 0;
   @State @Watch('onListGeometryChanged') private pageHeight: number = 0;
   // Ordinary chrome belongs to the active List. A viable management dock
   // alone may occupy the footer; its inner geometry survives placement changes.
@@ -181,7 +183,6 @@ export struct SharedDownloadPage {
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @State private sheetTitleMeasuredHeight: number = DOWNLOAD_VISUAL.sheetTitleHeight;
   @State private operationsHeaderMeasuredHeight: number = 0;
-  @State private bookOperationsBodyMeasuredHeight: number = 0;
   @State private dialogActionsMeasuredHeight: number = DOWNLOAD_VISUAL.buttonHeight;
   @State private sheetFooterMeasuredHeight: number = DOWNLOAD_VISUAL.buttonHeight + DOWNLOAD_VISUAL.sheetFooterTop + DOWNLOAD_VISUAL.sheetFooterBottom + DOWNLOAD_VISUAL.borderWidth;
   @State private bookCopyHeights: Map<string, number> = new Map<string, number>();
@@ -295,7 +296,9 @@ export struct SharedDownloadPage {
       const width = readerPageAreaLength(area.width);
       if (Number.isFinite(width) && width > 0 && Math.abs(width - this.pageWidth) > 0.5) this.pageWidth = width;
       const originX = readerPageAreaLength(area.globalPosition.x);
-      if (this.embeddedWide && Number.isFinite(originX) && Math.abs(originX - this.pageOriginX) > 0.1) this.pageOriginX = originX;
+      if (Number.isFinite(originX) && Math.abs(originX - this.pageOriginX) > 0.1) this.pageOriginX = originX;
+      const originY = readerPageAreaLength(area.globalPosition.y);
+      if (Number.isFinite(originY) && Math.abs(originY - this.pageOriginY) > 0.1) this.pageOriginY = originY;
       const height = readerPageAreaLength(area.height);
       if (Number.isFinite(height) && height > 0 && Math.abs(height - this.pageHeight) > 0.5) this.pageHeight = height;
     });
@@ -1241,6 +1244,7 @@ export struct SharedDownloadPage {
     Column({ space: 0 }) {
       this.sheetContent(false, opening);
     }.width('100%').constraintSize({ maxHeight: this.sheetMaxHeight() })
+      .padding({ left: this.sheetSafeLeft(), right: this.sheetSafeRight() })
       .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
       .borderRadius({ topLeft: DOWNLOAD_VISUAL.sheetRadius, topRight: DOWNLOAD_VISUAL.sheetRadius }).clip(true)
       .border({ width: { top: DOWNLOAD_VISUAL.borderWidth }, color: readerAppColor('app.border.modalHighlight', this.appThemeScheme) })
@@ -1267,7 +1271,7 @@ export struct SharedDownloadPage {
 
   private operationsSurfaceWidth(): number {
     return readerDynamicSurfaceWidth(resolveDrawerSpec('reader-action-sheet').maxWidth,
-      Math.max(0, this.pageViewportWidth() - this.safeLeft() - this.safeRight()));
+      Math.max(0, this.pageViewportWidth() - this.sheetSafeLeft() - this.sheetSafeRight()));
   }
 
   @Builder
@@ -1281,7 +1285,7 @@ export struct SharedDownloadPage {
     }.opacity(this.confirmation.length > 0 ? 0 : 1)
       .animation(this.reduceMotion ? readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.scrim'))
       .width('100%')
-      .padding({ left: this.safeLeft(), right: this.safeRight() })
+      .padding({ left: this.sheetSafeLeft(), right: this.sheetSafeRight() })
       .onAppear((): void => this.onSheetActorAppeared(attachment, ownerGeneration, 'operations:' + opening, opening))
       .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : TransitionEffect.asymmetric(
         TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.open')),
@@ -1306,22 +1310,20 @@ export struct SharedDownloadPage {
         .padding({ left: resolveDrawerSpec('reader-action-sheet').contentInset,
           right: resolveDrawerSpec('reader-action-sheet').contentInset,
           bottom: this.sheet === 'book-actions' ? 0 : resolveDrawerSpec('reader-action-sheet').contentInset })
-        .onAreaChange(this.sheetAreaHandler('operations-body', opening));
-    }.width('100%').height(this.sheet === 'book-actions' ? this.bookOperationsBodyHeight() : undefined)
+    }.width('100%')
       .constraintSize({ maxHeight: Math.max(1,
-        this.sheetMaxHeight() - this.operationsHeaderMeasuredHeight - this.operationsBottomInset()) }).scrollBar(BarState.Auto);
+        this.sheetMaxHeight() - this.operationsHeaderHeight() - this.operationsBottomInset()) }).scrollBar(BarState.Auto);
   }
 
   private operationsBottomInset(): number {
-    const safe = readerInteractiveSafeBottom(this.currentMetrics());
+    const safe = readerStableInteractiveSafeBottom(this.currentMetrics());
     return this.sheet === 'book-actions' ? Math.max(20, safe) : safe;
   }
 
-  private bookOperationsBodyHeight(): number {
-    const spec = resolveActionSheetSpec('grouped');
-    const fallback = this.operationsActions().length * spec.rowHeight + Math.max(0, this.operationsActions().length - 1) * spec.dividerHeight;
-    return Math.max(1, Math.min(this.bookOperationsBodyMeasuredHeight > 0 ? this.bookOperationsBodyMeasuredHeight : fallback,
-      this.sheetMaxHeight() - this.operationsHeaderMeasuredHeight - this.operationsBottomInset()));
+  private operationsHeaderHeight(): number {
+    const spec = resolveDrawerSpec('reader-action-sheet');
+    return Math.max(this.operationsHeaderMeasuredHeight,
+      spec.handleZone + Math.max(spec.titleHeight, spec.titleLineHeight * this.fontScale()));
   }
 
   @Builder
@@ -1702,7 +1704,7 @@ export struct SharedDownloadPage {
 
   @Builder
   private confirmationOverlay(opening: number = this.confirmationGeneration) {
-    Stack({ alignContent: Alignment.Center }) {
+    Stack({ alignContent: Alignment.TopStart }) {
       // A nested confirmation keeps the sheet's existing backdrop in place.
       if (this.sheet.length === 0 && !this.sheetExitPending) {
         Stack().width('100%').height('100%')
@@ -1711,34 +1713,32 @@ export struct SharedDownloadPage {
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
           .accessibilityLevel('no');
       }
-      Column() {
-        ReaderDialogSurface({ specId: 'download-confirmation', body: (): void => { this.confirmationSurfaceBody(opening); } }).clip(true);
-      }.width('100%').padding({ left: DOWNLOAD_VISUAL.dialogOuterSide, right: DOWNLOAD_VISUAL.dialogOuterSide,
-        top: this.dialogOuterPaddingY(), bottom: this.dialogOuterPaddingY() });
+      ReaderDialogViewport({ host: this.confirmationHost(), edgeGapY: DOWNLOAD_VISUAL.dialogOuterSide,
+        content: (width: number, height: number): void => {
+          ReaderDialogSurface({ specId: 'download-confirmation',
+            containerWidthVp: Math.max(0, width - 2 * DOWNLOAD_VISUAL.dialogOuterSide),
+            body: (): void => { this.confirmationSurfaceBody(opening, height); },
+          }).clip(true);
+        },
+      });
     }.width('100%').height('100%').hitTestBehavior(HitTestMode.Default);
   }
 
   @Builder
-  private confirmationSurfaceBody(opening: number = this.confirmationGeneration) {
-    if (this.dialogChromeOverflow()) {
-      // The shared frame owns the original 17vp inset. The viewport
-      // excludes that same inset while the whole body/actions scroll.
-      Scroll() { this.confirmationContent(true, this.presentationGeneration, opening); }.width('100%')
-        .constraintSize({ maxHeight: Math.max(0, this.dialogMaxHeight() - 34) }).scrollBar(BarState.Auto);
-    } else {
-      this.confirmationContent(false, this.presentationGeneration, opening);
-    }
+  private confirmationSurfaceBody(opening: number, viewportHeight: number) {
+    this.confirmationContent(viewportHeight <= this.dialogChromeHeight(), viewportHeight, this.presentationGeneration, opening);
   }
 
   @Builder
-  private confirmationContent(wholeDocument: boolean, ownerGeneration: number = this.presentationGeneration,
-    opening: number = this.confirmationGeneration) {
+  private confirmationContent(wholeDocument: boolean, viewportHeight: number, ownerGeneration: number,
+    opening: number) {
     Column({ space: 0 }) {
       if (wholeDocument) {
         this.confirmationBody();
       } else {
         Scroll() { this.confirmationBody(); }.width('100%')
-          .constraintSize({ maxHeight: this.dialogBodyMaxHeight() }).scrollBar(BarState.Auto);
+          .constraintSize({ maxHeight: readerSurfaceMaxHeight(viewportHeight, this.dialogChromeHeight()) })
+          .scrollBar(BarState.Auto);
       }
       Row({ space: DOWNLOAD_VISUAL.actionGap }) {
         this.confirmationButton((): string => '取消', false, (): void => {
@@ -2996,6 +2996,10 @@ export struct SharedDownloadPage {
   private safeRight(): number {
     return readerPageSafeRight(this.currentMetrics(), this.embeddedWide ? this.pageOriginX : undefined, this.pageWidth);
   }
+  private sheetSafeLeft(): number { return readerPageSafeLeft(this.currentMetrics(), this.pageOriginX, true); }
+  private sheetSafeRight(): number {
+    return readerPageSafeRight(this.currentMetrics(), this.pageOriginX, this.pageViewportWidth(), true);
+  }
   private leftInset(): number { return Math.max(8, this.safeLeft()); }
   private rightInset(): number { return Math.max(8, this.safeRight()); }
   private dockLeftInset(): number { return Math.max(30, this.safeLeft()); }
@@ -3006,7 +3010,7 @@ export struct SharedDownloadPage {
   private contentRightInset(): number {
     return sharedDownloadContentInsets(this.safeLeft(), this.safeRight()).right;
   }
-  private bottomInset(): number { return Math.max(DOWNLOAD_VISUAL.dockBottom, readerInteractiveSafeBottom(this.currentMetrics())); }
+  private bottomInset(): number { return Math.max(DOWNLOAD_VISUAL.dockBottom, readerStableInteractiveSafeBottom(this.currentMetrics())); }
   private pageViewportWidth(): number {
     return this.pageWidth > 0 ? this.pageWidth : this.currentMetrics().windowRect.width;
   }
@@ -3020,12 +3024,12 @@ export struct SharedDownloadPage {
   private sheetHasFooter(): boolean { return ['filter', 'sort', 'range', 'settings'].includes(this.sheet); }
   private sheetFooterBottomInset(): number {
     return Math.max(this.sheet === 'settings' ? DOWNLOAD_VISUAL.storageFooterBottom : DOWNLOAD_VISUAL.sheetFooterBottom,
-      readerInteractiveSafeBottom(this.currentMetrics()));
+      readerStableInteractiveSafeBottom(this.currentMetrics()));
   }
   private sheetBodyBottomInset(): number {
     if (this.sheet === 'settings') return 0;
     return this.sheetHasFooter() ? DOWNLOAD_VISUAL.sheetBodyBottom :
-      Math.max(DOWNLOAD_VISUAL.sheetBodyBottom, readerInteractiveSafeBottom(this.currentMetrics()));
+      Math.max(DOWNLOAD_VISUAL.sheetBodyBottom, readerStableInteractiveSafeBottom(this.currentMetrics()));
   }
   private selectionDockMinimumContentHeight(): number {
     const scale = this.fontScale();
@@ -3060,17 +3064,12 @@ export struct SharedDownloadPage {
   private dialogChromeHeight(): number {
     const button = Math.max(this.dialogActionsMeasuredHeight,
       this.textControlHeight(DOWNLOAD_VISUAL.buttonHeight, DOWNLOAD_VISUAL.controlLineHeight, DOWNLOAD_VISUAL.buttonPaddingY * 2));
-    return 34 + Math.max(44, button);
+    const spec = resolveDialogSpec('download-confirmation');
+    return 2 * (spec.padding + (spec.hasBorder ? 1 : 0)) + Math.max(spec.actionHeight, button);
   }
-  private dialogChromeOverflow(): boolean {
-    return this.dialogChromeHeight() + DOWNLOAD_VISUAL.dialogOuterSide * 2 >= this.availableHeight();
-  }
-  private dialogOuterPaddingY(): number { return this.dialogChromeOverflow() ? 0 : DOWNLOAD_VISUAL.dialogOuterSide; }
-  private dialogMaxHeight(): number {
-    return readerSurfaceMaxHeight(this.availableHeight(), this.dialogOuterPaddingY() * 2);
-  }
-  private dialogBodyMaxHeight(): number {
-    return readerSurfaceMaxHeight(this.dialogMaxHeight(), this.dialogChromeHeight());
+  private confirmationHost(): ReaderRectVp | undefined {
+    return this.pageWidth > 0 && this.pageHeight > 0 ?
+      new ReaderRectVp(this.pageOriginX, this.pageOriginY, this.pageWidth, this.pageHeight) : undefined;
   }
   private bookHeight(key: string): number { return Math.max(DOWNLOAD_VISUAL.coverHeight, this.bookCopyHeights.get(key) ?? DOWNLOAD_VISUAL.coverHeight); }
   private bookProgressSpacer(key: string): number {
@@ -3124,7 +3123,7 @@ export struct SharedDownloadPage {
   private recordSheetTitleHeight(height: number): void {
     if (Number.isFinite(height) && height > 0 && Math.abs(height - this.sheetTitleMeasuredHeight) > 0.5) this.sheetTitleMeasuredHeight = height;
   }
-  private sheetAreaHandler(slot: 'title' | 'footer' | 'operations-header' | 'operations-body', opening: number): (_old: Area, area: Area) => void {
+  private sheetAreaHandler(slot: 'title' | 'footer' | 'operations-header', opening: number): (_old: Area, area: Area) => void {
     const presentation = this.presentationGeneration, layout = this.measurementGeneration(), sheet = this.sheet;
     return (_old: Area, area: Area): void => {
       if (!this.presentationIsCurrent(presentation) || opening !== this.sheetOpeningGeneration ||
@@ -3135,8 +3134,6 @@ export struct SharedDownloadPage {
       else if (Number.isFinite(height) && height > 0) {
         if (slot === 'operations-header' && Math.abs(height - this.operationsHeaderMeasuredHeight) > .5)
           this.operationsHeaderMeasuredHeight = height;
-        if (slot === 'operations-body' && sheet === 'book-actions' && Math.abs(height - this.bookOperationsBodyMeasuredHeight) > .5)
-          this.bookOperationsBodyMeasuredHeight = height;
       }
     };
   }

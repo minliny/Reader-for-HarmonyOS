@@ -6,6 +6,8 @@ import { MainNavigationOverlay } from './MainNavigationOverlay';
 import { readerMainNavigationMode, type MainNavigationMode } from './MainNavigationSpec';
 import { ReaderPageScaffold } from '../../ui/layout/ReaderPageScaffold';
 import { ReaderPageGeometry, readerChromePageGeometry } from '../../ui/layout/ReaderPageGeometry';
+import { readerFloatingTabOccupiedHeight } from '../../ui/layout/ReaderFloatingBarMetrics';
+import { readerWindowMetrics } from '../../ui/foundation/ReaderWindowEnvironment';
 import { readerPresentedHeaderBottom, type ReaderStandardPageVariant } from '../../ui/layout/ReaderPageShell';
 import { ReaderFrameStyle, readerFrameStyle } from '../../ui/layout/ReaderFrameStyle';
 import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
@@ -81,7 +83,15 @@ export struct MainTabShell {
   }
 
   private pageGeometry(): ReaderPageGeometry {
-    return readerChromePageGeometry(this.headerTop, this.headerInsetLeft, this.headerInsetRight);
+    const geometry = readerChromePageGeometry(this.headerTop, this.headerInsetLeft, this.headerInsetRight);
+    geometry.footer.height = this.restingFooterHeight();
+    return geometry;
+  }
+
+  private restingFooterHeight(): number {
+    if (this.navigationMode() !== 'bottom') return 0;
+    return this.sharedBottomNavigationHeight >= 0 ? this.sharedBottomNavigationHeight :
+      readerFloatingTabOccupiedHeight(readerWindowMetrics());
   }
 
   private frameStyle(): ReaderFrameStyle {
@@ -105,6 +115,7 @@ export struct MainTabShell {
         },
         contentLeadingRail: this.navigationMode() === 'rail' ? readerMainRailLeading() : 0,
         contentEndInset: this.navigationMode() === 'rail' ? readerMainRailBottomInset() : -1,
+        initialFooterHeight: this.restingFooterHeight(),
         content: (): void => { this.content(); },
         header: (): void => { this.header(); },
         footer: (): void => { this.bottomNavigation(); },

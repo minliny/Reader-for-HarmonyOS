@@ -5,7 +5,7 @@ import { SourceGateway } from '../../features/source/application/SourceGateway';
 import { canonicalRulePayloadJson } from '../BundledBookSourceSupply';
 import { prepareReaderPublicLongBook } from './ReaderPublicLongBook';
 import type { ReaderPublicFixtureScope } from './ReaderPublicFixtureScope';
-import { READER_VM_AUTHOR, READER_VM_JOURNEY_SCOPE, READER_VM_LOCAL_TITLE, READER_VM_SHELF_SOURCE,
+import { READER_VM_AUTHOR, READER_VM_IMPORT_SOURCE, READER_VM_JOURNEY_SCOPE, READER_VM_LOCAL_TITLE, READER_VM_SHELF_SOURCE,
   READER_VM_SHELF_TITLE, readerVmJourneyBookId, readerVmJourneySources, readerVmJourneyTitle } from './ReaderVmJourneyData';
 
 /** Rebuild only the known public starting rows. Refuse an unexpected scope or
@@ -26,10 +26,19 @@ export async function prepareReaderVmJourneyFixture(owner: ReaderRuntimeOwner,
     book.title !== READER_VM_LOCAL_TITLE : readerVmJourneyTitle(book.sourceId, book.bookId) !== book.title)) {
     throw new Error('VM_JOURNEY_FIXTURE_UNEXPECTED_BOOKSHELF');
   }
-  const imported = await source.loadSources(undefined, true, current);
+  let imported = await source.loadSources(undefined, true, current);
   requireCurrent();
-  if (imported.some(row => !expected.some(definition => definition['bookSourceUrl'] === row.sourceId))) {
+  if (imported.some(row => row.sourceId !== READER_VM_IMPORT_SOURCE &&
+    !expected.some(definition => definition['bookSourceUrl'] === row.sourceId))) {
     throw new Error('VM_JOURNEY_FIXTURE_UNEXPECTED_SOURCES');
+  }
+  if (imported.some(row => row.sourceId === READER_VM_IMPORT_SOURCE)) {
+    const cleanup = await source.deleteSources([READER_VM_IMPORT_SOURCE]);
+    requireCurrent();
+    if (cleanup.deletedCount !== 1 || cleanup.cookieCleanupFailures !== 0) throw new Error('VM_JOURNEY_FIXTURE_SOURCE_CLEANUP_FAILED');
+    imported = await source.loadSources(undefined, true, current);
+    requireCurrent();
+    if (imported.some(row => row.sourceId === READER_VM_IMPORT_SOURCE)) throw new Error('VM_JOURNEY_FIXTURE_SOURCE_CLEANUP_UNCONFIRMED');
   }
   if (imported.length === 0) {
     const report = await source.importBookSourceDocument(JSON.stringify(expected), current);

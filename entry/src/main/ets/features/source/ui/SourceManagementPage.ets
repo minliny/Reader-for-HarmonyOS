@@ -10,18 +10,19 @@ import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from 
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
-import { ReaderRectVp, readerInteractiveSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
+import { ReaderRectVp, readerInteractiveSafeTop, readerStableInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS, readerTransientTextObserver,
   type ReaderTransientTextObserver } from '../../../ui/feedback/ReaderTransientFeedback';
-import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
+import { consumeReaderControlKeyboardBack, readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerPageAreaLength, readerStandardPageSpec, READER_STANDARD_PAGE_CONTENT_GAP } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerOverlayListHeight, readerOverlayPanel } from '../../../ui/layout/ReaderOverlayGeometry';
 import { resolveSourceManagementLayout, SOURCE_ROW_ACTION_GAP, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP, type SourceManagementLayout } from '../presentation/SourceManagementLayout';
 import { sourceManagementFilterKey, copySourceManagementScroll, type SourceManagementScrollState } from '../presentation/SourceManagementScrollState';
 import { projectSourceManagementV9, sourceV9DisplayUrl, sourceV9ReportTone, sourceV9Supports,
@@ -60,7 +61,7 @@ import { sourceVerificationOfflineDetectIdentity, sourceVerificationOpening, sou
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier,
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerNativeSurfaceOutline,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
@@ -219,12 +220,12 @@ export struct SourceManagementPage {
   @Prop @Watch('onBatchApplied') batchApplied: number = 0;
   @State private statusCounts: SourceV9Counts = { all: 0, enabled: 0, disabled: 0, abnormal: 0 };
   @State private hasReadableSources: boolean = false;
-  @State private moreMenuOpen: boolean = false;
+  @State @Watch('publishBackPreviewBlock') private moreMenuOpen: boolean = false;
   @State private moreAnchor: ReaderRectVp | undefined = undefined;
   private moreFocusRevision: number = 0;
-  @State private batchMode: boolean = false;
+  @State @Watch('publishBackPreviewBlock') private batchMode: boolean = false;
   @State private batchSourceIds: string[] = [];
-  @State private groupOpen: boolean = false;
+  @State @Watch('publishBackPreviewBlock') private groupOpen: boolean = false;
   @State private groupClosing: boolean = false;
   @State private groupSearchQuery: string = '';
   @State private groupSelectionId: string = '';
@@ -236,6 +237,8 @@ export struct SourceManagementPage {
   private temporaryBackIdentity: string = '';
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
+  onBackPreviewBlocked: (blocked: boolean) => void = (): void => {};
+  private lastBackPreviewBlocked: boolean = false;
   // 838 条书源时 @State 会为每个对象建立观察代理，重建一次就产生数百 MB 峰值。
   // 列表本身由 LazyForEach 数据源驱动，这里只保留普通引用并以计数触发重渲染。
   private projectedSources: BookSource[] = [];
@@ -398,6 +401,8 @@ export struct SourceManagementPage {
     this.footerInputs = '';
     this.retireGroupSelection();
     this.onTemporaryBackBridge(undefined, identity);
+    this.lastBackPreviewBlocked = false;
+    this.onBackPreviewBlocked(false);
   }
 
   private managementOpeningIsCurrent(): boolean {
@@ -427,6 +432,15 @@ export struct SourceManagementPage {
       return true;
     }
     return false;
+  }
+
+  private publishBackPreviewBlock(): void {
+    if (!this.mounted) return;
+    const blocked = this.groupOpen || this.moreMenuOpen || this.batchMode ||
+      readerControlKeyboardVisible(ReaderWindowCoordinator.metrics());
+    if (blocked === this.lastBackPreviewBlocked) return;
+    this.lastBackPreviewBlocked = blocked;
+    this.onBackPreviewBlocked(blocked);
   }
 
   private hideManagementKeyboard(identity: string): boolean {
@@ -936,26 +950,27 @@ export struct SourceManagementPage {
     this.onV9Action(id as SourceV9ListAction, id === 'detect' ? this.visibleIds() : []);
   }
 
-  private moreWidth(): number {
-    return Math.min(resolvePopupSpec('source-v9-more-menu').width, this.overlayRight() - this.overlayLeft());
+  private moreAnchorInPane(): ReaderRectVp {
+    const anchor = this.moreAnchor;
+    return anchor === undefined ? new ReaderRectVp(this.viewportWidth - this.geometry.header.insetRight - 44,
+      this.geometry.content.startInset - 50, 44, 44) :
+      new ReaderRectVp(anchor.left - this.originX, anchor.top - this.originY, anchor.width, anchor.height);
   }
 
-  private moreLeft(): number {
-    const anchorRight = this.moreAnchor === undefined ? this.viewportWidth - this.geometry.header.insetRight :
-      this.moreAnchor.left + this.moreAnchor.width - this.originX;
-    return Math.max(this.overlayLeft(), Math.min(this.overlayRight() - this.moreWidth(), anchorRight + 8 - this.moreWidth()));
-  }
-
-  private moreTop(): number {
-    const anchorBottom = this.moreAnchor === undefined ? this.geometry.content.startInset - 6 :
-      this.moreAnchor.top + this.moreAnchor.height - this.originY;
-    return Math.max(this.overlayTop() + 6, anchorBottom + 8);
+  private moreMenuRect(): ReaderRectVp {
+    const spec = resolvePopupSpec('source-v9-more-menu');
+    const rowHeight = readerScaledControlHeight(spec.actionHeight, spec.actionLineHeight, this.fontScale());
+    const height = readerOverlayListHeight(0, rowHeight, this.moreActions().length, 0, 6, 6, 1, 0);
+    const left = this.overlayLeft();
+    const top = this.overlayTop() + 6;
+    const viewport = new ReaderRectVp(left, top, this.overlayRight() - left, this.overlayBottom() - top - 6);
+    return readerOverlayPanel(viewport, spec.width, height, 'anchor-end', this.moreAnchorInPane(), 8);
   }
 
   private morePointerX(): number {
-    const anchorCenter = this.moreAnchor === undefined ? this.moreLeft() + this.moreWidth() - 28 :
-      this.moreAnchor.left - this.originX + this.moreAnchor.width / 2;
-    return Math.max(6, Math.min(this.moreWidth() - 18, anchorCenter - this.moreLeft() - 6));
+    const anchor = this.moreAnchorInPane();
+    const panel = this.moreMenuRect();
+    return Math.max(6, Math.min(panel.width - 18, anchor.left + anchor.width / 2 - panel.left - 6));
   }
 
   private moreTransition(): TransitionEffect {
@@ -979,8 +994,8 @@ export struct SourceManagementPage {
       Stack({ alignContent: Alignment.TopStart }) {
         Column() {
           ReaderActionMenuSurface({ specId: 'source-v9-more-menu', nativeId: 'reader-source-v9-more-menu',
-            actionIdPrefix: 'reader-source-v9-open-', scheme: this.appThemeScheme, availableWidth: this.moreWidth(),
-            viewportHeight: Math.max(0, this.overlayBottom() - this.moreTop() - 12),
+            actionIdPrefix: 'reader-source-v9-open-', scheme: this.appThemeScheme, availableWidth: this.moreMenuRect().width,
+            viewportHeight: Math.max(0, this.moreMenuRect().height - 14),
             reduceMotion: this.reduceMotion, actions: this.moreActions(),
             onAction: (id: string): void => this.chooseMoreAction(id) });
         }.width('100%').padding({ top: 6, bottom: 6 })
@@ -990,15 +1005,18 @@ export struct SourceManagementPage {
           .border(this.moreMenuMaterial().native ? { width: 0, color: Color.Transparent } :
             { width: 1, color: readerAppColor('app.border.menu', this.appThemeScheme) })
           .shadow(this.moreMenuMaterial().native ? undefined : readerSurfaceElevation('popover', this.appThemeScheme))
-          .attributeModifier(new ReaderImmersiveMaterialModifier(this.moreMenuMaterial()));
+          .attributeModifier(new ReaderImmersiveMaterialModifier(this.moreMenuMaterial(),
+            readerNativeSurfaceOutline(this.appThemeScheme, resolvePopupSpec('source-v9-more-menu').borderRadius)));
         if (!this.moreMenuMaterial().native) {
           Row().width(12).height(12).rotate({ angle: 45 })
             .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
             .border({ width: { top: 1, left: 1 }, color: readerAppColor('app.border.menu', this.appThemeScheme) })
-            .position({ x: this.morePointerX(), y: -6 }).zIndex(1)
+            .position({ x: this.morePointerX(), y: this.moreMenuRect().top < this.moreAnchorInPane().top ?
+              this.moreMenuRect().height - 6 : -6 }).zIndex(1)
             .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
         }
-      }.width(this.moreWidth()).clip(false).position({ x: this.moreLeft(), y: this.moreTop() })
+      }.width(this.moreMenuRect().width).clip(false)
+        .position({ x: this.moreMenuRect().left, y: this.moreMenuRect().top })
         .transition(this.moreTransition());
     }
   }
@@ -1981,7 +1999,7 @@ export struct SourceManagementPage {
     // revision even when the parent returns to the same layout.
     return JSON.stringify([this.contentFrame().width, this.fontScale(), this.expandedLayout,
       metrics.windowRect.height, metrics.densityPixels,
-      readerInteractiveSafeTop(metrics), readerInteractiveSafeBottom(metrics)]);
+      readerInteractiveSafeTop(metrics), readerStableInteractiveSafeBottom(metrics)]);
   }
 
   private cancelScrollRestore(): void {
@@ -2882,6 +2900,7 @@ export struct SourceManagementPage {
 
   private onGeometryInputsChanged(): void {
     if (!this.mounted) return;
+    this.publishBackPreviewBlock();
     const metrics = ReaderWindowCoordinator.metrics();
     const headerInputs = JSON.stringify([this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width, metrics.systemFontScale,
       metrics.densityPixels, readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics),

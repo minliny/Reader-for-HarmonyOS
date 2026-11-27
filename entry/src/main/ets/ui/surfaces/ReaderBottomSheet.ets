@@ -1,14 +1,16 @@
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
-import { READER_LAYOUT_DEBUG_BUILD, newReaderLayoutModalId, publishReaderLayoutModal } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_LAYOUT_DEBUG_BUILD, ReaderLayoutOverlayRoot, newReaderLayoutModalId, publishReaderLayoutModal }
+  from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
+import { readerBeginTransition, readerTransitionsEnabled } from '../foundation/ReaderTransitionSignals';
 import { READER_REDUCED_FADE_MS, READER_SHEET_CLOSE_MS } from '../foundation/ProductMotionTiming';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeTop, readerVisualSafeBottom, readerVisualSafeLeft, readerVisualSafeRight }
-  from '../foundation/ReaderWindowMetrics';
+import { ReaderRectVp } from '../foundation/ReaderWindowMetrics';
+import { readerOverlayViewport } from '../layout/ReaderOverlayGeometry';
 import { readerSurfaceElevation, resolveSheetSpec, type SheetSpecId, type SheetSurfaceSpec } from './ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerNativeSurfaceOutline,
   readerSurfaceMaterialDecision } from './ReaderSurfaceMaterial';
 
 /** The cover owns native modal isolation and system Back. The scrim and
@@ -35,6 +37,7 @@ export struct ReaderBottomSheet {
   @State private coverVisible: boolean = false;
   @State private frameVisible: boolean = false;
   private mounted: boolean = false;
+  private readonly layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('bottom-sheet');
   private coverReady: boolean = false;
   private coverAppearance: number = 0;
   private frameAttached: boolean = false;
@@ -114,21 +117,29 @@ export struct ReaderBottomSheet {
 
   @Builder
   private sheetCoverContent() {
-    Stack({ alignContent: Alignment.Bottom }) {
+    Stack({ alignContent: Alignment.TopStart }) {
       if (this.frameVisible) {
         Stack().width('100%').height('100%')
           .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
             readerAppColor(this.spec().hostMaskRole, this.scheme), this.frameMaterial().native))
-          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
           .accessibilityLevel('no')
           .onClick((): void => {
             if (this.mounted && this.visible && this.opened) this.onRequestClose();
           })
           .transition(TransitionEffect.OPACITY.animation(this.reduceMotion ? readerMotionReducedFadeParam() :
             readerMotionAnimateParam('app.sheet.scrim', false)));
-        this.frame();
+        if (this.frameViewport().width > 0 && this.frameViewport().height > 0) {
+          Stack({ alignContent: Alignment.Bottom }) { this.frame(); }
+            .width(this.frameViewport().width).height(this.frameViewport().height)
+            .position({ x: this.frameViewport().left, y: this.frameViewport().top })
+            .hitTestBehavior(HitTestMode.Transparent);
+        }
       }
-    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Default)
+    }.id(this.layoutOverlay?.id()).width('100%').height('100%').hitTestBehavior(HitTestMode.Default)
+      .onAppear((): void => this.layoutOverlay?.mount(this.getUIContext()))
+      .onDisAppear((): void => this.layoutOverlay?.unmount())
+      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.ALL])
       .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
         ? { role: 'modal-overlay', id: 'bottom-sheet', active: this.visible,
           intercepts: this.coverVisible, closeDurationMs: this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS } as LayoutInvariantTag : undefined);
@@ -142,24 +153,34 @@ export struct ReaderBottomSheet {
       } else {
         this.content();
       }
-    }.id(this.nativeId).width(this.surfaceWidth)
-      .constraintSize({ maxHeight: this.frameMaxHeight() })
-      .padding({ bottom: this.safeBottom() })
-      .translate({ x: this.safeCenterOffset() })
+    }.id(this.transitionNativeId()).width(Math.min(this.surfaceWidth, this.spec().maxWidth, this.frameViewport().width))
+      .constraintSize({ maxHeight: this.frameViewport().height })
       .backgroundEffect(undefined)
       .backgroundColor(this.frameMaterial().native ? Color.Transparent : readerAppColor(this.spec().hostBackgroundRole, this.scheme))
       .border(this.frameMaterial().native ? { width: 0, color: Color.Transparent } :
         { width: { top: this.spec().hostBorderWidth }, color: readerAppColor(this.spec().hostBorderRole, this.scheme) })
       .borderRadius({ topLeft: this.spec().borderRadius, topRight: this.spec().borderRadius })
       .shadow(this.frameMaterial().native ? undefined : this.frameShadow())
-      .attributeModifier(new ReaderImmersiveMaterialModifier(this.frameMaterial())).clip(true)
+      .attributeModifier(new ReaderImmersiveMaterialModifier(this.frameMaterial(), readerNativeSurfaceOutline(this.scheme,
+        { topLeft: this.spec().borderRadius, topRight: this.spec().borderRadius }, 'top'))).clip(true)
       .hitTestBehavior(HitTestMode.Default).focusable(true).focusScopeId(this.nativeId, true, false)
-      .onAppear((): void => { this.frameAttached = true; })
+      .onAppear((): void => {
+        this.frameAttached = true;
+        if (readerTransitionsEnabled()) {
+          const id = this.transitionNativeId();
+          readerBeginTransition({ kind: 'surface', action: 'mount', subject: this.specId,
+            scope: id, nodes: [id], axis: this.reduceMotion ? 'none' : 'y' });
+        }
+      })
       .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) :
         TransitionEffect.asymmetric(
           TransitionEffect.move(TransitionEdge.BOTTOM).animation(readerMotionAnimateParam('app.sheet.open', false)),
           TransitionEffect.move(TransitionEdge.BOTTOM).animation(readerMotionAnimateParam('app.sheet.close', false))),
         (entering: boolean): void => this.finishMotion(entering));
+  }
+
+  private transitionNativeId(): string {
+    return this.nativeId.length > 0 || !readerTransitionsEnabled() ? this.nativeId : `reader-transition-sheet:${this.layoutModalId}`;
   }
 
   private finishMotion(entering: boolean): void {
@@ -181,16 +202,9 @@ export struct ReaderBottomSheet {
     return readerSurfaceMaterialDecision('modalSheet', this.appearancePreferences, this.scheme, this.systemScheme);
   }
 
-  private frameMaxHeight(): Length {
+  private frameViewport(): ReaderRectVp {
     this.metricsRevision;
-    const metrics = readerWindowMetrics();
-    if (metrics.windowRect.height <= 0) return '100%';
-    return Math.max(1, metrics.windowRect.height - readerInteractiveSafeTop(metrics, false));
-  }
-
-  private safeBottom(): number {
-    this.metricsRevision;
-    return readerVisualSafeBottom(readerWindowMetrics());
+    return readerOverlayViewport(readerWindowMetrics());
   }
 
   private frameShadow(): ShadowOptions {
@@ -198,9 +212,4 @@ export struct ReaderBottomSheet {
     return readerSurfaceElevation(this.spec().hostElevation, this.scheme);
   }
 
-  private safeCenterOffset(): number {
-    this.metricsRevision;
-    const metrics = readerWindowMetrics();
-    return (readerVisualSafeLeft(metrics) - readerVisualSafeRight(metrics)) / 2;
-  }
 }

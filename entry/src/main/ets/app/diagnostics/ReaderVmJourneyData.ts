@@ -6,6 +6,7 @@ export const READER_VM_NEW_TITLE = 'ReaderNewNovel';
 export const READER_VM_MANGA_TITLE = 'ReaderComic';
 export const READER_VM_AUTHOR = 'Reader Fixture Author';
 export const READER_VM_LOCAL_TITLE = 'Reader Phase 1 公共长目录';
+export const READER_VM_LOCAL_SHA256 = '27792a0e5906b59c33ecf8fd5a9984654aadbdcf46d668dd61ad7a6a623b48df';
 
 const TEXT_TITLES: string[] = [READER_VM_SHELF_TITLE, READER_VM_NEW_TITLE];
 const MANGA_TITLES: string[] = [READER_VM_MANGA_TITLE];
@@ -22,8 +23,13 @@ const SOURCES: JourneySource[] = [
   { id: 'https://comic-a.reader-journeys.invalid', name: 'ReaderComicA', manga: true },
   { id: 'https://comic-b.reader-journeys.invalid', name: 'ReaderComicB', manga: true },
 ];
+const IMPORT_SOURCE: JourneySource = {
+  id: 'https://v9-import.reader-journeys.invalid', name: 'ReaderJourneyImportV9', manga: false,
+};
+const IMPORT_URL: string = 'https://novel-a.reader-journeys.invalid/fixtures/v9-source.json';
 
 export const READER_VM_SHELF_SOURCE = SOURCES[0].id;
+export const READER_VM_IMPORT_SOURCE = IMPORT_SOURCE.id;
 
 export function readerVmJourneyBookId(sourceId: string, title: string): string {
   return `${sourceId}/book/${title}`;
@@ -35,8 +41,8 @@ export function readerVmJourneyTitle(sourceId: string, bookId: string): string |
     .find(title => readerVmJourneyBookId(sourceId, title) === bookId);
 }
 
-export function readerVmJourneySources(): JsonObject[] {
-  return SOURCES.map((source: JourneySource): JsonObject => ({
+function sourceDefinition(source: JourneySource): JsonObject {
+  return {
     bookSourceUrl: source.id, bookSourceName: source.name, bookSourceType: source.manga ? 2 : 0,
     enabled: true, enabledExplore: false, enabledCookieJar: false,
     searchUrl: `${source.id}/search?q={{key}}`,
@@ -45,7 +51,15 @@ export function readerVmJourneySources(): JsonObject[] {
     ruleBookInfo: { name: 'h1@text', author: 'span.author@text', intro: 'p.intro@text', tocUrl: 'a.toc@href' },
     ruleToc: { chapterList: 'ol.toc li', chapterName: 'a@text', chapterUrl: 'a@href' },
     ruleContent: { content: source.manga ? 'tag.img@src' : 'div.content@text' },
-  }));
+  };
+}
+
+export function readerVmJourneySources(): JsonObject[] {
+  return SOURCES.map(sourceDefinition);
+}
+
+export function readerVmJourneyImportDocument(url: string): string | undefined {
+  return url === IMPORT_URL ? JSON.stringify([sourceDefinition(IMPORT_SOURCE)]) : undefined;
 }
 
 // Public, deterministic fixture. Only the scope-specific HTTP adapter calls
@@ -53,7 +67,13 @@ export function readerVmJourneySources(): JsonObject[] {
 export function readerVmJourneyResponse(params: JsonObject): JsonObject | undefined {
   const url = params['url'];
   if (typeof url !== 'string' || params['method'] !== 'GET' || params['usePlatformCookieJar'] === true) return undefined;
-  const source = SOURCES.find(row => url.startsWith(`${row.id}/`));
+  const importDocument = readerVmJourneyImportDocument(url);
+  if (importDocument !== undefined) {
+    return { status: 200, body: importDocument,
+      headers: { 'content-type': 'application/json; charset=utf-8' }, charsetHint: 'utf-8',
+      finalUrl: url, redirects: [], cookies: [] };
+  }
+  const source = [...SOURCES, IMPORT_SOURCE].find(row => url.startsWith(`${row.id}/`));
   if (source === undefined) return undefined;
   const path = url.slice(source.id.length);
   const titles = source.manga ? MANGA_TITLES : TEXT_TITLES;

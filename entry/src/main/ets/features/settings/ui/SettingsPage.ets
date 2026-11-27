@@ -35,6 +35,7 @@ import { ReaderSegmentedControl, READER_APP_THEME_SEGMENT_WIDTH } from '../../..
 import { CategorySection } from './CategorySection';
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
 import { DialogActionView, ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
+import { ReaderDialogViewport } from '../../../ui/surfaces/ReaderDialogViewport';
 import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
@@ -46,6 +47,8 @@ import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../../bookshelf/
 import { LocalRecoveryPanel } from '../../bookshelf/ui/LocalRecoveryPanel';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { SettingsSelectOverlay, type SettingsSelectField } from './SettingsSelectOverlay';
+import { READER_LAYOUT_DEBUG_BUILD, ReaderLayoutOverlayRoot } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { NavigationAppearanceSettings, readerRenderModeLabel } from './NavigationAppearanceSettings';
 import { SettingsLicensesPage } from './SettingsLicensesPage';
 import { ReaderSmartGestureSettingsRows } from './ReaderSmartGestureSettingsRows';
@@ -58,11 +61,6 @@ const SEG_OPTIONS: string[] = ['跟随', '浅色', '深色'];
 const THEME_SUMMARIES: string[] = ['跟随系统主题', '浅色主题', '深色主题'];
 const DEVELOPER_UNLOCK_TAPS: number = 5;
 const DEVELOPER_UNLOCK_MAX_GAP_MS: number = 1500;
-
-interface SettingsSelectAnchor {
-  right: number;
-  bottom: number;
-}
 
 let settingsSelectionGeneration: number = 0;
 
@@ -121,6 +119,7 @@ export struct SettingsPage {
   private resetFrameAttached: boolean = false;
   private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   private mounted: boolean = false;
+  private readonly resetLayoutOverlay = ReaderLayoutOverlayRoot.diagnostic('settings-reset');
   private themeOwner: ReaderRuntimeOwner | undefined = undefined;
   @State private appearanceSaveRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   @State private appearanceSaveRecoveryBusy: boolean = false;
@@ -153,14 +152,12 @@ export struct SettingsPage {
   @State private openSelect: SettingsSelectField | '' = '';
   @State private selectionId: string = '';
   @State private selectionField: SettingsSelectField | '' = '';
-  // 展开面板锚点: 触发条全局坐标减去宿主 Stack 原点, 得面板相对宿主 Stack 的位置。
-  // selectAnchors 为普通 map(非 @State): 逐行 onAreaChange 写入, 打开时读入 anchorX/Y。
-  @State private anchorRight: number = 0;
-  @State private anchorBottom: number = 0;
+  @State private selectAnchor: ReaderRectVp = new ReaderRectVp();
   @State private originX: number = 0;
   @State private originY: number = 0;
   @State private paneWidth: number = 0;
-  private selectAnchors: Record<string, SettingsSelectAnchor> = {};
+  @State private paneHeight: number = 0;
+  private selectAnchors: Map<SettingsSelectField, ReaderRectVp> = new Map();
   @Prop homeScrollY: number = 0;
   @Prop sharedBottomNavigationHeight: number = -1;
   @Prop homeScrollTopRequest: number = 0;
@@ -353,8 +350,8 @@ export struct SettingsPage {
       showOverlay: route === this.settingsSubroute() && this.selectionField !== '',
       boundedOverlayVisible: route === this.settingsSubroute() && this.pendingFeedbackVisible(),
       boundedOverlayContent: (): void => { this.pendingFeedback(); },
-      onOverlayOriginChange: (x: number, y: number, width?: number): void => {
-        if (route === this.settingsSubroute()) this.recordShellArea(x, y, width);
+      onOverlayOriginChange: (x: number, y: number, width: number, height: number): void => {
+        if (route === this.settingsSubroute()) this.recordShellArea(x, y, width, height);
       },
       // ArkUI 限制: @Builder 方法引用作 @BuilderParam 时, 方法内部再建 @Builder
       // 闭包 (CategorySection content → this.navRow) 会丢 this 绑定, 运行时崩
@@ -659,7 +656,7 @@ export struct SettingsPage {
 
   @Builder
   private homeNavigationGroup(group: SettingsNavigationGroup) {
-    CategorySection({ title: group.label }) {
+    CategorySection({ title: group.label, nativeId: READER_LAYOUT_DEBUG_BUILD ? `reader-settings-home-group:${group.id}` : '' }) {
       ForEach(group.items, (item: SettingsNavigationItem): void => {
         this.navRow(item.label, (): Resource => $r(`app.media.${item.icon}${this.appThemeScheme === 'night' ? '_theme_night' : ''}`),
           (): void => this.openHomeDestination(item.id), item.actionId ?? '', this.homeDestinationSummary(item.id));
@@ -1032,10 +1029,11 @@ export struct SettingsPage {
 
   private isWideSettings(): boolean { return this.embeddedWide || this.wideWindow || this.paneExpanded(); }
 
-  private recordShellArea(x: number, y: number, width?: number): void {
+  private recordShellArea(x: number, y: number, width: number, height: number): void {
     this.originX = x;
     this.originY = y;
-    if (width !== undefined && Number.isFinite(width) && width > 0) this.paneWidth = width;
+    if (Number.isFinite(width) && width > 0) this.paneWidth = width;
+    if (Number.isFinite(height) && height > 0) this.paneHeight = height;
   }
 
   @Builder
@@ -1131,22 +1129,21 @@ export struct SettingsPage {
         options: options,
         isOpen: this.openSelect === key,
         variant: this.paneExpanded() ? 'settingsTablet' : 'settingsPhone',
+        nativeAnchorId: typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ?
+          `reader-settings-select-trigger:${key}` : '',
         reduceMotion: this.appReduceMotion,
         onToggle: (): void => {
+          const anchor = this.selectAnchors.get(key);
+          if (this.openSelect !== key && anchor === undefined && this.paneExpanded()) return;
+          if (anchor !== undefined) this.selectAnchor = anchor;
           this.toggleSelection(key);
-          const a = this.selectAnchors[key];
-          if (a !== undefined) {
-            this.anchorRight = a.right;
-            this.anchorBottom = a.bottom;
-          }
         },
       })
         .onAreaChange((_oldValue: Area, newValue: Area): void => {
-          // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
-          this.selectAnchors[key] = {
-            right: readerPageAreaLength(newValue.globalPosition.x) + readerPageAreaLength(newValue.width),
-            bottom: readerPageAreaLength(newValue.globalPosition.y) + readerPageAreaLength(newValue.height),
-          };
+          const anchor = new ReaderRectVp(readerPageAreaLength(newValue.globalPosition.x),
+            readerPageAreaLength(newValue.globalPosition.y), readerPageAreaLength(newValue.width), readerPageAreaLength(newValue.height));
+          this.selectAnchors.set(key, anchor);
+          if (this.openSelect === key) this.selectAnchor = anchor;
         });
     }
   }
@@ -1322,8 +1319,8 @@ export struct SettingsPage {
         field: this.selectionField,
         value: this.currentValue(this.selectionField),
         options: this.selectOptions(this.selectionField),
-        anchorRight: this.anchorRight - this.originX,
-        anchorBottom: this.anchorBottom - this.originY,
+        hostGeometry: new ReaderRectVp(this.originX, this.originY, this.paneWidth, this.paneHeight),
+        anchorGeometry: this.selectAnchor,
         selectionId: this.selectionId,
         onSelect: (opt: string, identity?: string): void => this.commitSelection(opt, identity),
         onDismiss: (identity?: string): void => this.dismissSelection(identity),
@@ -1388,31 +1385,33 @@ export struct SettingsPage {
 
   @Builder
   private resetDialogCover() {
-    Stack({ alignContent: Alignment.Center }) {
+    Stack({ alignContent: Alignment.TopStart }) {
       if (this.resetFrameVisible) {
         ForEach([this.resetDialogTicket], (ticket: number): void => { this.resetDialog(ticket, this.temporaryBackIdentity); },
           (ticket: number): string => ticket.toString());
       }
-    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Default);
+    }.id(this.resetLayoutOverlay?.id()).width('100%').height('100%').hitTestBehavior(HitTestMode.Default)
+      .onAppear((): void => this.resetLayoutOverlay?.mount(this.getUIContext()))
+      .onDisAppear((): void => this.resetLayoutOverlay?.unmount())
+      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.ALL]);
   }
 
   @Builder
   private resetDialog(ticket: number, identity: string) {
-    Stack({ alignContent: Alignment.Center }) {
+    Stack({ alignContent: Alignment.TopStart }) {
       Stack().width('100%').height('100%')
         .attributeModifier(new ReaderModalScrimModifier(this.navigationPreferences, this.appThemeScheme,
           readerAppColor('app.scrim.warmModal', this.appThemeScheme)))
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
         .accessibilityLevel('no').onClick((): void => this.closeResetDialog(ticket));
-      Column() {
-        ReaderDialogSurface({ specId: 'book-removal', title: '恢复界面与阅读设置',
+      ReaderDialogViewport({ content: (widthVp: number, _heightVp: number): void => {
+        ReaderDialogSurface({ specId: 'book-removal', containerWidthVp: widthVp, title: '恢复界面与阅读设置',
           actions: [new DialogActionView('cancel', '取消', 'default', true, true),
             new DialogActionView('confirm', '恢复默认', 'danger')],
           onAction: (action: string): void => this.chooseResetDialog(ticket, identity, action),
           body: (): void => { this.resetDialogMessage(); },
-        });
-      }.width('100%').padding({ left: 20, right: 20 }).hitTestBehavior(HitTestMode.Transparent)
-        .transition(this.resetDialogMotion());
+        }).hitTestBehavior(HitTestMode.Default).transition(this.resetDialogMotion());
+      } });
     }.width('100%').height('100%')
       .onAppear((): void => { if (ticket === this.resetDialogTicket) this.resetFrameAttached = true; })
       .transition(this.appReduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) :
@@ -1434,13 +1433,11 @@ export struct SettingsPage {
 
   @Builder
   private resetDialogMessage() {
-    Scroll() {
-      Text('将重置通用偏好、界面外观与渲染模式、书架视图与筛选、阅读及朗读设置。书籍、书源、阅读进度、书签、导入字体文件及服务凭据会完整保留。')
-        .width('100%').textAlign(TextAlign.Center)
-        .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight).fontSize(MESSAGE_BODY.fontSizeFp)
-        .lineHeight(MESSAGE_BODY.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
-    }.width('100%').constraintSize({ maxHeight: '45%' }).scrollBar(BarState.Auto);
+    Text('将重置通用偏好、界面外观与渲染模式、书架视图与筛选、阅读及朗读设置。书籍、书源、阅读进度、书签、导入字体文件及服务凭据会完整保留。')
+      .width('100%').textAlign(TextAlign.Center)
+      .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight).fontSize(MESSAGE_BODY.fontSizeFp)
+      .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+      .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
   }
 
   private chooseResetDialog(ticket: number, identity: string, action: string): void {

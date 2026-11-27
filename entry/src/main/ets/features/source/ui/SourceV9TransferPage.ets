@@ -16,7 +16,7 @@ import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback'
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerAppColor, type ReaderAppColorRole } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
-import type { ReaderWindowMetricsSnapshot } from '../../../ui/foundation/ReaderWindowMetrics';
+import type { ReaderRectVp, ReaderWindowMetricsSnapshot } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
 import { readerFrameStyle, type ReaderFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
@@ -26,6 +26,7 @@ import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerPageAreaLength, READER_STANDARD_PAGE_CONTENT_GAP } from '../../../ui/layout/ReaderPageShell';
 import { DialogActionView, readerDialogCardTransition, readerDialogScrimTransition,
   ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
+import { ReaderDialogViewport } from '../../../ui/surfaces/ReaderDialogViewport';
 import { sourceV9DisplayUrl } from '../presentation/SourceManagementV9';
 import { SourceV9ReportSteps } from './SourceV9CheckDialog';
 import { SourceV9AddAction, SourceV9CircleCheck, SourceV9SegmentedTrack, type SourceV9SegmentChoice } from './SourceV9Chrome';
@@ -76,6 +77,7 @@ export struct SourceV9TransferPage {
   @Prop initialUrl: string = '';
   @Prop initialJson: string = '';
   @Prop @Watch('refreshLayout') embeddedWide: boolean = false;
+  @Prop modalHost: ReaderRectVp | undefined = undefined;
   owner: ReaderRuntimeOwner | undefined = undefined;
   onBack: () => void = (): void => {};
   onReadBack: (reports: SourceV9ImportedReport[], imported?: SourceV9ConfirmedImport) => void =
@@ -111,7 +113,6 @@ export struct SourceV9TransferPage {
   @State private paneX: number = 0;
   @State private paneY: number = 0;
   private headerHeight: number = APP_FLOATING_HEADER_BAR_HEIGHT;
-  private footerHeight: number = 0;
   private flow: SourceV9TransferOwner | undefined = undefined;
   private mounted: boolean = false;
   private readonly draftPaste: ReaderClipboardDraftPaste = new ReaderClipboardDraftPaste();
@@ -416,7 +417,7 @@ export struct SourceV9TransferPage {
     if (this.paneHeight > 0) {
       input.footerBottom = Math.max(input.footerBottom, this.paneHeight - this.visiblePaneHeight(metrics));
     }
-    input.footerHeight = this.pane === 'import' ? Math.max(this.footerHeight, this.footerButtonHeight() + TRANSFER_FOOTER_TOP) : 0;
+    input.footerHeight = this.pane === 'import' ? this.footerButtonHeight() + TRANSFER_FOOTER_TOP + 1 : 0;
     input.contentEndInset = input.footerHeight + input.footerBottom;
     this.geometry = resolveReaderPageGeometry(input);
   }
@@ -439,14 +440,7 @@ export struct SourceV9TransferPage {
     return Math.min(height, readerKeyboardHostBottom(metrics, this.paneY, height, this.paneX, width));
   }
 
-  private modalViewportHeight(): number {
-    if (this.windowRevision < 0) return this.paneHeight;
-    return this.visiblePaneHeight(readerWindowMetrics());
-  }
-
-  private modalBodyHeight(): number {
-    const height = this.modalViewportHeight();
-    if (height <= 0 && this.paneHeight <= 0) return 430;
+  private modalBodyHeight(height: number): number {
     const fontScale = readerReadableFontScale(readerWindowMetrics().systemFontScale);
     return Math.max(72, Math.min(480, height - 156 - 52 * (fontScale - 1)));
   }
@@ -476,11 +470,6 @@ export struct SourceV9TransferPage {
           onHeaderHeightChange: (height: number): void => {
             if (height <= 0 || height === this.headerHeight) return;
             this.headerHeight = height;
-            this.refreshLayout();
-          },
-          onFooterHeightChange: (height: number): void => {
-            if (height === this.footerHeight) return;
-            this.footerHeight = height;
             this.refreshLayout();
           },
         });
@@ -577,7 +566,8 @@ export struct SourceV9TransferPage {
           actionLabel: '核对', secondaryActionLabel: this.state.canContinueOriginal ? '继续' : '',
           actionEnabled: this.inputCurrent() && !this.state.busy,
           secondaryActionEnabled: this.inputCurrent() && !this.state.busy && this.state.canContinueOriginal,
-          maxHeightVp: Math.min(this.modalBodyHeight(), Math.max(0, this.geometry.footer.top - this.geometry.content.startInset)),
+          maxHeightVp: Math.min(this.modalBodyHeight(this.visiblePaneHeight(readerWindowMetrics())),
+            Math.max(0, this.geometry.footer.top - this.geometry.content.startInset)),
           onReconcile: (generation: number): void => { void this.flow?.recoverPending(generation, false); },
           onSecondaryAction: (generation: number): void => { void this.flow?.recoverPending(generation, true); },
         });
@@ -1088,30 +1078,23 @@ export struct SourceV9TransferPage {
 
   @Builder
   private modalFrame(layer: 'review' | 'edit' | 'report') {
-    Stack({ alignContent: Alignment.Top }) {
+    Stack({ alignContent: Alignment.TopStart }) {
       this.scrim();
-      Stack({ alignContent: Alignment.Center }) {
-        Scroll() {
-          Column() {
-            if (layer === 'review') this.subscriptionReview();
-            else if (layer === 'edit') this.subscriptionDialog();
-            else this.reportDialog();
-          }.width('100%');
-        }.width('100%').constraintSize({ maxHeight: this.paneHeight > 0 ? this.modalViewportHeight() : undefined })
-          .scrollBar(BarState.Auto).hitTestBehavior(HitTestMode.Transparent)
-          .transition(readerDialogCardTransition(this.reduceMotion));
-      }.width('100%').height(this.paneHeight > 0 ? this.modalViewportHeight() : '100%')
-        .hitTestBehavior(HitTestMode.Transparent);
+      ReaderDialogViewport({ host: this.modalHost, content: (width: number, height: number): void => {
+        if (layer === 'review') this.subscriptionReview(width, this.modalBodyHeight(height));
+        else if (layer === 'edit') this.subscriptionDialog(width, this.modalBodyHeight(height));
+        else this.reportDialog(width, this.modalBodyHeight(height));
+      } }).transition(readerDialogCardTransition(this.reduceMotion));
     }.width('100%').height('100%')
       .accessibilityLevel(layer !== 'report' && this.visibleReport !== undefined ? 'no-hide-descendants' : 'auto')
       .transition(readerDialogScrimTransition(this.reduceMotion));
   }
 
   @Builder
-  private subscriptionReview() {
+  private subscriptionReview(width: number, bodyHeight: number) {
     ReaderDialogSurface({ specId: 'source-v9-check', primarySurfaceColor: this.primary(),
       title: '订阅更新预览', showCloseButton: true, closeEnabled: this.inputCurrent() && !this.state.busy,
-      containerWidthVp: this.paneWidth,
+      containerWidthVp: width,
       onClose: (): void => { if (this.inputCurrent()) this.flow?.closeReviews(); },
       actions: [new DialogActionView('cancel', '取消', 'default', this.inputCurrent() && !this.state.busy, true),
         new DialogActionView('apply', '应用更新 (' + this.applyCount() + ')', 'primary',
@@ -1121,12 +1104,12 @@ export struct SourceV9TransferPage {
         if (action === 'cancel') this.flow?.closeReviews();
         else if (this.editable()) void this.flow?.applyReviews();
       },
-      body: (): void => { this.reviewBody(); },
+      body: (): void => { this.reviewBody(bodyHeight); },
     });
   }
 
   @Builder
-  private reviewBody() {
+  private reviewBody(bodyHeight: number) {
     Scroll() {
       Column({ space: 9 }) {
         if (this.state.error.length > 0) {
@@ -1138,7 +1121,7 @@ export struct SourceV9TransferPage {
         }
         this.reviewList();
       }.width('100%');
-    }.width('100%').constraintSize({ maxHeight: this.modalBodyHeight() }).scrollBar(BarState.Off)
+    }.width('100%').constraintSize({ maxHeight: bodyHeight }).scrollBar(BarState.Auto)
       .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
   }
 
@@ -1212,8 +1195,8 @@ export struct SourceV9TransferPage {
   }
 
   @Builder
-  private subscriptionDialog() {
-    ReaderDialogSurface({ specId: 'source-v9-check', primarySurfaceColor: this.primary(), containerWidthVp: this.paneWidth,
+  private subscriptionDialog(width: number, bodyHeight: number) {
+    ReaderDialogSurface({ specId: 'source-v9-check', primarySurfaceColor: this.primary(), containerWidthVp: width,
       title: this.dialog === 'delete' ? '删除订阅' : this.edited === undefined ? '新建订阅' : '编辑订阅',
       actions: [new DialogActionView('cancel', '取消', 'default', this.canDismissDialog(), true),
         new DialogActionView('confirm', this.dialog === 'delete' ? '删除订阅' : '保存',
@@ -1222,7 +1205,7 @@ export struct SourceV9TransferPage {
       onAction: (action: string): void => { void this.confirmDialog(action); },
       body: (): void => {
         if (this.dialog === 'delete') this.deleteBody();
-        else this.formBody();
+        else this.formBody(bodyHeight);
       },
     });
   }
@@ -1239,7 +1222,7 @@ export struct SourceV9TransferPage {
   }
 
   @Builder
-  private formBody() {
+  private formBody(bodyHeight: number) {
     Scroll() {
       Column({ space: 8 }) {
         this.field('订阅名称', this.formName, '', (value: string): void => { this.formName = value; });
@@ -1261,7 +1244,7 @@ export struct SourceV9TransferPage {
           ReaderPageState({ variant: 'inline', padded: false, message: this.state.error });
         }
       }.width('100%');
-    }.width('100%').constraintSize({ maxHeight: this.modalBodyHeight() }).scrollBar(BarState.Off)
+    }.width('100%').constraintSize({ maxHeight: bodyHeight }).scrollBar(BarState.Auto)
       .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
   }
 
@@ -1275,18 +1258,18 @@ export struct SourceV9TransferPage {
   }
 
   @Builder
-  private reportDialog() {
+  private reportDialog(width: number, bodyHeight: number) {
     ReaderDialogSurface({ specId: 'source-v9-check', primarySurfaceColor: this.primary(),
-      title: '检测详情', showCloseButton: true, closeEnabled: this.inputCurrent(), containerWidthVp: this.paneWidth,
+      title: '检测详情', showCloseButton: true, closeEnabled: this.inputCurrent(), containerWidthVp: width,
       onClose: (): void => { if (this.inputCurrent()) this.visibleReport = undefined; },
       actions: [new DialogActionView('close', '关闭', 'default', this.inputCurrent(), true)],
       onAction: (_action: string): void => { if (this.inputCurrent()) this.visibleReport = undefined; },
-      body: (): void => { this.reportBody(); },
+      body: (): void => { this.reportBody(bodyHeight); },
     });
   }
 
   @Builder
-  private reportBody() {
+  private reportBody(bodyHeight: number) {
     Scroll() {
       Column({ space: 8 }) {
         this.label(this.reportName, 13, 'TOK_INK', true);
@@ -1295,7 +1278,7 @@ export struct SourceV9TransferPage {
         if (this.visibleReport?.failureReason) this.label(this.visibleReport?.failureReason ?? '', 12, 'TOK_MUTED');
         SourceV9ReportSteps({ report: this.visibleReport?.report, currentFailure: this.visibleReport?.failureReason });
       }.width('100%').alignItems(HorizontalAlign.Start);
-    }.width('100%').constraintSize({ maxHeight: this.modalBodyHeight() }).scrollBar(BarState.Off)
+    }.width('100%').constraintSize({ maxHeight: bodyHeight }).scrollBar(BarState.Auto)
       .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
   }
 }

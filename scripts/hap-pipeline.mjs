@@ -50,6 +50,7 @@ import { prepareAppIdentity, assertAppIdentityUnchanged, verifyAppContentEvidenc
 import { selectBundledSources } from '../tools/verify-bundled-test-book-sources-live.mjs';
 import { archivedContractSelection, HISTORICAL_CONTRACT_TIMEOUT_MS } from './lib/archived-hap-contract-selection.mjs';
 import { canonicalServerKey, withHdcCommandSession, hdcDirectEnvironment, parseTargetState } from '../tools/reader-hdc-lease.mjs';
+import { assertCleanMainline, latestSignedRun } from './lib/hap-mainline-provenance.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SCRIPT_PATH), '..');
@@ -102,6 +103,7 @@ const HARMONY_GATE_INPUTS = [
   'scripts/test-host.mjs',
   'scripts/reader-ts-module-loader.mjs',
   'scripts/vm-journeys.mjs',
+  'scripts/check-hap-provenance.mjs',
   'tests',
   'scripts/lib',
   'scripts/hap-pipeline.mjs',
@@ -463,7 +465,7 @@ function withArtifactLock(action) {
   try { return action(lease.env); } finally { lease.release(); }
 }
 
-function gitRecord(repo) {
+function gitRecord(repo, includeMain = false) {
   const commit = capture('git', ['-C', repo, 'rev-parse', 'HEAD']);
   const statusText = capture('git', [
     '-C', repo, 'status', '--porcelain=v1', '--untracked-files=normal',
@@ -471,9 +473,55 @@ function gitRecord(repo) {
   return {
     repo,
     commit,
+    ...(includeMain ? { mainCommit: capture('git', ['-C', repo, 'rev-parse', 'refs/heads/main']) } : {}),
     dirty: statusText.length > 0,
     status: statusText.length > 0 ? statusText.split('\n') : [],
   };
+}
+
+export function hapMainlineSources() {
+  const sources = Object.fromEntries([['harmony', REPO_ROOT], ['core', CORE_ROOT]].map(([name, repo]) => {
+    const source = gitRecord(repo, true);
+    const branches = capture('git', ['-C', repo, 'for-each-ref', '--no-merged', 'refs/heads/main',
+      '--format=%(refname:short) %(objectname)', 'refs/heads']);
+    return [name, { ...source, unmerged: branches ? branches.split('\n') : [] }];
+  }));
+  const { core } = sources;
+  if (!core.dirty && core.commit === core.mainCommit) {
+    const snapshot = coreBuildSnapshot(CORE_ROOT);
+    if (snapshot.gitIdentity.gitCommit !== core.commit || snapshot.gitIdentity.gitDirty) {
+      fail('Core main changed while reading its build inputs');
+    }
+    core.inputFingerprint = snapshot.fingerprint;
+    const pin = JSON.parse(readFileSync(resolve(REPO_ROOT, 'scripts/core-dependency.json'), 'utf8'));
+    if (/^[a-f0-9]{40}$/.test(pin.coreCommit ?? '') && pin.coreInputFingerprint === core.inputFingerprint &&
+        run('git', ['-C', CORE_ROOT, 'merge-base', '--is-ancestor', pin.coreCommit, core.mainCommit],
+          { allowFailure: true }).status === 0) core.equivalentPin = pin.coreCommit;
+  }
+  return sources;
+}
+
+/** Read published metadata only. Live use obtains the fingerprint from the inspected HAP. */
+export function plannedSignedCoreFingerprint(selection) {
+  const artifact = selection.manifest.artifacts.find(item => item.kind === 'signed');
+  return verifyStorageDeliveryContract(dirname(selection.path), artifact, selection.manifest.source?.vendoredCoreNapi)
+    ?.coreInputFingerprint;
+}
+
+export function latestPublishedSignedHap(abi, root = DEFAULT_ARTIFACT_ROOT) {
+  const directory = resolve(root);
+  if (!existsSync(directory)) return undefined;
+  if (!lstatSync(directory).isDirectory()) fail('artifact root must be a real directory');
+  const candidates = readdirSync(directory).filter(name => !name.startsWith('.') && name !== 'retention-pins.json').map(name => {
+    const run = resolve(directory, name);
+    if (!lstatSync(run).isDirectory()) fail(`invalid published run directory: ${name}`);
+    const manifest = retentionJson(resolve(run, 'manifest.json'));
+    if (manifest.schemaVersion !== 2 || manifest.name !== 'reader-harmonyos-hap-run' || manifest.runId !== name ||
+        !Array.isArray(manifest.artifacts) || !Number.isFinite(Date.parse(manifest.finishedAt))) fail(`invalid published HAP manifest: ${name}`);
+    return manifest;
+  });
+  const selected = latestSignedRun(candidates, abi);
+  return selected ? { path: resolve(directory, selected.runId, 'manifest.json'), manifest: selected } : undefined;
 }
 
 
@@ -538,7 +586,7 @@ export function assertSnapshotUnchanged(before, after, label) {
 }
 
 function assertGitRecordUnchanged(before, after, label) {
-  if (before.commit !== after.commit || before.dirty !== after.dirty ||
+  if (before.commit !== after.commit || before.mainCommit !== after.mainCommit || before.dirty !== after.dirty ||
       JSON.stringify(before.status) !== JSON.stringify(after.status)) {
     fail(`${label} Git identity changed during the HAP build`);
   }
@@ -1039,12 +1087,6 @@ function acquireLock(lockDir, owner, reclaimStale = true) {
   writeJson(resolve(lockDir, 'owner.json'), owner);
 }
 
-function requireCleanAcceptance(buildClass, harmonyGit, coreGit, signingMode) {
-  if (buildClass !== 'acceptance') return;
-  if (harmonyGit.dirty || coreGit.dirty) fail('acceptance build requires clean Harmony and Core worktrees');
-  if (signingMode === 'unsigned') fail('acceptance build requires the local signed debug profile');
-}
-
 function validateLocalSigningProfile(path) {
   assertPrivateFilePermissions(path);
   const relativePath = relative(REPO_ROOT, path);
@@ -1487,12 +1529,15 @@ function validateBuildOptions(options, root = REPO_ROOT) {
 async function build(options) {
   validateBuildOptions(options);
   const buildStarted = performance.now();
+  const acceptance = option(options, '--class', 'iteration') === 'acceptance';
+  if (acceptance) assertCleanMainline(gitRecord(REPO_ROOT, true), gitRecord(CORE_ROOT, true));
   activeBuildAttempt = hapStageReceipt(resolve(REPO_ROOT, '.reader-artifacts/hap-attempts'), {});
   if (process.env.READER_HAP_TIMINGS === '1') activeBuildTimings = { parent: '', steps: new Map() };
   let beforeSnapshot;
   try {
-    const harmony = measureBuildStep('gitHarmonyBefore', () => gitRecord(REPO_ROOT));
-    const core = measureBuildStep('gitCoreBefore', () => gitRecord(CORE_ROOT));
+    const harmony = measureBuildStep('gitHarmonyBefore', () => gitRecord(REPO_ROOT, acceptance));
+    const core = measureBuildStep('gitCoreBefore', () => gitRecord(CORE_ROOT, acceptance));
+    if (acceptance) assertCleanMainline(harmony, core);
     beforeSnapshot = startRegularInputSnapshots([{ repo: REPO_ROOT, inputs: BUILD_INPUTS, label: 'Host build inputs' }]);
     const coreBuildInputs = measureBuildStep('coreBuildInputs', () => coreBuildSnapshot(CORE_ROOT));
     const controller = measureBuildStep('controllerBefore', () => controllerSnapshot());
@@ -1532,6 +1577,7 @@ async function buildImpl(options, inputs, buildStarted) {
   if (requestedSigning !== 'unsigned') readSigningAuthority();
   const localProfile = resolve(process.env.READER_HARMONY_SIGNING_PROFILE || DEFAULT_SIGNING_PROFILE);
   const signingMode = resolveSigningMode(requestedSigning, existsSync(localProfile));
+  if (buildClass === 'acceptance' && signingMode !== 'local') fail('acceptance build requires the local signed debug profile');
   if (signingMode === 'local' && !existsSync(localProfile)) {
     fail(`local signing profile is missing: ${localProfile}`);
   }
@@ -1547,7 +1593,6 @@ async function buildImpl(options, inputs, buildStarted) {
       material: measureBuildStep('signingMaterialBefore', () => signingMaterialSnapshot(signingProfile)) };
   }
 
-  requireCleanAcceptance(buildClass, sourceGitBefore, coreGitBefore, signingMode);
   const coreGateFile = option(options, '--core-gate-receipt', process.env.READER_CORE_GATE_RECEIPT);
   if (buildClass === 'acceptance' && coreGateFile) currentCoreGate(coreGateFile, CORE_ROOT);
   const precomputedRecords = appContentRecords(sourceBefore, harmonyGateBefore);
@@ -1766,8 +1811,9 @@ async function buildImpl(options, inputs, buildStarted) {
       { precomputedRecords: appContentRecords(sourceAfter, controllerAfter) }));
     assertSnapshotUnchanged(workspaceContractBefore, measureBuildStep('workspaceContractAfter', () => workspaceContractSnapshot()),
       'workspace HAP contract and skill inputs');
-    assertGitRecordUnchanged(sourceGitBefore, measureBuildStep('gitHarmonyAfter', () => gitRecord(REPO_ROOT)), 'Harmony source worktree');
-    assertGitRecordUnchanged(coreGitBefore, measureBuildStep('gitCoreAfter', () => gitRecord(CORE_ROOT)), 'Core source worktree');
+    const acceptance = buildClass === 'acceptance';
+    assertGitRecordUnchanged(sourceGitBefore, measureBuildStep('gitHarmonyAfter', () => gitRecord(REPO_ROOT, acceptance)), 'Harmony source worktree');
+    assertGitRecordUnchanged(coreGitBefore, measureBuildStep('gitCoreAfter', () => gitRecord(CORE_ROOT, acceptance)), 'Core source worktree');
 
     writeJson(resolve(runDir, 'app-content-snapshot.json'), appIdentity.contentSnapshot);
     writeJson(resolve(runDir, 'app-release-ledger.json'), appIdentity.ledger);
@@ -2175,6 +2221,10 @@ export function verifyManifest(path) {
 function verifyManifestWithInspector(path, inspector) {
   const loaded = loadManifest(path);
   const { manifest } = loaded;
+  if (manifest.buildClass === 'acceptance' &&
+      (manifest.source?.harmony?.mainCommit !== undefined || manifest.source?.core?.mainCommit !== undefined)) {
+    assertCleanMainline(manifest.source.harmony, manifest.source.core);
+  }
   const incrementalCommand = /(?:^|\s)--incremental(?:\s|$)/.test(manifest.toolchain?.buildCommand ?? '');
   if (manifest.incremental !== undefined || incrementalCommand) {
     if (typeof manifest.incremental !== 'boolean' || manifest.incremental !== incrementalCommand ||
@@ -2379,18 +2429,51 @@ export function assertHdcPreflight(hdc, target, serverKey, runner = run) {
   fail(`HDC preflight ${report?.result ?? 'FAILED'} before install: ${detail}.${next}`, 3);
 }
 
-function installedMetadata(hdc, target, serverKey) {
-  const result = runTargetHdc(hdc, target, serverKey, ['-t', target, 'shell', `bm dump -n ${BUNDLE_NAME}`], { allowFailure: true });
+function installedMetadata(hdc, target, serverKey, settings = {}) {
+  const result = runTargetHdc(hdc, target, serverKey, ['-t', target, 'shell', `bm dump -n ${BUNDLE_NAME}`], { ...settings, allowFailure: true });
   const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
   // Harmony's generic lookup error also covers missing bundles. Require a
   // successful, structurally valid inventory before admitting a new install.
   if (result.status === 0 && output.trim() === BUNDLE_LOOKUP_UNAVAILABLE) {
-    const listing = runTargetHdc(hdc, target, serverKey, ['-t', target, 'shell', 'bm dump -a'], { allowFailure: true });
+    const listing = runTargetHdc(hdc, target, serverKey, ['-t', target, 'shell', 'bm dump -a'], { ...settings, allowFailure: true });
     if (listing.status === 0 && !listing.stderr?.trim()) {
       return parseBundleMetadata(output, listing.stdout ?? '');
     }
   }
   return parseBundleMetadata(output);
+}
+
+export async function observeInstalledHapIdentity(options) {
+  const targetKind = requiredOption(options, '--target-kind');
+  const target = requiredOption(options, '--target');
+  const route = resolveHdcServer({ targetKind, vmLocation: option(options, '--vm-location'),
+    configuredServer: process.env.READER_HDC_SERVER_KEY });
+  const vmLog = option(options, '--vm-log');
+  if (route.vmLocation === 'local' && !vmLog) fail('Local VM verification requires its current emulator log (--vm-log)', 2);
+  return withDeploymentHdcSession(options, () => {
+    const hdc = hdcBinary();
+    const settings = { timeoutMs: 10000, maxBuffer: 1024 * 1024 };
+    assertTargetConnected(hdc, target, route.serverKey);
+    const readiness = targetReadiness({ targetKind, targetEndpoint: target, vmLog, query: command =>
+      readinessQueryOutput(command, runTargetHdc(hdc, target, route.serverKey, ['-t', target, 'shell', command],
+        { ...settings, allowFailure: true })) });
+    return { targetKind, targetRef: targetReference(target), ...hdcRouteEvidence(route), readiness,
+      installed: installedMetadata(hdc, target, route.serverKey, settings) };
+  }, { preflight: true });
+}
+
+export function latestHapInstallReceipt(directory, { targetKind, targetRef }) {
+  if (!['vm', 'physical'].includes(targetKind) || !/^[a-f0-9]{12}$/.test(targetRef)) fail('invalid deployment receipt target');
+  const prefix = `deploy-${targetKind}-${targetRef}-`;
+  const receipts = readdirSync(directory).filter(file => file.startsWith(prefix) && file.endsWith('.json')).map(file => {
+    const receipt = retentionJson(resolve(directory, file));
+    if (!Number.isFinite(Date.parse(receipt.completedAt))) fail(`invalid receipt completion time: ${file}`);
+    return { file, receipt };
+  }).sort((left, right) => Date.parse(right.receipt.completedAt) - Date.parse(left.receipt.completedAt));
+  if (receipts.length > 1 && Date.parse(receipts[0].receipt.completedAt) === Date.parse(receipts[1].receipt.completedAt)) {
+    fail('ambiguous latest deployment receipt');
+  }
+  return receipts[0];
 }
 
 export function storageTransitionCandidate(verified, artifact) {

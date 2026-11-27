@@ -1,11 +1,12 @@
 import { motionAnimateParam } from '../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../ui/foundation/ReaderMotionPolicy';
+import { readerConditionalSceneMotion } from './ReaderRouteMotionModel';
+export { READER_ROUTE_PARENT_PARALLAX, READER_ROUTE_PARENT_DIM } from './ReaderRouteMotionModel';
 
-export const READER_ROUTE_PARENT_PARALLAX = 0.16;
-export const READER_ROUTE_PARENT_DIM = 0.04;
-
-export function readerSceneTransition(width: number, reduceMotion: boolean, animated: boolean): TransitionEffect {
-  if (!animated) return TransitionEffect.IDENTITY;
+export function readerSceneTransition(width: number, reduceMotion: boolean, animated: boolean,
+  retainedParent: boolean = false): TransitionEffect {
+  const motion = readerConditionalSceneMotion(animated, retainedParent);
+  if (motion.enter === 'none' && motion.exit === 'none') return TransitionEffect.IDENTITY;
   if (reduceMotion) return TransitionEffect.opacity(0).animation(readerMotionReducedFadeParam());
 
   const fromRight = (): TransitionEffect => Number.isFinite(width) && width > 0 ?

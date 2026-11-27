@@ -1,4 +1,5 @@
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
+import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { TYPE_READER_READING_FAILURE_DETAIL, TYPE_READER_READING_FAILURE_TITLE } from '../../../ui/foundation/ReaderTypography';
 import type { ReaderAppearanceTheme } from '../application/ReaderAppearanceState';
 import { readerAppearanceChromeTone, readerAppearanceThemeStyle } from './ReaderAppearanceRenderStyle';
@@ -45,6 +46,7 @@ export struct ReaderChapterLoadingState {
         onTap: (): void => this.onBack(),
       }).position({ x: this.leftInset + 12, y: this.topInset + 8 });
     }.width('100%').height('100%')
+      .id(readerTransitionsEnabled() ? 'reader-chapter-loading-state' : undefined)
       .backgroundColor(readerAppearanceThemeStyle(this.theme).paperStart)
       .hitTestBehavior(HitTestMode.Default);
   }

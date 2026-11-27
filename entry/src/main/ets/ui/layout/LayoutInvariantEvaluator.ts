@@ -1,4 +1,7 @@
-export type LayoutInvariantRule = 'R1' | 'R2' | 'R3' | 'R4' | 'R5' | 'R6' | 'R7';
+import { evaluateNativeLayoutInvariants, type LayoutInvariantFeatureAssertion, type LayoutInvariantNativeCoverage,
+  type LayoutInvariantNativeSample } from './LayoutInvariantNativeAudit';
+
+export type LayoutInvariantRule = 'R1' | 'R2' | 'R3' | 'R4' | 'R5' | 'R6' | 'R7' | 'R8' | 'R9' | 'R10' | 'R11' | 'R12' | 'R13' | 'R14';
 export type LayoutInvariantRole = 'floating-header' | 'fixed-header' | 'header-content' | 'scroll-content' |
   'key-control' | 'primary-dock' | 'modal-overlay' | 'main-input';
 export const READER_PAGED_INPUT_SCOPE = 'reader-paged-input';
@@ -51,6 +54,7 @@ export interface LayoutInvariantSample {
   checkRecovery: boolean;
   mainInputEnabled?: boolean;
   requiresNativeMainInput?: boolean;
+  native?: LayoutInvariantNativeSample;
 }
 
 export interface LayoutInvariantViolation {
@@ -63,6 +67,8 @@ export interface LayoutInvariantResult {
   violations: LayoutInvariantViolation[];
   missing: string[];
   observedRules: LayoutInvariantRule[];
+  nativeAudit?: LayoutInvariantNativeCoverage;
+  features?: LayoutInvariantFeatureAssertion[];
 }
 
 interface MeasuredControl {
@@ -251,5 +257,10 @@ export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutI
     }
     layer.push({ id, bounds: frame });
   }
-  return { violations, missing, observedRules: [...observed].sort() };
+  const native = sample.native;
+  if (native === undefined) return { violations, missing, observedRules: [...observed].sort() };
+  const additional = evaluateNativeLayoutInvariants(native, fontScale);
+  return { violations: [...violations, ...additional.violations], missing: [...missing, ...additional.missing],
+    observedRules: [...observed, ...additional.observedRules].sort((a: LayoutInvariantRule, b: LayoutInvariantRule): number =>
+      Number(a.slice(1)) - Number(b.slice(1))), nativeAudit: additional.nativeAudit, features: additional.features };
 }

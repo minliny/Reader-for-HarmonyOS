@@ -2,6 +2,7 @@ import { motionSegment } from '../../../ui/foundation/MotionTimeline.ts';
 import type { ReaderSessionMorphSourceKind, ReaderSessionMorphSourceMeasurement } from './ReaderSessionMorphState';
 import type { ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
 import {
+  READER_SESSION_LAUNCH_CAPSULE_CONTENT_REVEAL_MS,
   READER_SESSION_LAUNCH_CONTROL_RELEASE_MS,
   READER_SESSION_LAUNCH_DOT_SIZE_VP,
   READER_SESSION_LAUNCH_DURATION_MS,
@@ -9,6 +10,7 @@ import {
   READER_SESSION_LAUNCH_EXPAND_START_MS,
   READER_SESSION_LAUNCH_FLIGHT_MS,
   READER_SESSION_LAUNCH_PAUSE_GAP_VP,
+  READER_SESSION_LAUNCH_SOURCE_CONTENT_FADE_START_MS,
   READER_SESSION_LAUNCH_SOURCE_RELEASE_MS,
 } from './ReaderSessionLaunchTimeline.ts';
 
@@ -64,6 +66,8 @@ export function readerSessionLaunchDesign(kind: ReaderSessionMorphSourceKind): R
 
 export interface ReaderSessionLaunchGeometryInput {
   readonly source: ReaderSessionMorphSourceMeasurement;
+  /** The island source is the measured playback card at the active width and font scale. */
+  readonly fixedIsland?: boolean;
   /** Final capsule's left/top in the same viewport coordinates as source. */
   readonly targetLeft: number;
   readonly targetTop: number;
@@ -110,15 +114,19 @@ export function buildReaderSessionLaunchGeometry(
   input: ReaderSessionLaunchGeometryInput,
 ): ReaderSessionLaunchGeometry | undefined {
   const source = input.source;
-  const design = readerSessionLaunchDesign(source.kind);
-  const width = input.capsuleWidth === undefined ? design.capsuleWidth : input.capsuleWidth;
-  const height = input.capsuleHeight ?? READER_SESSION_LAUNCH_DOT_SIZE_VP;
+  const legacy = input.fixedIsland === true ? undefined : readerSessionLaunchDesign(source.kind);
+  const type: ReaderSessionCapsuleType = source.kind === 'quickAutoPage' || source.kind === 'fullAutoPagePlayback' ?
+    'autoPage' : 'tts';
+  const dotSize = READER_SESSION_LAUNCH_DOT_SIZE_VP;
+  const minimumCapsuleWidth = type === 'autoPage' ? 96 : 94;
+  const width = input.capsuleWidth ?? minimumCapsuleWidth;
+  const height = input.capsuleHeight ?? dotSize;
   if (!Number.isFinite(source.left) || !Number.isFinite(source.top) ||
     !Number.isFinite(source.width) || !Number.isFinite(source.height) ||
     source.width <= 0 || source.height <= 0 || !Number.isFinite(source.revision) ||
     !Number.isFinite(input.targetLeft) || !Number.isFinite(input.targetTop) ||
-    !Number.isFinite(width) || width < design.capsuleWidth ||
-    !Number.isFinite(height) || height < READER_SESSION_LAUNCH_DOT_SIZE_VP ||
+    !Number.isFinite(width) || width < minimumCapsuleWidth ||
+    !Number.isFinite(height) || height < dotSize ||
     !Number.isFinite(input.topBarExitDistance) || input.topBarExitDistance < 0 ||
     !Number.isFinite(input.dockExitDistance) || input.dockExitDistance < 0) return undefined;
   const clipLeft = source.visibleLeft ?? 0, clipTop = source.visibleTop ?? 0;
@@ -127,7 +135,7 @@ export function buildReaderSessionLaunchGeometry(
     clipRight > source.width || clipBottom > source.height || clipRight <= clipLeft || clipBottom <= clipTop ||
     (source.cornerRadius !== undefined && (!Number.isFinite(source.cornerRadius) || source.cornerRadius < 0))) return undefined;
   return {
-    kind: source.kind, type: design.type,
+    kind: source.kind, type,
     sourceLeft: source.left, sourceTop: source.top, sourceWidth: source.width, sourceHeight: source.height,
     sourceRevision: source.revision, sourceActorId: source.actorId,
     sourceClipLeft: Math.max(0, source.visibleLeft ?? 0),
@@ -135,18 +143,20 @@ export function buildReaderSessionLaunchGeometry(
     sourceClipRightInset: Math.max(0, source.width - (source.visibleRight ?? source.width)),
     sourceClipBottomInset: Math.max(0, source.height - (source.visibleBottom ?? source.height)),
     targetLeft: input.targetLeft, targetTop: input.targetTop, capsuleWidth: width, capsuleHeight: height,
-    dotLeft: input.targetLeft + width - READER_SESSION_LAUNCH_DOT_SIZE_VP,
+    dotLeft: input.targetLeft + width - dotSize,
     topBarExitDistance: input.topBarExitDistance, dockExitDistance: input.dockExitDistance,
-    // Retain the original quantized Figma scale at its authored size. For a
-    // responsive source, scale uniformly; never independently squeeze x/y.
-    contentFinalScale: design.contentScale * design.width / source.width,
-    contentFinalTranslateX: design.contentTranslateX *
-      (source.width - READER_SESSION_LAUNCH_DOT_SIZE_VP) / (design.width - READER_SESSION_LAUNCH_DOT_SIZE_VP),
-    contentFinalTranslateY: design.contentTranslateY *
-      (source.height - READER_SESSION_LAUNCH_DOT_SIZE_VP) / (design.height - READER_SESSION_LAUNCH_DOT_SIZE_VP),
-    contentBaseOffset: design.contentBaseOffset, sourceRadius: source.cornerRadius ?? design.sourceRadius,
-    footerStart: design.footerStart + width - design.capsuleWidth,
-    footerDot: design.footerDot + width - design.capsuleWidth, footerEnd: design.footerEnd,
+    // Islands can reflow from one to four control columns. Fit their actual
+    // rect uniformly and keep its center aligned to the center of the shrinking proxy.
+    contentFinalScale: legacy === undefined ? Math.min(1, dotSize / Math.max(source.width, source.height)) :
+      legacy.contentScale * legacy.width / source.width,
+    contentFinalTranslateX: legacy === undefined ? (dotSize - source.width) / 2 :
+      legacy.contentTranslateX * (source.width - dotSize) / (legacy.width - dotSize),
+    contentFinalTranslateY: legacy === undefined ? (dotSize - source.height) / 2 :
+      legacy.contentTranslateY * (source.height - dotSize) / (legacy.height - dotSize),
+    contentBaseOffset: legacy?.contentBaseOffset ?? 0, sourceRadius: source.cornerRadius ?? legacy?.sourceRadius ?? 12,
+    footerStart: legacy === undefined ? width : legacy.footerStart + width - legacy.capsuleWidth,
+    footerDot: legacy === undefined ? width - dotSize : legacy.footerDot + width - legacy.capsuleWidth,
+    footerEnd: legacy?.footerEnd ?? 0,
   };
 }
 
@@ -205,6 +215,10 @@ export function sampleReaderSessionLaunch(
   const expansion = motionSegment(time, READER_SESSION_LAUNCH_EXPAND_START_MS, READER_SESSION_LAUNCH_EXPAND_MS, curves.expand);
   const handoff = motionSegment(time, READER_SESSION_LAUNCH_EXPAND_START_MS,
     READER_SESSION_LAUNCH_FLIGHT_MS - READER_SESSION_LAUNCH_EXPAND_START_MS, curves.easeOut);
+  const sourceContentFade = motionSegment(time, READER_SESSION_LAUNCH_SOURCE_CONTENT_FADE_START_MS,
+    READER_SESSION_LAUNCH_EXPAND_START_MS - READER_SESSION_LAUNCH_SOURCE_CONTENT_FADE_START_MS, curves.easeOut);
+  const capsuleContentReveal = motionSegment(time, READER_SESSION_LAUNCH_SOURCE_RELEASE_MS,
+    READER_SESSION_LAUNCH_CAPSULE_CONTENT_REVEAL_MS, curves.easeOut);
   const outgoing = motionSegment(time, 0, READER_SESSION_LAUNCH_CONTROL_RELEASE_MS, curves.flight);
   const expandedWidth = geometry.capsuleWidth - READER_SESSION_LAUNCH_DOT_SIZE_VP;
   const expandedHeight = geometry.capsuleHeight - READER_SESSION_LAUNCH_DOT_SIZE_VP;
@@ -237,13 +251,13 @@ export function sampleReaderSessionLaunch(
     sourceClipBottomInset: geometry.sourceClipBottomInset * (1 - flight),
     sourceContentBaseOffset: geometry.contentBaseOffset,
     sourceSurfaceOpacity: 1 - handoff, canonicalSurfaceOpacity: handoff,
-    sharpOpacity: 1,
+    sharpOpacity: 1 - sourceContentFade,
     sourceContentScale: 1 + (geometry.contentFinalScale - 1) * flight,
     sourceContentTranslateX: geometry.contentFinalTranslateX * flight,
     sourceContentTranslateY: geometry.contentFinalTranslateY * flight,
     leadingOffsetX: -expandedWidth * (1 - expansion),
-    leadingOpacity: handoff,
-    pauseX: READER_SESSION_LAUNCH_PAUSE_GAP_VP + expandedWidth * expansion, pauseOpacity: handoff,
+    leadingOpacity: capsuleContentReveal,
+    pauseX: READER_SESSION_LAUNCH_PAUSE_GAP_VP + expandedWidth * expansion, pauseOpacity: capsuleContentReveal,
     capsuleWidth: geometry.capsuleWidth, capsuleHeight: geometry.capsuleHeight,
     footerTranslateX: footerOffset,
     footerOpacity: expansion, immersiveOpacity: outgoing,

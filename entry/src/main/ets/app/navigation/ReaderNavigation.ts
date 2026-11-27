@@ -202,8 +202,10 @@ export class ReaderReturnNavigation {
     return this.showingBookInfoFromReader ? 'push' : 'pop';
   }
 
-  restoreReaderBehindDetail(restore: (context: ReaderReturnContext | undefined) => boolean): void {
-    if (this.detailReturnRoute === 'reader' && restore(this.detailReaderReturn)) this.detailReaderReturn = undefined;
+  restoreReaderBehindDetail(restore: (context: ReaderReturnContext | undefined) => boolean): boolean {
+    if (this.detailReturnRoute !== 'reader' || !restore(this.detailReaderReturn)) return false;
+    this.detailReaderReturn = undefined;
+    return true;
   }
 
   detailReturnTarget(owner: ReaderRuntimeOwner | undefined): DetailReturnRoute {

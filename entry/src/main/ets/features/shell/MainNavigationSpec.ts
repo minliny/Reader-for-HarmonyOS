@@ -5,7 +5,7 @@ import { MAIN_TABS } from '../../app/navigation/ReaderMainTabs';
 export { MAIN_TABS } from '../../app/navigation/ReaderMainTabs';
 export type { MainTabDef } from '../../app/navigation/ReaderMainTabs';
 import {
-  readerInteractiveSafeBottom,
+  readerStableInteractiveSafeBottom,
   readerInteractiveSafeLeft,
   readerVisualSafeTop,
 } from '../../ui/foundation/ReaderWindowMetrics';
@@ -80,7 +80,7 @@ export function readerMainNavigationMode(useRail: boolean, revision: number = 0,
   const metrics = ReaderWindowCoordinator.metrics();
   const viewport = readerMainViewport(revision);
   return mainNavigationMode(effectiveReaderWideNavigationRail(useRail), viewport.width, viewport.height,
-    0, readerInteractiveSafeBottom(metrics), MAIN_TABS.length, metrics.systemFontScale);
+    0, readerStableInteractiveSafeBottom(metrics), MAIN_TABS.length, metrics.systemFontScale);
 }
 
 export function readerMainRailLeft(_metricsRevision: number = 0): number {
@@ -102,9 +102,9 @@ export function readerMainRailContentRight(): number {
 export function readerMainRailTop(revision: number = 0, _metricsRevision: number = 0): number {
   const metrics = ReaderWindowCoordinator.metrics();
   return mainTabRailTop(readerMainViewport(revision).height, 0,
-    readerInteractiveSafeBottom(metrics), MAIN_TABS.length, metrics.systemFontScale);
+    readerStableInteractiveSafeBottom(metrics), MAIN_TABS.length, metrics.systemFontScale);
 }
 
 export function readerMainRailBottomInset(): number {
-  return Math.max(24, readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics()));
+  return Math.max(24, readerStableInteractiveSafeBottom(ReaderWindowCoordinator.metrics()));
 }
