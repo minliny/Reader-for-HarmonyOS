@@ -132,10 +132,11 @@ import { ReaderPageTurnRenderPage } from './ReaderPageTurnStage';
 import type { ReaderControlPage } from './ReaderControlPanel';
 import {
   ReaderControlDirectorySession, type ReaderNativeControlFrameRoute,
-  type ReaderNativeControlFrameInput, readerNativeControlCommands,
+  type ReaderNativeControlFrameInput, readerNativeControlIntent,
   type ReaderNativeControlActors, type ReaderNativeControlActions,
-  type ReaderControlPanelCommands, type ReaderControlDirectoryLifecycle,
+  type ReaderControlDirectoryLifecycle,
 } from './ReaderControlDirectoryHost';
+import type { ReaderControlIntentHandler } from './ReaderControlPanelNativeContract';
 import {
   ReaderControlNavigation, type ReaderControlFontOrderFacts, type ReaderControlNavigationIntent,
   type ReaderControlNavigationScope,
@@ -2111,7 +2112,7 @@ export struct ReadingExperience {
   private readonly mountedSceneView: ReaderMountedReadingSceneView = {
     bookTurnSurfaceId: READER_BOOK_TURN_COMPONENT_ID,
     controlFrame: (): ReaderNativeControlFrameInput => this.controlFrameInput,
-    controlCommands: (): ReaderControlPanelCommands => this.controlPanelCommands(),
+    controlIntent: (): ReaderControlIntentHandler => this.controlPanelIntent(),
     preferenceModule: (): string => this.readerPreferenceModule(),
     loadingTitle: (): string => this.loadingChapterTitle(),
     scheme: (): string => this.readerAppScheme,
@@ -2170,8 +2171,11 @@ export struct ReadingExperience {
     reducedMotion: (): boolean => this.reduceMotion,
     offlineOperationActive: (): boolean => this.offlineBookOperationActive,
     refreshEnabled: (): boolean => this.controlInteraction.canRefreshCurrentChapter(),
+    verification: (): ReaderControlVerificationSession => this.controlVerification,
+    bookmarkIdentity: (): ReaderBookIdentity | undefined => this.bookmarkIdentity,
+    searchPublication: this.quickSearchPublication,
   };
-  private controlPanelCommands(): ReaderControlPanelCommands {
+  private controlPanelIntent(): ReaderControlIntentHandler {
     const actors: ReaderNativeControlActors = {
       interaction: this.controlInteraction, playback: this.playback, replace: this.replacePanel,
       session: this.controlDirectory, geometry: this.controlGeometry, recovery: this.recovery, directory: this.directoryOps,
@@ -2182,18 +2186,15 @@ export struct ReadingExperience {
     const actions: ReaderNativeControlActions = {
       bookmarkEnabled: (): boolean => this.controlInteraction.isControlInputEnabled() && this.controlInteraction.controlMotionPage() === 'home' &&
         this.readerBookmark.controlEnabled(this.pageTurnProjection.bookmarkPresentationRevision + this.pageTurnProjection.pageTurnRenderRevision),
-      verification: this.controlVerification,
       windowMetricsRevision: (): number => this.readerWindowMetricsRevision,
       openBookInfo: (): void => this.onOpenBookInfo(),
-      bookmarkIdentity: this.bookmarkIdentity,
       deleteBookmarks: (times: number[]): void => { if (this.bookmarkWriteEnabled()) this.onDeleteBookmarks(times); },
       createBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void => {
         if (this.bookmarkWriteEnabled()) this.onCreateChapterStartBookmark(request);
       },
-      searchPublication: this.quickSearchPublication,
       reduceMotion: (): boolean => this.reduceMotion,
     };
-    return readerNativeControlCommands(actors, actions);
+    return readerNativeControlIntent(actors, actions);
   }
 
   private bookmarkWriteEnabled(): boolean {

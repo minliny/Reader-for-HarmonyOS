@@ -14,8 +14,8 @@ import { ReaderSessionCapsule } from './ReaderSessionCapsule';
 import type { ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerRenderStageKind } from './ReaderRenderStageSpec';
-import { ReaderControlDirectoryHost, readerNativeControlFrame, type ReaderNativeControlFrameInput,
-  type ReaderControlPanelCommands } from './ReaderControlDirectoryHost';
+import { ReaderControlDirectoryHost, type ReaderNativeControlFrameInput } from './ReaderControlDirectoryHost';
+import type { ReaderControlIntentHandler } from './ReaderControlPanelNativeContract';
 import { ReaderSourceSwitchOverlay } from './ReadingSourceSwitchOverlayHost';
 import { ReaderSmartGestureShortcut } from '../../../platform/interaction/HarmonySmartGestureHost';
 import type { ReaderReadingControlInteractionHost } from './ReaderReadingControlInteractionHost';
@@ -1401,7 +1401,7 @@ export interface ReaderMountedReadingSceneActors {
 export interface ReaderMountedReadingSceneView {
   readonly bookTurnSurfaceId: string;
   readonly controlFrame: () => ReaderNativeControlFrameInput;
-  readonly controlCommands: () => ReaderControlPanelCommands;
+  readonly controlIntent: () => ReaderControlIntentHandler;
   readonly preferenceModule: () => string;
   readonly loadingTitle: () => string;
   readonly scheme: () => string;
@@ -1516,8 +1516,8 @@ export function ReaderMountedReadingScene($$: ReaderMountedReadingSceneInput) {
       // routes, held input, the transition and committed close revision.
       ReaderControlDirectoryHost({
         owner: $$.actors.controlDirectory,
-        frame: readerNativeControlFrame($$.view.controlFrame()),
-        commands: $$.view.controlCommands(),
+        frame: $$.actors.controlDirectory.panelFrame($$.view.controlFrame()),
+        onIntent: $$.view.controlIntent(),
       })
         // The control overlay, including its transparent outside-tap owner,
         // must sit above selectable reading Text nodes on every control route.

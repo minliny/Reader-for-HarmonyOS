@@ -2,6 +2,7 @@ import type { ReaderReadingControlInteractionHost } from './ReaderReadingControl
 import type { ReaderReadingPlaybackFlowHost } from './ReaderReadingPlaybackFlowHost';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import type { ReaderAutoPageState } from './ReaderAutoPageState';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
 import { formatReaderAutoPageFullTimerSummary, type ReaderAutoPageFullConfiguration } from './ReaderAutoPageFullState';
 import { readerControlThemeStyle } from './ReaderControlThemeStyle';
 import type { ReaderReadingMountHost } from './ReaderReadingMountHost';
@@ -25,449 +26,20 @@ import type { ReaderControlGeometryHost } from './ReaderControlGeometryHost';
 import type { ReaderReadingPreferencesHost } from './ReaderReadingPreferencesHost';
 import type { ReaderPageTurnPreparationHost } from './ReaderPageTurnPreparationHost';
 import type { ReaderControlReplacePanel } from '../presentation/ReaderControlReplacePanel';
-import type { ReaderControlTemporaryInputKind } from './ReaderControlSessionState';
-import type { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
-import type { ReaderControlMeasuredProfileReader, ReaderControlModuleFacts, ReaderControlPresentationReceipt } from './ReaderControlMinimumMeasurement';
-import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
-import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
-import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
-import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
-import type { ReaderControlPlaybackProfileReceipt, ReaderControlPlaybackLaunchProfile } from './ReaderControlPlaybackProfile';
-import type { ReaderControlVerificationOrigin, ReaderControlVerificationSession } from './ReaderControlVerificationSession';
+import type { ReaderControlVerificationSession } from './ReaderControlVerificationSession';
 import type { ReaderBookIdentity } from '../presentation/ReaderBookmarkProjection';
-import type { ReadingContentSearchResult } from '../application/ReadingSessionFlowGateway';
-import type { ReaderAutoPageStatus } from './ReaderAutoPageState';
-import type { ReaderChineseConversionMode } from '../application/ReaderChineseConversionGateway';
-import type { ReaderAppearanceAlignment, ReaderAppearanceFont, ReaderAppearanceFontSlot, ReaderAppearanceIndent, ReaderAppearanceMetric, ReaderAppearanceSnapshot, ReaderAppearanceStepDirection, ReaderAppearanceTheme } from '../application/ReaderAppearanceState';
-import type { ReaderPageTurnStyle, ReaderScreenDirection, ReaderScreenTimeout, ReaderSettingsSnapshot, ReaderSettingsToggleKey, ReaderWidePageLayout } from '../application/ReaderSettingsState';
-import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
-import type { ReaderTtsConfigurationDraft } from '../application/ReaderTtsConfigurationHost';
-import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import type { ReadingDirectoryRecovery } from '../presentation/ReadingDirectoryRecovery';
-import type { ReaderTtsVoiceOption } from '../application/ReaderTtsPreferencesState';
-import type { ReaderSessionMorphSourceMeasurement, ReaderSessionMorphSourceKind } from './ReaderSessionMorphState';
-import type { ReaderTtsState, ReaderTtsTimerMode } from '../application/ReaderTtsState';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
-import type { ReaderReplacePreview } from '../application/ReaderReplaceQuickGateway';
-import type { ReaderControlReplaceState } from '../presentation/ReaderControlReplaceState';
-import type { ReaderReplaceRule, ReaderControlReplaceDraft } from '../application/ReaderReplaceQuickState';
-import type { ReaderControlLayoutSnapshot, ReaderControlContentMeasurer } from './ReaderLayoutGeometry';
-import type { ReaderControlFontOrderPresentation } from './ReaderControlAppearanceContent';
 import type { ReaderControlPage } from './ReaderControlRouting';
 import type { ReaderContentSearchPublication } from '../presentation/ReaderContentSearchPublication';
-import type { ReaderControlBackdropRect } from './ReaderControlBackdropTouch';
 import type { ReaderControlLocation } from './ReaderControlSessionState';
-import type { ReaderControlThemeStyle } from './ReaderControlThemeStyle';
 import { copyReaderControlSessionState, createReaderControlSessionState, readerControlContentLocation, type ReaderControlSessionState } from './ReaderControlSessionState';
 import { ReaderControlPanel } from './ReaderControlPanel';
-
-export interface ReaderControlPanelRenderFacts {
-  readonly directSheetRedesign: boolean;
-  readonly fixedIsland: boolean;
-  readonly bodySelectionPossible: boolean;
-  readonly sessionFontScale: number;
-  readonly controlThemeStyle: ReaderControlThemeStyle;
-  readonly launchSample: ReaderSessionLaunchSample | undefined;
-  readonly launchGeneration: number;
-  readonly launchSourceMinimum: ReaderControlPlaybackLaunchProfile | undefined;
-  readonly launchSourceKind: ReaderSessionMorphSourceKind;
-  readonly launchBusinessStatus: ReaderSessionCapsuleState;
-  readonly launchDesiredPlaying: boolean;
-  readonly launchStageOpacity: number;
-  readonly launchOwnsControls: boolean;
-  readonly launchRecovering: boolean;
-  readonly launchInteractionEnabled: boolean;
-  readonly launchSourceTtsState: ReaderTtsState;
-  readonly launchSourceAutoStatus: ReaderAutoPageStatus;
-  readonly launchCountdown: number;
-  readonly recoveryAvailable: boolean;
-  readonly recoveryIdentity: string;
-  readonly bookTitle: string;
-  readonly chapterTitle: string;
-  readonly sourceId: string;
-  readonly sourceName: string;
-  readonly progressPercent: number;
-  readonly totalChapters: number;
-  readonly readableChapterPosition: number;
-  readonly pageBookmarkStatus: 'unknown' | 'empty' | 'bookmarked';
-  readonly pageBookmarkEnabled: boolean;
-  readonly layout: ReaderControlLayoutSnapshot;
-  readonly presentationReceipt: ReaderControlPresentationReceipt | undefined;
-  readonly preparedMinimumRequired: boolean;
-  readonly minimumIdentity: string;
-  readonly minimumCommittedIdentity: string;
-  readonly minimumRequestLocation: ReaderControlLocation | undefined;
-  readonly minimumOwnerKey: string;
-  readonly minimumEnvironmentKey: string;
-  readonly minimumKey: string;
-  readonly minimumReady: boolean;
-  readonly minimumMetricsRevision: number;
-  readonly inputEnabled: boolean;
-  readonly controlObscured: boolean;
-  readonly controlOpenRevision: number;
-  readonly dismissTemporaryRevision: number;
-  readonly retireTemporaryRevision: number;
-  readonly temporaryLayerKind: ReaderControlTemporaryInputKind;
-  readonly directoryEntriesRevision: number;
-  readonly catalogComplete: boolean;
-  readonly catalogLoading: boolean;
-  readonly catalogLoadFailed: boolean;
-  readonly catalogChapterCount: number;
-  readonly catalogCurrentPosition: number;
-  readonly currentChapterIndex: number;
-  readonly chapterStartBookmarkCreationEnabled: boolean;
-  readonly chapterDownloadEnabled: boolean;
-  readonly bookmarkLoadFailed: boolean;
-  readonly bookmarkLoadMessage: string;
-  readonly bookmarkRecovery: ReadingDirectoryRecovery;
-  readonly searchQuery: string;
-  readonly searchRevision: number;
-  readonly brightnessPercent: number;
-  readonly brightnessAutomatic: boolean;
-  readonly brightnessRevision: number;
-  readonly autoPageStatus: ReaderAutoPageStatus;
-  readonly autoPageSpeedSeconds: number;
-  readonly autoPageTimerMinutes: number;
-  readonly autoPageTimerSeconds: number;
-  readonly autoPageTimerSummaryText: string;
-  readonly autoPageFollowHighlight: boolean;
-  readonly controlReplaceState: ReaderControlReplaceState;
-  readonly ttsConfigurationRecovery: ReaderRecoveryView;
-  readonly ttsConfigurationLoading: boolean;
-  readonly ttsConfigurationLoadFailed: boolean;
-  readonly appearanceSnapshot: ReaderAppearanceSnapshot;
-  readonly chineseConversionMode: ReaderChineseConversionMode;
-  readonly settingsSnapshot: ReaderSettingsSnapshot;
-  readonly widePageLayout: ReaderWidePageLayout;
-  readonly pageTurnSimulationAvailable: boolean;
-  readonly ttsState: ReaderTtsState;
-  readonly ttsTimerMode: ReaderTtsTimerMode;
-  readonly ttsTimerMinutes: number;
-  readonly ttsTimerSeconds: number;
-  readonly ttsFollowHighlight: boolean;
-  readonly ttsPauseOnInterruption: boolean;
-  readonly ttsAllowMixing: boolean;
-  readonly ttsBackgroundPlayback: boolean;
-  readonly ttsKeepScreenOn: boolean;
-  readonly ttsFailurePolicy: 'skip' | 'stop';
-  readonly ttsEngine: string;
-  readonly ttsHttpEngines: ReaderHttpTtsConfig[];
-  readonly ttsVoiceOptions: ReaderTtsVoiceOption[];
-  readonly ttsLanguage: string;
-  readonly ttsPerson: number;
-  readonly reduceMotion: boolean;
-  readonly sourceBookId: string;
-  readonly bookDownloadEnabled: boolean;
-  readonly bookDownloadActive: boolean;
-  readonly chapterRefreshEnabled: boolean;
-  readonly chineseConversionIdentity: string;
-}
-
-export interface ReaderControlPanelCommands {
-  readonly onLaunchSourceReady: (generation: number) => void;
-  readonly onLaunchToggle: () => void;
-  readonly onSessionLaunchShellMeasured: (topExit: number, dockExit: number) => void;
-  readonly onOpenRecovery: (identity: string) => void;
-  readonly onTogglePageBookmark: () => void;
-  readonly minimumReceiptCurrent?: (key: string) => boolean;
-  readonly onPlaybackProfileSelected: (receipt: ReaderControlPlaybackProfileReceipt) => void;
-  readonly onMinimumMeasurerReady: (identity: string, measurer: ReaderControlContentMeasurer | undefined,
-    profileReader?: ReaderControlMeasuredProfileReader, facts?: ReaderControlModuleFacts, factsGeometryKey?: string) => void;
-  readonly verificationSession: ReaderControlVerificationSession | undefined;
-  readonly onSessionRequest: ((next: ReaderControlSessionState, origin: ReaderControlVerificationOrigin) => void) | undefined;
-  readonly inputCurrent: (() => boolean) | undefined;
-  readonly onVisualSessionChange: (state: ReaderControlSessionState) => void;
-  readonly onTemporaryLayerChange: (active: boolean, kind?: ReaderControlTemporaryInputKind) => void;
-  readonly onTtsConfigurationOpen: () => void;
-  readonly onInputActivity: () => void;
-  readonly onBackdropRegionsChange: (regions: ReaderControlBackdropRect[], ready: boolean) => void;
-  readonly directoryPublication: ReaderDirectoryDataPublication | undefined;
-  readonly onRequireCompleteCatalog: () => void;
-  readonly onRetryBookmarkLoad: () => void;
-  readonly searchPublication: ReaderContentSearchPublication;
-  readonly onSessionMorphSourceMeasured: (measurement: ReaderSessionMorphSourceMeasurement) => void;
-  readonly onExitReading: () => void;
-  readonly onDismiss: () => void;
-  readonly onSourceSwitch: (focusId?: string) => void;
-  readonly onRefreshChapter: () => void;
-  readonly onDownloadBook: () => void;
-  readonly onOpenBookInfo: () => void;
-  readonly onPageChange: (page: ReaderControlPage, origin: ReaderControlVerificationOrigin) => void;
-  readonly onModuleSelect: (module: string) => void;
-  readonly onSelectChapter: (chapterIndex: number) => void;
-  readonly onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof) => void;
-  readonly onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined;
-  readonly bookmarkIdentity: ReaderBookIdentity | undefined;
-  readonly onDownloadChapter: (chapterIndex: number) => void;
-  readonly onDeleteBookmarks: (bookmarkTimes: number[]) => void;
-  readonly onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void;
-  readonly onPreviousChapter: () => void;
-  readonly onNextChapter: () => void;
-  readonly onProgressChange: (percent: number) => void;
-  readonly onBrightnessChange: (percent: number) => void;
-  readonly onBrightnessAuto: () => void;
-  readonly onBrightnessCancel: () => void;
-  readonly onSearchQueryChange: (query: string) => void;
-  readonly onSearch: () => void;
-  readonly onSearchLoadMore: () => void;
-  readonly onSearchNeedMore: () => void;
-  readonly onSearchResultSelect: (result: ReadingContentSearchResult, scope: number, ordinal: number) => void;
-  readonly onAutoPageToggle: () => void;
-  readonly onAutoPageStop: () => void;
-  readonly onAutoPageSlowDown: () => void;
-  readonly onAutoPageSpeedUp: () => void;
-  readonly onAutoPageFullTimerChange: (minutes: number, seconds: number) => void;
-  readonly onAutoPageFullSpeedChange: (seconds: number, onDeclined?: () => void) => void;
-  readonly onAutoPageFollowHighlightChange: (enabled: boolean) => void;
-  readonly onOpenReplace: () => void;
-  readonly onReloadControlReplace: (operationId?: string) => Promise<void>;
-  readonly onSaveControlReplace: (draft: ReaderControlReplaceDraft) => Promise<void>;
-  readonly onToggleControlReplace: (rule: ReaderReplaceRule, value: boolean) => Promise<void>;
-  readonly onDeleteControlReplace: (rule: ReaderReplaceRule) => Promise<void>;
-  readonly onPreviewControlReplace: () => Promise<ReaderReplacePreview>;
-  readonly onImportControlReplace: () => Promise<void>;
-  readonly onExportControlReplace: () => Promise<void>;
-  readonly onAppearanceThemeChange: (theme: ReaderAppearanceTheme) => void;
-  readonly onAppearanceDayThemeChange: (theme: ReaderAppearanceTheme) => void;
-  readonly onAppearanceNightThemeChange: (theme: ReaderAppearanceTheme) => void;
-  readonly onAppearanceFontChange: (font: ReaderAppearanceFont) => void;
-  readonly onAppearanceFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]) => ReaderControlFontOrderPresentation;
-  readonly onAppearanceFontReorderActivityChange: (active: boolean) => void;
-  readonly onAppearanceCustomFontImport: () => void;
-  readonly onAppearanceIndentRequest: (indent: ReaderAppearanceIndent) => void;
-  readonly onAppearanceAlignmentRequest: (current: ReaderAppearanceAlignment) => void;
-  readonly onAppearanceMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection) => void;
-  readonly onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string) => void;
-  readonly onSettingsToggleChange: (key: ReaderSettingsToggleKey, value: boolean) => void;
-  readonly onWidePageLayoutChange: (value: ReaderWidePageLayout) => void;
-  readonly onScreenDirectionChange: (direction: ReaderScreenDirection) => void;
-  readonly onScreenTimeoutChange: (timeout: ReaderScreenTimeout) => void;
-  readonly onPageTurnStyleChange: (style: ReaderPageTurnStyle) => void;
-  readonly onTtsToggle: () => void;
-  readonly onTtsStop: () => void;
-  readonly onTtsPrevious: () => void;
-  readonly onTtsNext: () => void;
-  readonly onTtsSeek: (sliceIndex: number) => void;
-  readonly onTtsRateChange: (rate: number, onDeclined?: () => void) => void;
-  readonly onTtsTimerChange: (minutes: number, seconds: number, mode?: ReaderTtsTimerMode) => void;
-  readonly onTtsFollowHighlightChange: (enabled: boolean) => void;
-  readonly onTtsPauseOnInterruptionChange: (enabled: boolean) => void;
-  readonly onTtsAllowMixingChange: (enabled: boolean) => void;
-  readonly onTtsBackgroundPlaybackChange: (enabled: boolean) => void;
-  readonly onTtsKeepScreenOnChange: (enabled: boolean) => void;
-  readonly onTtsFailurePolicyChange: (policy: 'skip' | 'stop') => void;
-  readonly onTtsVoiceChange: (language: string, person: number) => void;
-  readonly onTtsVoiceAudition: (language: string, person: number) => Promise<void>;
-  readonly onTtsAuditionStop: () => void;
-  readonly onTtsEngineChange: (engine: string) => Promise<void>;
-  readonly onTtsHttpEnginePut: (config: ReaderTtsConfigurationDraft) => Promise<void>;
-  readonly onTtsHttpEngineDelete: (id: number) => Promise<void>;
-}
-
-@Observed
-export class ReaderControlPanelFrame {
-  @Track readonly directSheetRedesign: boolean;
-  @Track readonly fixedIsland: boolean;
-  @Track readonly bodySelectionPossible: boolean;
-  @Track readonly sessionFontScale: number;
-  @Track readonly controlThemeStyle: ReaderControlThemeStyle;
-  @Track readonly launchSample: ReaderSessionLaunchSample | undefined;
-  @Track readonly launchGeneration: number;
-  @Track readonly launchSourceMinimum: ReaderControlPlaybackLaunchProfile | undefined;
-  @Track readonly launchSourceKind: ReaderSessionMorphSourceKind;
-  @Track readonly launchBusinessStatus: ReaderSessionCapsuleState;
-  @Track readonly launchDesiredPlaying: boolean;
-  @Track readonly launchStageOpacity: number;
-  @Track readonly launchOwnsControls: boolean;
-  @Track readonly launchRecovering: boolean;
-  @Track readonly launchInteractionEnabled: boolean;
-  @Track readonly launchSourceTtsState: ReaderTtsState;
-  @Track readonly launchSourceAutoStatus: ReaderAutoPageStatus;
-  @Track readonly launchCountdown: number;
-  @Track readonly recoveryAvailable: boolean;
-  @Track readonly recoveryIdentity: string;
-  @Track readonly bookTitle: string;
-  @Track readonly chapterTitle: string;
-  @Track readonly sourceId: string;
-  @Track readonly sourceName: string;
-  @Track readonly progressPercent: number;
-  @Track readonly totalChapters: number;
-  @Track readonly readableChapterPosition: number;
-  @Track readonly pageBookmarkStatus: 'unknown' | 'empty' | 'bookmarked';
-  @Track readonly pageBookmarkEnabled: boolean;
-  @Track readonly layout: ReaderControlLayoutSnapshot;
-  @Track readonly presentationReceipt: ReaderControlPresentationReceipt | undefined;
-  @Track readonly preparedMinimumRequired: boolean;
-  @Track readonly minimumIdentity: string;
-  @Track readonly minimumCommittedIdentity: string;
-  @Track readonly minimumRequestLocation: ReaderControlLocation | undefined;
-  @Track readonly minimumOwnerKey: string;
-  @Track readonly minimumEnvironmentKey: string;
-  @Track readonly minimumKey: string;
-  @Track readonly minimumReady: boolean;
-  @Track readonly minimumMetricsRevision: number;
-  @Track readonly inputEnabled: boolean;
-  @Track readonly controlObscured: boolean;
-  @Track readonly controlOpenRevision: number;
-  @Track readonly dismissTemporaryRevision: number;
-  @Track readonly retireTemporaryRevision: number;
-  @Track readonly temporaryLayerKind: ReaderControlTemporaryInputKind;
-  @Track readonly directoryEntriesRevision: number;
-  @Track readonly catalogComplete: boolean;
-  @Track readonly catalogLoading: boolean;
-  @Track readonly catalogLoadFailed: boolean;
-  @Track readonly catalogChapterCount: number;
-  @Track readonly catalogCurrentPosition: number;
-  @Track readonly currentChapterIndex: number;
-  @Track readonly chapterStartBookmarkCreationEnabled: boolean;
-  @Track readonly chapterDownloadEnabled: boolean;
-  @Track readonly bookmarkLoadFailed: boolean;
-  @Track readonly bookmarkLoadMessage: string;
-  @Track readonly bookmarkRecovery: ReadingDirectoryRecovery;
-  @Track readonly searchQuery: string;
-  @Track readonly searchRevision: number;
-  @Track readonly brightnessPercent: number;
-  @Track readonly brightnessAutomatic: boolean;
-  @Track readonly brightnessRevision: number;
-  @Track readonly autoPageStatus: ReaderAutoPageStatus;
-  @Track readonly autoPageSpeedSeconds: number;
-  @Track readonly autoPageTimerMinutes: number;
-  @Track readonly autoPageTimerSeconds: number;
-  @Track readonly autoPageTimerSummaryText: string;
-  @Track readonly autoPageFollowHighlight: boolean;
-  @Track readonly controlReplaceState: ReaderControlReplaceState;
-  @Track readonly ttsConfigurationRecovery: ReaderRecoveryView;
-  @Track readonly ttsConfigurationLoading: boolean;
-  @Track readonly ttsConfigurationLoadFailed: boolean;
-  @Track readonly appearanceSnapshot: ReaderAppearanceSnapshot;
-  @Track readonly chineseConversionMode: ReaderChineseConversionMode;
-  @Track readonly settingsSnapshot: ReaderSettingsSnapshot;
-  @Track readonly widePageLayout: ReaderWidePageLayout;
-  @Track readonly pageTurnSimulationAvailable: boolean;
-  @Track readonly ttsState: ReaderTtsState;
-  @Track readonly ttsTimerMode: ReaderTtsTimerMode;
-  @Track readonly ttsTimerMinutes: number;
-  @Track readonly ttsTimerSeconds: number;
-  @Track readonly ttsFollowHighlight: boolean;
-  @Track readonly ttsPauseOnInterruption: boolean;
-  @Track readonly ttsAllowMixing: boolean;
-  @Track readonly ttsBackgroundPlayback: boolean;
-  @Track readonly ttsKeepScreenOn: boolean;
-  @Track readonly ttsFailurePolicy: 'skip' | 'stop';
-  @Track readonly ttsEngine: string;
-  @Track readonly ttsHttpEngines: ReaderHttpTtsConfig[];
-  @Track readonly ttsVoiceOptions: ReaderTtsVoiceOption[];
-  @Track readonly ttsLanguage: string;
-  @Track readonly ttsPerson: number;
-  @Track readonly reduceMotion: boolean;
-  @Track readonly sourceBookId: string;
-  @Track readonly bookDownloadEnabled: boolean;
-  @Track readonly bookDownloadActive: boolean;
-  @Track readonly chapterRefreshEnabled: boolean;
-  @Track readonly chineseConversionIdentity: string;
-
-  constructor(facts: ReaderControlPanelRenderFacts) {
-    this.directSheetRedesign = facts.directSheetRedesign;
-    this.fixedIsland = facts.fixedIsland;
-    this.bodySelectionPossible = facts.bodySelectionPossible;
-    this.sessionFontScale = facts.sessionFontScale;
-    this.controlThemeStyle = facts.controlThemeStyle;
-    this.launchSample = facts.launchSample;
-    this.launchGeneration = facts.launchGeneration;
-    this.launchSourceMinimum = facts.launchSourceMinimum;
-    this.launchSourceKind = facts.launchSourceKind;
-    this.launchBusinessStatus = facts.launchBusinessStatus;
-    this.launchDesiredPlaying = facts.launchDesiredPlaying;
-    this.launchStageOpacity = facts.launchStageOpacity;
-    this.launchOwnsControls = facts.launchOwnsControls;
-    this.launchRecovering = facts.launchRecovering;
-    this.launchInteractionEnabled = facts.launchInteractionEnabled;
-    this.launchSourceTtsState = facts.launchSourceTtsState;
-    this.launchSourceAutoStatus = facts.launchSourceAutoStatus;
-    this.launchCountdown = facts.launchCountdown;
-    this.recoveryAvailable = facts.recoveryAvailable;
-    this.recoveryIdentity = facts.recoveryIdentity;
-    this.bookTitle = facts.bookTitle;
-    this.chapterTitle = facts.chapterTitle;
-    this.sourceId = facts.sourceId;
-    this.sourceName = facts.sourceName;
-    this.progressPercent = facts.progressPercent;
-    this.totalChapters = facts.totalChapters;
-    this.readableChapterPosition = facts.readableChapterPosition;
-    this.pageBookmarkStatus = facts.pageBookmarkStatus;
-    this.pageBookmarkEnabled = facts.pageBookmarkEnabled;
-    this.layout = facts.layout;
-    this.presentationReceipt = facts.presentationReceipt;
-    this.preparedMinimumRequired = facts.preparedMinimumRequired;
-    this.minimumIdentity = facts.minimumIdentity;
-    this.minimumCommittedIdentity = facts.minimumCommittedIdentity;
-    this.minimumRequestLocation = facts.minimumRequestLocation;
-    this.minimumOwnerKey = facts.minimumOwnerKey;
-    this.minimumEnvironmentKey = facts.minimumEnvironmentKey;
-    this.minimumKey = facts.minimumKey;
-    this.minimumReady = facts.minimumReady;
-    this.minimumMetricsRevision = facts.minimumMetricsRevision;
-    this.inputEnabled = facts.inputEnabled;
-    this.controlObscured = facts.controlObscured;
-    this.controlOpenRevision = facts.controlOpenRevision;
-    this.dismissTemporaryRevision = facts.dismissTemporaryRevision;
-    this.retireTemporaryRevision = facts.retireTemporaryRevision;
-    this.temporaryLayerKind = facts.temporaryLayerKind;
-    this.directoryEntriesRevision = facts.directoryEntriesRevision;
-    this.catalogComplete = facts.catalogComplete;
-    this.catalogLoading = facts.catalogLoading;
-    this.catalogLoadFailed = facts.catalogLoadFailed;
-    this.catalogChapterCount = facts.catalogChapterCount;
-    this.catalogCurrentPosition = facts.catalogCurrentPosition;
-    this.currentChapterIndex = facts.currentChapterIndex;
-    this.chapterStartBookmarkCreationEnabled = facts.chapterStartBookmarkCreationEnabled;
-    this.chapterDownloadEnabled = facts.chapterDownloadEnabled;
-    this.bookmarkLoadFailed = facts.bookmarkLoadFailed;
-    this.bookmarkLoadMessage = facts.bookmarkLoadMessage;
-    this.bookmarkRecovery = facts.bookmarkRecovery;
-    this.searchQuery = facts.searchQuery;
-    this.searchRevision = facts.searchRevision;
-    this.brightnessPercent = facts.brightnessPercent;
-    this.brightnessAutomatic = facts.brightnessAutomatic;
-    this.brightnessRevision = facts.brightnessRevision;
-    this.autoPageStatus = facts.autoPageStatus;
-    this.autoPageSpeedSeconds = facts.autoPageSpeedSeconds;
-    this.autoPageTimerMinutes = facts.autoPageTimerMinutes;
-    this.autoPageTimerSeconds = facts.autoPageTimerSeconds;
-    this.autoPageTimerSummaryText = facts.autoPageTimerSummaryText;
-    this.autoPageFollowHighlight = facts.autoPageFollowHighlight;
-    this.controlReplaceState = facts.controlReplaceState;
-    this.ttsConfigurationRecovery = facts.ttsConfigurationRecovery;
-    this.ttsConfigurationLoading = facts.ttsConfigurationLoading;
-    this.ttsConfigurationLoadFailed = facts.ttsConfigurationLoadFailed;
-    this.appearanceSnapshot = facts.appearanceSnapshot;
-    this.chineseConversionMode = facts.chineseConversionMode;
-    this.settingsSnapshot = facts.settingsSnapshot;
-    this.widePageLayout = facts.widePageLayout;
-    this.pageTurnSimulationAvailable = facts.pageTurnSimulationAvailable;
-    this.ttsState = facts.ttsState;
-    this.ttsTimerMode = facts.ttsTimerMode;
-    this.ttsTimerMinutes = facts.ttsTimerMinutes;
-    this.ttsTimerSeconds = facts.ttsTimerSeconds;
-    this.ttsFollowHighlight = facts.ttsFollowHighlight;
-    this.ttsPauseOnInterruption = facts.ttsPauseOnInterruption;
-    this.ttsAllowMixing = facts.ttsAllowMixing;
-    this.ttsBackgroundPlayback = facts.ttsBackgroundPlayback;
-    this.ttsKeepScreenOn = facts.ttsKeepScreenOn;
-    this.ttsFailurePolicy = facts.ttsFailurePolicy;
-    this.ttsEngine = facts.ttsEngine;
-    this.ttsHttpEngines = facts.ttsHttpEngines;
-    this.ttsVoiceOptions = facts.ttsVoiceOptions;
-    this.ttsLanguage = facts.ttsLanguage;
-    this.ttsPerson = facts.ttsPerson;
-    this.reduceMotion = facts.reduceMotion;
-    this.sourceBookId = facts.sourceBookId;
-    this.bookDownloadEnabled = facts.bookDownloadEnabled;
-    this.bookDownloadActive = facts.bookDownloadActive;
-    this.chapterRefreshEnabled = facts.chapterRefreshEnabled;
-    this.chineseConversionIdentity = facts.chineseConversionIdentity;
-  }
-}
+import {
+  ReaderControlPanelFrame, defaultReaderControlIntent, type ReaderControlIntent, type ReaderControlIntentHandler, type ReaderControlIntentResult,
+  type ReaderControlGeometrySnapshot, type ReaderControlLaunchSnapshot, type ReaderControlDocumentSnapshot,
+  type ReaderControlPreferencesSnapshot, type ReaderControlPlaybackSnapshot,
+} from './ReaderControlPanelNativeContract';
 
 /** The native two-way link becomes the authoritative writer once it mounts.
  * A route can still commit control ownership before the first native frame. */
@@ -502,6 +74,7 @@ export class ReaderControlDirectorySession {
   private closeRevision: number = 0;
   private visit: number = 0;
   private readonly lifecycle: ReaderControlDirectoryLifecycle;
+  private controlPanelFrame: ReaderControlPanelFrame | undefined = undefined;
 
   constructor(initial: ReaderControlSessionState, lifecycle: ReaderControlDirectoryLifecycle) {
     this.session = initial;
@@ -512,7 +85,15 @@ export class ReaderControlDirectorySession {
   visualSession(): ReaderControlSessionState { return this.visual; }
   visitRevision(): number { return this.visit; }
 
+  panelFrame(input: ReaderNativeControlFrameInput): ReaderControlPanelFrame {
+    const frame = readerNativeControlFrame(input, this.controlPanelFrame);
+    this.controlPanelFrame = frame;
+    return frame;
+  }
+
+
   beginMount(): void {
+    this.controlPanelFrame = undefined;
     this.copyVisual(this.session);
     this.closeRevision = 0;
     this.observedPage = 'home';
@@ -605,7 +186,7 @@ export class ReaderControlDirectorySession {
 @Component
 export struct ReaderControlDirectoryHost {
   owner!: ReaderControlDirectorySession;
-  commands!: ReaderControlPanelCommands;
+  onIntent!: ReaderControlIntentHandler;
   @ObjectLink frame: ReaderControlPanelFrame;
   @State @Watch('onNativeControlSessionChanged') private controlSession: ReaderControlSessionState = createReaderControlSessionState();
   private detach: (() => void) | undefined = undefined;
@@ -626,203 +207,9 @@ export struct ReaderControlDirectoryHost {
 
   build() {
     ReaderControlPanel({
-      directSheetRedesign: this.frame.directSheetRedesign,
-      fixedIsland: this.frame.fixedIsland,
-      bodySelectionPossible: this.frame.bodySelectionPossible,
-      sessionFontScale: this.frame.sessionFontScale,
-      controlThemeStyle: this.frame.controlThemeStyle,
-      launchSample: this.frame.launchSample,
-      launchGeneration: this.frame.launchGeneration,
-      launchSourceMinimum: this.frame.launchSourceMinimum,
-      launchSourceKind: this.frame.launchSourceKind,
-      launchBusinessStatus: this.frame.launchBusinessStatus,
-      launchDesiredPlaying: this.frame.launchDesiredPlaying,
-      launchStageOpacity: this.frame.launchStageOpacity,
-      launchOwnsControls: this.frame.launchOwnsControls,
-      launchRecovering: this.frame.launchRecovering,
-      onLaunchSourceReady: this.commands.onLaunchSourceReady,
-      launchInteractionEnabled: this.frame.launchInteractionEnabled,
-      launchSourceTtsState: this.frame.launchSourceTtsState,
-      launchSourceAutoStatus: this.frame.launchSourceAutoStatus,
-      launchCountdown: this.frame.launchCountdown,
-      onLaunchToggle: this.commands.onLaunchToggle,
-      onSessionLaunchShellMeasured: this.commands.onSessionLaunchShellMeasured,
-      recoveryAvailable: this.frame.recoveryAvailable,
-      recoveryIdentity: this.frame.recoveryIdentity,
-      onOpenRecovery: this.commands.onOpenRecovery,
-      bookTitle: this.frame.bookTitle,
-      chapterTitle: this.frame.chapterTitle,
-      sourceId: this.frame.sourceId,
-      sourceName: this.frame.sourceName,
-      progressPercent: this.frame.progressPercent,
-      totalChapters: this.frame.totalChapters,
-      readableChapterPosition: this.frame.readableChapterPosition,
-      pageBookmarkStatus: this.frame.pageBookmarkStatus,
-      pageBookmarkEnabled: this.frame.pageBookmarkEnabled,
-      onTogglePageBookmark: this.commands.onTogglePageBookmark,
-      layout: this.frame.layout,
-      presentationReceipt: this.frame.presentationReceipt,
-      preparedMinimumRequired: this.frame.preparedMinimumRequired,
-      minimumIdentity: this.frame.minimumIdentity,
-      minimumCommittedIdentity: this.frame.minimumCommittedIdentity,
-      minimumRequestLocation: this.frame.minimumRequestLocation,
-      minimumOwnerKey: this.frame.minimumOwnerKey,
-      minimumEnvironmentKey: this.frame.minimumEnvironmentKey,
-      minimumKey: this.frame.minimumKey,
-      minimumReady: this.frame.minimumReady,
-      minimumReceiptCurrent: this.commands.minimumReceiptCurrent,
-      minimumMetricsRevision: this.frame.minimumMetricsRevision,
-      onPlaybackProfileSelected: this.commands.onPlaybackProfileSelected,
-      onMinimumMeasurerReady: this.commands.onMinimumMeasurerReady,
+      panelFrame: this.frame,
       controlSession: $controlSession,
-      verificationSession: this.commands.verificationSession,
-      onSessionRequest: this.commands.onSessionRequest,
-      inputEnabled: this.frame.inputEnabled,
-      inputCurrent: this.commands.inputCurrent,
-      controlObscured: this.frame.controlObscured,
-      controlOpenRevision: this.frame.controlOpenRevision,
-      dismissTemporaryRevision: this.frame.dismissTemporaryRevision,
-      retireTemporaryRevision: this.frame.retireTemporaryRevision,
-      temporaryLayerKind: this.frame.temporaryLayerKind,
-      onVisualSessionChange: this.commands.onVisualSessionChange,
-      onTemporaryLayerChange: this.commands.onTemporaryLayerChange,
-      onTtsConfigurationOpen: this.commands.onTtsConfigurationOpen,
-      onInputActivity: this.commands.onInputActivity,
-      onBackdropRegionsChange: this.commands.onBackdropRegionsChange,
-      directoryPublication: this.commands.directoryPublication,
-      directoryEntriesRevision: this.frame.directoryEntriesRevision,
-      catalogComplete: this.frame.catalogComplete,
-      catalogLoading: this.frame.catalogLoading,
-      catalogLoadFailed: this.frame.catalogLoadFailed,
-      catalogChapterCount: this.frame.catalogChapterCount,
-      catalogCurrentPosition: this.frame.catalogCurrentPosition,
-      onRequireCompleteCatalog: this.commands.onRequireCompleteCatalog,
-      currentChapterIndex: this.frame.currentChapterIndex,
-      chapterStartBookmarkCreationEnabled: this.frame.chapterStartBookmarkCreationEnabled,
-      chapterDownloadEnabled: this.frame.chapterDownloadEnabled,
-      bookmarkLoadFailed: this.frame.bookmarkLoadFailed,
-      bookmarkLoadMessage: this.frame.bookmarkLoadMessage,
-      bookmarkRecovery: this.frame.bookmarkRecovery,
-      onRetryBookmarkLoad: this.commands.onRetryBookmarkLoad,
-      searchQuery: this.frame.searchQuery,
-      searchPublication: this.commands.searchPublication,
-      searchRevision: this.frame.searchRevision,
-      brightnessPercent: this.frame.brightnessPercent,
-      brightnessAutomatic: this.frame.brightnessAutomatic,
-      brightnessRevision: this.frame.brightnessRevision,
-      autoPageStatus: this.frame.autoPageStatus,
-      autoPageSpeedSeconds: this.frame.autoPageSpeedSeconds,
-      autoPageTimerMinutes: this.frame.autoPageTimerMinutes,
-      autoPageTimerSeconds: this.frame.autoPageTimerSeconds,
-      autoPageTimerSummaryText: this.frame.autoPageTimerSummaryText,
-      autoPageFollowHighlight: this.frame.autoPageFollowHighlight,
-      controlReplaceState: this.frame.controlReplaceState,
-      ttsConfigurationRecovery: this.frame.ttsConfigurationRecovery,
-      ttsConfigurationLoading: this.frame.ttsConfigurationLoading,
-      ttsConfigurationLoadFailed: this.frame.ttsConfigurationLoadFailed,
-      appearanceSnapshot: this.frame.appearanceSnapshot,
-      chineseConversionMode: this.frame.chineseConversionMode,
-      settingsSnapshot: this.frame.settingsSnapshot,
-      widePageLayout: this.frame.widePageLayout,
-      pageTurnSimulationAvailable: this.frame.pageTurnSimulationAvailable,
-      ttsState: this.frame.ttsState,
-      ttsTimerMode: this.frame.ttsTimerMode,
-      ttsTimerMinutes: this.frame.ttsTimerMinutes,
-      ttsTimerSeconds: this.frame.ttsTimerSeconds,
-      ttsFollowHighlight: this.frame.ttsFollowHighlight,
-      ttsPauseOnInterruption: this.frame.ttsPauseOnInterruption,
-      ttsAllowMixing: this.frame.ttsAllowMixing,
-      ttsBackgroundPlayback: this.frame.ttsBackgroundPlayback,
-      ttsKeepScreenOn: this.frame.ttsKeepScreenOn,
-      ttsFailurePolicy: this.frame.ttsFailurePolicy,
-      ttsEngine: this.frame.ttsEngine,
-      ttsHttpEngines: this.frame.ttsHttpEngines,
-      ttsVoiceOptions: this.frame.ttsVoiceOptions,
-      ttsLanguage: this.frame.ttsLanguage,
-      ttsPerson: this.frame.ttsPerson,
-      reduceMotion: this.frame.reduceMotion,
-      onSessionMorphSourceMeasured: this.commands.onSessionMorphSourceMeasured,
-      onExitReading: this.commands.onExitReading,
-      onDismiss: this.commands.onDismiss,
-      sourceBookId: this.frame.sourceBookId,
-      onSourceSwitch: this.commands.onSourceSwitch,
-      onRefreshChapter: this.commands.onRefreshChapter,
-      bookDownloadEnabled: this.frame.bookDownloadEnabled,
-      bookDownloadActive: this.frame.bookDownloadActive,
-      onDownloadBook: this.commands.onDownloadBook,
-      onOpenBookInfo: this.commands.onOpenBookInfo,
-      chapterRefreshEnabled: this.frame.chapterRefreshEnabled,
-      onPageChange: this.commands.onPageChange,
-      onModuleSelect: this.commands.onModuleSelect,
-      onSelectChapter: this.commands.onSelectChapter,
-      onSelectNavigationTarget: this.commands.onSelectNavigationTarget,
-      onSelectBookmark: this.commands.onSelectBookmark,
-      bookmarkIdentity: this.commands.bookmarkIdentity,
-      onDownloadChapter: this.commands.onDownloadChapter,
-      onDeleteBookmarks: this.commands.onDeleteBookmarks,
-      onCreateChapterStartBookmark: this.commands.onCreateChapterStartBookmark,
-      onPreviousChapter: this.commands.onPreviousChapter,
-      onNextChapter: this.commands.onNextChapter,
-      onProgressChange: this.commands.onProgressChange,
-      onBrightnessChange: this.commands.onBrightnessChange,
-      onBrightnessAuto: this.commands.onBrightnessAuto,
-      onBrightnessCancel: this.commands.onBrightnessCancel,
-      onSearchQueryChange: this.commands.onSearchQueryChange,
-      onSearch: this.commands.onSearch,
-      onSearchLoadMore: this.commands.onSearchLoadMore,
-      onSearchNeedMore: this.commands.onSearchNeedMore,
-      onSearchResultSelect: this.commands.onSearchResultSelect,
-      onAutoPageToggle: this.commands.onAutoPageToggle,
-      onAutoPageStop: this.commands.onAutoPageStop,
-      onAutoPageSlowDown: this.commands.onAutoPageSlowDown,
-      onAutoPageSpeedUp: this.commands.onAutoPageSpeedUp,
-      onAutoPageFullTimerChange: this.commands.onAutoPageFullTimerChange,
-      onAutoPageFullSpeedChange: this.commands.onAutoPageFullSpeedChange,
-      onAutoPageFollowHighlightChange: this.commands.onAutoPageFollowHighlightChange,
-      onOpenReplace: this.commands.onOpenReplace,
-      onReloadControlReplace: this.commands.onReloadControlReplace,
-      onSaveControlReplace: this.commands.onSaveControlReplace,
-      onToggleControlReplace: this.commands.onToggleControlReplace,
-      onDeleteControlReplace: this.commands.onDeleteControlReplace,
-      onPreviewControlReplace: this.commands.onPreviewControlReplace,
-      onImportControlReplace: this.commands.onImportControlReplace,
-      onExportControlReplace: this.commands.onExportControlReplace,
-      onAppearanceThemeChange: this.commands.onAppearanceThemeChange,
-      onAppearanceDayThemeChange: this.commands.onAppearanceDayThemeChange,
-      onAppearanceNightThemeChange: this.commands.onAppearanceNightThemeChange,
-      onAppearanceFontChange: this.commands.onAppearanceFontChange,
-      onAppearanceFontOrderChange: this.commands.onAppearanceFontOrderChange,
-      onAppearanceFontReorderActivityChange: this.commands.onAppearanceFontReorderActivityChange,
-      onAppearanceCustomFontImport: this.commands.onAppearanceCustomFontImport,
-      onAppearanceIndentRequest: this.commands.onAppearanceIndentRequest,
-      onAppearanceAlignmentRequest: this.commands.onAppearanceAlignmentRequest,
-      onAppearanceMetricStep: this.commands.onAppearanceMetricStep,
-      chineseConversionIdentity: this.frame.chineseConversionIdentity,
-      onChineseConversionChange: this.commands.onChineseConversionChange,
-      onSettingsToggleChange: this.commands.onSettingsToggleChange,
-      onWidePageLayoutChange: this.commands.onWidePageLayoutChange,
-      onScreenDirectionChange: this.commands.onScreenDirectionChange,
-      onScreenTimeoutChange: this.commands.onScreenTimeoutChange,
-      onPageTurnStyleChange: this.commands.onPageTurnStyleChange,
-      onTtsToggle: this.commands.onTtsToggle,
-      onTtsStop: this.commands.onTtsStop,
-      onTtsPrevious: this.commands.onTtsPrevious,
-      onTtsNext: this.commands.onTtsNext,
-      onTtsSeek: this.commands.onTtsSeek,
-      onTtsRateChange: this.commands.onTtsRateChange,
-      onTtsTimerChange: this.commands.onTtsTimerChange,
-      onTtsFollowHighlightChange: this.commands.onTtsFollowHighlightChange,
-      onTtsPauseOnInterruptionChange: this.commands.onTtsPauseOnInterruptionChange,
-      onTtsAllowMixingChange: this.commands.onTtsAllowMixingChange,
-      onTtsBackgroundPlaybackChange: this.commands.onTtsBackgroundPlaybackChange,
-      onTtsKeepScreenOnChange: this.commands.onTtsKeepScreenOnChange,
-      onTtsFailurePolicyChange: this.commands.onTtsFailurePolicyChange,
-      onTtsVoiceChange: this.commands.onTtsVoiceChange,
-      onTtsVoiceAudition: this.commands.onTtsVoiceAudition,
-      onTtsAuditionStop: this.commands.onTtsAuditionStop,
-      onTtsEngineChange: this.commands.onTtsEngineChange,
-      onTtsHttpEnginePut: this.commands.onTtsHttpEnginePut,
-      onTtsHttpEngineDelete: this.commands.onTtsHttpEngineDelete,
+      onIntent: this.onIntent,
     });
   }
 }
@@ -847,156 +234,221 @@ export interface ReaderNativeControlActors {
 
 export interface ReaderNativeControlActions {
   readonly bookmarkEnabled: () => boolean;
-  readonly verification: ReaderControlVerificationSession;
   readonly windowMetricsRevision: () => number;
   readonly openBookInfo: () => void;
-  readonly bookmarkIdentity: ReaderBookIdentity | undefined;
   readonly deleteBookmarks: (times: number[]) => void;
   readonly createBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void;
-  readonly searchPublication: ReaderContentSearchPublication;
   readonly reduceMotion: () => boolean;
 }
 
-export function readerNativeControlCommands(actors: ReaderNativeControlActors, other: ReaderNativeControlActions): ReaderControlPanelCommands {
-  return {
-    onLaunchSourceReady: (generation: number): void => actors.auxiliary.onSourceReady(generation),
-    onLaunchToggle: (): void => actors.auxiliary.toggleSessionCapsule(),
-    onSessionLaunchShellMeasured: (topExit: number, dockExit: number): void => {
-      actors.auxiliary.noteShellExitDistances(topExit, dockExit);
-    },
-    onOpenRecovery: (identity: string): void => actors.recovery.open(identity),
-    onTogglePageBookmark: (): void => {
-      if (other.bookmarkEnabled()) {
-        actors.bookmarks.toggle();
+export function readerNativeControlIntent(actors: ReaderNativeControlActors,
+  other: ReaderNativeControlActions): ReaderControlIntentHandler {
+  return (intent: ReaderControlIntent): ReaderControlIntentResult => {
+    switch (intent.kind) {
+      case 'launchSourceReady':
+        return actors.auxiliary.onSourceReady(intent.generation);
+      case 'launchToggle':
+        return actors.auxiliary.toggleSessionCapsule();
+      case 'sessionLaunchShellMeasured': {
+        const topExit = intent.topExit;
+        const dockExit = intent.dockExit;
+        actors.auxiliary.noteShellExitDistances(topExit, dockExit);
+        return;
       }
-    },
-    minimumReceiptCurrent: (key: string): boolean => actors.geometry.receiptCurrent(key),
-    onPlaybackProfileSelected: (receipt: ReaderControlPlaybackProfileReceipt): void =>
-      actors.geometry.acceptPlaybackProfile(receipt, other.windowMetricsRevision()),
-    onMinimumMeasurerReady: (identity: string, measurer: ReaderControlContentMeasurer | undefined,
-      profileReader?: ReaderControlMeasuredProfileReader, facts?: ReaderControlModuleFacts, factsGeometryKey?: string): void =>
-      actors.geometry.bind(identity, measurer, profileReader, facts, factsGeometryKey),
-    verificationSession: other.verification,
-    onSessionRequest: (next: ReaderControlSessionState, origin: ReaderControlVerificationOrigin): void =>
-      actors.interaction.requestControlSession(next, origin),
-    inputCurrent: (): boolean => actors.interaction.isControlInputEnabled() && actors.auxiliary.sessionLaunchAllowsControlInput(),
-    onVisualSessionChange: (state: ReaderControlSessionState): void => actors.session.admitVisual(state),
-    onTemporaryLayerChange: (active: boolean, kind?: ReaderControlTemporaryInputKind): void => actors.geometry.onTemporaryLayerChanged(active, kind),
-    onTtsConfigurationOpen: (): void => actors.speech.retryTtsConfigurationMetadataOnOpen(),
-    onInputActivity: (): void => actors.interaction.onControlInputActivity(),
-    onBackdropRegionsChange: (regions: ReaderControlBackdropRect[], ready: boolean): void => actors.geometry.acceptBackdropRegions(regions, ready),
-    directoryPublication: actors.directory.publication,
-    onRequireCompleteCatalog: (): void => actors.turnInput.requestCatalog(),
-    onRetryBookmarkLoad: (): void => actors.directory.loadBookmarks(),
-    searchPublication: other.searchPublication,
-    onSessionMorphSourceMeasured: (measurement: ReaderSessionMorphSourceMeasurement): void =>
-      actors.auxiliary.admitSessionMorphSourceMeasurement(measurement),
-    onExitReading: (): void => actors.progress.beginExit(),
-    onDismiss: (): void => actors.interaction.hideControl(),
-    onSourceSwitch: (focusId?: string): void => {
-      actors.interaction.switchSource(focusId);
-    },
-    onRefreshChapter: (): void => actors.interaction.refreshCurrentChapter(),
-    onDownloadBook: (): void => actors.directory.requestDownload(),
-    onOpenBookInfo: (): void => other.openBookInfo(),
-    onPageChange: (page: ReaderControlPage, origin: ReaderControlVerificationOrigin): void => actors.interaction.setControlPage(page, origin),
-    onModuleSelect: (_module: string): void => {},
-    onSelectChapter: (chapterIndex: number): void => actors.directory.selectChapter(chapterIndex),
-    onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
-      positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof): void =>
-      actors.directory.selectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
-    onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void =>
-      actors.directory.selectBookmarkAnchor(chapterIndex, chapterOffset, positionScope),
-    bookmarkIdentity: other.bookmarkIdentity,
-    onDownloadChapter: (chapterIndex: number): void => actors.directory.requestDownload(chapterIndex),
-    onDeleteBookmarks: (bookmarkTimes: number[]): void => { other.deleteBookmarks(bookmarkTimes); },
-    onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-      { other.createBookmark(request); },
-    onPreviousChapter: (): void => actors.directory.step(-1),
-    onNextChapter: (): void => actors.directory.step(1),
-    onProgressChange: (percent: number): void => actors.directory.seek(percent),
-    onBrightnessChange: (percent: number): void => actors.brightness.setManual(percent),
-    onBrightnessAuto: (): void => actors.brightness.toggleAutomatic(),
-    onBrightnessCancel: (): void => actors.brightness.cancel(),
-    onSearchQueryChange: (query: string): void => actors.interaction.updateQuickSearchQuery(query),
-    onSearch: (): void => actors.interaction.runQuickSearch(),
-    onSearchLoadMore: (): void => actors.interaction.loadMoreQuickSearch(false),
-    onSearchNeedMore: (): void => actors.interaction.loadMoreQuickSearch(true),
-    onSearchResultSelect: (result: ReadingContentSearchResult, scope: number, ordinal: number): void =>
-      actors.interaction.selectSearchResult(result, scope, ordinal),
-    onAutoPageToggle: (): void => actors.playback.toggleAutoPage(),
-    onAutoPageStop: (): void => actors.playback.stopAutoPage(),
-    onAutoPageSlowDown: (): void => actors.playback.changeAutoPageSpeed(2),
-    onAutoPageSpeedUp: (): void => actors.playback.changeAutoPageSpeed(-2),
-    onAutoPageFullTimerChange: (minutes: number, seconds: number): void =>
-      actors.playback.auto.setSessionTimer(minutes, seconds),
-    onAutoPageFullSpeedChange: (seconds: number, onDeclined?: () => void): void =>
-      actors.playback.setAutoPageSpeed(seconds, onDeclined),
-    onAutoPageFollowHighlightChange: (enabled: boolean): void =>
-      actors.playback.auto.setFollowHighlight(enabled),
-    onOpenReplace: (): void => actors.interaction.openQuickReplace(),
-    onReloadControlReplace: (operationId?: string): Promise<void> => actors.replace.reload(true, operationId),
-    onSaveControlReplace: (draft: ReaderControlReplaceDraft): Promise<void> => actors.replace.save(draft),
-    onToggleControlReplace: (rule: ReaderReplaceRule, value: boolean): Promise<void> =>
-      actors.replace.toggle(rule, value),
-    onDeleteControlReplace: (rule: ReaderReplaceRule): Promise<void> => actors.replace.delete(rule),
-    onPreviewControlReplace: (): Promise<ReaderReplacePreview> => actors.replace.preview(),
-    onImportControlReplace: (): Promise<void> => actors.interaction.importControlReplace(),
-    onExportControlReplace: (): Promise<void> => actors.interaction.exportControlReplace(),
-    onAppearanceThemeChange: (theme: ReaderAppearanceTheme): void =>
-      actors.preferences.changeAppearanceTheme(theme),
-    onAppearanceDayThemeChange: (theme: ReaderAppearanceTheme): void =>
-      actors.preferences.changeAppearanceDayTheme(theme),
-    onAppearanceNightThemeChange: (theme: ReaderAppearanceTheme): void =>
-      actors.preferences.changeAppearanceNightTheme(theme),
-    onAppearanceFontChange: (font: ReaderAppearanceFont): void => actors.preferences.changeAppearanceFont(font),
-    onAppearanceFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): ReaderControlFontOrderPresentation =>
-      actors.geometry.fontOrder.request(fontOrder),
-    onAppearanceFontReorderActivityChange: (active: boolean): void => {
-      if (active && !other.reduceMotion()) {
-        try { void vibrator.startVibration({ type: 'time', duration: 10 }, { usage: 'touch' }).catch((): void => {}); }
-        catch (_) {}
+      case 'openRecovery':
+        return actors.recovery.open(intent.identity);
+      case 'togglePageBookmark': {
+        if (other.bookmarkEnabled()) {
+          actors.bookmarks.toggle();
+        }
+        return;
       }
-    },
-    onAppearanceCustomFontImport: (): void => actors.preferences.importReaderCustomFont(),
-    onAppearanceIndentRequest: (indent: ReaderAppearanceIndent): void =>
-      actors.preferences.changeAppearanceIndent(indent),
-    onAppearanceAlignmentRequest: (current: ReaderAppearanceAlignment): void =>
-      actors.preferences.toggleAppearanceAlignment(current),
-    onAppearanceMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection): void =>
-      actors.preferences.stepAppearanceMetric(metric, direction),
-    onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string): void =>
-      actors.mutation.dispatchChineseConversionAction(mode, identity),
-    onSettingsToggleChange: (key: ReaderSettingsToggleKey, value: boolean): void =>
-      actors.preferences.changeReaderSetting(key, value),
-    onWidePageLayoutChange: (value: ReaderWidePageLayout): void => actors.preferences.changeWidePageLayout(value),
-    onScreenDirectionChange: (direction: ReaderScreenDirection): void =>
-      actors.preferences.changeReaderScreenDirection(direction),
-    onScreenTimeoutChange: (timeout: ReaderScreenTimeout): void =>
-      actors.preferences.changeReaderScreenTimeout(timeout),
-    onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
-      actors.preferences.changeReaderPageTurnStyle(style),
-    onTtsToggle: (): void => actors.speech.toggleTts(),
-    onTtsStop: (): void => actors.speech.stopTts(),
-    onTtsPrevious: (): void => actors.speech.previousTtsUtterance(),
-    onTtsNext: (): void => actors.speech.nextTtsUtterance(),
-    onTtsSeek: (sliceIndex: number): void => actors.speech.seekTtsUtterance(sliceIndex),
-    onTtsRateChange: (rate: number, onDeclined?: () => void): void => actors.speech.changeTtsRate(rate, onDeclined),
-    onTtsTimerChange: (minutes: number, seconds: number, mode?: ReaderTtsTimerMode): void =>
-      actors.speech.changeTtsTimer(minutes, seconds, mode),
-    onTtsFollowHighlightChange: (enabled: boolean): void => actors.speech.changeTtsFollowHighlight(enabled),
-    onTtsPauseOnInterruptionChange: (enabled: boolean): void =>
-      actors.speech.changeTtsPauseOnInterruption(enabled),
-    onTtsAllowMixingChange: (enabled: boolean): void => actors.speech.changeTtsAllowMixing(enabled),
-    onTtsBackgroundPlaybackChange: (enabled: boolean): void => actors.speech.changeTtsBackgroundPlayback(enabled),
-    onTtsKeepScreenOnChange: (enabled: boolean): void => actors.speech.changeTtsKeepScreenOn(enabled),
-    onTtsFailurePolicyChange: (policy: 'skip' | 'stop'): void => actors.speech.changeTtsFailurePolicy(policy),
-    onTtsVoiceChange: (language: string, person: number): void => actors.speech.changeTtsVoice(language, person),
-    onTtsVoiceAudition: (language: string, person: number): Promise<void> => actors.speech.auditionReaderTtsVoice(language, person),
-    onTtsAuditionStop: (): void => actors.speech.stopReaderTtsAudition(),
-    onTtsEngineChange: (engine: string): Promise<void> => actors.speech.changeTtsEngine(engine),
-    onTtsHttpEnginePut: (config: ReaderTtsConfigurationDraft): Promise<void> => actors.speech.saveHttpTtsEngine(config),
-    onTtsHttpEngineDelete: (id: number): Promise<void> => actors.speech.deleteHttpTtsEngine(id),
+      case 'minimumReceiptCurrent':
+        return actors.geometry.receiptCurrent(intent.key);
+      case 'playbackProfileSelected':
+        return actors.geometry.acceptPlaybackProfile(intent.receipt, other.windowMetricsRevision());
+      case 'minimumMeasurerReady':
+        return actors.geometry.bind(intent.identity, intent.measurer, intent.profileReader, intent.facts, intent.factsGeometryKey);
+      case 'sessionRequest':
+        return actors.interaction.requestControlSession(intent.next, intent.origin);
+      case 'inputCurrent':
+        return actors.interaction.isControlInputEnabled() && actors.auxiliary.sessionLaunchAllowsControlInput();
+      case 'visualSessionChange':
+        return actors.session.admitVisual(intent.state);
+      case 'temporaryLayerChange':
+        return actors.geometry.onTemporaryLayerChanged(intent.active, intent.layer);
+      case 'ttsConfigurationOpen':
+        return actors.speech.retryTtsConfigurationMetadataOnOpen();
+      case 'inputActivity':
+        return actors.interaction.onControlInputActivity();
+      case 'backdropRegionsChange':
+        return actors.geometry.acceptBackdropRegions(intent.regions, intent.ready);
+      case 'requireCompleteCatalog':
+        return actors.turnInput.requestCatalog();
+      case 'retryBookmarkLoad':
+        return actors.directory.loadBookmarks();
+      case 'sessionMorphSourceMeasured':
+        return actors.auxiliary.admitSessionMorphSourceMeasurement(intent.measurement);
+      case 'exitReading':
+        return actors.progress.beginExit();
+      case 'dismiss':
+        return actors.interaction.hideControl();
+      case 'sourceSwitch': {
+        const focusId = intent.focusId;
+        actors.interaction.switchSource(focusId);
+        return;
+      }
+      case 'refreshChapter':
+        return actors.interaction.refreshCurrentChapter();
+      case 'downloadBook':
+        return actors.directory.requestDownload();
+      case 'openBookInfo':
+        return other.openBookInfo();
+      case 'pageChange':
+        return actors.interaction.setControlPage(intent.page, intent.origin);
+      case 'selectChapter':
+        return actors.directory.selectChapter(intent.chapterIndex);
+      case 'selectNavigationTarget':
+        return actors.directory.selectNavigationTarget(intent.chapterIndex, intent.chapterOffsetScalar, intent.positionScope, intent.directoryTargetProof);
+      case 'selectBookmark':
+        return actors.directory.selectBookmarkAnchor(intent.chapterIndex, intent.chapterOffset, intent.positionScope);
+      case 'downloadChapter':
+        return actors.directory.requestDownload(intent.chapterIndex);
+      case 'deleteBookmarks':
+        return other.deleteBookmarks(intent.bookmarkTimes);
+      case 'createChapterStartBookmark':
+        return other.createBookmark(intent.request);
+      case 'previousChapter':
+        return actors.directory.step(-1);
+      case 'nextChapter':
+        return actors.directory.step(1);
+      case 'progressChange':
+        return actors.directory.seek(intent.percent);
+      case 'brightnessChange':
+        return actors.brightness.setManual(intent.percent);
+      case 'brightnessAuto':
+        return actors.brightness.toggleAutomatic();
+      case 'brightnessCancel':
+        return actors.brightness.cancel();
+      case 'searchQueryChange':
+        return actors.interaction.updateQuickSearchQuery(intent.query);
+      case 'search':
+        return actors.interaction.runQuickSearch();
+      case 'searchLoadMore':
+        return actors.interaction.loadMoreQuickSearch(false);
+      case 'searchNeedMore':
+        return actors.interaction.loadMoreQuickSearch(true);
+      case 'searchResultSelect':
+        return actors.interaction.selectSearchResult(intent.result, intent.scope, intent.ordinal);
+      case 'autoPageToggle':
+        return actors.playback.toggleAutoPage();
+      case 'autoPageStop':
+        return actors.playback.stopAutoPage();
+      case 'autoPageSlowDown':
+        return actors.playback.changeAutoPageSpeed(2);
+      case 'autoPageSpeedUp':
+        return actors.playback.changeAutoPageSpeed(-2);
+      case 'autoPageFullTimerChange':
+        return actors.playback.auto.setSessionTimer(intent.minutes, intent.seconds);
+      case 'autoPageFullSpeedChange':
+        return actors.playback.setAutoPageSpeed(intent.seconds, intent.onDeclined);
+      case 'autoPageFollowHighlightChange':
+        return actors.playback.auto.setFollowHighlight(intent.enabled);
+      case 'openReplace':
+        return actors.interaction.openQuickReplace();
+      case 'reloadControlReplace':
+        return actors.replace.reload(true, intent.operationId);
+      case 'saveControlReplace':
+        return actors.replace.save(intent.draft);
+      case 'toggleControlReplace':
+        return actors.replace.toggle(intent.rule, intent.value);
+      case 'deleteControlReplace':
+        return actors.replace.delete(intent.rule);
+      case 'previewControlReplace':
+        return actors.replace.preview();
+      case 'importControlReplace':
+        return actors.interaction.importControlReplace();
+      case 'exportControlReplace':
+        return actors.interaction.exportControlReplace();
+      case 'appearanceThemeChange':
+        return actors.preferences.changeAppearanceTheme(intent.theme);
+      case 'appearanceDayThemeChange':
+        return actors.preferences.changeAppearanceDayTheme(intent.theme);
+      case 'appearanceNightThemeChange':
+        return actors.preferences.changeAppearanceNightTheme(intent.theme);
+      case 'appearanceFontChange':
+        return actors.preferences.changeAppearanceFont(intent.font);
+      case 'appearanceFontOrderChange':
+        return actors.geometry.fontOrder.request(intent.fontOrder);
+      case 'appearanceFontReorderActivityChange': {
+        const active = intent.active;
+        if (active && !other.reduceMotion()) {
+          try { void vibrator.startVibration({ type: 'time', duration: 10 }, { usage: 'touch' }).catch((): void => {}); }
+          catch (_) {}
+        }
+        return;
+      }
+      case 'appearanceCustomFontImport':
+        return actors.preferences.importReaderCustomFont();
+      case 'appearanceIndentRequest':
+        return actors.preferences.changeAppearanceIndent(intent.indent);
+      case 'appearanceAlignmentRequest':
+        return actors.preferences.toggleAppearanceAlignment(intent.current);
+      case 'appearanceMetricStep':
+        return actors.preferences.stepAppearanceMetric(intent.metric, intent.direction);
+      case 'chineseConversionChange':
+        return actors.mutation.dispatchChineseConversionAction(intent.mode, intent.identity);
+      case 'settingsToggleChange':
+        return actors.preferences.changeReaderSetting(intent.key, intent.value);
+      case 'widePageLayoutChange':
+        return actors.preferences.changeWidePageLayout(intent.value);
+      case 'screenDirectionChange':
+        return actors.preferences.changeReaderScreenDirection(intent.direction);
+      case 'screenTimeoutChange':
+        return actors.preferences.changeReaderScreenTimeout(intent.timeout);
+      case 'pageTurnStyleChange':
+        return actors.preferences.changeReaderPageTurnStyle(intent.style);
+      case 'ttsToggle':
+        return actors.speech.toggleTts();
+      case 'ttsStop':
+        return actors.speech.stopTts();
+      case 'ttsPrevious':
+        return actors.speech.previousTtsUtterance();
+      case 'ttsNext':
+        return actors.speech.nextTtsUtterance();
+      case 'ttsSeek':
+        return actors.speech.seekTtsUtterance(intent.sliceIndex);
+      case 'ttsRateChange':
+        return actors.speech.changeTtsRate(intent.rate, intent.onDeclined);
+      case 'ttsTimerChange':
+        return actors.speech.changeTtsTimer(intent.minutes, intent.seconds, intent.mode);
+      case 'ttsFollowHighlightChange':
+        return actors.speech.changeTtsFollowHighlight(intent.enabled);
+      case 'ttsPauseOnInterruptionChange':
+        return actors.speech.changeTtsPauseOnInterruption(intent.enabled);
+      case 'ttsAllowMixingChange':
+        return actors.speech.changeTtsAllowMixing(intent.enabled);
+      case 'ttsBackgroundPlaybackChange':
+        return actors.speech.changeTtsBackgroundPlayback(intent.enabled);
+      case 'ttsKeepScreenOnChange':
+        return actors.speech.changeTtsKeepScreenOn(intent.enabled);
+      case 'ttsFailurePolicyChange':
+        return actors.speech.changeTtsFailurePolicy(intent.policy);
+      case 'ttsVoiceChange':
+        return actors.speech.changeTtsVoice(intent.language, intent.person);
+      case 'ttsVoiceAudition':
+        return actors.speech.auditionReaderTtsVoice(intent.language, intent.person);
+      case 'ttsAuditionStop':
+        return actors.speech.stopReaderTtsAudition();
+      case 'ttsEngineChange':
+        return actors.speech.changeTtsEngine(intent.engine);
+      case 'ttsHttpEnginePut':
+        return actors.speech.saveHttpTtsEngine(intent.config);
+      case 'ttsHttpEngineDelete':
+        return actors.speech.deleteHttpTtsEngine(intent.id);
+      default:
+        return defaultReaderControlIntent(intent);
+    }
   };
 }
 
@@ -1040,111 +492,293 @@ export interface ReaderNativeControlFrameInput {
   readonly reducedMotion: () => boolean;
   readonly offlineOperationActive: () => boolean;
   readonly refreshEnabled: () => boolean;
+  readonly verification: () => ReaderControlVerificationSession;
+  readonly bookmarkIdentity: () => ReaderBookIdentity | undefined;
+  readonly searchPublication: ReaderContentSearchPublication;
 }
 
-/** Projects the accepted mounted session into the legacy Panel's native frame.
- * The stable directory provider is retained across the close transition. */
-export function readerNativeControlFrame(input: ReaderNativeControlFrameInput): ReaderControlPanelFrame {
-    const facts: ReaderControlPanelRenderFacts = {
-      directSheetRedesign: true,
-      fixedIsland: true,
-      bodySelectionPossible: input.selectionPossible(),
-      sessionFontScale: input.systemFontScale(),
-      controlThemeStyle: readerControlThemeStyle(input.appScheme()),
-      launchSample: input.overlay().sessionLaunch?.sample,
-      launchGeneration: input.overlay().sessionLaunch?.generation ?? 0,
-      launchSourceMinimum: input.auxiliary.sourceMinimum,
-      launchSourceKind: input.overlay().sessionLaunch?.geometry.kind ?? 'quickAutoPage',
-      launchBusinessStatus: input.auxiliary.sessionLaunchBusinessStatus(),
-      launchDesiredPlaying: input.overlay().sessionLaunch?.desiredPlaying ?? true,
-      launchStageOpacity: input.overlay().sessionLaunchStageOpacity,
-      launchOwnsControls: input.overlay().sessionLaunch?.ownership === 'stage',
-      launchRecovering: input.overlay().sessionLaunch?.ownership === 'handoffPending',
-      launchInteractionEnabled: !input.projection().pageTurnInputOwned && input.overlay().sessionLaunch?.ownership === 'stage',
-      launchSourceTtsState: input.auxiliary.sourceTtsState,
-      launchSourceAutoStatus: input.auxiliary.sourceAutoStatus,
-      launchCountdown: input.automaticState().remainingSeconds,
-      recoveryAvailable: input.recovery.hasContent(),
-      recoveryIdentity: input.recovery.overlayId(),
-      bookTitle: input.route().bookTitle,
-      chapterTitle: input.chrome().chapterTitle,
-      sourceId: input.route().sourceId,
-      sourceName: input.route().sourceName,
-      progressPercent: input.pageChrome.controlProgress(),
-      totalChapters: input.mount.entryCatalogNavigation?.readableChapterCount ?? input.readableTocCount(),
-      readableChapterPosition: input.currentReadablePosition(),
-      pageBookmarkStatus: input.bookmark.controlStatus(input.projection().bookmarkPresentationRevision + input.projection().pageTurnRenderRevision),
-      pageBookmarkEnabled: input.bookmark.controlEnabled(input.projection().bookmarkPresentationRevision + input.projection().pageTurnRenderRevision),
-      layout: input.geometry.layout(input.windowMetricsRevision()),
-      presentationReceipt: input.chrome().controlPresentationReceipt,
-      preparedMinimumRequired: true,
-      minimumIdentity: input.geometry.identity(),
-      minimumCommittedIdentity: input.geometry.committedIdentity(),
-      minimumRequestLocation: input.geometry.requestLocation(),
-      minimumOwnerKey: input.geometry.ownerKey(),
-      minimumEnvironmentKey: input.geometry.environmentKey(),
-      minimumKey: input.geometry.layout(input.windowMetricsRevision()).minimumKey,
-      minimumReady: input.chrome().controlMinimumReady,
-      minimumMetricsRevision: ReaderWindowCoordinator.metrics().revision,
-      inputEnabled: input.controlInputEnabled() && input.auxiliary.sessionLaunchAllowsControlInput(),
-      controlObscured: input.controlObscured(),
-      controlOpenRevision: input.chrome().controlOpenRevision,
-      dismissTemporaryRevision: input.chrome().dismissControlTemporaryRevision,
-      retireTemporaryRevision: input.chrome().retireControlTemporaryRevision,
-      temporaryLayerKind: input.chrome().controlTemporaryLayerPresented,
-      directoryEntriesRevision: input.directory.publishDirectory(readerControlHostVisible(input.chrome().controlSession)),
-      catalogComplete: !input.mount.entryCatalogPending,
-      catalogLoading: input.session().entryCatalogLoading,
-      catalogLoadFailed: input.session().entryCatalogLoadFailed,
-      catalogChapterCount: input.mount.entryCatalogNavigation?.chapterCount ?? input.chrome().tocEntries.length,
-      catalogCurrentPosition: input.directory.catalogPosition(),
-      currentChapterIndex: input.currentChapter(),
-      chapterStartBookmarkCreationEnabled: input.chapterStartBookmarkEnabled(),
-      chapterDownloadEnabled: input.route().sourceId !== 'local',
-      bookmarkLoadFailed: input.chrome().controlBookmarkLoadFailed,
-      bookmarkLoadMessage: input.bookmarkMessage(),
-      bookmarkRecovery: input.bookmarkRecovery(),
-      searchQuery: input.chrome().quickSearchQuery,
-      searchRevision: input.chrome().quickSearchRevision,
-      brightnessPercent: input.chrome().brightnessPercent,
-      brightnessAutomatic: input.brightness.automatic(),
-      brightnessRevision: input.chrome().brightnessRevision,
-      autoPageStatus: input.automaticState().status,
-      autoPageSpeedSeconds: input.automaticState().speedSeconds,
-      autoPageTimerMinutes: input.automaticConfiguration().timerMinutes,
-      autoPageTimerSeconds: input.automaticConfiguration().timerSeconds,
-      autoPageTimerSummaryText: formatReaderAutoPageFullTimerSummary(input.automaticConfiguration()),
-      autoPageFollowHighlight: input.automaticConfiguration().followHighlight,
-      controlReplaceState: input.chrome().controlReplaceState,
-      ttsConfigurationRecovery: input.overlay().ttsConfigurationRecovery,
-      ttsConfigurationLoading: input.overlay().ttsConfigurationLoading,
-      ttsConfigurationLoadFailed: input.overlay().ttsConfigurationLoadFailed,
-      appearanceSnapshot: input.chrome().appearanceSnapshot,
-      chineseConversionMode: input.chrome().chineseConversionMode,
-      settingsSnapshot: input.chrome().readerSettingsSnapshot,
-      widePageLayout: input.chrome().readerSettingsSnapshot.widePageLayout ?? 'spread',
-      pageTurnSimulationAvailable: !input.projection().bookTurnRuntimeFailed,
-      ttsState: input.session().ttsState,
-      ttsTimerMode: input.session().ttsTimerMode,
-      ttsTimerMinutes: input.session().ttsTimerMinutes,
-      ttsTimerSeconds: input.session().ttsTimerSeconds,
-      ttsFollowHighlight: input.session().ttsFollowHighlight,
-      ttsPauseOnInterruption: input.session().ttsPauseOnInterruption,
-      ttsAllowMixing: input.session().ttsAllowMixing,
-      ttsBackgroundPlayback: input.session().ttsBackgroundPlayback,
-      ttsKeepScreenOn: input.session().ttsKeepScreenOn,
-      ttsFailurePolicy: input.session().ttsFailurePolicy,
-      ttsEngine: input.session().ttsEngine,
-      ttsHttpEngines: input.session().ttsHttpEngines,
-      ttsVoiceOptions: input.session().ttsVoiceOptions,
-      ttsLanguage: input.session().ttsLanguage,
-      ttsPerson: input.session().ttsPerson,
-      reduceMotion: input.reducedMotion(),
-      sourceBookId: input.route().bookId,
-      bookDownloadEnabled: input.route().sourceId !== 'local' && (input.mount.entryCatalogNavigation?.readableChapterCount ?? input.route().chapterCount) > 0 && !input.offlineOperationActive(),
-      bookDownloadActive: input.offlineOperationActive(),
-      chapterRefreshEnabled: input.refreshEnabled(),
-      chineseConversionIdentity: input.mutation.chineseConversionIdentity(),
-    };
-    return new ReaderControlPanelFrame(facts);
-  }
+const EMPTY_CONTROL_DIRECTORY: LocalReadingTocEntry[] = [];
+
+/** Projects the admitted reading owners into five immutable native snapshots. */
+function readerNativeControlFrame(input: ReaderNativeControlFrameInput,
+  previous: ReaderControlPanelFrame | undefined): ReaderControlPanelFrame {
+  // The verification scope and publication owners were assigned on native
+  // construction. Retain them with the mounted bookmark identity.
+  const geometry: ReaderControlGeometrySnapshot = {
+    directSheet: true,
+    fixedIsland: true,
+    allowsTextSelection: input.selectionPossible(),
+    fontScale: input.systemFontScale(),
+    theme: readerControlThemeStyle(input.appScheme()),
+    layout: input.geometry.layout(input.windowMetricsRevision()),
+    reduceMotion: input.reducedMotion(),
+    verification: previous === undefined ? input.verification() : previous.geometry.verification,
+    inputEnabled: input.controlInputEnabled() && input.auxiliary.sessionLaunchAllowsControlInput(),
+    obscured: input.controlObscured(),
+    openRevision: input.chrome().controlOpenRevision,
+    minimum: {
+      receipt: input.chrome().controlPresentationReceipt,
+      preparedRequired: true,
+      identity: input.geometry.identity(),
+      committedIdentity: input.geometry.committedIdentity(),
+      requestLocation: input.geometry.requestLocation(),
+      ownerKey: input.geometry.ownerKey(),
+      environmentKey: input.geometry.environmentKey(),
+      key: input.geometry.layout(input.windowMetricsRevision()).minimumKey,
+      ready: input.chrome().controlMinimumReady,
+      metricsRevision: ReaderWindowCoordinator.metrics().revision,
+    },
+    temporary: {
+      dismissRevision: input.chrome().dismissControlTemporaryRevision,
+      retireRevision: input.chrome().retireControlTemporaryRevision,
+      layer: input.chrome().controlTemporaryLayerPresented,
+    },
+  };
+  const launch: ReaderControlLaunchSnapshot = {
+    sample: input.overlay().sessionLaunch?.sample,
+    generation: input.overlay().sessionLaunch?.generation ?? 0,
+    sourceMinimum: input.auxiliary.sourceMinimum,
+    sourceKind: input.overlay().sessionLaunch?.geometry.kind ?? 'quickAutoPage',
+    status: input.auxiliary.sessionLaunchBusinessStatus(),
+    desiredPlaying: input.overlay().sessionLaunch?.desiredPlaying ?? true,
+    countdown: input.automaticState().remainingSeconds,
+    opacity: input.overlay().sessionLaunchStageOpacity,
+    ownsControls: input.overlay().sessionLaunch?.ownership === 'stage',
+    recovering: input.overlay().sessionLaunch?.ownership === 'handoffPending',
+    interactionEnabled: !input.projection().pageTurnInputOwned && input.overlay().sessionLaunch?.ownership === 'stage',
+    sourceSpeech: input.auxiliary.sourceTtsState,
+    sourceAutomatic: input.auxiliary.sourceAutoStatus,
+  };
+  const document: ReaderControlDocumentSnapshot = {
+    bookTitle: input.route().bookTitle,
+    chapterTitle: input.chrome().chapterTitle,
+    source: {
+      id: input.route().sourceId,
+      bookId: input.route().bookId,
+      name: input.route().sourceName,
+    },
+    progressPercent: input.pageChrome.controlProgress(),
+    totalChapters: input.mount.entryCatalogNavigation?.readableChapterCount ?? input.readableTocCount(),
+    readableChapterPosition: input.currentReadablePosition(),
+    chapterIndex: input.currentChapter(),
+    bookmarks: {
+      allowChapterStart: input.chapterStartBookmarkEnabled(),
+      loadFailed: input.chrome().controlBookmarkLoadFailed,
+      message: input.bookmarkMessage(),
+      recovery: input.bookmarkRecovery(),
+      book: previous === undefined ? input.bookmarkIdentity() : previous.document.bookmarks.book,
+      pageStatus: input.bookmark.controlStatus(input.projection().bookmarkPresentationRevision + input.projection().pageTurnRenderRevision),
+      pageEnabled: input.bookmark.controlEnabled(input.projection().bookmarkPresentationRevision + input.projection().pageTurnRenderRevision),
+    },
+    catalog: {
+      publication: previous === undefined ? input.directory.publication : previous.document.catalog.publication,
+      revision: input.directory.publishDirectory(readerControlHostVisible(input.chrome().controlSession)),
+      complete: !input.mount.entryCatalogPending,
+      loading: input.session().entryCatalogLoading,
+      loadFailed: input.session().entryCatalogLoadFailed,
+      chapterCount: input.mount.entryCatalogNavigation?.chapterCount ?? input.chrome().tocEntries.length,
+      position: input.directory.catalogPosition(),
+      defaultEntries: EMPTY_CONTROL_DIRECTORY,
+    },
+    search: {
+      query: input.chrome().quickSearchQuery,
+      revision: input.chrome().quickSearchRevision,
+      publication: previous === undefined ? input.searchPublication : previous.document.search.publication,
+      manga: false,
+    },
+    replace: input.chrome().controlReplaceState,
+    recovery: {
+      available: input.recovery.hasContent(),
+      identity: input.recovery.overlayId(),
+    },
+    download: {
+      chapterEnabled: input.route().sourceId !== 'local',
+      bookEnabled: input.route().sourceId !== 'local' && (input.mount.entryCatalogNavigation?.readableChapterCount ?? input.route().chapterCount) > 0 && !input.offlineOperationActive(),
+      bookActive: input.offlineOperationActive(),
+    },
+    allowChapterRefresh: input.refreshEnabled(),
+  };
+  const preferences: ReaderControlPreferencesSnapshot = {
+    brightness: {
+      percent: input.chrome().brightnessPercent,
+      automatic: input.brightness.automatic(),
+      revision: input.chrome().brightnessRevision,
+    },
+    appearance: input.chrome().appearanceSnapshot,
+    conversion: {
+      identity: input.mutation.chineseConversionIdentity(),
+      mode: input.chrome().chineseConversionMode,
+    },
+    settings: input.chrome().readerSettingsSnapshot,
+    widePageLayout: input.chrome().readerSettingsSnapshot.widePageLayout ?? 'spread',
+    pageTurnSimulationAvailable: !input.projection().bookTurnRuntimeFailed,
+  };
+  const playback: ReaderControlPlaybackSnapshot = {
+    automatic: {
+      status: input.automaticState().status,
+      speedSeconds: input.automaticState().speedSeconds,
+      timerMinutes: input.automaticConfiguration().timerMinutes,
+      timerSeconds: input.automaticConfiguration().timerSeconds,
+      timerSummary: formatReaderAutoPageFullTimerSummary(input.automaticConfiguration()),
+      followHighlight: input.automaticConfiguration().followHighlight,
+    },
+    speech: {
+      state: input.session().ttsState,
+      timerMode: input.session().ttsTimerMode,
+      timerMinutes: input.session().ttsTimerMinutes,
+      timerSeconds: input.session().ttsTimerSeconds,
+      followHighlight: input.session().ttsFollowHighlight,
+      pauseOnInterruption: input.session().ttsPauseOnInterruption,
+      allowMixing: input.session().ttsAllowMixing,
+      backgroundPlayback: input.session().ttsBackgroundPlayback,
+      keepScreenOn: input.session().ttsKeepScreenOn,
+      failurePolicy: input.session().ttsFailurePolicy,
+      engine: input.session().ttsEngine,
+      httpEngines: input.session().ttsHttpEngines,
+      configurationRecovery: input.overlay().ttsConfigurationRecovery,
+      configurationLoading: input.overlay().ttsConfigurationLoading,
+      configurationLoadFailed: input.overlay().ttsConfigurationLoadFailed,
+      voiceOptions: input.session().ttsVoiceOptions,
+      language: input.session().ttsLanguage,
+      person: input.session().ttsPerson,
+    },
+  };
+
+  if (previous === undefined) return new ReaderControlPanelFrame({ geometry, launch, document, preferences, playback });
+  const sameGeometryFacts = sameGeometry(previous.geometry, geometry);
+  const sameLaunchFacts = sameLaunch(previous.launch, launch);
+  const sameDocumentFacts = sameDocument(previous.document, document);
+  const samePreferencesFacts = samePreferences(previous.preferences, preferences);
+  const samePlaybackFacts = samePlayback(previous.playback, playback);
+  if (sameGeometryFacts && sameLaunchFacts && sameDocumentFacts && samePreferencesFacts && samePlaybackFacts) return previous;
+  return new ReaderControlPanelFrame({
+    geometry: sameGeometryFacts ? previous.geometry : geometry,
+    launch: sameLaunchFacts ? previous.launch : launch,
+    document: sameDocumentFacts ? previous.document : document,
+    preferences: samePreferencesFacts ? previous.preferences : preferences,
+    playback: samePlaybackFacts ? previous.playback : playback,
+  });
+}
+
+function sameGeometry(first: ReaderControlGeometrySnapshot, second: ReaderControlGeometrySnapshot): boolean {
+  return first.directSheet === second.directSheet &&
+    first.fixedIsland === second.fixedIsland &&
+    first.allowsTextSelection === second.allowsTextSelection &&
+    first.fontScale === second.fontScale &&
+    first.theme.ink === second.theme.ink && first.theme.muted === second.theme.muted &&
+    first.theme.primary === second.theme.primary && first.theme.panel === second.theme.panel &&
+    first.theme.panelSoft === second.theme.panelSoft && first.theme.line === second.theme.line &&
+    first.theme.lineStrong === second.theme.lineStrong &&
+    first.layout === second.layout &&
+    first.reduceMotion === second.reduceMotion &&
+    first.verification === second.verification &&
+    first.inputEnabled === second.inputEnabled &&
+    first.obscured === second.obscured &&
+    first.openRevision === second.openRevision &&
+    first.minimum.receipt === second.minimum.receipt &&
+    first.minimum.preparedRequired === second.minimum.preparedRequired &&
+    first.minimum.identity === second.minimum.identity &&
+    first.minimum.committedIdentity === second.minimum.committedIdentity &&
+    first.minimum.requestLocation === second.minimum.requestLocation &&
+    first.minimum.ownerKey === second.minimum.ownerKey &&
+    first.minimum.environmentKey === second.minimum.environmentKey &&
+    first.minimum.key === second.minimum.key &&
+    first.minimum.ready === second.minimum.ready &&
+    first.minimum.metricsRevision === second.minimum.metricsRevision &&
+    first.temporary.dismissRevision === second.temporary.dismissRevision &&
+    first.temporary.retireRevision === second.temporary.retireRevision &&
+    first.temporary.layer === second.temporary.layer;
+}
+
+function sameLaunch(first: ReaderControlLaunchSnapshot, second: ReaderControlLaunchSnapshot): boolean {
+  return first.sample === second.sample &&
+    first.generation === second.generation &&
+    first.sourceMinimum === second.sourceMinimum &&
+    first.sourceKind === second.sourceKind &&
+    first.status === second.status &&
+    first.desiredPlaying === second.desiredPlaying &&
+    first.countdown === second.countdown &&
+    first.opacity === second.opacity &&
+    first.ownsControls === second.ownsControls &&
+    first.recovering === second.recovering &&
+    first.interactionEnabled === second.interactionEnabled &&
+    first.sourceSpeech === second.sourceSpeech &&
+    first.sourceAutomatic === second.sourceAutomatic;
+}
+
+function sameDocument(first: ReaderControlDocumentSnapshot, second: ReaderControlDocumentSnapshot): boolean {
+  return first.bookTitle === second.bookTitle &&
+    first.chapterTitle === second.chapterTitle &&
+    first.source.id === second.source.id &&
+    first.source.bookId === second.source.bookId &&
+    first.source.name === second.source.name &&
+    first.progressPercent === second.progressPercent &&
+    first.totalChapters === second.totalChapters &&
+    first.readableChapterPosition === second.readableChapterPosition &&
+    first.chapterIndex === second.chapterIndex &&
+    first.bookmarks.allowChapterStart === second.bookmarks.allowChapterStart &&
+    first.bookmarks.loadFailed === second.bookmarks.loadFailed &&
+    first.bookmarks.message === second.bookmarks.message &&
+    first.bookmarks.recovery === second.bookmarks.recovery &&
+    first.bookmarks.book === second.bookmarks.book &&
+    first.bookmarks.pageStatus === second.bookmarks.pageStatus &&
+    first.bookmarks.pageEnabled === second.bookmarks.pageEnabled &&
+    first.catalog.publication === second.catalog.publication &&
+    first.catalog.revision === second.catalog.revision &&
+    first.catalog.complete === second.catalog.complete &&
+    first.catalog.loading === second.catalog.loading &&
+    first.catalog.loadFailed === second.catalog.loadFailed &&
+    first.catalog.chapterCount === second.catalog.chapterCount &&
+    first.catalog.position === second.catalog.position &&
+    first.search.query === second.search.query &&
+    first.search.revision === second.search.revision &&
+    first.search.publication === second.search.publication &&
+    first.replace === second.replace &&
+    first.recovery.available === second.recovery.available &&
+    first.recovery.identity === second.recovery.identity &&
+    first.download.chapterEnabled === second.download.chapterEnabled &&
+    first.download.bookEnabled === second.download.bookEnabled &&
+    first.download.bookActive === second.download.bookActive &&
+    first.allowChapterRefresh === second.allowChapterRefresh &&
+    first.catalog.defaultEntries === second.catalog.defaultEntries &&
+    first.search.manga === second.search.manga;
+}
+
+function samePreferences(first: ReaderControlPreferencesSnapshot, second: ReaderControlPreferencesSnapshot): boolean {
+  return first.brightness.percent === second.brightness.percent &&
+    first.brightness.automatic === second.brightness.automatic &&
+    first.brightness.revision === second.brightness.revision &&
+    first.appearance === second.appearance &&
+    first.conversion.identity === second.conversion.identity &&
+    first.conversion.mode === second.conversion.mode &&
+    first.settings === second.settings &&
+    first.widePageLayout === second.widePageLayout &&
+    first.pageTurnSimulationAvailable === second.pageTurnSimulationAvailable;
+}
+
+function samePlayback(first: ReaderControlPlaybackSnapshot, second: ReaderControlPlaybackSnapshot): boolean {
+  return first.automatic.status === second.automatic.status &&
+    first.automatic.speedSeconds === second.automatic.speedSeconds &&
+    first.automatic.timerMinutes === second.automatic.timerMinutes &&
+    first.automatic.timerSeconds === second.automatic.timerSeconds &&
+    first.automatic.timerSummary === second.automatic.timerSummary &&
+    first.automatic.followHighlight === second.automatic.followHighlight &&
+    first.speech.state === second.speech.state &&
+    first.speech.timerMode === second.speech.timerMode &&
+    first.speech.timerMinutes === second.speech.timerMinutes &&
+    first.speech.timerSeconds === second.speech.timerSeconds &&
+    first.speech.followHighlight === second.speech.followHighlight &&
+    first.speech.pauseOnInterruption === second.speech.pauseOnInterruption &&
+    first.speech.allowMixing === second.speech.allowMixing &&
+    first.speech.backgroundPlayback === second.speech.backgroundPlayback &&
+    first.speech.keepScreenOn === second.speech.keepScreenOn &&
+    first.speech.failurePolicy === second.speech.failurePolicy &&
+    first.speech.engine === second.speech.engine &&
+    first.speech.httpEngines === second.speech.httpEngines &&
+    first.speech.configurationRecovery === second.speech.configurationRecovery &&
+    first.speech.configurationLoading === second.speech.configurationLoading &&
+    first.speech.configurationLoadFailed === second.speech.configurationLoadFailed &&
+    first.speech.voiceOptions === second.speech.voiceOptions &&
+    first.speech.language === second.speech.language &&
+    first.speech.person === second.speech.person;
+}

@@ -1,6 +1,5 @@
 import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import type { ReaderControlTemporaryInputKind } from './ReaderControlSessionState';
-import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { readerKeyboardViewport } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
@@ -26,7 +25,7 @@ import { ReaderControlModuleNavigation, type ReaderControlNavigationModule } fro
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderReadingTopBar, readerReadingTopBarHeight } from '../../../ui/chrome/ReaderReadingTopBar';
 import { TYPE_READER_CONTROL_BOOK_TITLE, TYPE_READER_CONTROL_CHAPTER_SOURCE, TYPE_READER_CONTROL_COLLAPSE_INTER, TYPE_READER_CONTROL_COLLAPSE_UI, TYPE_READER_CONTROL_COLLAPSE_TTS, TYPE_READER_CONTROL_HEADER_INTER, TYPE_READER_CONTROL_HEADER_UI, type ReaderTextStyle } from '../../../ui/foundation/ReaderTypography';
-import { TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL, TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_COLLAPSE, TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_VALUE, TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL, TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL, TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL, TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL, TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL, TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY } from '../../../ui/foundation/ReaderTypography';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerTtsWaveformSnapshot } from './ReaderTtsWaveform';
@@ -35,21 +34,18 @@ import { ReaderSessionLaunchStage } from './ReaderSessionLaunchStage';
 import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerControlIsDirectSheet } from './ReaderControlHostSession';
 import { readerPaperActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
-import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
-import type { ReaderSessionCapsuleState, ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
+import type { ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { PopupSurfaceSpec, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { ReaderControlMotionFrameCache } from './ReaderControlMotionGeometry';
-import { readerControlPlaybackProfileMatches, readerControlPlaybackSourceKindMatches, type ReaderControlPlaybackProfileData,
-  type ReaderControlPlaybackProfileReader, type ReaderControlPlaybackProfileReceipt,
-  type ReaderControlPlaybackLaunchProfile } from './ReaderControlPlaybackProfile';
+import { readerControlPlaybackProfileMatches, readerControlPlaybackSourceKindMatches, type ReaderControlPlaybackProfileData, type ReaderControlPlaybackProfileReader, type ReaderControlPlaybackProfileReceipt } from './ReaderControlPlaybackProfile';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerControlMotionMs, sampleReaderControlMorphProgress } from './ReaderControlMotionPolicy';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { ReaderControlVerificationMotion, readReaderControlNativeActor, readReaderControlPopupOwner,
   type MotionActor, type ReaderControlPopupOwnerObservation, type ReaderControlVerificationLayoutInputs } from './ReaderControlVerificationMotion';
-import type { ReaderControlVerificationOrigin, ReaderControlVerificationRequest, ReaderControlVerificationSession } from './ReaderControlVerificationSession';
+import type { ReaderControlVerificationOrigin, ReaderControlVerificationRequest } from './ReaderControlVerificationSession';
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS } from '../../../ui/foundation/ProductMotionTiming';
 import { registerReaderFonts, prepareReaderFontFamily } from '../../../ui/foundation/ReaderFonts';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
@@ -61,42 +57,18 @@ import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGatewa
 import type { ReaderBookIdentity } from '../presentation/ReaderBookmarkProjection';
 import type { ReadingContentSearchResult } from '../application/ReadingSessionFlowGateway';
 import { ReaderControlAutoPageContent } from './ReaderControlAutoPageContent';
-import type { ReaderAutoPageStatus } from './ReaderAutoPageState';
 import type { ReaderChineseConversionMode } from '../application/ReaderChineseConversionGateway';
-import {
-  createDefaultReaderAppearanceSnapshot,
-  type ReaderAppearanceAlignment,
-  type ReaderAppearanceFont,
-  type ReaderAppearanceFontSlot,
-  type ReaderAppearanceIndent,
-  type ReaderAppearanceMetric,
-  type ReaderAppearanceSnapshot,
-  type ReaderAppearanceStepDirection,
-  type ReaderAppearanceTheme,
-} from '../application/ReaderAppearanceState';
+import { type ReaderAppearanceAlignment, type ReaderAppearanceFont, type ReaderAppearanceFontSlot, type ReaderAppearanceIndent, type ReaderAppearanceMetric, type ReaderAppearanceStepDirection, type ReaderAppearanceTheme } from '../application/ReaderAppearanceState';
 import { ReaderControlSettingsContent } from './ReaderControlSettingsContent';
-import {
-  createDefaultReaderSettingsSnapshot,
-  readerPageTurnStyle,
-  type ReaderPageTurnStyle,
-  type ReaderScreenDirection,
-  type ReaderScreenTimeout,
-  type ReaderSettingsSnapshot,
-  type ReaderSettingsToggleKey,
-  type ReaderWidePageLayout,
-} from '../application/ReaderSettingsState';
-import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
+import { readerPageTurnStyle, type ReaderPageTurnStyle, type ReaderScreenDirection, type ReaderScreenTimeout, type ReaderSettingsToggleKey, type ReaderWidePageLayout } from '../application/ReaderSettingsState';
 import type { ReaderTtsConfigurationDraft } from '../application/ReaderTtsConfigurationHost';
 import { ReaderControlTtsContent } from './ReaderControlTtsContent';
-import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
-import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../presentation/ReadingDirectoryRecovery';
-import type { ReaderTtsVoiceOption } from '../application/ReaderTtsPreferencesState';
 import {
   ReaderSessionMorphSourceMeasurement,
   readerSessionMorphActorId,
   type ReaderSessionMorphSourceKind,
 } from './ReaderSessionMorphState';
-import { createReaderTtsState, type ReaderTtsState, type ReaderTtsTimerMode } from '../application/ReaderTtsState';
+import { type ReaderTtsTimerMode } from '../application/ReaderTtsState';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
 import { ReaderControlSearchContent } from './ReaderControlSearchContent';
 import { ReaderControlReplaceContent } from './ReaderControlReplaceContent';
@@ -114,42 +86,10 @@ import { readerControlHeaderRole, readerControlHeaderTitle, readerControlHeaderA
 import type { ReaderControlActorFrame } from './ReaderControlActorGeometry';
 import type { ReaderControlReplaceHeaderFrame } from './ReaderControlReplaceGeometry';
 import type { ReaderReplacePreview } from '../application/ReaderReplaceQuickGateway';
-import { createReaderControlReplaceState, type ReaderControlReplaceState } from '../presentation/ReaderControlReplaceState';
 import type { ReaderReplaceRule, ReaderControlReplaceDraft } from '../application/ReaderReplaceQuickState';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
-import {
-  ReaderControlGeometry,
-  READER_CONTROL_BRIGHTNESS_AUTO_HIT_WIDTH,
-  READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE,
-  READER_CONTROL_BRIGHTNESS_CONTROL_GAP,
-  READER_CONTROL_BRIGHTNESS_ICON_SIZE,
-  READER_CONTROL_BRIGHTNESS_ICON_TOP,
-  READER_CONTROL_BRIGHTNESS_MAX,
-  READER_CONTROL_BRIGHTNESS_MIN,
-  READER_CONTROL_BRIGHTNESS_RAIL_WIDTH,
-  READER_CONTROL_BRIGHTNESS_STEP,
-  READER_CONTROL_BRIGHTNESS_TRACK_HIT_WIDTH,
-  READER_CONTROL_BRIGHTNESS_TRACK_WIDTH,
-  READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT,
-  READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT,
-  READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT,
-  READER_CONTROL_HOME_QUICK_ACTION_HEIGHT,
-  READER_CONTROL_HOME_SECTION_GAP,
-  READER_CONTROL_HOME_SHORT_ACTION_HEIGHT,
-  READER_CONTROL_HOME_TOP_ROW_HEIGHT,
-  READER_CONTROL_TOP_BAR_HEIGHT,
-  READER_CONTROL_PROGRESS_MAX,
-  READER_CONTROL_PROGRESS_MIN,
-  readerControlBrightnessTrackHeight,
-} from './ReaderControlGeometry';
-import {
-  ReaderControlLayoutSnapshot,
-  createDefaultReaderControlLayout,
-  readerControlExtentFits,
-  type ReaderControlCandidateWidths, type ReaderControlCandidateMinimum,
-  type ReaderControlModuleMinimum, type ReaderControlModuleMeasurer,
-  type ReaderControlContentMeasurer, type ReaderControlContentModule,
-} from './ReaderLayoutGeometry';
+import { ReaderControlGeometry, READER_CONTROL_BRIGHTNESS_AUTO_HIT_WIDTH, READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE, READER_CONTROL_BRIGHTNESS_CONTROL_GAP, READER_CONTROL_BRIGHTNESS_ICON_SIZE, READER_CONTROL_BRIGHTNESS_ICON_TOP, READER_CONTROL_BRIGHTNESS_MAX, READER_CONTROL_BRIGHTNESS_MIN, READER_CONTROL_BRIGHTNESS_RAIL_WIDTH, READER_CONTROL_BRIGHTNESS_STEP, READER_CONTROL_BRIGHTNESS_TRACK_HIT_WIDTH, READER_CONTROL_BRIGHTNESS_TRACK_WIDTH, READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT, READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT, READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT, READER_CONTROL_HOME_QUICK_ACTION_HEIGHT, READER_CONTROL_HOME_SECTION_GAP, READER_CONTROL_HOME_SHORT_ACTION_HEIGHT, READER_CONTROL_TOP_BAR_HEIGHT, READER_CONTROL_PROGRESS_MAX, READER_CONTROL_PROGRESS_MIN, readerControlBrightnessTrackHeight } from './ReaderControlGeometry';
+import { ReaderControlLayoutSnapshot, readerControlExtentFits, type ReaderControlCandidateWidths, type ReaderControlCandidateMinimum, type ReaderControlModuleMeasurer, type ReaderControlContentModule } from './ReaderLayoutGeometry';
 import { ReaderControlPlacement, readerControlAlignment, readerControlDockLeft,
   type ReaderControlAlignment } from './ReaderControlPlacement';
 import { subscribeReaderHoldingHand } from '../../../platform/interaction/HarmonyReaderGrip';
@@ -157,11 +97,10 @@ import type { ReaderHoldingHand } from '../../../platform/interaction/ReaderHold
 import { TYPE_READER_CONTROL_CHAPTER_TITLE, TYPE_READER_CONTROL_SOURCE_ACTION } from '../../../ui/foundation/ReaderTypography';
 
 import curves from '@ohos.curves';
-import { DEBUG, BUILD_MODE_NAME } from '../../../../../../build/default/generated/profile/default/BuildProfile';
+import { DEBUG } from '../../../../../../build/default/generated/profile/default/BuildProfile';
 import { ReaderControlDirectoryContent } from './ReaderControlDirectoryContent';
 import { ReaderControlAppearanceContent, type ReaderControlFontOrderPresentation } from './ReaderControlAppearanceContent';
 import type { ReaderControlPage } from './ReaderControlRouting';
-import { ReaderContentSearchPublication } from '../presentation/ReaderContentSearchPublication';
 import type { ReaderControlBackdropRect } from './ReaderControlBackdropTouch';
 import {
   copyReaderControlSessionState, createReaderControlSessionState, readerControlContentLocation, readerControlTargetLocation,
@@ -175,7 +114,11 @@ import {
   sampleReaderControlMotionComposition,
   type ReaderControlMotionFrame, type ReaderControlMotionBounds,
 } from './ReaderControlMotionGeometry';
-import { readerControlThemeStyle, type ReaderControlThemeStyle } from './ReaderControlThemeStyle';
+
+import {
+  createReaderControlFactDelivery, defaultReaderControlIntent, type ReaderControlFactWatch,
+  type ReaderControlPanelFacts, type ReaderControlIntentHandler, type ReaderControlPanelFrame,
+} from './ReaderControlPanelNativeContract';
 
 interface ReaderControlMenuVerificationFrame {
   frameTimeNs: number;
@@ -215,11 +158,51 @@ class ReaderControlHeaderLineHeight implements AttributeModifier<TextAttribute> 
 
 @Component
 export struct ReaderControlPanel {
+  @ObjectLink @Watch('onPanelFrameChanged') panelFrame!: ReaderControlPanelFrame;
+  onIntent: ReaderControlIntentHandler = defaultReaderControlIntent;
+  private deliveredFrame: ReaderControlPanelFrame | undefined = undefined;
+  private readonly factDelivery = createReaderControlFactDelivery();
+  private readonly selectBookmark = (bookmarkId: string, chapterIndex: number, chapterOffset: number,
+    positionScope?: RemoteReadingPositionScope): void => {
+    this.onIntent({ kind: 'selectBookmark', bookmarkId, chapterIndex, chapterOffset, positionScope });
+  };
+
+  private currentFacts(): ReaderControlPanelFacts {
+    return this.factDelivery.active() ?? this.panelFrame;
+  }
+
+  private onPanelFrameChanged(): void {
+    const previous = this.deliveredFrame;
+    const next = this.panelFrame;
+    this.deliveredFrame = next;
+    if (previous === undefined || previous === next) return;
+    this.factDelivery.deliver(previous, next, (event: ReaderControlFactWatch): void => {
+      switch (event) {
+        case 'placement': this.refreshDockPlacement(); break;
+        case 'launch': this.onLaunchSampleChanged(); break;
+        case 'runtimeInput': this.onRuntimeEnabledChanged(); break;
+        case 'openRevision': this.syncProgressInput(); break;
+        case 'minimumIdentity': this.onMinimumIdentityChanged(); break;
+        case 'minimumCommit': this.onCommittedMinimumIdentityChanged(); break;
+        case 'measure': this.publishMinimumMeasurer(); break;
+        case 'minimumMetrics': this.onMinimumMetricsChanged(); break;
+        case 'receipt': this.onPresentationReceiptChanged(); break;
+        case 'playbackMinimum': this.publishSelectedPlaybackProfile(); break;
+        case 'minimumAvailability': this.onMinimumAvailabilityChanged(); break;
+        case 'temporaryLayer': this.onTemporaryLayerActivityChanged(); break;
+        case 'minimumFacts': this.onMinimumFactsPropsChanged(); break;
+        case 'layout': this.onLayoutChanged(); break;
+        case 'bookmark': this.onPageBookmarkStatusChanged(); break;
+        case 'brightness': this.onBrightnessConfirmed(); break;
+        case 'recovery': this.onRecoveryIdentityChanged(); break;
+      }
+    });
+  }
+
   @StorageLink('readerControlAlignment') @Watch('refreshDockPlacement')
   private manualControlAlignment: string = 'center';
   @StorageLink('readerAppForeground') @Watch('refreshDockPlacement')
   private gripForeground: boolean = true;
-  @Prop @Watch('refreshDockPlacement') bodySelectionPossible: boolean = false;
   @State private dockAlignment: ReaderControlAlignment = 'center';
   private readonly placement: ReaderControlPlacement = new ReaderControlPlacement();
   private readonly placementPointers: Set<number> = new Set();
@@ -260,7 +243,7 @@ export struct ReaderControlPanel {
       task.top >= shell.top - .5 && task.top + task.height <= shell.top + shell.height + .5 ? shell : task;
   }
   private mountEditingHost(): void {
-    this.editingHost.mount({ current: (): boolean => this.runtimeMounted && this.inputEnabled && !this.controlObscured &&
+    this.editingHost.mount({ current: (): boolean => this.runtimeMounted && this.currentFacts().geometry.inputEnabled && !this.currentFacts().geometry.obscured &&
         this.frame().visibility > 0,
       metrics: readerWindowMetrics,
       viewport: (): ReaderRectVp => new ReaderRectVp(this.rootScreenX, this.rootScreenY,
@@ -276,32 +259,13 @@ export struct ReaderControlPanel {
         this.reportBackdropRegions();
       } });
   }
-
-  @Prop sessionFontScale: number = 1;
   @StorageLink('readerAppScheme') private appScheme: string = 'day';
   @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
-  @Prop @Watch('onLaunchSampleChanged') launchSample: ReaderSessionLaunchSample | undefined = undefined;
-  @Prop @Watch('onLaunchSampleChanged') launchGeneration: number = 0;
-  @Prop @Watch('onLaunchSampleChanged') launchSourceMinimum: ReaderControlPlaybackLaunchProfile | undefined = undefined;
-  @Prop launchSourceKind: ReaderSessionMorphSourceKind = 'quickAutoPage';
-  @Prop launchBusinessStatus: ReaderSessionCapsuleState = 'preparing';
-  @Prop launchDesiredPlaying: boolean = true;
-  @Prop launchCountdown: number = 8;
-  @Prop launchStageOpacity: number = 1;
-  @Prop launchOwnsControls: boolean = false;
-  @Prop @Watch('onRuntimeEnabledChanged') launchRecovering: boolean = false;
-  onLaunchSourceReady: (generation: number) => void = (_generation: number): void => {};
   private launchSourceVisibleGeneration: number = 0;
   private launchSourceVisibleKind: ReaderSessionMorphSourceKind | undefined = undefined;
   private launchSourceReadyGeneration: number = 0;
-  @Prop launchInteractionEnabled: boolean = true;
-  @Prop launchSourceTtsState: ReaderTtsState = createReaderTtsState(false);
-  @Prop launchSourceAutoStatus: ReaderAutoPageStatus = 'stopped';
-  onLaunchToggle: () => void = (): void => {};
-  onSessionLaunchShellMeasured: (topExit: number, dockExit: number) => void =
-    (_topExit: number, _dockExit: number): void => {};
   private capturedLaunchGeneration: number = 0;
   private launchWaveformSample: ReaderTtsWaveformSample | undefined = undefined;
   private launchContentWidth: number = 286;
@@ -315,48 +279,47 @@ export struct ReaderControlPanel {
 
   private onLaunchSampleChanged(): void {
     this.refreshDockPlacement();
-    if (this.launchSample === undefined) {
+    const sample = this.currentFacts().launch.sample;
+    if (sample === undefined) {
       this.launchNaturalMinimum = undefined;
       this.launchMotionBounds = undefined;
       this.launchSourceVisibleGeneration = 0;
       this.launchSourceVisibleKind = undefined;
       return;
     }
-    if (this.capturedLaunchGeneration === this.launchGeneration) return;
-    const bundleRequired = this.minimumIdentity.length > 0;
-    const source = this.launchSourceMinimum;
-    if (bundleRequired && (source === undefined || source.generation !== this.launchGeneration ||
-      !readerControlPlaybackSourceKindMatches(source.kind, this.launchSample.type))) return;
+    if (this.capturedLaunchGeneration === this.currentFacts().launch.generation) return;
+    const bundleRequired = this.currentFacts().geometry.minimum.identity.length > 0;
+    const source = this.currentFacts().launch.sourceMinimum;
+    if (bundleRequired && (source === undefined || source.generation !== this.currentFacts().launch.generation ||
+      !readerControlPlaybackSourceKindMatches(source.kind, sample.type))) return;
     const receipt = bundleRequired ? source?.receipt : undefined;
     const naturalContract = bundleRequired && source?.requiresNaturalProfile === true;
     if (bundleRequired && source?.requiresNaturalProfile === false && receipt !== undefined) return;
-    if (naturalContract && (receipt === undefined || receipt.metricsRevision !== this.minimumMetricsRevision ||
-      !readerControlPlaybackProfileMatches(receipt, this.launchSample.type,
+    if (naturalContract && (receipt === undefined || receipt.metricsRevision !== this.currentFacts().geometry.minimum.metricsRevision ||
+      !readerControlPlaybackProfileMatches(receipt, sample.type,
       receipt.identity, receipt.key, receipt.metricsRevision))) return;
-    this.capturedLaunchGeneration = this.launchGeneration;
+    this.capturedLaunchGeneration = this.currentFacts().launch.generation;
     this.launchWaveformSample = readerTtsWaveformSnapshot();
-    if (this.launchSourceVisibleGeneration !== this.launchGeneration) {
+    if (this.launchSourceVisibleGeneration !== this.currentFacts().launch.generation) {
       this.launchSourceVisibleGeneration = 0;
       this.launchSourceVisibleKind = undefined;
     }
     this.launchNaturalMinimum = naturalContract ? receipt : undefined;
-    this.capturedLaunchSourceKind = bundleRequired && source !== undefined ? source.kind : this.launchSourceKind;
+    this.capturedLaunchSourceKind = bundleRequired && source !== undefined ? source.kind : this.currentFacts().launch.sourceKind;
     this.launchMotionProgress = naturalContract && source !== undefined ?
       (source.kind === 'fullTtsPlayback' || source.kind === 'fullAutoPagePlayback' ? 1 : 0) : this.contentMotionProgress;
-    const measuredBounds = this.fixedIsland ? undefined : this.launchNaturalMinimum?.bounds;
+    const measuredBounds = this.currentFacts().geometry.fixedIsland ? undefined : this.launchNaturalMinimum?.bounds;
     this.launchMotionBounds = measuredBounds ?? readerControlMotionBounds(this.currentLayout().fullPanelWidth,
       this.controlPanelHeight(), this.currentLayout().dockBottomGap, this.controlQuickHeight(), this.currentLayout().contentBudget);
     const endpoint = sampleReaderControlMotionComposition({ visibilityProgress: 1,
       expansionProgress: this.launchMotionProgress }, this.launchMotionBounds);
-    this.launchContentWidth = this.fixedIsland ? this.launchSample.sourceWidth :
+    this.launchContentWidth = this.currentFacts().geometry.fixedIsland ? sample.sourceWidth :
       this.launchNaturalMinimum === undefined ? this.contentMotionWidth : endpoint.content.width;
-    this.launchContentHeight = this.fixedIsland ? this.launchSample.sourceHeight :
+    this.launchContentHeight = this.currentFacts().geometry.fixedIsland ? sample.sourceHeight :
       this.launchNaturalMinimum === undefined ? this.contentMotionHeight : endpoint.content.height;
     this.launchFullContentHeight = this.launchNaturalMinimum?.fullContentHeightVp ?? this.contentEndpointHeight(true);
     this.confirmLaunchSourceReady();
   }
-
-  @Prop controlThemeStyle: ReaderControlThemeStyle = readerControlThemeStyle('day');
   @Link @Watch('onControlSessionChanged') controlSession: ReaderControlSessionState;
   // Keep clock/gesture decisions local. Only the scalars used by an actor
   // invalidate its observers; a MOVE must not invalidate the module branch.
@@ -388,7 +351,6 @@ export struct ReaderControlPanel {
   private temporaryInputKind: ReaderControlTemporaryInputKind = '';
   private endInlineEditing: (() => void | Promise<void>) | undefined = undefined;
   private runtimeMounted: boolean = false;
-  verificationSession: ReaderControlVerificationSession | undefined = undefined;
   private verifiedSearchResultScope: number = 0;
   private verifiedSearchResultCount: number = 0;
   private verificationMotion: ReaderControlVerificationMotion | undefined = undefined;
@@ -411,30 +373,8 @@ export struct ReaderControlPanel {
   @State private lastVisibleContentLocation: ReaderControlLocation = {
     level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick',
   };
-  @Prop @Watch('onRuntimeEnabledChanged') inputEnabled: boolean = true;
-  inputCurrent: (() => boolean) | undefined = undefined;
-  @Prop @Watch('onRuntimeEnabledChanged') controlObscured: boolean = false;
-  @Prop @Watch('syncProgressInput') controlOpenRevision: number = 0;
-  @Prop @Watch('onMinimumIdentityChanged') minimumIdentity: string = '';
-  @Prop @Watch('onCommittedMinimumIdentityChanged') minimumCommittedIdentity: string = '';
-  @Prop @Watch('publishMinimumMeasurer') minimumRequestLocation: ReaderControlLocation | undefined = undefined;
-  @Prop minimumOwnerKey: string = '';
-  @Prop @Watch('onMinimumMetricsChanged') minimumEnvironmentKey: string = '';
-  @Prop preparedMinimumRequired: boolean = false;
-  @Prop @Watch('onPresentationReceiptChanged') presentationReceipt: ReaderControlPresentationReceipt | undefined = undefined;
-  @Prop @Watch('publishSelectedPlaybackProfile') minimumKey: string = '';
-  @Prop @Watch('onMinimumMetricsChanged') minimumMetricsRevision: number = -1;
-  @Prop @Watch('onMinimumAvailabilityChanged') minimumReady: boolean = true;
-  minimumReceiptCurrent?: (key: string) => boolean;
-  onMinimumMeasurerReady: (identity: string, measurer: ReaderControlContentMeasurer | undefined,
-    profileReader?: ReaderControlMeasuredProfileReader, facts?: ReaderControlModuleFacts, factsGeometryKey?: string) => void =
-    (_identity: string, _measurer: ReaderControlContentMeasurer | undefined,
-      _profileReader?: ReaderControlMeasuredProfileReader, _facts?: ReaderControlModuleFacts, _factsGeometryKey?: string): void => {};
-  onSessionRequest: ((next: ReaderControlSessionState, origin: ReaderControlVerificationOrigin) => void) | undefined = undefined;
   private moduleMinimumMeasurer: ReaderControlModuleMeasurer | undefined = undefined;
   private moduleMinimumProfileReader: ReaderControlPlaybackProfileReader | undefined = undefined;
-  onPlaybackProfileSelected: (receipt: ReaderControlPlaybackProfileReceipt) => void =
-    (_receipt: ReaderControlPlaybackProfileReceipt): void => {};
   private moduleMinimumIdentity: string = '';
   private moduleMinimumModule: string = '';
   private minimumFontsReady: boolean = false;
@@ -455,55 +395,9 @@ export struct ReaderControlPanel {
   private directoryMinimumInputs: string = '';
   private readonly minimumProfileReader: ReaderControlMeasuredProfileReader =
     (key: string): ReaderControlMeasuredProfile | undefined => this.minimumProfiles.get(key);
-  @Prop @Watch('dismissMoreMenu') dismissTemporaryRevision: number = 0;
-  @Prop retireTemporaryRevision: number = 0;
-  @Prop @Watch('onTemporaryLayerActivityChanged') temporaryLayerKind: ReaderControlTemporaryInputKind = '';
-  onTemporaryLayerChange: (active: boolean, kind?: ReaderControlTemporaryInputKind) => void = (_active: boolean, _kind?: ReaderControlTemporaryInputKind): void => {};
-  /** Non-reactive telemetry path for system-back/close decisions mid-motion. */
-  onVisualSessionChange: (state: ReaderControlSessionState) => void =
-    (_state: ReaderControlSessionState): void => {};
-  onInputActivity: () => void = (): void => {};
-  onBackdropRegionsChange: (regions: ReaderControlBackdropRect[], ready: boolean) => void =
-    (_regions: ReaderControlBackdropRect[], _ready: boolean): void => {};
-  @Prop bookTitle: string = '';
-  @Prop @Watch('publishMinimumMeasurer') chapterTitle: string = '';
-  @Prop @Watch('onMinimumFactsPropsChanged') sourceId: string = '';
-  @Prop sourceBookId: string = '';
-  @Prop sourceName: string = '';
-  @Prop progressPercent: number = 0;
-  @Prop @Watch('publishMinimumMeasurer') totalChapters: number = 0;
-  @Prop @Watch('onMinimumFactsPropsChanged') readableChapterPosition: number = -1;
-  @Prop @Watch('onLayoutChanged') layout: ReaderControlLayoutSnapshot = createDefaultReaderControlLayout();
-  tocEntries: LocalReadingTocEntry[] = [];
-  directoryPublication: ReaderDirectoryDataPublication | undefined = undefined;
-  @Prop @Watch('onMinimumFactsPropsChanged') directoryEntriesRevision: number = 0;
   private currentDirectoryEntries(): LocalReadingTocEntry[] {
-    return this.directoryPublication?.entriesAt(this.directoryEntriesRevision) ?? this.tocEntries;
+    return this.currentFacts().document.catalog.publication?.entriesAt(this.currentFacts().document.catalog.revision) ?? this.currentFacts().document.catalog.defaultEntries;
   }
-  @Prop @Watch('onMinimumFactsPropsChanged') catalogComplete: boolean = true;
-  @Prop @Watch('onMinimumFactsPropsChanged') catalogLoading: boolean = false;
-  @Prop @Watch('onMinimumFactsPropsChanged') catalogLoadFailed: boolean = false;
-  @Prop @Watch('onMinimumFactsPropsChanged') catalogChapterCount: number = 0;
-  @Prop @Watch('onMinimumFactsPropsChanged') catalogCurrentPosition: number = -1;
-  onRequireCompleteCatalog: () => void = (): void => {};
-  @Prop @Watch('onMinimumFactsPropsChanged') currentChapterIndex: number = -1;
-  @Prop chapterStartBookmarkCreationEnabled: boolean = false;
-  @Prop chapterDownloadEnabled: boolean = false;
-  @Prop mangaSearch: boolean = false;
-  @Prop @Watch('onMinimumFactsPropsChanged') bookmarkLoadFailed: boolean = false;
-  @Prop @Watch('onMinimumFactsPropsChanged') bookmarkLoadMessage: string = '';
-  @Prop bookmarkRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
-  onRetryBookmarkLoad: () => void = (): void => {};
-  @Prop @Watch('onMinimumFactsPropsChanged') searchQuery: string = '';
-  searchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();
-  @Prop @Watch('onMinimumFactsPropsChanged') searchRevision: number = 0;
-  @Prop brightnessPercent: number = 100;
-  @Prop brightnessAutomatic: boolean = true;
-  @Prop directSheetRedesign: boolean = false;
-  @Prop fixedIsland: boolean = false;
-  @Prop @Watch('onPageBookmarkStatusChanged') pageBookmarkStatus: 'unknown' | 'empty' | 'bookmarked' = 'unknown';
-  @Prop pageBookmarkEnabled: boolean = false;
-  onTogglePageBookmark: () => void = (): void => {};
   @State private pageBookmarkFill: number = 0;
   @State private pageBookmarkTuck: number = 1;
   @State private moduleMotionX: number = 0;
@@ -516,52 +410,6 @@ export struct ReaderControlPanel {
   private directBudget: ReaderControlContentBudget | undefined = undefined;
   private directBudgetAvailable: number = 0;
   private modulePaintKey: string = '';
-  @Prop @Watch('onBrightnessConfirmed') brightnessRevision: number = 0;
-  @Prop @Watch('onMinimumFactsPropsChanged') autoPageStatus: ReaderAutoPageStatus = 'stopped';
-  @Prop autoPageSpeedSeconds: number = 8;
-  @Prop autoPageTimerMinutes: number = 15;
-  @Prop autoPageTimerSeconds: number = 0;
-  @Prop @Watch('onMinimumFactsPropsChanged') autoPageTimerSummaryText: string = '15:00';
-  @Prop autoPageFollowHighlight: boolean = true;
-  @Prop @Watch('onMinimumFactsPropsChanged') controlReplaceState: ReaderControlReplaceState = createReaderControlReplaceState();
-  @Prop @Watch('onMinimumFactsPropsChanged') appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
-  @Prop chineseConversionIdentity: string = '';
-  @Prop @Watch('onMinimumFactsPropsChanged') chineseConversionMode: ReaderChineseConversionMode = 'none';
-  @Prop @Watch('onMinimumFactsPropsChanged') settingsSnapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
-  @Prop widePageLayout: ReaderWidePageLayout = 'spread';
-  /** Native simulation capability for this mounted reading session. */
-  @Prop pageTurnSimulationAvailable: boolean = true;
-  @Prop @Watch('onMinimumFactsPropsChanged') ttsState: ReaderTtsState = createReaderTtsState(false);
-  @Prop @Watch('onMinimumFactsPropsChanged') ttsTimerMode: ReaderTtsTimerMode = 'duration';
-  @Prop @Watch('onMinimumFactsPropsChanged') ttsTimerMinutes: number = 25;
-  @Prop @Watch('onMinimumFactsPropsChanged') ttsTimerSeconds: number = 0;
-  @Prop ttsFollowHighlight: boolean = true;
-  @Prop ttsPauseOnInterruption: boolean = true;
-  @Prop @Watch('onMinimumFactsPropsChanged') ttsAllowMixing: boolean = false;
-  @Prop ttsBackgroundPlayback: boolean = true;
-  @Prop ttsKeepScreenOn: boolean = false;
-  @Prop @Watch('onMinimumFactsPropsChanged') ttsFailurePolicy: 'skip' | 'stop' = 'stop';
-  @Prop @Watch('onMinimumFactsPropsChanged') ttsEngine: string = 'system';
-  @Prop @Watch('onMinimumFactsPropsChanged') ttsHttpEngines: ReaderHttpTtsConfig[] = [];
-  @Prop ttsConfigurationRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
-  @Prop ttsConfigurationLoading: boolean = false;
-  @Prop ttsConfigurationLoadFailed: boolean = false;
-  @Prop @Watch('onMinimumFactsPropsChanged') ttsVoiceOptions: ReaderTtsVoiceOption[] = [];
-  @Prop @Watch('onMinimumFactsPropsChanged') ttsLanguage: string = 'zh-CN';
-  @Prop @Watch('onMinimumFactsPropsChanged') ttsPerson: number = 0;
-  @Prop @Watch('onLayoutChanged') reduceMotion: boolean = false;
-  onExitReading: () => void = (): void => {};
-  onDismiss: () => void = (): void => {};
-  onSourceSwitch: (focusId?: string) => void = (): void => {};
-  @Prop recoveryAvailable: boolean = false;
-  @Prop @Watch('onRecoveryIdentityChanged') recoveryIdentity: string = '';
-  onOpenRecovery: (identity: string) => void = (_identity: string): void => {};
-  onRefreshChapter: () => void = (): void => {};
-  onOpenBookInfo: () => void = (): void => {};
-  onDownloadBook: () => void = (): void => {};
-  @Prop chapterRefreshEnabled: boolean = false;
-  @Prop bookDownloadEnabled: boolean = false;
-  @Prop bookDownloadActive: boolean = false;
   @State private moreMenuVisible: boolean = false;
   @State private moreTopAnchor: ReaderRectVp | undefined = undefined;
   @State private moreShortAnchor: ReaderRectVp | undefined = undefined;
@@ -571,116 +419,6 @@ export struct ReaderControlPanel {
   private moreMenuMeasuredWidth: number = 0;
   private moreMenuWidthKey: string = '';
   private moreMenuOwnerScope: string = '';
-  onPageChange: (page: ReaderControlPage, origin: ReaderControlVerificationOrigin) => void =
-    (_page: ReaderControlPage, _origin: ReaderControlVerificationOrigin): void => {};
-  onModuleSelect: (module: string) => void = (_module: string): void => {};
-  onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
-  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof) => void =
-    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: ReaderDirectoryTargetProof): void => {};
-  // Bookmark tab precise-anchor wiring: undefined keeps the panel's legacy
-  // chapter-start fallback, so this stays a zero-regression opt-in.
-  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined =
-    undefined;
-  // Static per-session book identity for stable bookmark ids; plain member by
-  // contract (the identity never changes while the session is mounted).
-  bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
-  onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
-  onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
-  onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
-    (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
-  onPreviousChapter: () => void = (): void => {};
-  onNextChapter: () => void = (): void => {};
-  onProgressChange: (percent: number) => void = (_percent: number): void => {};
-  onBrightnessCancel: () => void = (): void => {};
-  onBrightnessChange: (percent: number) => void = (_percent: number): void => {};
-  onBrightnessAuto: () => void = (): void => {};
-  onSearchQueryChange: (query: string) => void = (_query: string): void => {};
-  onSearch: () => void = (): void => {};
-  onSearchLoadMore: () => void = (): void => {};
-  onSearchNeedMore: () => void = (): void => {};
-  onSearchResultSelect: (result: ReadingContentSearchResult, scope: number, ordinal: number) => void =
-    (_result: ReadingContentSearchResult, _scope: number, _ordinal: number): void => {};
-  onAutoPageToggle: () => void = (): void => {};
-  onAutoPageStop: () => void = (): void => {};
-  onAutoPageSlowDown: () => void = (): void => {};
-  onAutoPageSpeedUp: () => void = (): void => {};
-  onAutoPageFullTimerChange: (minutes: number, seconds: number) => void =
-    (_minutes: number, _seconds: number): void => {};
-  onAutoPageFullSpeedChange: (seconds: number, onDeclined?: () => void) => void =
-    (_seconds: number, onDeclined?: () => void): void => { onDeclined?.(); };
-  onAutoPageFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
-  onOpenReplace: () => void = (): void => {};
-  onReloadControlReplace: (operationId?: string) => Promise<void> = async (): Promise<void> => {};
-  onSaveControlReplace: (draft: ReaderControlReplaceDraft) => Promise<void> =
-    async (_draft: ReaderControlReplaceDraft): Promise<void> => {};
-  onToggleControlReplace: (rule: ReaderReplaceRule, value: boolean) => Promise<void> =
-    async (_rule: ReaderReplaceRule, _value: boolean): Promise<void> => {};
-  onDeleteControlReplace: (rule: ReaderReplaceRule) => Promise<void> =
-    async (_rule: ReaderReplaceRule): Promise<void> => {};
-  onPreviewControlReplace: () => Promise<ReaderReplacePreview> = async (): Promise<ReaderReplacePreview> => {
-    throw new Error('当前章节预览尚未就绪');
-  };
-  onImportControlReplace: () => Promise<void> = async (): Promise<void> => {};
-  onExportControlReplace: () => Promise<void> = async (): Promise<void> => {};
-  onAppearanceThemeChange: (theme: ReaderAppearanceTheme) => void =
-    (_theme: ReaderAppearanceTheme): void => {};
-  onAppearanceDayThemeChange: (theme: ReaderAppearanceTheme) => void =
-    (_theme: ReaderAppearanceTheme): void => {};
-  onAppearanceNightThemeChange: (theme: ReaderAppearanceTheme) => void =
-    (_theme: ReaderAppearanceTheme): void => {};
-  onAppearanceFontChange: (font: ReaderAppearanceFont) => void =
-    (_font: ReaderAppearanceFont): void => {};
-  onAppearanceFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]) => ReaderControlFontOrderPresentation =
-    (_fontOrder: ReaderAppearanceFontSlot[]): ReaderControlFontOrderPresentation =>
-      ({ displayed: Promise.resolve(false), retire: (): void => {}, current: (): boolean => false });
-  onAppearanceFontReorderActivityChange: (active: boolean) => void = (_active: boolean): void => {};
-  onAppearanceMotionActivityChange: (active: boolean) => void = (_active: boolean): void => {};
-  onAppearanceCustomFontImport: () => void = (): void => {};
-  onAppearanceIndentRequest: (indent: ReaderAppearanceIndent) => void =
-    (_indent: ReaderAppearanceIndent): void => {};
-  onAppearanceAlignmentRequest: (current: ReaderAppearanceAlignment) => void =
-    (_current: ReaderAppearanceAlignment): void => {};
-  onAppearanceMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection) => void =
-    (_metric: ReaderAppearanceMetric, _direction: ReaderAppearanceStepDirection): void => {};
-  onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string) => void =
-    (_mode: ReaderChineseConversionMode): void => {};
-  onSettingsToggleChange: (key: ReaderSettingsToggleKey, value: boolean) => void =
-    (_key: ReaderSettingsToggleKey, _value: boolean): void => {};
-  onWidePageLayoutChange: (value: ReaderWidePageLayout) => void = (_value: ReaderWidePageLayout): void => {};
-  onScreenDirectionChange: (direction: ReaderScreenDirection) => void =
-    (_direction: ReaderScreenDirection): void => {};
-  onScreenTimeoutChange: (timeout: ReaderScreenTimeout) => void =
-    (_timeout: ReaderScreenTimeout): void => {};
-  onPageTurnStyleChange: (style: ReaderPageTurnStyle) => void =
-    (_style: ReaderPageTurnStyle): void => {};
-  onTtsToggle: () => void = (): void => {};
-  onTtsStop: () => void = (): void => {};
-  onTtsPrevious: () => void = (): void => {};
-  onTtsNext: () => void = (): void => {};
-  onTtsSeek: (sliceIndex: number) => void = (_sliceIndex: number): void => {};
-  onTtsRateChange: (rate: number, onDeclined?: () => void) => void =
-    (_rate: number, onDeclined?: () => void): void => { onDeclined?.(); };
-  onTtsTimerChange: (minutes: number, seconds: number, mode?: ReaderTtsTimerMode) => void =
-    (_minutes: number, _seconds: number, _mode?: ReaderTtsTimerMode): void => {};
-  onTtsFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
-  onTtsPauseOnInterruptionChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
-  onTtsAllowMixingChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
-  onTtsBackgroundPlaybackChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
-  onTtsKeepScreenOnChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
-  onTtsFailurePolicyChange: (policy: 'skip' | 'stop') => void =
-    (_policy: 'skip' | 'stop'): void => {};
-  onTtsVoiceAudition: (language: string, person: number) => Promise<void> =
-    (_language: string, _person: number): Promise<void> => Promise.resolve();
-  onTtsAuditionStop: () => void = (): void => {};
-  onTtsVoiceChange: (language: string, person: number) => void =
-    (_language: string, _person: number): void => {};
-  onTtsConfigurationOpen: () => void = (): void => {};
-  onTtsEngineChange: (engine: string) => Promise<void> = (_engine: string): Promise<void> => Promise.resolve();
-  onTtsHttpEnginePut: (config: ReaderTtsConfigurationDraft) => Promise<void> =
-    (_config: ReaderTtsConfigurationDraft): Promise<void> => Promise.resolve();
-  onTtsHttpEngineDelete: (id: number) => Promise<void> = (_id: number): Promise<void> => Promise.resolve();
-  onSessionMorphSourceMeasured: (measurement: ReaderSessionMorphSourceMeasurement) => void =
-    (_measurement: ReaderSessionMorphSourceMeasurement): void => {};
   private sessionMorphMeasurementRevision: number = 0;
 
   private reportSessionMorphSource(
@@ -694,9 +432,8 @@ export struct ReaderControlPanel {
       !Number.isFinite(height) || width <= 0 || height <= 0) {
       return;
     }
-    if (this.launchOwnsControls || this.launchRecovering) return;
-    this.onSessionLaunchShellMeasured(this.currentLayout().topBarTop + this.currentLayout().topBarHeight,
-      this.currentLayout().viewportHeight - this.presentedDockTop() - this.frame().shell.y);
+    if (this.currentFacts().launch.ownsControls || this.currentFacts().launch.recovering) return;
+    this.onIntent({ kind: 'sessionLaunchShellMeasured', topExit: this.currentLayout().topBarTop + this.currentLayout().topBarHeight, dockExit: this.currentLayout().viewportHeight - this.presentedDockTop() - this.frame().shell.y });
     const frame = this.frame();
     const localLeft = left - this.rootScreenX;
     const localTop = top - this.rootScreenY;
@@ -708,7 +445,7 @@ export struct ReaderControlPanel {
     const visibleBottom = Math.min(height, clipTop + frame.content.height - localTop);
     if (visibleRight <= visibleLeft || visibleBottom <= visibleTop) return;
     this.sessionMorphMeasurementRevision += 1;
-    this.onSessionMorphSourceMeasured(new ReaderSessionMorphSourceMeasurement(
+    this.onIntent({ kind: 'sessionMorphSourceMeasured', measurement: new ReaderSessionMorphSourceMeasurement(
       kind,
       readerSessionMorphActorId(kind),
       left - this.rootScreenX,
@@ -716,24 +453,24 @@ export struct ReaderControlPanel {
       width,
       height,
       this.sessionMorphMeasurementRevision, visibleLeft, visibleTop, visibleRight, visibleBottom,
-      this.fixedIsland || kind === 'quickAutoPage' ? 12 : kind === 'fullTtsPlayback' ? 14 : 8,
-    ));
+      this.currentFacts().geometry.fixedIsland || kind === 'quickAutoPage' ? 12 : kind === 'fullTtsPlayback' ? 14 : 8,
+    ) });
   }
 
   private isLocalBook(): boolean {
-    return this.sourceId === 'local';
+    return this.currentFacts().document.source.id === 'local';
   }
 
   private sourceLabel(): string {
-    const label = this.sourceName.trim();
+    const label = this.currentFacts().document.source.name.trim();
     if (this.isLocalBook()) {
-      return label.length > 0 && label !== this.sourceId ? label : '本地书籍';
+      return label.length > 0 && label !== this.currentFacts().document.source.id ? label : '本地书籍';
     }
-    return label.length > 0 && label !== this.sourceId ? label : '在线书源';
+    return label.length > 0 && label !== this.currentFacts().document.source.id ? label : '在线书源';
   }
 
   private topBarSubtitle(): string {
-    const chapter = this.chapterTitle.trim();
+    const chapter = this.currentFacts().document.chapterTitle.trim();
     return chapter.length > 0 ? `${chapter} · ${this.sourceLabel()}` : this.sourceLabel();
   }
 
@@ -762,11 +499,12 @@ export struct ReaderControlPanel {
   private readonly controlMotionCurve = curves.cubicBezierCurve(0.2, 0, 0, 1);
 
   aboutToAppear(): void {
+    this.deliveredFrame = this.panelFrame;
     this.mountEditingHost();
     this.runtimeMounted = true;
-    this.pageBookmarkFill = this.pageBookmarkStatus === 'bookmarked' ? 1 : 0;
-    this.temporaryInputScope = (this.temporaryLayerKind !== '') ? this.currentTemporaryInputScope() : '';
-    this.temporaryInputKind = this.temporaryLayerKind;
+    this.pageBookmarkFill = this.currentFacts().document.bookmarks.pageStatus === 'bookmarked' ? 1 : 0;
+    this.temporaryInputScope = (this.currentFacts().geometry.temporary.layer !== '') ? this.currentTemporaryInputScope() : '';
+    this.temporaryInputKind = this.currentFacts().geometry.temporary.layer;
     this.runtimeLifecycle += 1;
     this.runtime = new ReaderControlRuntime(this.runtimeConfig(), readerMotionNowMs);
     this.acceptRuntime(this.runtime.start(this.controlSession));
@@ -801,7 +539,7 @@ export struct ReaderControlPanel {
     this.runtimeMounted = false;
     this.retireDockPlacement();
     this.runtimeLifecycle += 1;
-    this.onMinimumMeasurerReady(this.minimumIdentity, undefined);
+    this.onIntent({ kind: 'minimumMeasurerReady', identity: this.currentFacts().geometry.minimum.identity, measurer: undefined });
     this.minimumFontsReady = false;
     this.minimumProfiles.clear();
     this.launchNaturalMinimum = undefined;
@@ -810,8 +548,8 @@ export struct ReaderControlPanel {
     this.pendingRuntimeFrame = false;
     this.cancelBrightnessDrag();
     this.runtime?.stop();
-    this.onBackdropRegionsChange([], false);
-    this.onTemporaryLayerChange(false);
+    this.onIntent({ kind: 'backdropRegionsChange', regions: [], ready: false });
+    this.onIntent({ kind: 'temporaryLayerChange', active: false });
     this.setAppearanceFontReorderActivity(false);
   }
 
@@ -819,15 +557,15 @@ export struct ReaderControlPanel {
     return { axis: readerControlMotionAxis(readerControlMotionBounds(this.currentLayout().fullPanelWidth,
       this.controlPanelHeight(), this.currentLayout().dockBottomGap, this.controlQuickHeight(), this.currentLayout().contentBudget),
       this.rootScreenY + this.presentedDockTop()), tapMaxDurationMs: 500, directionSlopVp: 8,
-      settleDurationMs: readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion),
-      showDurationMs: readerControlMotionMs(READER_CONTROL_OPEN_MS, this.reduceMotion),
-      dismissDurationMs: readerControlMotionMs(READER_CONTROL_DISMISS_MS, this.reduceMotion), coordinatedMotion: true };
+      settleDurationMs: readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.currentFacts().geometry.reduceMotion),
+      showDurationMs: readerControlMotionMs(READER_CONTROL_OPEN_MS, this.currentFacts().geometry.reduceMotion),
+      dismissDurationMs: readerControlMotionMs(READER_CONTROL_DISMISS_MS, this.currentFacts().geometry.reduceMotion), coordinatedMotion: true };
   }
 
   private configureRuntime(): void {
     const runtime = this.runtime;
     if (runtime === undefined) return;
-    const verification = this.runtimeMounted ? this.verificationSession : undefined;
+    const verification = this.runtimeMounted ? this.currentFacts().geometry.verification : undefined;
     const request = verification?.current(this.visualSession);
     const observe = request !== undefined && request.direction === this.visualSession.transition?.kind;
     const update = runtime.configure(this.runtimeConfig(), observe);
@@ -837,7 +575,7 @@ export struct ReaderControlPanel {
 
   private acceptRuntime(update: ReaderControlRuntimeUpdate): void {
     if (!this.runtimeMounted) return;
-    const observed = this.verificationSession?.current(this.visualSession);
+    const observed = this.currentFacts().geometry.verification?.current(this.visualSession);
     if (this.visualSession.epoch !== update.session.epoch) {
       if (observed !== undefined) this.verificationMotion?.finish('interrupted', observed.transitionId);
       else this.verificationMotion?.finish('interrupted');
@@ -864,7 +602,7 @@ export struct ReaderControlPanel {
     this.motionOffsetY = update.offsetY;
     this.syncProgressInput();
     if (placementInputChanged) this.refreshDockPlacement();
-    if (sessionChanged) this.onVisualSessionChange(update.session);
+    if (sessionChanged) this.onIntent({ kind: 'visualSessionChange', state: update.session });
     if (update.endpoint !== undefined) this.commitVisualSession(update.endpoint);
     const f = this.frame();
     if (this.contentMotionProgress !== f.progress) this.contentMotionProgress = f.progress;
@@ -887,11 +625,11 @@ export struct ReaderControlPanel {
     const fromDirect = transition?.fromLocation.level === 'secondary' && readerControlIsDirectSheet(transition.fromLocation.module);
     const toDirect = target.level === 'secondary' && readerControlIsDirectSheet(target.module);
     this.visualDirectSheet = toDirect || fromDirect;
-    this.directSheetClosing = this.directSheetRedesign && fromDirect && target.level === 'home';
-    if (this.directSheetRedesign && !this.visualDirectSheet) this.directSheetReceipt = undefined;
+    this.directSheetClosing = this.currentFacts().geometry.directSheet && fromDirect && target.level === 'home';
+    if (this.currentFacts().geometry.directSheet && !this.visualDirectSheet) this.directSheetReceipt = undefined;
     const previous = this.modulePaintKey;
     this.modulePaintKey = active;
-    if (this.reduceMotion) {
+    if (this.currentFacts().geometry.reduceMotion) {
       this.moduleMotionX = 0;
       this.moduleMotionY = 0;
       if (fromDirect || toDirect) { this.moduleMotionOpacity = 1; return; }
@@ -940,7 +678,7 @@ export struct ReaderControlPanel {
       const update = runtime.frame(runtimeTickMs, ticket, (p: number): number => this.clockSample(p));
       if (update !== undefined) {
         const previous = this.visualSession;
-        const verification = this.verificationSession;
+        const verification = this.currentFacts().geometry.verification;
         const request = verification?.current(previous);
         // Use the component snapshot preceding this frame's publication. No
         // probe value is fed back to runtime or used to advance its clock.
@@ -948,7 +686,7 @@ export struct ReaderControlPanel {
           this.recordVerificationFrame(request, previous, frameTimeNs, runtimeTickMs, ticket, false);
         }
         if (previous.epoch !== update.session.epoch && update.session.transition !== undefined) {
-          verification?.accept('runtime-resume', previous, update.session, this.controlOpenRevision);
+          verification?.accept('runtime-resume', previous, update.session, this.currentFacts().geometry.openRevision);
         }
         this.acceptRuntime(update);
         if (request !== undefined && previous.transition?.kind === request.direction && this.verificationMotion !== undefined) {
@@ -999,9 +737,9 @@ export struct ReaderControlPanel {
   /** The pointer path uses existing touch/render callbacks and never drives the clock. */
   private acceptVerificationGesture(update: ReaderControlRuntimeUpdate, origin: ReaderControlVerificationOrigin): void {
     const previous = this.visualSession;
-    const verification = this.verificationSession;
+    const verification = this.currentFacts().geometry.verification;
     if (origin === 'grabber-down' && update.session.heldPointerId >= 0) this.verificationPointerStartY = this.runtime?.lastPointerY();
-    verification?.accept(origin, previous, update.session, this.controlOpenRevision, update.releaseMotion, update.cancelMotion);
+    verification?.accept(origin, previous, update.session, this.currentFacts().geometry.openRevision, update.releaseMotion, update.cancelMotion);
     this.acceptRuntime(update);
     const request = verification?.current(update.session);
     if (request === undefined || update.session.heldPointerId < 0 || this.verificationPointerFramePending) return;
@@ -1028,7 +766,7 @@ export struct ReaderControlPanel {
   }
 
   private minimumModule(): ReaderControlContentModule {
-    const location = this.preparedMinimumRequired ? this.minimumRequestLocation ?? readerControlContentLocation(this.controlSession) : this.contentLocation();
+    const location = this.currentFacts().geometry.minimum.preparedRequired ? this.currentFacts().geometry.minimum.requestLocation ?? readerControlContentLocation(this.controlSession) : this.contentLocation();
     return location.level === 'secondary' ? location.module : 'home';
   }
 
@@ -1042,84 +780,84 @@ export struct ReaderControlPanel {
 
   private defaultMinimumFacts(): ReaderControlModuleFacts {
     const module = this.minimumModule();
-    const location = this.minimumRequestLocation ?? readerControlContentLocation(this.controlSession);
+    const location = this.currentFacts().geometry.minimum.requestLocation ?? readerControlContentLocation(this.controlSession);
     if (module === 'directory') {
-      const inputs = JSON.stringify([this.minimumIdentity, location.directoryTab, this.currentChapterIndex,
-        this.catalogComplete, this.catalogChapterCount, this.catalogLoading, this.catalogLoadFailed,
-        this.catalogCurrentPosition, this.totalChapters, this.readableChapterPosition, this.mangaSearch,
-        this.bookmarkLoadFailed, this.bookmarkLoadMessage]);
+      const inputs = JSON.stringify([this.currentFacts().geometry.minimum.identity, location.directoryTab, this.currentFacts().document.chapterIndex,
+        this.currentFacts().document.catalog.complete, this.currentFacts().document.catalog.chapterCount, this.currentFacts().document.catalog.loading, this.currentFacts().document.catalog.loadFailed,
+        this.currentFacts().document.catalog.position, this.currentFacts().document.totalChapters, this.currentFacts().document.readableChapterPosition, this.currentFacts().document.search.manga,
+        this.currentFacts().document.bookmarks.loadFailed, this.currentFacts().document.bookmarks.message]);
       if (this.directoryMinimumFactsCache !== undefined && this.directoryMinimumEntries === this.currentDirectoryEntries() &&
-        this.directoryMinimumBook === this.bookmarkIdentity && this.directoryMinimumInputs === inputs) {
+        this.directoryMinimumBook === this.currentFacts().document.bookmarks.book && this.directoryMinimumInputs === inputs) {
         return this.directoryMinimumFactsCache;
       }
       const snapshot = readerControlDirectorySnapshot(this.currentDirectoryEntries(), location.directoryTab, '', true,
-        this.currentChapterIndex, this.bookmarkIdentity, { complete: this.catalogComplete,
-          chapterCount: this.catalogChapterCount, loading: this.catalogLoading, loadFailed: this.catalogLoadFailed,
-          currentPosition: this.catalogCurrentPosition, readableChapterCount: this.totalChapters,
-          readablePosition: this.readableChapterPosition }, this.mangaSearch);
+        this.currentFacts().document.chapterIndex, this.currentFacts().document.bookmarks.book, { complete: this.currentFacts().document.catalog.complete,
+          chapterCount: this.currentFacts().document.catalog.chapterCount, loading: this.currentFacts().document.catalog.loading, loadFailed: this.currentFacts().document.catalog.loadFailed,
+          currentPosition: this.currentFacts().document.catalog.position, readableChapterCount: this.currentFacts().document.totalChapters,
+          readablePosition: this.currentFacts().document.readableChapterPosition }, this.currentFacts().document.search.manga);
       const facts: ReaderControlModuleFacts = { module: module, directory: readerControlDirectoryMinimumFacts({ snapshot: snapshot,
-        tab: location.directoryTab, catalogComplete: this.catalogComplete,
-        bookmarkLoadFailed: this.bookmarkLoadFailed, bookmarkLoadMessage: this.bookmarkLoadMessage }) };
+        tab: location.directoryTab, catalogComplete: this.currentFacts().document.catalog.complete,
+        bookmarkLoadFailed: this.currentFacts().document.bookmarks.loadFailed, bookmarkLoadMessage: this.currentFacts().document.bookmarks.message }) };
       this.directoryMinimumEntries = this.currentDirectoryEntries();
-      this.directoryMinimumBook = this.bookmarkIdentity;
+      this.directoryMinimumBook = this.currentFacts().document.bookmarks.book;
       this.directoryMinimumInputs = inputs;
       this.directoryMinimumFactsCache = facts;
       return facts;
     }
     if (module === 'search') {
-      const state = this.searchPublication.stateAt(this.searchRevision);
-      return { module: module, search: readerControlSearchMinimumFacts({ query: this.searchQuery, state: state,
-        onlineBook: this.sourceId !== 'local' && (this.sourceId?.length ?? 0) > 0,
-        resultScope: this.searchPublication.resultScrollScopeFor(state), retainedLoadMoreFailure: false }) };
+      const state = this.currentFacts().document.search.publication.stateAt(this.currentFacts().document.search.revision);
+      return { module: module, search: readerControlSearchMinimumFacts({ query: this.currentFacts().document.search.query, state: state,
+        onlineBook: this.currentFacts().document.source.id !== 'local' && (this.currentFacts().document.source.id?.length ?? 0) > 0,
+        resultScope: this.currentFacts().document.search.publication.resultScrollScopeFor(state), retainedLoadMoreFailure: false }) };
     }
     if (module === 'settings') return { module: module, settings: readerControlSettingsMinimumFacts() };
     if (module === 'appearance') return { module: module, appearance: readerControlAppearanceMinimumFacts({
-      snapshot: this.appearanceSnapshot, chineseConversionMode: this.chineseConversionMode }) };
-    if (module === 'tts') return { module: module, tts: readerControlTtsMinimumFacts({ state: this.ttsState,
-      timerMode: this.ttsTimerMode, timerMinutes: this.ttsTimerMinutes, timerSeconds: this.ttsTimerSeconds,
-      failurePolicy: this.ttsFailurePolicy, allowMixing: this.ttsAllowMixing, engine: this.ttsEngine,
-      httpEngines: this.ttsHttpEngines, voiceOptions: this.ttsVoiceOptions, language: this.ttsLanguage,
-      person: this.ttsPerson, ratePreview: -1, serviceTab: '' }) };
+      snapshot: this.currentFacts().preferences.appearance, chineseConversionMode: this.currentFacts().preferences.conversion.mode }) };
+    if (module === 'tts') return { module: module, tts: readerControlTtsMinimumFacts({ state: this.currentFacts().playback.speech.state,
+      timerMode: this.currentFacts().playback.speech.timerMode, timerMinutes: this.currentFacts().playback.speech.timerMinutes, timerSeconds: this.currentFacts().playback.speech.timerSeconds,
+      failurePolicy: this.currentFacts().playback.speech.failurePolicy, allowMixing: this.currentFacts().playback.speech.allowMixing, engine: this.currentFacts().playback.speech.engine,
+      httpEngines: this.currentFacts().playback.speech.httpEngines, voiceOptions: this.currentFacts().playback.speech.voiceOptions, language: this.currentFacts().playback.speech.language,
+      person: this.currentFacts().playback.speech.person, ratePreview: -1, serviceTab: '' }) };
     if (module === 'autoPage') return { module: module, autoPage: readerControlAutoPageMinimumFacts({
-      status: this.autoPageStatus, timerSummary: this.autoPageTimerSummaryText }) };
+      status: this.currentFacts().playback.automatic.status, timerSummary: this.currentFacts().playback.automatic.timerSummary }) };
     if (module === 'replace') return { module: module, replace: readerControlReplaceMinimumFacts({
-      state: this.controlReplaceState, localError: '', layer: '', temporaryTitle: '', full: location.form === 'full' }) };
-    return { module: 'home', home: { chapterTitle: this.chapterTitle, totalChapters: this.totalChapters } };
+      state: this.currentFacts().document.replace, localError: '', layer: '', temporaryTitle: '', full: location.form === 'full' }) };
+    return { module: 'home', home: { chapterTitle: this.currentFacts().document.chapterTitle, totalChapters: this.currentFacts().document.totalChapters } };
   }
 
   private presentedHomeChapterTitle(): string {
-    return this.preparedMinimumRequired ? this.presentationReceipt?.facts?.home?.chapterTitle ?? '' : this.chapterTitle;
+    return this.currentFacts().geometry.minimum.preparedRequired ? this.currentFacts().geometry.minimum.receipt?.facts?.home?.chapterTitle ?? '' : this.currentFacts().document.chapterTitle;
   }
 
   private presentedHomeTotalChapters(): number {
-    return this.preparedMinimumRequired ? this.presentationReceipt?.facts?.home?.totalChapters ?? 0 : this.totalChapters;
+    return this.currentFacts().geometry.minimum.preparedRequired ? this.currentFacts().geometry.minimum.receipt?.facts?.home?.totalChapters ?? 0 : this.currentFacts().document.totalChapters;
   }
 
   private currentLayout(): ReaderControlLayoutSnapshot {
     const receipt = this.paintedPresentationReceipt();
-    return this.preparedMinimumRequired && receipt !== undefined && receipt.ownerKey === this.minimumOwnerKey ? receipt.layout : this.layout;
+    return this.currentFacts().geometry.minimum.preparedRequired && receipt !== undefined && receipt.ownerKey === this.currentFacts().geometry.minimum.ownerKey ? receipt.layout : this.currentFacts().geometry.layout;
   }
 
   private paintedPresentationReceipt(): ReaderControlPresentationReceipt | undefined {
-    return this.directSheetClosing ? this.directSheetReceipt ?? this.presentationReceipt : this.presentationReceipt;
+    return this.directSheetClosing ? this.directSheetReceipt ?? this.currentFacts().geometry.minimum.receipt : this.currentFacts().geometry.minimum.receipt;
   }
 
   private currentMinimumKey(): string {
-    return this.preparedMinimumRequired ? this.paintedPresentationReceipt()?.key ?? '' : this.minimumKey;
+    return this.currentFacts().geometry.minimum.preparedRequired ? this.paintedPresentationReceipt()?.key ?? '' : this.currentFacts().geometry.minimum.key;
   }
 
   private currentMinimumIdentity(): string {
-    return this.preparedMinimumRequired ? this.paintedPresentationReceipt()?.identity ?? '' : this.minimumIdentity;
+    return this.currentFacts().geometry.minimum.preparedRequired ? this.paintedPresentationReceipt()?.identity ?? '' : this.currentFacts().geometry.minimum.identity;
   }
 
   private committedMinimumIdentity(): string {
-    return this.minimumCommittedIdentity || this.minimumIdentity;
+    return this.currentFacts().geometry.minimum.committedIdentity || this.currentFacts().geometry.minimum.identity;
   }
 
   private preparedMinimum(): ReaderControlPreparedModuleProfile | undefined {
     const prepared = this.minimumPresentationAvailable() ? this.paintedPresentationReceipt()?.prepared : undefined;
     if (prepared === undefined) return undefined;
-    const scope = `${this.minimumOwnerKey}|${this.currentMinimumIdentity()}|${this.currentMoreMenuOwnerScope()}`;
+    const scope = `${this.currentFacts().geometry.minimum.ownerKey}|${this.currentMinimumIdentity()}|${this.currentMoreMenuOwnerScope()}`;
     if (this.preparedInputSource !== prepared || this.preparedInputScope !== scope || this.preparedInputProfile === undefined) {
       this.preparedInputSource = prepared;
       this.preparedInputScope = scope;
@@ -1130,9 +868,9 @@ export struct ReaderControlPanel {
   }
 
   private minimumPresentationAvailable(): boolean {
-    if (!this.preparedMinimumRequired) return true;
+    if (!this.currentFacts().geometry.minimum.preparedRequired) return true;
     const receipt = this.paintedPresentationReceipt();
-    return receipt !== undefined && receipt.ownerKey === this.minimumOwnerKey &&
+    return receipt !== undefined && receipt.ownerKey === this.currentFacts().geometry.minimum.ownerKey &&
       receipt.key === receipt.layout.minimumKey &&
       receipt.profile.identity === receipt.identity && (receipt.profile.module === 'home' ||
         (receipt.prepared !== undefined && receipt.prepared.identity === receipt.identity && receipt.prepared.key === receipt.key));
@@ -1140,14 +878,14 @@ export struct ReaderControlPanel {
 
   private onPresentationReceiptChanged(): void {
     if (!this.minimumPresentationAvailable()) return;
-    const receipt = this.presentationReceipt;
-    if (receipt === undefined || receipt.identity !== this.committedMinimumIdentity() || receipt.environmentKey !== this.minimumEnvironmentKey) return;
+    const receipt = this.currentFacts().geometry.minimum.receipt;
+    if (receipt === undefined || receipt.identity !== this.committedMinimumIdentity() || receipt.environmentKey !== this.currentFacts().geometry.minimum.environmentKey) return;
     const location = receipt.location;
     const previous = this.lastVisibleContentLocation;
-    if (this.directSheetRedesign && location.level === 'secondary' && readerControlIsDirectSheet(location.module)) {
+    if (this.currentFacts().geometry.directSheet && location.level === 'secondary' && readerControlIsDirectSheet(location.module)) {
       this.directSheetReceipt = receipt;
     }
-    if (this.directSheetRedesign && location.level === 'home' && previous.level === 'secondary' &&
+    if (this.currentFacts().geometry.directSheet && location.level === 'home' && previous.level === 'secondary' &&
       readerControlIsDirectSheet(previous.module) && (this.directSheetClosing ||
         this.controlSession.transition?.fromLocation.level === 'secondary' && this.controlSession.transition.toLocation.level === 'home')) return;
     if (location.level !== 'hidden' && (location.level !== previous.level || location.module !== previous.module ||
@@ -1170,12 +908,12 @@ export struct ReaderControlPanel {
     this.temporaryInputKind = '';
     this.endInlineEditing = undefined;
     this.temporaryInputScope = '';
-    if (this.runtimeMounted) this.onTemporaryLayerChange(false);
+    if (this.runtimeMounted) this.onIntent({ kind: 'temporaryLayerChange', active: false });
     this.onPresentationReceiptChanged();
   }
 
   private onModuleMinimumFactsChanged(identity: string, facts: ReaderControlModuleFacts): void {
-    if (!this.runtimeMounted || identity !== this.minimumIdentity || facts.module !== this.minimumModule()) return;
+    if (!this.runtimeMounted || identity !== this.currentFacts().geometry.minimum.identity || facts.module !== this.minimumModule()) return;
     const defaults = this.defaultMinimumFacts();
     this.minimumOwnerFactsSignature = readerControlModuleFactsGeometryKey(defaults);
     this.minimumOwnerFacts = defaults;
@@ -1184,7 +922,7 @@ export struct ReaderControlPanel {
   }
 
   private onMinimumIdentityChanged(): void {
-    if (this.moduleMinimumIdentity !== this.minimumIdentity) {
+    if (this.moduleMinimumIdentity !== this.currentFacts().geometry.minimum.identity) {
       this.moduleMinimumMeasurer = undefined;
       this.localMinimumFacts = undefined;
       this.minimumOwnerFactsSignature = '';
@@ -1203,17 +941,17 @@ export struct ReaderControlPanel {
   }
 
   private minimumInputReady(): boolean {
-    if (this.preparedMinimumRequired) {
-      const receipt = this.presentationReceipt;
+    if (this.currentFacts().geometry.minimum.preparedRequired) {
+      const receipt = this.currentFacts().geometry.minimum.receipt;
       const budget = receipt?.layout.contentBudget;
       const viewport = this.contentMotionProgress === 1 ? budget?.fullContentHeightVp : budget?.quickContentHeightVp;
       return this.minimumPresentationAvailable() && receipt !== undefined && receipt.identity === this.committedMinimumIdentity() &&
-        receipt.environmentKey === this.minimumEnvironmentKey &&
-        (this.minimumReceiptCurrent?.(receipt.key) ?? false) && viewport !== undefined && Number.isFinite(viewport) && viewport > 0;
+        receipt.environmentKey === this.currentFacts().geometry.minimum.environmentKey &&
+        ((this.onIntent({ kind: 'minimumReceiptCurrent', key: receipt.key }) as boolean | undefined) ?? false) && viewport !== undefined && Number.isFinite(viewport) && viewport > 0;
     }
-    const ready = this.minimumIdentity.length === 0 ||
-      (this.minimumReady && this.minimumKey.startsWith(`${this.minimumIdentity}|`) &&
-        (this.minimumReceiptCurrent?.(this.minimumKey) ?? true));
+    const ready = this.currentFacts().geometry.minimum.identity.length === 0 ||
+      (this.currentFacts().geometry.minimum.ready && this.currentFacts().geometry.minimum.key.startsWith(`${this.currentFacts().geometry.minimum.identity}|`) &&
+        ((this.onIntent({ kind: 'minimumReceiptCurrent', key: this.currentFacts().geometry.minimum.key }) as boolean | undefined) ?? true));
     const budget = this.currentLayout().contentBudget;
     const viewport = this.contentMotionProgress === 1 ? budget?.fullContentHeightVp : budget?.quickContentHeightVp;
     return ready && (viewport === undefined || Number.isFinite(viewport) && viewport > 0);
@@ -1224,8 +962,8 @@ export struct ReaderControlPanel {
       this.diagnosticReadyEvents += 1;
       hilog.info(0xD004, 'ReaderControlDiagnostic',
         'stage=ready-changed ready=%{public}s prefix=%{public}s effective=%{public}s input=%{public}s obscured=%{public}s',
-        String(this.minimumReady), String(this.minimumKey.startsWith(`${this.minimumIdentity}|`)),
-        String(this.minimumInputReady()), String(this.inputEnabled), String(this.controlObscured));
+        String(this.currentFacts().geometry.minimum.ready), String(this.currentFacts().geometry.minimum.key.startsWith(`${this.currentFacts().geometry.minimum.identity}|`)),
+        String(this.minimumInputReady()), String(this.currentFacts().geometry.inputEnabled), String(this.currentFacts().geometry.obscured));
     }
     if (!this.minimumInputReady() || (this.brightnessDragging && this.brightnessDragCurrent?.() === false)) this.cancelBrightnessDrag();
     this.syncProgressInput();
@@ -1234,7 +972,7 @@ export struct ReaderControlPanel {
 
   private bindModuleMinimum(module: ReaderControlContentModule, identity: string,
     measurer: ReaderControlModuleMeasurer | undefined, profileReader?: ReaderControlPlaybackProfileReader): void {
-    if (this.preparedMinimumRequired) return;
+    if (this.currentFacts().geometry.minimum.preparedRequired) return;
     if (DEBUG && this.diagnosticBindGeneration < 32 && (identity !== this.diagnosticMinimumIdentity || module !== this.diagnosticMinimumModule ||
       measurer !== this.diagnosticMinimumMeasurer)) {
       this.diagnosticMinimumIdentity = identity;
@@ -1243,10 +981,10 @@ export struct ReaderControlPanel {
       this.diagnosticBindGeneration += 1;
       hilog.info(0xD004, 'ReaderControlDiagnostic',
         'stage=module-bind generation=%{public}d mounted=%{public}s identityMatch=%{public}s moduleMatch=%{public}s hasDelegate=%{public}s',
-        this.diagnosticBindGeneration, String(this.runtimeMounted), String(identity === this.minimumIdentity),
+        this.diagnosticBindGeneration, String(this.runtimeMounted), String(identity === this.currentFacts().geometry.minimum.identity),
         String(module === this.minimumModule()), String(measurer !== undefined));
     }
-    if (!this.runtimeMounted || identity !== this.minimumIdentity || module !== this.minimumModule()) return;
+    if (!this.runtimeMounted || identity !== this.currentFacts().geometry.minimum.identity || module !== this.minimumModule()) return;
     this.moduleMinimumMeasurer = measurer;
     this.moduleMinimumProfileReader = profileReader;
     this.moduleMinimumIdentity = identity;
@@ -1255,10 +993,10 @@ export struct ReaderControlPanel {
   }
 
   private publishMinimumMeasurer(): void {
-    if (!this.runtimeMounted || !this.minimumFontsReady || this.minimumIdentity.length === 0) return;
-    const identity = this.minimumIdentity;
+    if (!this.runtimeMounted || !this.minimumFontsReady || this.currentFacts().geometry.minimum.identity.length === 0) return;
+    const identity = this.currentFacts().geometry.minimum.identity;
     const module = this.minimumModule();
-    if (this.preparedMinimumRequired) {
+    if (this.currentFacts().geometry.minimum.preparedRequired) {
       const defaults = this.defaultMinimumFacts();
       const ownerSignature = readerControlModuleFactsGeometryKey(defaults);
       if (ownerSignature !== this.minimumOwnerFactsSignature || !readerControlModuleFactsDisplayEqual(defaults, this.minimumOwnerFacts)) {
@@ -1267,20 +1005,19 @@ export struct ReaderControlPanel {
         this.minimumOwnerFacts = defaults;
       }
       const facts = this.localMinimumFacts ?? defaults;
-      const signature = JSON.stringify([identity, this.minimumEnvironmentKey, this.chapterTitle, this.totalChapters,
+      const signature = JSON.stringify([identity, this.currentFacts().geometry.minimum.environmentKey, this.currentFacts().document.chapterTitle, this.currentFacts().document.totalChapters,
         readerControlModuleFactsGeometryKey(facts)]);
       if (signature === this.minimumFactsSignature && readerControlModuleFactsDisplayEqual(facts, this.publishedMinimumFacts)) return;
       this.minimumFactsSignature = signature;
       this.publishedMinimumFacts = facts;
       this.moduleMinimumIdentity = identity;
       this.moduleMinimumModule = module;
-      this.onMinimumMeasurerReady(identity,
-        (widths: ReaderControlCandidateWidths, key: string): ReaderControlCandidateMinimum | undefined => {
-          if (!this.runtimeMounted || identity !== this.minimumIdentity || signature !== this.minimumFactsSignature ||
+      this.onIntent({ kind: 'minimumMeasurerReady', identity, measurer: (widths: ReaderControlCandidateWidths, key: string): ReaderControlCandidateMinimum | undefined => {
+          if (!this.runtimeMounted || identity !== this.currentFacts().geometry.minimum.identity || signature !== this.minimumFactsSignature ||
             facts !== this.publishedMinimumFacts ||
             module !== this.minimumModule()) return undefined;
           return this.measureControlMinimum(module, widths, key, undefined, undefined, facts);
-        }, this.minimumProfileReader, facts, signature);
+        }, profileReader: this.minimumProfileReader, facts, factsGeometryKey: signature });
       return;
     }
     const delegate = this.moduleMinimumIdentity === identity && this.moduleMinimumModule === module ?
@@ -1288,19 +1025,18 @@ export struct ReaderControlPanel {
     const profileReader = this.moduleMinimumIdentity === identity && this.moduleMinimumModule === module ?
       this.moduleMinimumProfileReader : undefined;
     if (module !== 'home' && delegate === undefined) {
-      this.onMinimumMeasurerReady(identity, undefined);
+      this.onIntent({ kind: 'minimumMeasurerReady', identity, measurer: undefined });
       return;
     }
-    this.onMinimumMeasurerReady(identity,
-      (widths: ReaderControlCandidateWidths, key: string): ReaderControlCandidateMinimum | undefined => {
-        if (!this.runtimeMounted || identity !== this.minimumIdentity || module !== this.minimumModule()) return undefined;
+    this.onIntent({ kind: 'minimumMeasurerReady', identity, measurer: (widths: ReaderControlCandidateWidths, key: string): ReaderControlCandidateMinimum | undefined => {
+        if (!this.runtimeMounted || identity !== this.currentFacts().geometry.minimum.identity || module !== this.minimumModule()) return undefined;
         return this.measureControlMinimum(module, widths, key, delegate, profileReader);
-      });
+      } });
   }
 
   private measureHomeForm(width: number): ReaderControlHomeFormProfile | undefined {
     const context = this.getUIContext();
-    const title = measureReaderControlText(context, this.chapterTitle,
+    const title = measureReaderControlText(context, this.currentFacts().document.chapterTitle,
       TYPE_READER_CONTROL_CHAPTER_TITLE, Math.max(1, width - 106));
     const percent = measureReaderControlText(context, '100%',
       TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL, Math.max(1, width));
@@ -1334,13 +1070,13 @@ export struct ReaderControlPanel {
     key: string, delegate: ReaderControlModuleMeasurer | undefined,
     profileReader?: ReaderControlPlaybackProfileReader, facts?: ReaderControlModuleFacts): ReaderControlCandidateMinimum | undefined {
     const topBarHeight = readerReadingTopBarHeight(this.getUIContext(), 'reading', READER_CONTROL_TOP_BAR_HEIGHT);
-    const availableWithTopBar = this.layout.fullPanelHeight + this.layout.fullPanelTop -
-      Math.max(READER_FULL_PANEL_TOP, this.layout.topBarTop + topBarHeight + 8);
-    const location = this.preparedMinimumRequired ? this.minimumRequestLocation ?? readerControlContentLocation(this.controlSession) : this.contentLocation();
+    const availableWithTopBar = this.currentFacts().geometry.layout.fullPanelHeight + this.currentFacts().geometry.layout.fullPanelTop -
+      Math.max(READER_FULL_PANEL_TOP, this.currentFacts().geometry.layout.topBarTop + topBarHeight + 8);
+    const location = this.currentFacts().geometry.minimum.preparedRequired ? this.currentFacts().geometry.minimum.requestLocation ?? readerControlContentLocation(this.controlSession) : this.contentLocation();
     const measured = measureReaderControlMinimum({ context: this.getUIContext(), headerInter: this.minimumHeaderInter(module),
-      title: this.minimumTitle(module, location.directoryTab), identity: this.minimumIdentity, metricsRevision: this.minimumMetricsRevision,
+      title: this.minimumTitle(module, location.directoryTab), identity: this.currentFacts().geometry.minimum.identity, metricsRevision: this.currentFacts().geometry.minimum.metricsRevision,
       topBarHeightVp: topBarHeight, availableWithTopBarHeightVp: availableWithTopBar,
-      moduleFacts: facts, preparedMinimumRequired: this.preparedMinimumRequired,
+      moduleFacts: facts, preparedMinimumRequired: this.currentFacts().geometry.minimum.preparedRequired,
       measureHomeForm: (width: number): ReaderControlHomeFormProfile | undefined => this.measureHomeForm(width) },
       module, widths, key, delegate, profileReader);
     if (measured === undefined) return undefined;
@@ -1357,33 +1093,33 @@ export struct ReaderControlPanel {
   }
 
   private selectedMinimumProfile(): ReaderControlMeasuredProfile | undefined {
-    if (this.preparedMinimumRequired) return this.minimumPresentationAvailable() ? this.presentationReceipt?.profile : undefined;
-    return this.minimumKey.length > 0 ? this.minimumProfiles.get(this.minimumKey) : undefined;
+    if (this.currentFacts().geometry.minimum.preparedRequired) return this.minimumPresentationAvailable() ? this.currentFacts().geometry.minimum.receipt?.profile : undefined;
+    return this.currentFacts().geometry.minimum.key.length > 0 ? this.minimumProfiles.get(this.currentFacts().geometry.minimum.key) : undefined;
   }
 
   private publishSelectedPlaybackProfile(): void {
     const profile = this.selectedMinimumProfile();
-    const module = this.preparedMinimumRequired ? profile?.module : this.minimumModule();
-    const identity = this.preparedMinimumRequired ? this.committedMinimumIdentity() : this.minimumIdentity;
+    const module = this.currentFacts().geometry.minimum.preparedRequired ? profile?.module : this.minimumModule();
+    const identity = this.currentFacts().geometry.minimum.preparedRequired ? this.committedMinimumIdentity() : this.currentFacts().geometry.minimum.identity;
     const key = this.currentMinimumKey();
-    if (!this.runtimeMounted || !this.minimumReady ||
+    if (!this.runtimeMounted || !this.currentFacts().geometry.minimum.ready ||
       (module !== 'tts' && module !== 'autoPage') || profile === undefined || profile.playbackData === undefined ||
       profile.module !== module || profile.identity !== identity ||
-      (this.preparedMinimumRequired && (!this.minimumInputReady() || !this.minimumPresentationAvailable())) ||
-      (!this.preparedMinimumRequired && profile.metricsRevision !== this.minimumMetricsRevision) || this.currentLayout().minimumKey !== key ||
+      (this.currentFacts().geometry.minimum.preparedRequired && (!this.minimumInputReady() || !this.minimumPresentationAvailable())) ||
+      (!this.currentFacts().geometry.minimum.preparedRequired && profile.metricsRevision !== this.currentFacts().geometry.minimum.metricsRevision) || this.currentLayout().minimumKey !== key ||
       !key.startsWith(`${identity}|`) ||
       profile.widths.panelWidthVp !== this.currentLayout().fullPanelWidth) return;
-    const facts = this.presentationReceipt?.facts;
+    const facts = this.currentFacts().geometry.minimum.receipt?.facts;
     const layout = this.currentLayout();
     const budget = layout.contentBudget;
     if (budget === undefined) return;
-    const data: ReaderControlPlaybackProfileData = this.preparedMinimumRequired ? {
+    const data: ReaderControlPlaybackProfileData = this.currentFacts().geometry.minimum.preparedRequired ? {
       tts: profile.playbackData.tts, autoPage: profile.playbackData.autoPage,
       ttsPlaybackErrorHeight: profile.playbackData.ttsPlaybackErrorHeight,
       ttsFacts: facts?.tts, autoPageFacts: facts?.autoPage,
     } : profile.playbackData;
     const receipt: ReaderControlPlaybackProfileReceipt = { module: module, identity: profile.identity,
-      key: key, metricsRevision: this.minimumMetricsRevision, widths: profile.widths,
+      key: key, metricsRevision: this.currentFacts().geometry.minimum.metricsRevision, widths: profile.widths,
       data: data, layout: layout,
       // The prepared profile describes the measurement candidate. The
       // visible card and fixed island shell are captured separately at launch.
@@ -1391,7 +1127,7 @@ export struct ReaderControlPanel {
         layout.dockBottomGap, layout.quickPanelHeight, budget),
       quickContentHeightVp: budget.quickContentHeightVp, fullContentHeightVp: budget.fullContentHeightVp };
     if (readerControlPlaybackProfileMatches(receipt, module, identity,
-      key, this.minimumMetricsRevision)) this.onPlaybackProfileSelected(receipt);
+      key, this.currentFacts().geometry.minimum.metricsRevision)) this.onIntent({ kind: 'playbackProfileSelected', receipt });
   }
 
   private homeMetric(name: 'chapterTitleHeight' | 'chapterRowHeight' | 'progressHeight' | 'percentWidth' |
@@ -1414,26 +1150,26 @@ export struct ReaderControlPanel {
   }
 
   private onRuntimeEnabledChanged(): void {
-    if (this.moreMenuVisible && (!this.inputEnabled || this.controlObscured)) this.dismissMoreMenu();
+    if (this.moreMenuVisible && (!this.currentFacts().geometry.inputEnabled || this.currentFacts().geometry.obscured)) this.dismissMoreMenu();
     if (this.runtime !== undefined) {
-      this.acceptRuntime(this.runtime.setEnabled((this.inputEnabled || this.launchRecovering) && !this.controlObscured));
+      this.acceptRuntime(this.runtime.setEnabled((this.currentFacts().geometry.inputEnabled || this.currentFacts().launch.recovering) && !this.currentFacts().geometry.obscured));
     }
     this.syncProgressInput();
-    if (!this.inputEnabled || this.controlObscured) this.placementPointers.clear();
+    if (!this.currentFacts().geometry.inputEnabled || this.currentFacts().geometry.obscured) this.placementPointers.clear();
     this.refreshDockPlacement();
   }
 
   private onTemporaryLayerActivityChanged(): void {
-    this.temporaryInputScope = (this.temporaryLayerKind !== '') ? this.currentTemporaryInputScope() : '';
-    this.temporaryInputKind = this.temporaryLayerKind;
+    this.temporaryInputScope = (this.currentFacts().geometry.temporary.layer !== '') ? this.currentTemporaryInputScope() : '';
+    this.temporaryInputKind = this.currentFacts().geometry.temporary.layer;
     if (DEBUG && this.diagnosticTemporaryEvents < 32) {
       this.diagnosticTemporaryEvents += 1;
       hilog.info(0xD004, 'ReaderControlDiagnostic',
         'stage=temporary-changed active=%{public}s ready=%{public}s input=%{public}s obscured=%{public}s',
-        String((this.temporaryLayerKind !== '')), String(this.minimumInputReady()),
-        String(this.inputEnabled), String(this.controlObscured));
+        String((this.currentFacts().geometry.temporary.layer !== '')), String(this.minimumInputReady()),
+        String(this.currentFacts().geometry.inputEnabled), String(this.currentFacts().geometry.obscured));
     }
-    if ((this.temporaryLayerKind !== '')) this.cancelBrightnessDrag();
+    if ((this.currentFacts().geometry.temporary.layer !== '')) this.cancelBrightnessDrag();
     this.syncProgressInput();
     this.refreshDockPlacement();
   }
@@ -1447,7 +1183,7 @@ export struct ReaderControlPanel {
   }
 
   private handleControlTouch(event: TouchEvent): void {
-    if (this.fixedIsland) return;
+    if (this.currentFacts().geometry.fixedIsland) return;
     const runtime = this.runtime;
     if (DEBUG) {
       if (event.type === TouchType.Down) this.diagnosticControlMoveLogged = false;
@@ -1457,22 +1193,22 @@ export struct ReaderControlPanel {
         hilog.info(0xD004, 'ReaderControlDiagnostic',
           'stage=control-touch type=%{public}d ready=%{public}s owner=%{public}d input=%{public}s obscured=%{public}s',
           event.type, String(this.minimumInputReady()), runtime?.owner() ?? -1,
-          String(this.inputEnabled), String(this.controlObscured));
+          String(this.currentFacts().geometry.inputEnabled), String(this.currentFacts().geometry.obscured));
       }
     }
-    if (!this.runtimeMounted || runtime === undefined || !this.inputEnabled || this.controlObscured) return;
+    if (!this.runtimeMounted || runtime === undefined || !this.currentFacts().geometry.inputEnabled || this.currentFacts().geometry.obscured) return;
     if (event.type === TouchType.Cancel) {
       if (runtime.owner() >= 0) event.stopPropagation();
       this.acceptVerificationGesture(
-        runtime.cancel(this.verificationSession?.observing() === true), 'grabber-cancel'); return;
+        runtime.cancel(this.currentFacts().geometry.verification?.observing() === true), 'grabber-cancel'); return;
     }
     const pointers = event.changedTouches.length > 0 ? event.changedTouches : event.touches;
     if (event.type === TouchType.Down) {
       // A successor measurement fences new gestures, not the original
       // pointer's Move/Up/Cancel while its accepted runtime rebases the axis.
-      if (this.inputCurrent?.() === false || !this.minimumInputReady()) return;
-      if (pointers.length > 0 && runtime.owner() < 0 && this.temporaryLayerKind === '') {
-        this.onInputActivity();
+      if ((this.onIntent({ kind: 'inputCurrent' }) as boolean | undefined) === false || !this.minimumInputReady()) return;
+      if (pointers.length > 0 && runtime.owner() < 0 && this.currentFacts().geometry.temporary.layer === '') {
+        this.onIntent({ kind: 'inputActivity' });
         this.inputClock = new ReaderPageInputClock();
         const time = this.inputClock.sample(event.timestamp, readerMotionNowMs());
         if (DEBUG) {
@@ -1503,7 +1239,7 @@ export struct ReaderControlPanel {
       }
       if (event.type === TouchType.Move) this.acceptVerificationGesture(runtime.move(pointer.id, pointer.windowY, time), 'grabber-move');
       if (event.type === TouchType.Up) this.acceptVerificationGesture(
-        runtime.up(pointer.id, pointer.windowY, time, this.verificationSession?.observing() === true), 'grabber-release');
+        runtime.up(pointer.id, pointer.windowY, time, this.currentFacts().geometry.verification?.observing() === true), 'grabber-release');
       return;
     }
     if (runtime.owner() >= 0) event.stopPropagation();
@@ -1515,17 +1251,17 @@ export struct ReaderControlPanel {
       .accessibilityRole(AccessibilityRoleType.BUTTON)
       .enabled(this.controlActionInputEnabled())
       .onClick(this.controlActionHandler((): void => {
-        if (this.controlActionInputEnabled()) { this.onInputActivity(); this.onDismiss(); }
+        if (this.controlActionInputEnabled()) { this.onIntent({ kind: 'inputActivity' }); this.onIntent({ kind: 'dismiss' }); }
       }));
-    if (!this.fixedIsland && this.contentLocation().level === 'secondary') {
+    if (!this.currentFacts().geometry.fixedIsland && this.contentLocation().level === 'secondary') {
       Text(this.contentLocation().form === 'full' ? '收回快捷控制栏' : '展开完整控制栏')
         .width(1).height(1).accessibilityRole(AccessibilityRoleType.BUTTON)
         .enabled(this.controlActionInputEnabled() && this.contentInputEnabled())
         .onClick(this.controlActionHandler((): void => {
           if (!this.controlActionInputEnabled() || !this.contentInputEnabled()) return;
-          this.onInputActivity();
+          this.onIntent({ kind: 'inputActivity' });
           this.applySemanticSession(toggleReaderControlSession(this.visualSession,
-            readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)), 'grabber-accessibility');
+            readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.currentFacts().geometry.reduceMotion)), 'grabber-accessibility');
         }));
     }
   }
@@ -1537,56 +1273,56 @@ export struct ReaderControlPanel {
   private fullEndpointCache: ReaderControlMotionFrameCache = new ReaderControlMotionFrameCache();
 
   private onLaunchSourceVisible(kind: ReaderSessionMorphSourceKind): void {
-    if (!this.launchRecovering) return;
-    const source = this.launchSourceMinimum;
-    const expected = source?.generation === this.launchGeneration ? source.kind :
-      this.capturedLaunchGeneration === this.launchGeneration ? this.capturedLaunchSourceKind : undefined;
+    if (!this.currentFacts().launch.recovering) return;
+    const source = this.currentFacts().launch.sourceMinimum;
+    const expected = source?.generation === this.currentFacts().launch.generation ? source.kind :
+      this.capturedLaunchGeneration === this.currentFacts().launch.generation ? this.capturedLaunchSourceKind : undefined;
     if (expected !== undefined && kind !== expected) return;
-    this.launchSourceVisibleGeneration = this.launchGeneration;
+    this.launchSourceVisibleGeneration = this.currentFacts().launch.generation;
     this.launchSourceVisibleKind = kind;
     this.confirmLaunchSourceReady();
   }
 
   private launchSourceDetached(type: ReaderSessionCapsuleType): boolean {
-    return this.launchSample?.type === type && (this.launchOwnsControls || this.launchRecovering);
+    return this.currentFacts().launch.sample?.type === type && (this.currentFacts().launch.ownsControls || this.currentFacts().launch.recovering);
   }
 
   private confirmLaunchSourceReady(): void {
-    if (!this.launchRecovering || (this.fixedIsland && (this.launchSourceVisibleGeneration !== this.launchGeneration ||
+    if (!this.currentFacts().launch.recovering || (this.currentFacts().geometry.fixedIsland && (this.launchSourceVisibleGeneration !== this.currentFacts().launch.generation ||
       this.launchSourceVisibleKind !== this.capturedLaunchSourceKind)) ||
-      this.launchSourceReadyGeneration === this.launchGeneration || this.visualVisibilityProgress < 1 ||
+      this.launchSourceReadyGeneration === this.currentFacts().launch.generation || this.visualVisibilityProgress < 1 ||
       !this.launchSourceCurrent()) return;
-    this.launchSourceReadyGeneration = this.launchGeneration;
-    this.onLaunchSourceReady(this.launchGeneration);
+    this.launchSourceReadyGeneration = this.currentFacts().launch.generation;
+    this.onIntent({ kind: 'launchSourceReady', generation: this.currentFacts().launch.generation });
   }
 
   private frame(): ReaderControlMotionFrame {
-    const launch = this.launchSample;
-    if (launch !== undefined && (this.launchOwnsControls || this.launchRecovering)) {
-      const heldBounds = this.capturedLaunchGeneration === this.launchGeneration ? this.launchMotionBounds : undefined;
+    const launch = this.currentFacts().launch.sample;
+    if (launch !== undefined && (this.currentFacts().launch.ownsControls || this.currentFacts().launch.recovering)) {
+      const heldBounds = this.capturedLaunchGeneration === this.currentFacts().launch.generation ? this.launchMotionBounds : undefined;
       const bounds = heldBounds ?? readerControlMotionBounds(this.currentLayout().fullPanelWidth,
         this.controlPanelHeight(), this.currentLayout().dockBottomGap, this.controlQuickHeight(), this.currentLayout().contentBudget);
       const frame = this.launchFrameCache.sample(1, this.launchMotionProgress,
         bounds.width, bounds.fullHeight, bounds.bottomGap, bounds.quickHeight, 0, bounds.contentBudget,
-        this.fixedIsland ? 'module' : 'legacy', this.reduceMotion);
+        this.currentFacts().geometry.fixedIsland ? 'module' : 'legacy', this.currentFacts().geometry.reduceMotion);
       // Recovery shares the existing control Runtime clock. Rebase the actual
       // outgoing offsets rather than flashing at its unrelated hidden endpoint.
-      const remainder = this.launchRecovering ? 1 - this.visualVisibilityProgress : 1;
-      frame.topBar.translateY = this.reduceMotion ? 0 : launch.topBarOffsetY * remainder;
-      frame.dock.translateY = this.reduceMotion ? 0 : launch.dockOffsetY * remainder;
+      const remainder = this.currentFacts().launch.recovering ? 1 - this.visualVisibilityProgress : 1;
+      frame.topBar.translateY = this.currentFacts().geometry.reduceMotion ? 0 : launch.topBarOffsetY * remainder;
+      frame.dock.translateY = this.currentFacts().geometry.reduceMotion ? 0 : launch.dockOffsetY * remainder;
       return frame;
     }
-    if (this.directSheetRedesign && this.visualDirectSheet) {
+    if (this.currentFacts().geometry.directSheet && this.visualDirectSheet) {
       const layout = this.currentLayout();
       const height = this.controlPanelHeight();
       return this.motionFrameCache.sample(this.visualVisibilityProgress, 1, layout.fullPanelWidth, height,
         this.directSheetBottom(), this.controlQuickHeight(), 0, this.directSheetBudget(layout, height),
-        'legacy', this.reduceMotion);
+        'legacy', this.currentFacts().geometry.reduceMotion);
     }
     return this.motionFrameCache.sample(this.visualVisibilityProgress, this.visualExpansionProgress,
       this.currentLayout().fullPanelWidth, this.controlPanelHeight(), this.currentLayout().dockBottomGap,
       this.controlQuickHeight(), this.motionOffsetY, this.currentLayout().contentBudget,
-      this.fixedIsland ? (this.contentLocation().level === 'secondary' ? 'module' : 'home') : 'legacy', this.reduceMotion);
+      this.currentFacts().geometry.fixedIsland ? (this.contentLocation().level === 'secondary' ? 'module' : 'home') : 'legacy', this.currentFacts().geometry.reduceMotion);
   }
 
   private directSheetBudget(layout: ReaderControlLayoutSnapshot, height: number): ReaderControlContentBudget | undefined {
@@ -1616,19 +1352,19 @@ export struct ReaderControlPanel {
   private quickGeometry: ReaderControlGeometry | undefined = undefined;
 
   private controlPanelHeight(): number {
-    if (this.directSheetRedesign && this.visualDirectSheet) {
+    if (this.currentFacts().geometry.directSheet && this.visualDirectSheet) {
       const layout = this.currentLayout();
       const safeTop = readerVisualSafeTop(readerWindowMetrics());
       return layout.isExpanded() ? Math.max(0, layout.viewportHeight - this.directSheetBottom() - Math.max(12, safeTop)) :
         Math.min(layout.viewportHeight * .78, Math.max(0, layout.viewportHeight - safeTop));
     }
-    if (this.fixedIsland) return readerControlIslandHeight(this.currentLayout().fullPanelHeight);
+    if (this.currentFacts().geometry.fixedIsland) return readerControlIslandHeight(this.currentLayout().fullPanelHeight);
     if (this.currentLayout().quickPanelHeight !== undefined) return this.currentLayout().fullPanelHeight;
     return Math.min(Math.max(0, this.currentLayout().fullPanelHeight), this.isExpanded() ? 852 : 736);
   }
 
   private controlQuickHeight(): number {
-    if (this.fixedIsland && !this.visualDirectSheet) return this.controlPanelHeight();
+    if (this.currentFacts().geometry.fixedIsland && !this.visualDirectSheet) return this.controlPanelHeight();
     const currentQuickHeight = this.currentLayout().quickPanelHeight;
     if (currentQuickHeight !== undefined) return currentQuickHeight;
     // Both device layouts retain the full 190vp Quick content above the
@@ -1643,8 +1379,8 @@ export struct ReaderControlPanel {
   }
 
   private contentEndpointHeight(full: boolean): number {
-    if (full && this.directSheetRedesign && this.visualDirectSheet) return this.frame().content.height;
-    if (this.fixedIsland) return this.frame().content.height;
+    if (full && this.currentFacts().geometry.directSheet && this.visualDirectSheet) return this.frame().content.height;
+    if (this.currentFacts().geometry.fixedIsland) return this.frame().content.height;
     const cache = full ? this.fullEndpointCache : this.quickEndpointCache;
     return cache.sample(1, full ? 1 : 0, this.currentLayout().fullPanelWidth,
       this.controlPanelHeight(), this.currentLayout().dockBottomGap, this.controlQuickHeight(), 0, this.currentLayout().contentBudget).content.height;
@@ -1653,8 +1389,8 @@ export struct ReaderControlPanel {
   private clockSample(fraction: number): number {
     const transition = this.visualSession.transition;
     if (transition === undefined) return fraction;
-    if (this.reduceMotion) return this.expandCurve.interpolate(fraction);
-    const direct = this.directSheetRedesign && (transition.fromLocation.level === 'secondary' &&
+    if (this.currentFacts().geometry.reduceMotion) return this.expandCurve.interpolate(fraction);
+    const direct = this.currentFacts().geometry.directSheet && (transition.fromLocation.level === 'secondary' &&
       readerControlIsDirectSheet(transition.fromLocation.module) || transition.toLocation.level === 'secondary' &&
       readerControlIsDirectSheet(transition.toLocation.module));
     if (direct || transition.kind === 'navigate') return this.controlMotionCurve.interpolate(fraction);
@@ -1676,8 +1412,8 @@ export struct ReaderControlPanel {
     // sample used by the Stage prevents hidden Lists/TextInputs from receiving
     // events or doing avoidable work while their parent opacity is zero.
     const visibility = this.visualVisibilityProgress;
-    const currentOwner = !this.preparedMinimumRequired || this.currentMinimumIdentity() === this.committedMinimumIdentity();
-    return !this.directSheetClosing && currentOwner && this.inputEnabled && (this.inputCurrent?.() ?? true) && !this.controlObscured &&
+    const currentOwner = !this.currentFacts().geometry.minimum.preparedRequired || this.currentMinimumIdentity() === this.committedMinimumIdentity();
+    return !this.directSheetClosing && currentOwner && this.currentFacts().geometry.inputEnabled && ((this.onIntent({ kind: 'inputCurrent' }) as boolean | undefined) ?? true) && !this.currentFacts().geometry.obscured &&
       (this.minimumInputReady() || this.hasCurrentTemporaryInput()) && visibility > 0 &&
       (this.visualTransitionKind === '' || this.visualTransitionKind === 'open') &&
       this.visualHeldPointerId < 0;
@@ -1685,8 +1421,8 @@ export struct ReaderControlPanel {
 
   private currentTemporaryInputScope(): string {
     const location = this.contentLocation();
-    return JSON.stringify([this.sourceId, this.bookmarkIdentity?.libraryBookId ?? '',
-      this.bookmarkIdentity?.bookId ?? this.bookTitle, this.controlOpenRevision,
+    return JSON.stringify([this.currentFacts().document.source.id, this.currentFacts().document.bookmarks.book?.libraryBookId ?? '',
+      this.currentFacts().document.bookmarks.book?.bookId ?? this.currentFacts().document.bookTitle, this.currentFacts().geometry.openRevision,
       location.level, location.module, location.directoryTab]);
   }
 
@@ -1702,19 +1438,20 @@ export struct ReaderControlPanel {
     const scope = this.currentTemporaryInputScope();
     return (active: boolean, kind: ReaderControlTemporaryInputKind = 'modal', endEditing?: () => void | Promise<void>): void => {
       if (!this.runtimeMounted || scope !== this.currentTemporaryInputScope() || this.contentLocation().module !== module ||
-        (this.preparedMinimumRequired && (identity !== this.committedMinimumIdentity() || identity !== this.currentMinimumIdentity()))) return;
+        (this.currentFacts().geometry.minimum.preparedRequired && (identity !== this.committedMinimumIdentity() || identity !== this.currentMinimumIdentity()))) return;
       if (active && !this.minimumInputReady() && !this.hasCurrentTemporaryInput()) return;
       const oldKind = this.temporaryInputKind;
       this.temporaryInputKind = active ? kind : '';
       this.temporaryInputScope = active ? scope : '';
       this.endInlineEditing = active && kind === 'inlineEditor' ? endEditing : undefined;
-      this.onTemporaryLayerChange(active, this.temporaryInputKind);
-      if (this.verificationSession?.observing() === true && oldKind !== this.temporaryInputKind) {
+      this.onIntent({ kind: 'temporaryLayerChange', active, layer: this.temporaryInputKind });
+      const verification = this.currentFacts().geometry.verification;
+      if (verification?.observing() === true && oldKind !== this.temporaryInputKind) {
         if (active) this.verificationLayerGeneration += 1;
-        this.verificationSession.layer(module, active, this.verificationLayerGeneration, this.visualSession,
+        verification.layer(module, active, this.verificationLayerGeneration, this.visualSession,
           active ? kind : oldKind);
       }
-      if (active && module === 'tts' && this.secondaryModuleInputEnabled('tts')) this.onTtsConfigurationOpen();
+      if (active && module === 'tts' && this.secondaryModuleInputEnabled('tts')) this.onIntent({ kind: 'ttsConfigurationOpen' });
     };
   }
 
@@ -1741,8 +1478,8 @@ export struct ReaderControlPanel {
 
   /** Commands and pointer input enter the same runtime before rendering. */
   private applySemanticSession(next: ReaderControlSessionState, origin: ReaderControlVerificationOrigin): void {
-    if (this.preparedMinimumRequired && this.onSessionRequest !== undefined) {
-      this.onSessionRequest(next, origin);
+    if (this.currentFacts().geometry.minimum.preparedRequired && this.onIntent !== defaultReaderControlIntent) {
+      this.onIntent({ kind: 'sessionRequest', next, origin });
       return;
     }
     if (!readerControlSessionStateEquals(this.controlSession, next)) this.controlSession = next;
@@ -1751,11 +1488,11 @@ export struct ReaderControlPanel {
 
   private rememberVisibleContentLocation(state: ReaderControlSessionState): void {
     const location = readerControlContentLocation(state);
-    if (this.directSheetRedesign && location.level === 'home' && state.transition?.fromLocation.level === 'secondary' &&
+    if (this.currentFacts().geometry.directSheet && location.level === 'home' && state.transition?.fromLocation.level === 'secondary' &&
       readerControlIsDirectSheet(state.transition.fromLocation.module)) return;
-    if (this.preparedMinimumRequired && (!this.minimumPresentationAvailable() ||
-      this.presentationReceipt?.identity !== this.committedMinimumIdentity() ||
-      (location.level === 'secondary' ? location.module : 'home') !== this.presentationReceipt?.profile.module)) return;
+    if (this.currentFacts().geometry.minimum.preparedRequired && (!this.minimumPresentationAvailable() ||
+      this.currentFacts().geometry.minimum.receipt?.identity !== this.committedMinimumIdentity() ||
+      (location.level === 'secondary' ? location.module : 'home') !== this.currentFacts().geometry.minimum.receipt?.profile.module)) return;
     const previous = this.lastVisibleContentLocation;
     if (location.level !== 'hidden' && (location.level !== previous.level ||
       location.module !== previous.module || location.directoryTab !== previous.directoryTab ||
@@ -1772,27 +1509,27 @@ export struct ReaderControlPanel {
 
   private reportBackdropRegions(): void {
     const frame = this.frame();
-    const ready = this.dockMeasured && this.topBarRect.width > 0 && !this.controlObscured;
+    const ready = this.dockMeasured && this.topBarRect.width > 0 && !this.currentFacts().geometry.obscured;
     const topBar = this.backdropRegions[1];
     topBar.x = this.topBarRect.x;
     topBar.y = this.topBarRect.y + frame.topBar.translateY;
     topBar.width = this.topBarRect.width;
     topBar.height = this.topBarRect.height;
     topBar.borderRadius = 24;
-    this.onBackdropRegionsChange(this.backdropRegions, ready);
+    this.onIntent({ kind: 'backdropRegionsChange', regions: this.backdropRegions, ready });
   }
 
   private requestPage(page: ReaderControlPage, origin: ReaderControlVerificationOrigin = 'module-button'): void {
     this.invalidateProgressInput();
-    this.onInputActivity();
-    this.onPageChange(page, origin);
+    this.onIntent({ kind: 'inputActivity' });
+    this.onIntent({ kind: 'pageChange', page, origin });
   }
 
   private controlActionInputEnabled(allowInlineEditor: boolean = false, forAppearance: boolean = false): boolean {
     const blockedByTemporaryInput = allowInlineEditor ? this.hasCurrentModalInput() : this.hasCurrentTemporaryInput();
-    const moreOwnsInput = this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu';
-    return this.runtimeMounted && this.inputEnabled && (this.inputCurrent?.() ?? true) && !this.controlObscured &&
-      (!this.preparedMinimumRequired || this.minimumPresentationAvailable()) &&
+    const moreOwnsInput = this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu';
+    return this.runtimeMounted && this.currentFacts().geometry.inputEnabled && ((this.onIntent({ kind: 'inputCurrent' }) as boolean | undefined) ?? true) && !this.currentFacts().geometry.obscured &&
+      (!this.currentFacts().geometry.minimum.preparedRequired || this.minimumPresentationAvailable()) &&
       (!blockedByTemporaryInput || (forAppearance && this.temporaryInputKind === 'moreMenu')) &&
       (forAppearance || !moreOwnsInput) && this.visualVisibilityProgress > 0 &&
       this.visualHeldPointerId < 0;
@@ -1800,17 +1537,17 @@ export struct ReaderControlPanel {
 
   private collapseControl(): void {
     if (!this.controlActionInputEnabled() || this.contentLocation().level !== 'secondary') return;
-    if (this.fixedIsland || this.directSheetRedesign && readerControlIsDirectSheet(this.contentLocation().module)) {
+    if (this.currentFacts().geometry.fixedIsland || this.currentFacts().geometry.directSheet && readerControlIsDirectSheet(this.contentLocation().module)) {
       this.requestPage('home');
       return;
     }
-    this.onInputActivity();
+    this.onIntent({ kind: 'inputActivity' });
     // A collapse button can be tapped while a handle transition is still in
     // flight. Retarget from the exact local visual sample, not the sparse host
     // snapshot, so the shape/visibility path never jumps back to its command
     // origin before the runtime applies the module-specific settle timing.
     this.applySemanticSession(collapseReaderControlSession(this.visualSession,
-      readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)), 'header-collapse');
+      readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.currentFacts().geometry.reduceMotion)), 'header-collapse');
   }
 
   private navigationIntentPending: boolean = false;
@@ -1834,7 +1571,7 @@ export struct ReaderControlPanel {
         if (!this.runtimeMounted || scope !== this.currentTemporaryInputScope() || !this.navigationInputEnabled()) return;
       }
       this.requestPage(destination);
-      this.onModuleSelect(destination === 'home' ? 'home' : module);
+      this.onIntent({ kind: 'moduleSelect', module: destination === 'home' ? 'home' : module });
     } finally { this.navigationIntentPending = false; }
   }
 
@@ -1842,7 +1579,7 @@ export struct ReaderControlPanel {
   private setAppearanceFontReorderActivity(active: boolean): void {
     if (this.appearanceFontReorderActive === active) return;
     this.appearanceFontReorderActive = active;
-    this.onAppearanceFontReorderActivityChange(active);
+    this.onIntent({ kind: 'appearanceFontReorderActivityChange', active });
   }
 
   private contentTitle(): string {
@@ -1850,7 +1587,7 @@ export struct ReaderControlPanel {
   }
 
   private listSessionKey(): string {
-    return `${this.sourceId}:${this.bookTitle}:${this.controlOpenRevision}`;
+    return `${this.currentFacts().document.source.id}:${this.currentFacts().document.bookTitle}:${this.currentFacts().geometry.openRevision}`;
   }
 
   private refreshDockPlacement(): void {
@@ -1860,8 +1597,8 @@ export struct ReaderControlPanel {
     this.placementTimer = -1;
     const locked = this.visualHeldPointerId >= 0 || this.visualTransitionKind.length > 0 ||
       this.placementPointers.size > 0 || this.progressPreviewPercent >= 0 || this.brightnessDragging ||
-      this.moreMenuVisible || this.temporaryLayerKind !== '' || this.bodySelectionPossible || this.controlObscured ||
-      this.launchSample !== undefined || !this.inputEnabled || !this.gripForeground;
+      this.moreMenuVisible || this.currentFacts().geometry.temporary.layer !== '' || this.currentFacts().geometry.allowsTextSelection || this.currentFacts().geometry.obscured ||
+      this.currentFacts().launch.sample !== undefined || !this.currentFacts().geometry.inputEnabled || !this.gripForeground;
     const result = this.placement.update(readerControlAlignment(this.manualControlAlignment),
       this.holdingHand, locked, readerMotionNowMs());
     if (result.alignment !== this.dockAlignment) {
@@ -1877,7 +1614,7 @@ export struct ReaderControlPanel {
 
   private syncGripSubscription(): void {
     const layout = this.currentLayout();
-    const requested = this.gripForeground && this.inputEnabled && !this.controlObscured && this.isExpanded() &&
+    const requested = this.gripForeground && this.currentFacts().geometry.inputEnabled && !this.currentFacts().geometry.obscured && this.isExpanded() &&
       layout.viewportWidth - layout.fullPanelWidth > layout.fullPanelLeftGap + layout.fullPanelRightGap;
     if (requested === this.gripRequested) return;
     this.gripRequested = requested;
@@ -1921,7 +1658,7 @@ export struct ReaderControlPanel {
   /** The dock's visual and input geometry share this pane-local origin. */
   private dockLeft(): number {
     const layout = this.currentLayout();
-    if (this.directSheetRedesign && this.visualDirectSheet && layout.isExpanded()) {
+    if (this.currentFacts().geometry.directSheet && this.visualDirectSheet && layout.isExpanded()) {
       return Math.max(0, layout.viewportWidth - layout.fullPanelWidth - Math.max(12, readerVisualSafeRight(readerWindowMetrics())));
     }
     return readerControlDockLeft(layout.viewportWidth, layout.fullPanelWidth, layout.fullPanelLeftGap,
@@ -1929,7 +1666,7 @@ export struct ReaderControlPanel {
   }
 
   private dockTop(): number {
-    const bottom = this.directSheetRedesign && this.visualDirectSheet ? this.directSheetBottom() : this.currentLayout().dockBottomGap;
+    const bottom = this.currentFacts().geometry.directSheet && this.visualDirectSheet ? this.directSheetBottom() : this.currentLayout().dockBottomGap;
     return this.currentLayout().viewportHeight - bottom - this.controlPanelHeight();
   }
 
@@ -1938,11 +1675,11 @@ export struct ReaderControlPanel {
   }
 
   private directSheetVisible(): boolean {
-    return this.directSheetRedesign && this.visualDirectSheet && this.visualVisibilityProgress > 0;
+    return this.currentFacts().geometry.directSheet && this.visualDirectSheet && this.visualVisibilityProgress > 0;
   }
 
   private directSheetTranslation(): number {
-    if (!this.directSheetVisible() || this.reduceMotion) return 0;
+    if (!this.directSheetVisible() || this.currentFacts().geometry.reduceMotion) return 0;
     const layout = this.currentLayout();
     return (1 - this.visualExpansionProgress) * (layout.isExpanded() ? layout.viewportWidth - this.dockLeft() :
       this.controlPanelHeight() + this.directSheetBottom());
@@ -1959,7 +1696,7 @@ export struct ReaderControlPanel {
   // The production component owns both the clock and every actor builder.
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.controlActorsRetained || this.frame().visibility > 0 || this.launchSample !== undefined) {
+      if (this.controlActorsRetained || this.frame().visibility > 0 || this.currentFacts().launch.sample !== undefined) {
       Stack({ alignContent: Alignment.Top }) { this.topBar(); }
         .id('reader-control-motion-topbar')
         .width(this.currentLayout().topBarWidth).height(this.currentLayout().topBarHeight)
@@ -1968,7 +1705,7 @@ export struct ReaderControlPanel {
         .translate({ y: this.frame().topBar.translateY }).opacity(this.currentLayout().topBarVisible ? this.frame().topBar.opacity : 0)
         .enabled(!this.directSheetVisible() && this.topBarInputEnabled() && this.frame().topBar.opacity > 0)
         .hitTestBehavior(!this.directSheetVisible() && this.currentLayout().topBarVisible && this.frame().topBar.opacity > 0 ? HitTestMode.Transparent : HitTestMode.None)
-        .accessibilityLevel(this.currentLayout().topBarVisible && this.frame().topBar.opacity > 0 && (this.temporaryLayerKind === '' || this.moreMenuVisible) ?
+        .accessibilityLevel(this.currentLayout().topBarVisible && this.frame().topBar.opacity > 0 && (this.currentFacts().geometry.temporary.layer === '' || this.moreMenuVisible) ?
           'auto' : 'no-hide-descendants')
         .onAreaChange((_previous: Area, current: Area): void => {
           this.measureTopBar({ x: Number(current.globalPosition.x),
@@ -2055,12 +1792,12 @@ export struct ReaderControlPanel {
           // Default admits the child collapse action and masks lower siblings.
           // Block here would skip every child, leaving a visible but dead button.
           .zIndex(2)
-          .hitTestBehavior(this.temporaryLayerKind === '' && (this.frame().header.opacity > 0 || this.contentLocation().module === 'replace') ?
+          .hitTestBehavior(this.currentFacts().geometry.temporary.layer === '' && (this.frame().header.opacity > 0 || this.contentLocation().module === 'replace') ?
             HitTestMode.Default : HitTestMode.None)
-          .enabled(this.inputEnabled && this.frame().visibility > 0 && this.visualHeldPointerId < 0 &&
-            (this.temporaryLayerKind === '' || this.temporaryLayerKind === 'moreMenu') &&
+          .enabled(this.currentFacts().geometry.inputEnabled && this.frame().visibility > 0 && this.visualHeldPointerId < 0 &&
+            (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu') &&
             (this.frame().header.opacity > 0 || this.contentLocation().module === 'replace'))
-          .accessibilityLevel((this.temporaryLayerKind !== '') ? 'no-hide-descendants' : 'auto');
+          .accessibilityLevel((this.currentFacts().geometry.temporary.layer !== '') ? 'no-hide-descendants' : 'auto');
         this.headerAction();
         Stack({ alignContent: Alignment.TopStart }) { this.brightnessRail(); }
           .width(this.frame().brightness.width).height(this.frame().brightness.height)
@@ -2068,10 +1805,10 @@ export struct ReaderControlPanel {
           .opacity(this.frame().brightness.opacity)
           // HitTestMode.None excludes only this container, not its children.
           // Retain the authored actors, but retire the whole faded subtree.
-          .enabled(this.contentInputEnabled() && (this.temporaryLayerKind === '' || this.temporaryLayerKind === 'moreMenu') &&
+          .enabled(this.contentInputEnabled() && (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu') &&
             this.frame().brightness.opacity > 0)
-          .hitTestBehavior(this.temporaryLayerKind === '' && this.frame().brightness.opacity > 0 ? HitTestMode.Default : HitTestMode.None)
-          .accessibilityLevel(this.contentInputEnabled() && this.temporaryLayerKind === '' &&
+          .hitTestBehavior(this.currentFacts().geometry.temporary.layer === '' && this.frame().brightness.opacity > 0 ? HitTestMode.Default : HitTestMode.None)
+          .accessibilityLevel(this.contentInputEnabled() && this.currentFacts().geometry.temporary.layer === '' &&
             this.frame().brightness.opacity > 0 ? 'auto' : 'no-hide-descendants');
         Stack({ alignContent: Alignment.TopStart }) { this.moduleNavBar(); }
           .width(this.frame().navigation.width).height(this.frame().navigation.height)
@@ -2084,7 +1821,7 @@ export struct ReaderControlPanel {
             this.frame().navigation.opacity > 0 ? 'auto' : 'no-hide-descendants')
           .hitTestBehavior(this.frame().navigation.opacity > 0 ? HitTestMode.Default : HitTestMode.None);
         // The cap and central grabber retain their one gesture owner.
-        if (!this.fixedIsland) {
+        if (!this.currentFacts().geometry.fixedIsland) {
         this.headerGrabCap();
 
         Stack({ alignContent: Alignment.TopStart }) {
@@ -2114,49 +1851,49 @@ export struct ReaderControlPanel {
         .id('reader-control-motion-dock')
         .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
           ? { role: 'modal-overlay', id: 'reading-controls', active: this.frame().visibility > 0,
-            intercepts: this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0) } as LayoutInvariantTag : undefined)
+            intercepts: this.currentFacts().geometry.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0) } as LayoutInvariantTag : undefined)
         .translate({ x: this.currentLayout().isExpanded() ? this.directSheetTranslation() : 0,
           y: this.frame().dock.translateY + (this.currentLayout().isExpanded() ? 0 : this.directSheetTranslation()) })
-        .opacity(this.frame().dock.opacity * (this.directSheetVisible() && this.reduceMotion ? this.visualExpansionProgress : 1))
+        .opacity(this.frame().dock.opacity * (this.directSheetVisible() && this.currentFacts().geometry.reduceMotion ? this.visualExpansionProgress : 1))
         .position({ x: this.dockLeft(), y: this.presentedDockTop() })
         .onTouch((event: TouchEvent): void => this.onDockPlacementTouch(event))
         // A held pointer may reach the hidden endpoint before UP. Retiring
         // its ancestor here loses UP/CANCEL and leaves the runtime held.
-        .enabled(this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0))
-          .hitTestBehavior(this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0) ?
+        .enabled(this.currentFacts().geometry.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0))
+          .hitTestBehavior(this.currentFacts().geometry.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0) ?
           HitTestMode.Transparent : HitTestMode.None);
-      if (this.launchSample !== undefined) {
+      if (this.currentFacts().launch.sample !== undefined) {
         ReaderSessionLaunchStage({
-          fontScale: this.sessionFontScale,
-          sample: this.launchSample, sessionState: this.launchBusinessStatus,
-          desiredPlaying: this.launchDesiredPlaying, countdown: this.launchCountdown,
-          interactionEnabled: this.launchInteractionEnabled,
-          ownsSourceRegion: this.launchSourceDetached(this.launchSample.type),
+          fontScale: this.currentFacts().geometry.fontScale,
+          sample: this.currentFacts().launch.sample, sessionState: this.currentFacts().launch.status,
+          desiredPlaying: this.currentFacts().launch.desiredPlaying, countdown: this.currentFacts().launch.countdown,
+          interactionEnabled: this.currentFacts().launch.interactionEnabled,
+          ownsSourceRegion: this.launchSourceDetached(this.currentFacts().launch.sample?.type ?? 'autoPage'),
           material: this.surfaceMaterial('sessionCapsule'),
-          sourceSurfaceColor: readerAppColor(this.fixedIsland ? 'TOK_READ_CARD_EMPHASIS' : this.launchSourceKind === 'fullAutoPagePlayback' ?
-            'TOK_SURFACE_PANEL_SOFT' : this.launchSourceKind === 'fullTtsPlayback' ? 'TOK_TTS_CARD' :
-              this.launchSourceKind === 'quickTts' ? 'TOK_TTS_QUICK_CARD' : 'TOK_SURFACE_PANEL', this.appScheme),
-          sourceBorderColor: readerAppColor(this.fixedIsland ? 'TOK_LINE_STRONG' : this.launchSourceKind === 'quickTts' ?
-            'app.control.paint.66B4A697' : this.launchSourceKind === 'fullTtsPlayback' ? 'TOK_TTS_LINE' : 'TOK_LINE', this.appScheme),
-          sourceBorderWidth: this.fixedIsland || this.launchSample.type === 'autoPage' ? TOK_BORDER_W : 0.5,
-          sourceSurfaceTopInset: !this.fixedIsland && this.launchSourceKind === 'fullTtsPlayback' ? 27 : 0,
-          sourceHighlightColor: !this.fixedIsland && this.launchSourceKind === 'fullTtsPlayback' ? readerAppColor('app.control.paint.99FFFFFF', this.appScheme) : '#00000000',
-          sourceGradientStart: !this.fixedIsland && this.launchSourceKind === 'quickTts' ? readerAppColor('app.control.paint.FFFAF4', this.appScheme) : '',
-          sourceGradientEnd: !this.fixedIsland && this.launchSourceKind === 'quickTts' ? readerAppColor('app.control.paint.F6ECDD', this.appScheme) : '',
+          sourceSurfaceColor: readerAppColor(this.currentFacts().geometry.fixedIsland ? 'TOK_READ_CARD_EMPHASIS' : this.currentFacts().launch.sourceKind === 'fullAutoPagePlayback' ?
+            'TOK_SURFACE_PANEL_SOFT' : this.currentFacts().launch.sourceKind === 'fullTtsPlayback' ? 'TOK_TTS_CARD' :
+              this.currentFacts().launch.sourceKind === 'quickTts' ? 'TOK_TTS_QUICK_CARD' : 'TOK_SURFACE_PANEL', this.appScheme),
+          sourceBorderColor: readerAppColor(this.currentFacts().geometry.fixedIsland ? 'TOK_LINE_STRONG' : this.currentFacts().launch.sourceKind === 'quickTts' ?
+            'app.control.paint.66B4A697' : this.currentFacts().launch.sourceKind === 'fullTtsPlayback' ? 'TOK_TTS_LINE' : 'TOK_LINE', this.appScheme),
+          sourceBorderWidth: this.currentFacts().geometry.fixedIsland || this.currentFacts().launch.sample?.type === 'autoPage' ? TOK_BORDER_W : 0.5,
+          sourceSurfaceTopInset: !this.currentFacts().geometry.fixedIsland && this.currentFacts().launch.sourceKind === 'fullTtsPlayback' ? 27 : 0,
+          sourceHighlightColor: !this.currentFacts().geometry.fixedIsland && this.currentFacts().launch.sourceKind === 'fullTtsPlayback' ? readerAppColor('app.control.paint.99FFFFFF', this.appScheme) : '#00000000',
+          sourceGradientStart: !this.currentFacts().geometry.fixedIsland && this.currentFacts().launch.sourceKind === 'quickTts' ? readerAppColor('app.control.paint.FFFAF4', this.appScheme) : '',
+          sourceGradientEnd: !this.currentFacts().geometry.fixedIsland && this.currentFacts().launch.sourceKind === 'quickTts' ? readerAppColor('app.control.paint.F6ECDD', this.appScheme) : '',
           themeScheme: this.appScheme,
           sourceSharpContent: (): void => { this.launchSourceContent(); },
-          onToggle: (): void => this.onLaunchToggle(),
-        }).id('reader-session-launch-fade-owner').opacity(this.launchStageOpacity).zIndex(9)
-          .transition(this.reduceMotion ? TransitionEffect.asymmetric(
+          onToggle: (): void => { this.onIntent({ kind: 'launchToggle' }); },
+        }).id('reader-session-launch-fade-owner').opacity(this.currentFacts().launch.opacity).zIndex(9)
+          .transition(this.currentFacts().geometry.reduceMotion ? TransitionEffect.asymmetric(
             TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()), TransitionEffect.IDENTITY) :
             TransitionEffect.IDENTITY);
       }
       }
     }
-    .visibility(this.controlObscured ? Visibility.Hidden : Visibility.Visible)
+    .visibility(this.currentFacts().geometry.obscured ? Visibility.Hidden : Visibility.Visible)
     .width(this.currentLayout().viewportWidth)
     .height(this.currentLayout().viewportHeight)
-    .accessibilityLevel(this.frame().visibility > 0 || this.launchSample !== undefined ? 'auto' : 'no-hide-descendants')
+    .accessibilityLevel(this.frame().visibility > 0 || this.currentFacts().launch.sample !== undefined ? 'auto' : 'no-hide-descendants')
     .hitTestBehavior(HitTestMode.Transparent)
     .onAreaChange((_previous: Area, current: Area): void => {
       this.rootScreenX = Number(current.globalPosition.x);
@@ -2173,24 +1910,24 @@ export struct ReaderControlPanel {
 
   private setMoreMenuVisible(visible: boolean): void {
     if (this.moreMenuVisible === visible) return;
-    if (visible && (!this.runtimeMounted || !this.inputEnabled || this.controlObscured || (this.temporaryLayerKind !== '') || this.frame().visibility <= 0)) return;
+    if (visible && (!this.runtimeMounted || !this.currentFacts().geometry.inputEnabled || this.currentFacts().geometry.obscured || (this.currentFacts().geometry.temporary.layer !== '') || this.frame().visibility <= 0)) return;
     if (visible) {
       this.moreMenuGeneration += 1;
-      this.moreMenuRecoveryIdentity = this.recoveryIdentity;
+      this.moreMenuRecoveryIdentity = this.currentFacts().document.recovery.identity;
       this.moreMenuOwnerScope = this.currentMoreMenuOwnerScope();
       this.moreMenuMeasuredWidth = 0;
       this.moreMenuWidthKey = '';
     }
     this.moreMenuVisible = visible;
-    this.verificationSession?.layer('more', visible, this.moreMenuGeneration, this.visualSession);
+    this.currentFacts().geometry.verification?.layer('more', visible, this.moreMenuGeneration, this.visualSession);
     this.observeMoreMenuFrames(visible, this.moreMenuGeneration);
     this.syncProgressInput();
-    this.onTemporaryLayerChange(visible, 'moreMenu');
+    this.onIntent({ kind: 'temporaryLayerChange', active: visible, layer: 'moreMenu' });
     this.refreshDockPlacement();
   }
 
   private observeMoreMenuFrames(visible: boolean, generation: number): void {
-    const verification = this.verificationSession;
+    const verification = this.currentFacts().geometry.verification;
     if (verification?.observing() !== true) return;
     const ticket = ++this.verificationMenuTicket;
     if (visible) this.verificationPopupOwnerId = -1;
@@ -2230,8 +1967,8 @@ export struct ReaderControlPanel {
   }
 
   private currentMoreMenuOwnerScope(): string {
-    return JSON.stringify([this.sourceId, this.sourceBookId, this.bookmarkIdentity?.libraryBookId ?? '',
-      this.controlOpenRevision, this.runtimeLifecycle]);
+    return JSON.stringify([this.currentFacts().document.source.id, this.currentFacts().document.source.bookId, this.currentFacts().document.bookmarks.book?.libraryBookId ?? '',
+      this.currentFacts().geometry.openRevision, this.runtimeLifecycle]);
   }
 
   private dismissMoreMenu(generation: number = this.moreMenuGeneration): void {
@@ -2240,24 +1977,24 @@ export struct ReaderControlPanel {
 
   private performMoreAction(action: 'info' | 'refresh' | 'download' | 'recovery', generation: number = this.moreMenuGeneration): void {
     if (generation !== this.moreMenuGeneration || !this.moreMenuVisible || !this.runtimeMounted ||
-      !this.inputEnabled || this.controlObscured || this.frame().visibility <= 0 ||
+      !this.currentFacts().geometry.inputEnabled || this.currentFacts().geometry.obscured || this.frame().visibility <= 0 ||
       this.moreMenuOwnerScope !== this.currentMoreMenuOwnerScope()) return;
-    if (action === 'refresh' && !this.chapterRefreshEnabled) return;
-    if (action === 'download' && !this.bookDownloadEnabled) return;
-    if (action === 'recovery' && (!this.recoveryAvailable || this.moreMenuRecoveryIdentity.length === 0 ||
-      this.moreMenuRecoveryIdentity !== this.recoveryIdentity)) return;
+    if (action === 'refresh' && !this.currentFacts().document.allowChapterRefresh) return;
+    if (action === 'download' && !this.currentFacts().document.download.bookEnabled) return;
+    if (action === 'recovery' && (!this.currentFacts().document.recovery.available || this.moreMenuRecoveryIdentity.length === 0 ||
+      this.moreMenuRecoveryIdentity !== this.currentFacts().document.recovery.identity)) return;
     const recoveryIdentity = this.moreMenuRecoveryIdentity;
     this.dismissMoreMenu(generation);
-    if (action === 'info') this.onOpenBookInfo();
-    else if (action === 'refresh') this.onRefreshChapter();
-    else if (action === 'recovery') this.onOpenRecovery(recoveryIdentity);
-    else this.onDownloadBook();
+    if (action === 'info') this.onIntent({ kind: 'openBookInfo' });
+    else if (action === 'refresh') this.onIntent({ kind: 'refreshChapter' });
+    else if (action === 'recovery') this.onIntent({ kind: 'openRecovery', identity: recoveryIdentity });
+    else this.onIntent({ kind: 'downloadBook' });
   }
 
   private readerMoreMenuWidth(): number {
     const surface = this.readerMoreSurfaceSpec();
     const labels = this.readerMoreActions().map((action: ReaderMenuActionView): string => action.label);
-    const key = JSON.stringify([labels, this.minimumMetricsRevision, this.minimumKey,
+    const key = JSON.stringify([labels, this.currentFacts().geometry.minimum.metricsRevision, this.currentFacts().geometry.minimum.key,
       surface.actionFontFamily, surface.actionFontSize, surface.actionFontWeight]);
     // Reuse ordinary motion publications. A live label/font publication owns
     // a new measurement even while the same native popup remains open.
@@ -2348,11 +2085,12 @@ export struct ReaderControlPanel {
         color: readerAppColor(surface.surfaceShadowRole, this.appScheme),
         offsetY: surface.shadowOffsetY * density },
       autoCancel: true, mask: true, focusable: true, followTransformOfTarget: true,
-      transition: this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : undefined,
+      transition: this.currentFacts().geometry.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : undefined,
       onStateChange: (event: PopupStateChangeParam): void => {
-        if (generation === this.moreMenuGeneration && this.verificationSession?.observing() === true) {
+        const verification = generation === this.moreMenuGeneration ? this.currentFacts().geometry.verification : undefined;
+        if (verification?.observing() === true) {
           const facts: ReaderControlMenuNativeState = { visible: event.isVisible, generation: generation };
-          this.verificationSession.effect('more-popup', 'native-state', facts);
+          verification.effect('more-popup', 'native-state', facts);
         }
         if (!event.isVisible) this.dismissMoreMenu(generation);
       },
@@ -2362,21 +2100,21 @@ export struct ReaderControlPanel {
   }
 
   private readerMoreActionEnabled(action: 'info' | 'refresh' | 'download' | 'recovery'): boolean {
-    return this.inputEnabled && !this.controlObscured &&
+    return this.currentFacts().geometry.inputEnabled && !this.currentFacts().geometry.obscured &&
       (!this.moreMenuVisible || this.moreMenuOwnerScope === this.currentMoreMenuOwnerScope()) &&
-      (action !== 'refresh' || this.chapterRefreshEnabled) &&
-      (action !== 'download' || this.bookDownloadEnabled) &&
-      (action !== 'recovery' || this.recoveryAvailable);
+      (action !== 'refresh' || this.currentFacts().document.allowChapterRefresh) &&
+      (action !== 'download' || this.currentFacts().document.download.bookEnabled) &&
+      (action !== 'recovery' || this.currentFacts().document.recovery.available);
   }
 
   private readerMoreActions(): ReaderMenuActionView[] {
     const actions: ReaderMenuActionView[] = [
       new ReaderMenuActionView('info', '书籍信息', this.readerMoreActionEnabled('info')),
       new ReaderMenuActionView('refresh', '刷新本章', this.readerMoreActionEnabled('refresh')),
-      new ReaderMenuActionView('download', this.bookDownloadActive ? '正在下载章节…' : '下载全部章节',
+      new ReaderMenuActionView('download', this.currentFacts().document.download.bookActive ? '正在下载章节…' : '下载全部章节',
         this.readerMoreActionEnabled('download')),
     ];
-    if (this.recoveryAvailable) actions.push(new ReaderMenuActionView('recovery', '待处理事项', this.readerMoreActionEnabled('recovery')));
+    if (this.currentFacts().document.recovery.available) actions.push(new ReaderMenuActionView('recovery', '待处理事项', this.readerMoreActionEnabled('recovery')));
     return actions;
   }
 
@@ -2400,7 +2138,7 @@ export struct ReaderControlPanel {
     if (this.launchSourceCurrent()) {
     if (this.capturedLaunchSourceKind === 'quickAutoPage' || this.capturedLaunchSourceKind === 'fullAutoPagePlayback') {
       ReaderControlAutoPageContent({
-        fixedIsland: this.fixedIsland,
+        fixedIsland: this.currentFacts().geometry.fixedIsland,
         sourceMinimum: this.launchNaturalMinimum,
         sourceMinimumIdentity: this.launchNaturalMinimum?.identity ?? '',
         sourceMinimumKey: this.launchNaturalMinimum?.key ?? '',
@@ -2409,43 +2147,45 @@ export struct ReaderControlPanel {
         form: this.capturedLaunchSourceKind === 'quickAutoPage' ? 'quick' : 'full',
         motionProgress: this.launchMotionProgress, availableWidth: this.launchContentWidth,
         availableHeight: this.launchContentHeight, fullViewportHeight: this.launchFullContentHeight,
-        interactionEnabled: false, status: this.launchSourceAutoStatus,
-        speedSeconds: this.autoPageSpeedSeconds, timerSummaryText: this.autoPageTimerSummaryText,
-        timerMinutes: this.autoPageTimerMinutes, timerSeconds: this.autoPageTimerSeconds,
-        followHighlight: this.autoPageFollowHighlight, canPreviousChapter: this.canStepChapter(-1),
+        interactionEnabled: false, status: this.currentFacts().launch.sourceAutomatic,
+        speedSeconds: this.currentFacts().playback.automatic.speedSeconds, timerSummaryText: this.currentFacts().playback.automatic.timerSummary,
+        timerMinutes: this.currentFacts().playback.automatic.timerMinutes, timerSeconds: this.currentFacts().playback.automatic.timerSeconds,
+        followHighlight: this.currentFacts().playback.automatic.followHighlight, canPreviousChapter: this.canStepChapter(-1),
         canNextChapter: this.canStepChapter(1),
       });
     } else {
       ReaderControlTtsContent({
-        fixedIsland: this.fixedIsland,
+        fixedIsland: this.currentFacts().geometry.fixedIsland,
         sourceMinimum: this.launchNaturalMinimum,
         sourceMinimumIdentity: this.launchNaturalMinimum?.identity ?? '',
         sourceMinimumKey: this.launchNaturalMinimum?.key ?? '',
         sourceMinimumMetricsRevision: this.launchNaturalMinimum?.metricsRevision ?? -1,
         sourceOnly: this.capturedLaunchSourceKind === 'quickTts' ? 'quick' : 'full',
-        frozenWaveformSample: this.launchWaveformSample, reduceMotion: this.reduceMotion,
+        frozenWaveformSample: this.launchWaveformSample, reduceMotion: this.currentFacts().geometry.reduceMotion,
         form: this.capturedLaunchSourceKind === 'quickTts' ? 'quick' : 'full',
         motionProgress: this.launchMotionProgress, availableWidth: this.launchContentWidth,
         availableHeight: this.launchContentHeight, fullViewportHeight: this.launchFullContentHeight,
-        interactionEnabled: false, state: this.launchSourceTtsState,
-        timerMode: this.ttsTimerMode, timerMinutes: this.ttsTimerMinutes, timerSeconds: this.ttsTimerSeconds,
-        engine: this.ttsEngine, language: this.ttsLanguage, person: this.ttsPerson,
-        voiceOptions: this.ttsVoiceOptions, followHighlight: this.ttsFollowHighlight,
+        interactionEnabled: false, state: this.currentFacts().launch.sourceSpeech,
+        timerMode: this.currentFacts().playback.speech.timerMode, timerMinutes: this.currentFacts().playback.speech.timerMinutes, timerSeconds: this.currentFacts().playback.speech.timerSeconds,
+        engine: this.currentFacts().playback.speech.engine, language: this.currentFacts().playback.speech.language, person: this.currentFacts().playback.speech.person,
+        voiceOptions: this.currentFacts().playback.speech.voiceOptions, followHighlight: this.currentFacts().playback.speech.followHighlight,
       });
     }
     }
   }
 
   private launchSourceCurrent(): boolean {
-    if (!this.runtimeMounted || this.launchSample === undefined || this.capturedLaunchGeneration !== this.launchGeneration) return false;
-    if (this.minimumIdentity.length === 0) return true;
-    const source = this.launchSourceMinimum;
+    if (!this.runtimeMounted) return false;
+    const sample = this.currentFacts().launch.sample;
+    if (sample === undefined || this.capturedLaunchGeneration !== this.currentFacts().launch.generation) return false;
+    if (this.currentFacts().geometry.minimum.identity.length === 0) return true;
+    const source = this.currentFacts().launch.sourceMinimum;
     const receipt = this.launchNaturalMinimum;
-    if (source === undefined || source.generation !== this.launchGeneration || source.kind !== this.capturedLaunchSourceKind ||
-      !readerControlPlaybackSourceKindMatches(source.kind, this.launchSample.type)) return false;
+    if (source === undefined || source.generation !== this.currentFacts().launch.generation || source.kind !== this.capturedLaunchSourceKind ||
+      !readerControlPlaybackSourceKindMatches(source.kind, sample.type)) return false;
     if (!source.requiresNaturalProfile) return receipt === undefined && source.receipt === undefined;
     return receipt !== undefined && source.receipt !== undefined &&
-      receipt.module === this.launchSample.type && receipt.metricsRevision === this.minimumMetricsRevision &&
+      receipt.module === sample.type && receipt.metricsRevision === this.currentFacts().geometry.minimum.metricsRevision &&
       readerControlPlaybackProfileMatches(receipt, receipt.module, receipt.identity, receipt.key, receipt.metricsRevision) &&
       readerControlPlaybackProfileMatches(source.receipt, receipt.module, receipt.identity, receipt.key, receipt.metricsRevision);
   }
@@ -2456,7 +2196,7 @@ export struct ReaderControlPanel {
   }
 
   private headerPaintLayout(): ReaderControlHeaderLayout {
-    return readerControlHeaderLayout(this.contentLocation().module, this.fixedIsland ? 1 : this.frame().progress,
+    return readerControlHeaderLayout(this.contentLocation().module, this.currentFacts().geometry.fixedIsland ? 1 : this.frame().progress,
       this.frame().header.width, this.selectedMinimumProfile()?.headerPaint);
   }
 
@@ -2500,16 +2240,16 @@ export struct ReaderControlPanel {
   }
 
   private controlCallbackGuard(): () => boolean {
-    const owner = this.minimumOwnerKey;
+    const owner = this.currentFacts().geometry.minimum.ownerKey;
     const identity = this.currentMinimumIdentity();
     const scope = this.currentMoreMenuOwnerScope();
     return (): boolean => scope === this.currentMoreMenuOwnerScope() &&
-      (!this.preparedMinimumRequired || (owner === this.minimumOwnerKey && identity === this.currentMinimumIdentity()));
+      (!this.currentFacts().geometry.minimum.preparedRequired || (owner === this.currentFacts().geometry.minimum.ownerKey && identity === this.currentMinimumIdentity()));
   }
 
   private controlActionScope(): string {
-    return JSON.stringify([this.currentMoreMenuOwnerScope(), this.preparedMinimumRequired ? this.minimumOwnerKey : '',
-      this.preparedMinimumRequired ? this.currentMinimumIdentity() : '']);
+    return JSON.stringify([this.currentMoreMenuOwnerScope(), this.currentFacts().geometry.minimum.preparedRequired ? this.currentFacts().geometry.minimum.ownerKey : '',
+      this.currentFacts().geometry.minimum.preparedRequired ? this.currentMinimumIdentity() : '']);
   }
 
   private controlActionHandler(action: () => void): () => void {
@@ -2525,14 +2265,14 @@ export struct ReaderControlPanel {
   private controlTouchHandler(): (event: TouchEvent) => void {
     const runtime = this.runtime;
     const lifecycle = this.runtimeLifecycle;
-    const owner = this.minimumOwnerKey;
+    const owner = this.currentFacts().geometry.minimum.ownerKey;
     const identity = this.currentMinimumIdentity();
     const scope = this.currentMoreMenuOwnerScope();
     return (event: TouchEvent): void => {
-      if (runtime !== this.runtime || lifecycle !== this.runtimeLifecycle || owner !== this.minimumOwnerKey ||
+      if (runtime !== this.runtime || lifecycle !== this.runtimeLifecycle || owner !== this.currentFacts().geometry.minimum.ownerKey ||
         scope !== this.currentMoreMenuOwnerScope()) return;
-      if (event.type === TouchType.Down && (this.directSheetRedesign && this.visualDirectSheet ||
-        this.preparedMinimumRequired && identity !== this.currentMinimumIdentity())) return;
+      if (event.type === TouchType.Down && (this.currentFacts().geometry.directSheet && this.visualDirectSheet ||
+        this.currentFacts().geometry.minimum.preparedRequired && identity !== this.currentMinimumIdentity())) return;
       this.handleControlTouch(event);
     };
   }
@@ -2606,7 +2346,7 @@ export struct ReaderControlPanel {
       }.width(32).height(32).borderRadius(16).backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appScheme))
         .position({ x: this.headerPaintLayout().actionPaint.x + Math.max(0, (this.headerPaintLayout().actionPaint.width - 32) / 2),
           y: this.headerPaintLayout().actionPaint.y }).hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
-    } else if (this.fixedIsland) {
+    } else if (this.currentFacts().geometry.fixedIsland) {
       Stack({ alignContent: Alignment.Center }) {
         Text('返回').fontFamily(this.headerActionStyle().fontFamily).fontWeight(this.headerActionStyle().fontWeight)
           .fontSize(this.headerActionStyle().fontSizeFp).maxLines(1)
@@ -2652,7 +2392,7 @@ export struct ReaderControlPanel {
       .enabled(this.headerActionInputEnabled())
       .hitTestBehavior(this.headerActionInputEnabled() ? HitTestMode.Block : HitTestMode.None)
       .accessibilityText(this.directSheetVisible() ? `关闭${this.contentTitle()}` :
-        this.fixedIsland ? '返回阅读主控' :
+        this.currentFacts().geometry.fixedIsland ? '返回阅读主控' :
           this.headerRole() === 'replace' ? '完成替换规则管理，收起到快捷态' : `收起${this.contentTitle()}`)
       .accessibilityLevel(this.headerActionInputEnabled() ? 'auto' : 'no-hide-descendants')
       .onClick(this.controlActionHandler((): void => this.activateHeaderAction()));
@@ -2694,50 +2434,50 @@ export struct ReaderControlPanel {
           .enableScrollInteraction(!readerControlExtentFits(this.homeContentMinimumHeight(), this.frame().content.height));
       } else if (this.contentLocation().module === 'directory') {
         ReaderControlDirectoryContent({
-          verificationSession: this.verificationSession,
+          verificationSession: this.currentFacts().geometry.verification,
           minimumIdentity: this.currentMinimumIdentity(), minimumKey: this.currentMinimumKey(),
-      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.preparedMinimumRequired,
+      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.currentFacts().geometry.minimum.preparedRequired,
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
           onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined): void =>
             this.bindModuleMinimum('directory', identity, measurer),
-          directoryPublication: this.directoryPublication, directoryEntriesRevision: this.directoryEntriesRevision, currentChapterIndex: this.currentChapterIndex,
-          catalogComplete: this.catalogComplete, catalogChapterCount: this.catalogChapterCount,
-          catalogLoading: this.catalogLoading, catalogLoadFailed: this.catalogLoadFailed,
-          catalogCurrentPosition: this.catalogCurrentPosition,
-          catalogReadableChapterCount: this.totalChapters, catalogReadablePosition: this.readableChapterPosition,
-          onRequireCompleteCatalog: (): void => this.onRequireCompleteCatalog(),
-          bookmarkLoadFailed: this.bookmarkLoadFailed,
-          bookmarkLoadMessage: this.bookmarkLoadMessage,
-          bookmarkRecovery: this.bookmarkRecovery,
-          onRetryBookmarkLoad: (): void => this.onRetryBookmarkLoad(),
-          chapterDownloadEnabled: this.chapterDownloadEnabled,
-          mangaSearch: this.mangaSearch,
-          chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+          directoryPublication: this.currentFacts().document.catalog.publication, directoryEntriesRevision: this.currentFacts().document.catalog.revision, currentChapterIndex: this.currentFacts().document.chapterIndex,
+          catalogComplete: this.currentFacts().document.catalog.complete, catalogChapterCount: this.currentFacts().document.catalog.chapterCount,
+          catalogLoading: this.currentFacts().document.catalog.loading, catalogLoadFailed: this.currentFacts().document.catalog.loadFailed,
+          catalogCurrentPosition: this.currentFacts().document.catalog.position,
+          catalogReadableChapterCount: this.currentFacts().document.totalChapters, catalogReadablePosition: this.currentFacts().document.readableChapterPosition,
+          onRequireCompleteCatalog: (): void => { this.onIntent({ kind: 'requireCompleteCatalog' }); },
+          bookmarkLoadFailed: this.currentFacts().document.bookmarks.loadFailed,
+          bookmarkLoadMessage: this.currentFacts().document.bookmarks.message,
+          bookmarkRecovery: this.currentFacts().document.bookmarks.recovery,
+          onRetryBookmarkLoad: (): void => { this.onIntent({ kind: 'retryBookmarkLoad' }); },
+          chapterDownloadEnabled: this.currentFacts().document.download.chapterEnabled,
+          mangaSearch: this.currentFacts().document.search.manga,
+          chapterStartBookmarkCreationEnabled: this.currentFacts().document.bookmarks.allowChapterStart,
           progress: this.contentMotionProgress,
           interactionEnabled: this.secondaryModuleInputEnabled('directory'),
           inputCurrent: (): boolean => this.secondaryModuleInputEnabled('directory'),
           editorInputCurrent: (): boolean => this.moduleEditorInputEnabled('directory'),
           onTemporaryLayerChange: this.moduleTemporaryLayerHandler('directory'),
-          dismissTemporaryRevision: this.dismissTemporaryRevision,
+          dismissTemporaryRevision: this.currentFacts().geometry.temporary.dismissRevision,
           availableWidth: this.contentMotionWidth, availableHeight: this.contentEditingHeight(),
           tab: this.contentLocation().directoryTab,
-          sessionKey: this.listSessionKey(), bookmarkIdentity: this.bookmarkIdentity,
+          sessionKey: this.listSessionKey(), bookmarkIdentity: this.currentFacts().document.bookmarks.book,
           onTabChange: (tab: string): void => {
             if (DEBUG) hilog.info(0xD004, 'ReaderControlDiagnostic',
               'stage=panel-directory-tab tab=%{public}d ready=%{public}s owner=%{public}d',
               tab === 'bookmarks' ? 1 : 0, String(this.minimumInputReady()), this.runtime?.owner() ?? -1);
-            this.onInputActivity();
+            this.onIntent({ kind: 'inputActivity' });
             this.applySemanticSession(setReaderControlDirectoryTab(this.controlSession,
               tab === 'bookmarks' ? 'bookmarks' : 'directory'), 'directory-tab');
           },
-          onSelectChapter: (index: number): void => this.onSelectChapter(index),
+          onSelectChapter: (index: number): void => { this.onIntent({ kind: 'selectChapter', chapterIndex: index }); },
           onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof): void =>
-            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
-          onSelectBookmark: this.onSelectBookmark,
-          onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
-          onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+            { this.onIntent({ kind: 'selectNavigationTarget', chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof }); },
+          onSelectBookmark: this.onIntent === defaultReaderControlIntent ? undefined : this.selectBookmark,
+          onDownloadChapter: (index: number): void => { this.onIntent({ kind: 'downloadChapter', chapterIndex: index }); },
+          onDeleteBookmarks: (times: number[]): void => { this.onIntent({ kind: 'deleteBookmarks', bookmarkTimes: times }); },
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-            this.onCreateChapterStartBookmark(request),
+            { this.onIntent({ kind: 'createChapterStartBookmark', request }); },
         });
       } else if (this.contentLocation().module === 'search') {
         this.searchModuleContent();
@@ -2761,10 +2501,10 @@ export struct ReaderControlPanel {
   @Builder
   private appearanceContent() {
     ReaderControlAppearanceContent({
-      fixedIsland: this.fixedIsland,
-      verificationSession: this.verificationSession,
+      fixedIsland: this.currentFacts().geometry.fixedIsland,
+      verificationSession: this.currentFacts().geometry.verification,
       minimumIdentity: this.currentMinimumIdentity(), minimumKey: this.currentMinimumKey(),
-      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.preparedMinimumRequired,
+      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.currentFacts().geometry.minimum.preparedRequired,
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
       onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined): void =>
         this.bindModuleMinimum('appearance', identity, measurer),
@@ -2774,44 +2514,44 @@ export struct ReaderControlPanel {
       fullContentHeight: this.contentEndpointHeight(true),
       interactionEnabled: this.secondaryModuleInputEnabled('appearance'),
       inputCurrent: (): boolean => this.secondaryModuleInputEnabled('appearance'),
-      dismissTemporaryRevision: this.dismissTemporaryRevision,
+      dismissTemporaryRevision: this.currentFacts().geometry.temporary.dismissRevision,
       onTemporaryLayerChange: this.moduleTemporaryLayerHandler('appearance'),
-      reduceMotion: this.reduceMotion,
+      reduceMotion: this.currentFacts().geometry.reduceMotion,
       motionProgress: this.contentMotionProgress,
-      snapshot: this.appearanceSnapshot,
-      chineseConversionMode: this.chineseConversionMode,
-      pageTurnStyle: readerPageTurnStyle(this.settingsSnapshot),
-      pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,
-      onThemeChange: (theme: ReaderAppearanceTheme): void => this.onAppearanceThemeChange(theme),
-      onSetDayTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceDayThemeChange(theme),
-      onSetNightTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceNightThemeChange(theme),
-      onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),
+      snapshot: this.currentFacts().preferences.appearance,
+      chineseConversionMode: this.currentFacts().preferences.conversion.mode,
+      pageTurnStyle: readerPageTurnStyle(this.currentFacts().preferences.settings),
+      pageTurnSimulationAvailable: this.currentFacts().preferences.pageTurnSimulationAvailable,
+      onThemeChange: (theme: ReaderAppearanceTheme): void => { this.onIntent({ kind: 'appearanceThemeChange', theme }); },
+      onSetDayTheme: (theme: ReaderAppearanceTheme): void => { this.onIntent({ kind: 'appearanceDayThemeChange', theme }); },
+      onSetNightTheme: (theme: ReaderAppearanceTheme): void => { this.onIntent({ kind: 'appearanceNightThemeChange', theme }); },
+      onFontChange: (font: ReaderAppearanceFont): void => { this.onIntent({ kind: 'appearanceFontChange', font }); },
       onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): ReaderControlFontOrderPresentation =>
-        this.onAppearanceFontOrderChange(fontOrder),
+        (this.onIntent({ kind: 'appearanceFontOrderChange', fontOrder }) as ReaderControlFontOrderPresentation),
       onFontReorderActivityChange: (active: boolean): void =>
         this.setAppearanceFontReorderActivity(active),
-      onCustomFontImport: (): void => this.onAppearanceCustomFontImport(),
-      onIndentRequest: (indent: ReaderAppearanceIndent): void => this.onAppearanceIndentRequest(indent),
+      onCustomFontImport: (): void => { this.onIntent({ kind: 'appearanceCustomFontImport' }); },
+      onIndentRequest: (indent: ReaderAppearanceIndent): void => { this.onIntent({ kind: 'appearanceIndentRequest', indent }); },
       onAlignmentRequest: (current: ReaderAppearanceAlignment): void =>
-        this.onAppearanceAlignmentRequest(current),
+        { this.onIntent({ kind: 'appearanceAlignmentRequest', current }); },
       onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection): void =>
-        this.onAppearanceMetricStep(metric, direction),
-      chineseConversionIdentity: this.chineseConversionIdentity,
+        { this.onIntent({ kind: 'appearanceMetricStep', metric, direction }); },
+      chineseConversionIdentity: this.currentFacts().preferences.conversion.identity,
       onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string): void =>
-        this.onChineseConversionChange(mode, identity),
+        { this.onIntent({ kind: 'chineseConversionChange', mode, identity }); },
       onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
-        this.onPageTurnStyleChange(style),
+        { this.onIntent({ kind: 'pageTurnStyleChange', style }); },
     });
   }
 
   private secondaryModuleInputEnabled(module: string): boolean {
     return this.runtimeMounted && !this.moreMenuVisible && this.contentLocation().level === 'secondary' &&
       this.contentLocation().module === module && this.contentInputEnabled() &&
-      (!this.preparedMinimumRequired || this.minimumInputReady());
+      (!this.currentFacts().geometry.minimum.preparedRequired || this.minimumInputReady());
   }
 
   private observeSearchResultList(scope: number, count: number): void {
-    const verification = this.verificationSession;
+    const verification = this.currentFacts().geometry.verification;
     const location = this.contentLocation();
     if (!this.runtimeMounted || verification?.observing() !== true ||
       location.level !== 'secondary' || location.module !== 'search' || location.form !== 'quick' ||
@@ -2825,7 +2565,7 @@ export struct ReaderControlPanel {
   private searchModuleContent() {
     ReaderControlSearchContent({ editingHost: this.editingHost,
       minimumIdentity: this.currentMinimumIdentity(), minimumKey: this.currentMinimumKey(),
-      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.preparedMinimumRequired,
+      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.currentFacts().geometry.minimum.preparedRequired,
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
       onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined): void =>
         this.bindModuleMinimum('search', identity, measurer),
@@ -2835,30 +2575,30 @@ export struct ReaderControlPanel {
       availableHeight: this.contentEditingHeight(),
       interactionEnabled: this.secondaryModuleInputEnabled('search'),
       inputCurrent: (): boolean => this.secondaryModuleInputEnabled('search'),
-      dismissTemporaryRevision: this.dismissTemporaryRevision,
+      dismissTemporaryRevision: this.currentFacts().geometry.temporary.dismissRevision,
       onTemporaryLayerChange: this.moduleTemporaryLayerHandler('search'),
       editorInputCurrent: (): boolean => this.moduleEditorInputEnabled('search'),
-      query: this.searchQuery,
-      onlineBook: this.sourceId !== 'local' && (this.sourceId?.length ?? 0) > 0,
-      searchPublication: this.searchPublication,
-      searchRevision: this.searchRevision,
+      query: this.currentFacts().document.search.query,
+      onlineBook: this.currentFacts().document.source.id !== 'local' && (this.currentFacts().document.source.id?.length ?? 0) > 0,
+      searchPublication: this.currentFacts().document.search.publication,
+      searchRevision: this.currentFacts().document.search.revision,
       onBack: (): void => this.requestPage('home', 'module-back'),
-      onQueryChange: (query: string): void => this.onSearchQueryChange(query),
-      onSearch: (): void => this.onSearch(),
-      onLoadMore: (): void => this.onSearchLoadMore(),
-      onNeedMore: (): void => this.onSearchNeedMore(),
+      onQueryChange: (query: string): void => { this.onIntent({ kind: 'searchQueryChange', query }); },
+      onSearch: (): void => { this.onIntent({ kind: 'search' }); },
+      onLoadMore: (): void => { this.onIntent({ kind: 'searchLoadMore' }); },
+      onNeedMore: (): void => { this.onIntent({ kind: 'searchNeedMore' }); },
       onResultListPublished: (scope: number, count: number): void => this.observeSearchResultList(scope, count),
       onSelectResult: (result: ReadingContentSearchResult, scope: number, ordinal: number): void =>
-        this.onSearchResultSelect(result, scope, ordinal),
+        { this.onIntent({ kind: 'searchResultSelect', result, scope, ordinal }); },
     });
   }
 
   @Builder
   private settingsModuleContent() {
     ReaderControlSettingsContent({
-      fixedIsland: this.fixedIsland,
+      fixedIsland: this.currentFacts().geometry.fixedIsland,
       minimumIdentity: this.currentMinimumIdentity(), minimumKey: this.currentMinimumKey(),
-      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.preparedMinimumRequired,
+      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.currentFacts().geometry.minimum.preparedRequired,
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
       onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined): void =>
         this.bindModuleMinimum('settings', identity, measurer),
@@ -2868,41 +2608,41 @@ export struct ReaderControlPanel {
       availableHeight: this.contentEditingHeight(),
       interactionEnabled: this.secondaryModuleInputEnabled('settings'),
       inputCurrent: (): boolean => this.secondaryModuleInputEnabled('settings'),
-      snapshot: this.settingsSnapshot,
-      widePageLayoutAvailable: this.isExpanded(), widePageLayout: this.widePageLayout,
+      snapshot: this.currentFacts().preferences.settings,
+      widePageLayoutAvailable: this.isExpanded(), widePageLayout: this.currentFacts().preferences.widePageLayout,
       onWidePageLayoutChange: (value: ReaderWidePageLayout): void => {
-        if (this.isExpanded() && this.secondaryModuleInputEnabled('settings')) this.onWidePageLayoutChange(value);
+        if (this.isExpanded() && this.secondaryModuleInputEnabled('settings')) this.onIntent({ kind: 'widePageLayoutChange', value });
       },
-      pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,
-      justifyText: this.appearanceSnapshot.alignment === 'justify',
+      pageTurnSimulationAvailable: this.currentFacts().preferences.pageTurnSimulationAvailable,
+      justifyText: this.currentFacts().preferences.appearance.alignment === 'justify',
       onJustifyTextChange: (_value: boolean): void =>
-        this.onAppearanceAlignmentRequest(this.appearanceSnapshot.alignment),
+        { this.onIntent({ kind: 'appearanceAlignmentRequest', current: this.currentFacts().preferences.appearance.alignment }); },
       onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
-        this.onPageTurnStyleChange(style),
+        { this.onIntent({ kind: 'pageTurnStyleChange', style }); },
       onScreenDirectionChange: (direction: ReaderScreenDirection): void =>
-        this.onScreenDirectionChange(direction),
+        { this.onIntent({ kind: 'screenDirectionChange', direction }); },
       onScreenTimeoutChange: (timeout: ReaderScreenTimeout): void =>
-        this.onScreenTimeoutChange(timeout),
+        { this.onIntent({ kind: 'screenTimeoutChange', timeout }); },
       onToggleChange: (key: ReaderSettingsToggleKey, value: boolean): void =>
-        this.onSettingsToggleChange(key, value),
+        { this.onIntent({ kind: 'settingsToggleChange', key, value }); },
     });
   }
 
   @Builder
   private ttsModuleContent() {
     ReaderControlTtsContent({
-      fixedIsland: this.fixedIsland,
+      fixedIsland: this.currentFacts().geometry.fixedIsland,
       minimumIdentity: this.currentMinimumIdentity(), minimumKey: this.currentMinimumKey(),
-      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.preparedMinimumRequired,
+      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.currentFacts().geometry.minimum.preparedRequired,
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
       onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined,
         profileReader?: ReaderControlPlaybackProfileReader): void => this.bindModuleMinimum('tts', identity, measurer, profileReader),
       sourceDetached: this.launchSourceDetached('tts'),
-      sourceHandoffPending: this.launchRecovering,
-      reduceMotion: this.reduceMotion,
-      waveformActive: this.frame().visibility > 0 && !this.launchSourceDetached('tts') && !this.controlObscured,
+      sourceHandoffPending: this.currentFacts().launch.recovering,
+      reduceMotion: this.currentFacts().geometry.reduceMotion,
+      waveformActive: this.frame().visibility > 0 && !this.launchSourceDetached('tts') && !this.currentFacts().geometry.obscured,
       onMorphActorVisible: (kind: ReaderSessionMorphSourceKind): void => this.onLaunchSourceVisible(kind),
-      dismissTemporaryRevision: this.dismissTemporaryRevision,
+      dismissTemporaryRevision: this.currentFacts().geometry.temporary.dismissRevision,
       onTemporaryLayerChange: this.moduleTemporaryLayerHandler('tts'),
       fullViewportHeight: this.contentEndpointHeight(true),
       motionProgress: this.contentMotionProgress,
@@ -2913,45 +2653,45 @@ export struct ReaderControlPanel {
       interactionEnabled: this.secondaryModuleInputEnabled('tts'),
       inputCurrent: (): boolean => this.secondaryModuleInputEnabled('tts'),
       editorInputCurrent: (): boolean => this.moduleEditorInputEnabled('tts'),
-      state: this.ttsState,
-      timerMode: this.ttsTimerMode,
-      timerMinutes: this.ttsTimerMinutes,
-      timerSeconds: this.ttsTimerSeconds,
-      followHighlight: this.ttsFollowHighlight,
-      pauseOnInterruption: this.ttsPauseOnInterruption,
-      allowMixing: this.ttsAllowMixing,
-      backgroundPlayback: this.ttsBackgroundPlayback,
-      keepScreenOn: this.ttsKeepScreenOn,
-      failurePolicy: this.ttsFailurePolicy,
-      engine: this.ttsEngine,
-      httpEngines: this.ttsHttpEngines,
-      configurationRecovery: this.ttsConfigurationRecovery,
-      configurationLoading: this.ttsConfigurationLoading,
-      configurationLoadFailed: this.ttsConfigurationLoadFailed,
-      voiceOptions: this.ttsVoiceOptions,
-      language: this.ttsLanguage,
-      person: this.ttsPerson,
-      onToggle: (): void => this.onTtsToggle(),
-      onStop: (): void => this.onTtsStop(),
-      onPrevious: (): void => this.onTtsPrevious(),
-      onNext: (): void => this.onTtsNext(),
-      onSeek: (sliceIndex: number): void => this.onTtsSeek(sliceIndex),
-      onRateChange: (rate: number, onDeclined?: () => void): void => this.onTtsRateChange(rate, onDeclined),
+      state: this.currentFacts().playback.speech.state,
+      timerMode: this.currentFacts().playback.speech.timerMode,
+      timerMinutes: this.currentFacts().playback.speech.timerMinutes,
+      timerSeconds: this.currentFacts().playback.speech.timerSeconds,
+      followHighlight: this.currentFacts().playback.speech.followHighlight,
+      pauseOnInterruption: this.currentFacts().playback.speech.pauseOnInterruption,
+      allowMixing: this.currentFacts().playback.speech.allowMixing,
+      backgroundPlayback: this.currentFacts().playback.speech.backgroundPlayback,
+      keepScreenOn: this.currentFacts().playback.speech.keepScreenOn,
+      failurePolicy: this.currentFacts().playback.speech.failurePolicy,
+      engine: this.currentFacts().playback.speech.engine,
+      httpEngines: this.currentFacts().playback.speech.httpEngines,
+      configurationRecovery: this.currentFacts().playback.speech.configurationRecovery,
+      configurationLoading: this.currentFacts().playback.speech.configurationLoading,
+      configurationLoadFailed: this.currentFacts().playback.speech.configurationLoadFailed,
+      voiceOptions: this.currentFacts().playback.speech.voiceOptions,
+      language: this.currentFacts().playback.speech.language,
+      person: this.currentFacts().playback.speech.person,
+      onToggle: (): void => { this.onIntent({ kind: 'ttsToggle' }); },
+      onStop: (): void => { this.onIntent({ kind: 'ttsStop' }); },
+      onPrevious: (): void => { this.onIntent({ kind: 'ttsPrevious' }); },
+      onNext: (): void => { this.onIntent({ kind: 'ttsNext' }); },
+      onSeek: (sliceIndex: number): void => { this.onIntent({ kind: 'ttsSeek', sliceIndex }); },
+      onRateChange: (rate: number, onDeclined?: () => void): void => { this.onIntent({ kind: 'ttsRateChange', rate, onDeclined }); },
       onTimerChange: (minutes: number, seconds: number, mode?: ReaderTtsTimerMode): void =>
-        this.onTtsTimerChange(minutes, seconds, mode),
-      onFollowHighlightChange: (enabled: boolean): void => this.onTtsFollowHighlightChange(enabled),
+        { this.onIntent({ kind: 'ttsTimerChange', minutes, seconds, mode }); },
+      onFollowHighlightChange: (enabled: boolean): void => { this.onIntent({ kind: 'ttsFollowHighlightChange', enabled }); },
       onPauseOnInterruptionChange: (enabled: boolean): void =>
-        this.onTtsPauseOnInterruptionChange(enabled),
-      onAllowMixingChange: (enabled: boolean): void => this.onTtsAllowMixingChange(enabled),
-      onBackgroundPlaybackChange: (enabled: boolean): void => this.onTtsBackgroundPlaybackChange(enabled),
-      onKeepScreenOnChange: (enabled: boolean): void => this.onTtsKeepScreenOnChange(enabled),
-      onFailurePolicyChange: (policy: 'skip' | 'stop'): void => this.onTtsFailurePolicyChange(policy),
-      onVoiceChange: (language: string, person: number): void => this.onTtsVoiceChange(language, person),
-      onVoiceAudition: (language: string, person: number): Promise<void> => this.onTtsVoiceAudition(language, person),
-      onAuditionStop: (): void => this.onTtsAuditionStop(),
-      onEngineChange: (engine: string): Promise<void> => this.onTtsEngineChange(engine),
-      onHttpEnginePut: (config: ReaderTtsConfigurationDraft): Promise<void> => this.onTtsHttpEnginePut(config),
-      onHttpEngineDelete: (id: number): Promise<void> => this.onTtsHttpEngineDelete(id),
+        { this.onIntent({ kind: 'ttsPauseOnInterruptionChange', enabled }); },
+      onAllowMixingChange: (enabled: boolean): void => { this.onIntent({ kind: 'ttsAllowMixingChange', enabled }); },
+      onBackgroundPlaybackChange: (enabled: boolean): void => { this.onIntent({ kind: 'ttsBackgroundPlaybackChange', enabled }); },
+      onKeepScreenOnChange: (enabled: boolean): void => { this.onIntent({ kind: 'ttsKeepScreenOnChange', enabled }); },
+      onFailurePolicyChange: (policy: 'skip' | 'stop'): void => { this.onIntent({ kind: 'ttsFailurePolicyChange', policy }); },
+      onVoiceChange: (language: string, person: number): void => { this.onIntent({ kind: 'ttsVoiceChange', language, person }); },
+      onVoiceAudition: (language: string, person: number): Promise<void> => (this.onIntent({ kind: 'ttsVoiceAudition', language, person }) as Promise<void>),
+      onAuditionStop: (): void => { this.onIntent({ kind: 'ttsAuditionStop' }); },
+      onEngineChange: (engine: string): Promise<void> => (this.onIntent({ kind: 'ttsEngineChange', engine }) as Promise<void>),
+      onHttpEnginePut: (config: ReaderTtsConfigurationDraft): Promise<void> => (this.onIntent({ kind: 'ttsHttpEnginePut', config }) as Promise<void>),
+      onHttpEngineDelete: (id: number): Promise<void> => (this.onIntent({ kind: 'ttsHttpEngineDelete', id }) as Promise<void>),
       onMorphActorMeasured: (kind: ReaderSessionMorphSourceKind, left: number, top: number,
         width: number, height: number): void => this.reportSessionMorphSource(kind, left, top, width, height),
     });
@@ -2960,14 +2700,14 @@ export struct ReaderControlPanel {
   @Builder
   private autoPageModuleContent() {
         ReaderControlAutoPageContent({
-          fixedIsland: this.fixedIsland,
+          fixedIsland: this.currentFacts().geometry.fixedIsland,
           minimumIdentity: this.currentMinimumIdentity(), minimumKey: this.currentMinimumKey(),
-      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.preparedMinimumRequired,
+      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.currentFacts().geometry.minimum.preparedRequired,
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
           onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined,
             profileReader?: ReaderControlPlaybackProfileReader): void => this.bindModuleMinimum('autoPage', identity, measurer, profileReader),
           sourceDetached: this.launchSourceDetached('autoPage'),
-          sourceHandoffPending: this.launchRecovering,
+          sourceHandoffPending: this.currentFacts().launch.recovering,
           onMorphActorVisible: (kind: ReaderSessionMorphSourceKind): void => this.onLaunchSourceVisible(kind),
           fullViewportHeight: this.contentEndpointHeight(true),
           expandedLayout: this.isExpanded(), motionProgress: this.contentMotionProgress,
@@ -2978,19 +2718,19 @@ export struct ReaderControlPanel {
           inputCurrent: (): boolean => this.secondaryModuleInputEnabled('autoPage'),
           canPreviousChapter: this.canStepChapter(-1),
           canNextChapter: this.canStepChapter(1),
-          status: this.autoPageStatus, speedSeconds: this.autoPageSpeedSeconds,
-          timerMinutes: this.autoPageTimerMinutes, timerSeconds: this.autoPageTimerSeconds,
-          timerSummaryText: this.autoPageTimerSummaryText, followHighlight: this.autoPageFollowHighlight,
+          status: this.currentFacts().playback.automatic.status, speedSeconds: this.currentFacts().playback.automatic.speedSeconds,
+          timerMinutes: this.currentFacts().playback.automatic.timerMinutes, timerSeconds: this.currentFacts().playback.automatic.timerSeconds,
+          timerSummaryText: this.currentFacts().playback.automatic.timerSummary, followHighlight: this.currentFacts().playback.automatic.followHighlight,
           onBack: (): void => this.requestPage('home', 'module-back'),
-          onPreviousChapter: (): void => this.onPreviousChapter(),
-          onToggleRunning: (): void => this.onAutoPageToggle(),
-          onStop: (): void => this.onAutoPageStop(),
-          onNextChapter: (): void => this.onNextChapter(),
+          onPreviousChapter: (): void => { this.onIntent({ kind: 'previousChapter' }); },
+          onToggleRunning: (): void => { this.onIntent({ kind: 'autoPageToggle' }); },
+          onStop: (): void => { this.onIntent({ kind: 'autoPageStop' }); },
+          onNextChapter: (): void => { this.onIntent({ kind: 'nextChapter' }); },
           onTimerChange: (minutes: number, seconds: number): void =>
-            this.onAutoPageFullTimerChange(minutes, seconds),
+            { this.onIntent({ kind: 'autoPageFullTimerChange', minutes, seconds }); },
           onSpeedChange: (seconds: number, onDeclined?: () => void): void =>
-            this.onAutoPageFullSpeedChange(seconds, onDeclined),
-          onFollowHighlightChange: (enabled: boolean): void => this.onAutoPageFollowHighlightChange(enabled),
+            { this.onIntent({ kind: 'autoPageFullSpeedChange', seconds, onDeclined }); },
+          onFollowHighlightChange: (enabled: boolean): void => { this.onIntent({ kind: 'autoPageFollowHighlightChange', enabled }); },
           onMorphActorMeasured: (kind: ReaderSessionMorphSourceKind, left: number, top: number,
             width: number, height: number): void => this.reportSessionMorphSource(kind, left, top, width, height),
         });
@@ -3000,31 +2740,31 @@ export struct ReaderControlPanel {
   private replaceModuleContent() {
         ReaderControlReplaceContent({
           minimumIdentity: this.currentMinimumIdentity(), minimumKey: this.currentMinimumKey(),
-      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.preparedMinimumRequired,
+      preparedMinimum: this.preparedMinimum(), preparedMinimumRequired: this.currentFacts().geometry.minimum.preparedRequired,
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
           onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined): void =>
             this.bindModuleMinimum('replace', identity, measurer),
           fullContentHeight: this.contentEndpointHeight(true), quickContentHeight: this.contentEndpointHeight(false),
-          state: this.controlReplaceState, motionProgress: this.contentMotionProgress,
+          state: this.currentFacts().document.replace, motionProgress: this.contentMotionProgress,
           availableWidth: this.contentMotionWidth, availableHeight: this.contentEditingHeight(),
           interactionEnabled: this.secondaryModuleInputEnabled('replace'),
           inputCurrent: (): boolean => this.secondaryModuleInputEnabled('replace'),
-          dismissTemporaryRevision: this.dismissTemporaryRevision, retireTemporaryRevision: this.retireTemporaryRevision,
+          dismissTemporaryRevision: this.currentFacts().geometry.temporary.dismissRevision, retireTemporaryRevision: this.currentFacts().geometry.temporary.retireRevision,
           onTemporaryLayerChange: this.moduleTemporaryLayerHandler('replace'),
           onBack: (): void => this.requestPage('home', 'module-back'),
           onExpand: (): void => {
-            if ((this.temporaryLayerKind !== '')) return;
-            this.onInputActivity();
+            if ((this.currentFacts().geometry.temporary.layer !== '')) return;
+            this.onIntent({ kind: 'inputActivity' });
             this.applySemanticSession(expandReaderControlSession(this.controlSession,
-              readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion)), 'replace-expand');
+              readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.currentFacts().geometry.reduceMotion)), 'replace-expand');
           },
-          onReload: (operationId?: string): Promise<void> => this.onReloadControlReplace(operationId),
-          onSave: (draft: ReaderControlReplaceDraft): Promise<void> => this.onSaveControlReplace(draft),
-          onToggle: (rule: ReaderReplaceRule, value: boolean): Promise<void> => this.onToggleControlReplace(rule, value),
-          onDelete: (rule: ReaderReplaceRule): Promise<void> => this.onDeleteControlReplace(rule),
-          onPreview: (): Promise<ReaderReplacePreview> => this.onPreviewControlReplace(),
-          onImport: (): Promise<void> => this.onImportControlReplace(),
-          onExport: (): Promise<void> => this.onExportControlReplace(),
+          onReload: (operationId?: string): Promise<void> => (this.onIntent({ kind: 'reloadControlReplace', operationId }) as Promise<void>),
+          onSave: (draft: ReaderControlReplaceDraft): Promise<void> => (this.onIntent({ kind: 'saveControlReplace', draft }) as Promise<void>),
+          onToggle: (rule: ReaderReplaceRule, value: boolean): Promise<void> => (this.onIntent({ kind: 'toggleControlReplace', rule, value }) as Promise<void>),
+          onDelete: (rule: ReaderReplaceRule): Promise<void> => (this.onIntent({ kind: 'deleteControlReplace', rule }) as Promise<void>),
+          onPreview: (): Promise<ReaderReplacePreview> => (this.onIntent({ kind: 'previewControlReplace' }) as Promise<ReaderReplacePreview>),
+          onImport: (): Promise<void> => (this.onIntent({ kind: 'importControlReplace' }) as Promise<void>),
+          onExport: (): Promise<void> => (this.onIntent({ kind: 'exportControlReplace' }) as Promise<void>),
         });
   }
 
@@ -3036,8 +2776,8 @@ export struct ReaderControlPanel {
   @Builder
   private topBar() {
     ReaderReadingTopBar({ variant: 'reading', barWidth: this.currentLayout().topBarWidth, barHeight: this.currentLayout().topBarHeight,
-      bookTitle: this.bookTitle, subtitle: this.topBarSubtitle(), scheme: this.appScheme,
-      inputEnabled: this.inputEnabled, leading: (): void => { this.topBarBack(); }, trailing: (): void => { this.topBarActions(); },
+      bookTitle: this.currentFacts().document.bookTitle, subtitle: this.topBarSubtitle(), scheme: this.appScheme,
+      inputEnabled: this.currentFacts().geometry.inputEnabled, leading: (): void => { this.topBarBack(); }, trailing: (): void => { this.topBarActions(); },
     });
   }
 
@@ -3054,16 +2794,16 @@ export struct ReaderControlPanel {
     .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
     .responseRegion(readerActionTouchRegion(44, 44))
     .attributeModifier(new ReaderActionAccessibility('退出阅读，返回上一页',
-      this.topBarInputEnabled() && (this.temporaryLayerKind === '' || this.temporaryLayerKind === 'moreMenu'),
+      this.topBarInputEnabled() && (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu'),
       false, true, new ReaderPressFeedback(Color.Transparent, this.appScheme, 999), 'nativeButton'))
-    .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto')
+    .accessibilityLevel(this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu' ? 'no-hide-descendants' : 'auto')
     .onClick(this.controlActionHandler((): void => {
-      if (this.topBarInputEnabled() && !this.controlObscured && this.temporaryLayerKind === '' && !this.moreMenuVisible) this.onExitReading();
+      if (this.topBarInputEnabled() && !this.currentFacts().geometry.obscured && this.currentFacts().geometry.temporary.layer === '' && !this.moreMenuVisible) this.onIntent({ kind: 'exitReading' });
     }));
   }
 
   private topBarInputEnabled(): boolean {
-    return this.runtimeMounted && this.inputEnabled && (this.inputCurrent?.() ?? true) && !this.controlObscured &&
+    return this.runtimeMounted && this.currentFacts().geometry.inputEnabled && ((this.onIntent({ kind: 'inputCurrent' }) as boolean | undefined) ?? true) && !this.currentFacts().geometry.obscured &&
       this.currentLayout().topBarVisible && this.frame().topBar.opacity > 0;
   }
 
@@ -3088,16 +2828,16 @@ export struct ReaderControlPanel {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       this.sourceActionLabel();
     }.width(62).height(this.sourceActionHeight()).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
-    .id(sourceSwitchTriggerFocusId(this.sourceId, this.sourceBookId, 'reader-control'))
+    .id(sourceSwitchTriggerFocusId(this.currentFacts().document.source.id, this.currentFacts().document.source.bookId, 'reader-control'))
     .responseRegion(readerActionTouchRegion(62, this.sourceActionHeight()))
     .attributeModifier(new ReaderActionAccessibility('换源',
-      this.topBarInputEnabled() && (this.temporaryLayerKind === '' || this.temporaryLayerKind === 'moreMenu') && !this.isLocalBook(),
+      this.topBarInputEnabled() && (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu') && !this.isLocalBook(),
       false, true, new ReaderPressFeedback(Color.Transparent, this.appScheme, 999), 'nativeButton'))
-    .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto')
+    .accessibilityLevel(this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu' ? 'no-hide-descendants' : 'auto')
     .onClick(this.controlActionHandler((): void => {
       // 本地书籍换源置灰不可点; 仅在线书籍可换源。
-      if (this.topBarInputEnabled() && !this.controlObscured && this.temporaryLayerKind === '' && !this.moreMenuVisible && !this.isLocalBook()) {
-        this.onSourceSwitch(sourceSwitchTriggerFocusId(this.sourceId, this.sourceBookId, 'reader-control'));
+      if (this.topBarInputEnabled() && !this.currentFacts().geometry.obscured && this.currentFacts().geometry.temporary.layer === '' && !this.moreMenuVisible && !this.isLocalBook()) {
+        this.onIntent({ kind: 'sourceSwitch', focusId: sourceSwitchTriggerFocusId(this.currentFacts().document.source.id, this.currentFacts().document.source.bookId, 'reader-control') });
       }
     }));
 
@@ -3113,7 +2853,7 @@ export struct ReaderControlPanel {
     .responseRegion(readerActionTouchRegion(44, 44))
     .id('reader-control-more')
     .attributeModifier(new ReaderActionAccessibility('更多',
-      this.topBarInputEnabled() && !this.controlObscured && (this.temporaryLayerKind === '' || this.moreMenuVisible), false, true,
+      this.topBarInputEnabled() && !this.currentFacts().geometry.obscured && (this.currentFacts().geometry.temporary.layer === '' || this.moreMenuVisible), false, true,
       new ReaderPressFeedback(Color.Transparent, this.appScheme, 999), 'nativeButton'))
     .onClick(this.controlActionHandler((): void => { if (this.topBarInputEnabled()) this.setMoreMenuVisible(!this.moreMenuVisible); }))
     .onAreaChange((_previous: Area, area: Area): void => this.recordMoreAnchor(area, false))
@@ -3133,33 +2873,33 @@ export struct ReaderControlPanel {
           .width(24).height(24).accessibilityLevel('no');
       }.width(44).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0)
         .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appScheme, 999))
-        .enabled(this.shortWindowActionInput() && (this.temporaryLayerKind === '' || this.temporaryLayerKind === 'moreMenu'))
-        .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto')
+        .enabled(this.shortWindowActionInput() && (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu'))
+        .accessibilityLevel(this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu' ? 'no-hide-descendants' : 'auto')
         .accessibilityText('退出阅读，返回上一页')
         .onClick(this.controlActionHandler((): void => {
-          if (this.shortWindowActionInput() && this.temporaryLayerKind === '' && !this.moreMenuVisible) this.onExitReading();
+          if (this.shortWindowActionInput() && this.currentFacts().geometry.temporary.layer === '' && !this.moreMenuVisible) this.onIntent({ kind: 'exitReading' });
         }));
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         this.sourceActionLabel();
       }.width(76).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0)
         .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appScheme, 999))
-        .id(sourceSwitchTriggerFocusId(this.sourceId, this.sourceBookId, 'reader-control-short'))
-        .enabled(this.shortWindowActionInput() && (this.temporaryLayerKind === '' || this.temporaryLayerKind === 'moreMenu') && !this.isLocalBook())
-        .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto')
+        .id(sourceSwitchTriggerFocusId(this.currentFacts().document.source.id, this.currentFacts().document.source.bookId, 'reader-control-short'))
+        .enabled(this.shortWindowActionInput() && (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu') && !this.isLocalBook())
+        .accessibilityLevel(this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu' ? 'no-hide-descendants' : 'auto')
         .accessibilityText('换源')
         .onClick(this.controlActionHandler((): void => {
-          if (this.shortWindowActionInput() && this.temporaryLayerKind === '' && !this.moreMenuVisible && !this.isLocalBook())
-            this.onSourceSwitch(sourceSwitchTriggerFocusId(this.sourceId, this.sourceBookId, 'reader-control-short'));
+          if (this.shortWindowActionInput() && this.currentFacts().geometry.temporary.layer === '' && !this.moreMenuVisible && !this.isLocalBook())
+            this.onIntent({ kind: 'sourceSwitch', focusId: sourceSwitchTriggerFocusId(this.currentFacts().document.source.id, this.currentFacts().document.source.bookId, 'reader-control-short') });
         }));
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Image($r(this.appScheme === 'night' ? 'app.media.rc_dots_theme_night' : 'app.media.rc_dots')).width(20).height(20).accessibilityLevel('no');
       }.width(44).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0)
         .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appScheme, 999))
-        .enabled(this.shortWindowActionInput() && (this.temporaryLayerKind === '' || this.moreMenuVisible))
+        .enabled(this.shortWindowActionInput() && (this.currentFacts().geometry.temporary.layer === '' || this.moreMenuVisible))
         .id('reader-control-more-short')
         .accessibilityText('更多')
         .onClick(this.controlActionHandler((): void => {
-          if (this.shortWindowActionInput() && (this.temporaryLayerKind === '' || this.moreMenuVisible)) this.setMoreMenuVisible(!this.moreMenuVisible);
+          if (this.shortWindowActionInput() && (this.currentFacts().geometry.temporary.layer === '' || this.moreMenuVisible)) this.setMoreMenuVisible(!this.moreMenuVisible);
         }))
         .onAreaChange((_previous: Area, area: Area): void => this.recordMoreAnchor(area, true))
         .bindPopup(this.moreMenuVisible && !this.currentLayout().topBarVisible, this.readerMorePopupOptions(this.moreMenuGeneration));
@@ -3176,7 +2916,7 @@ export struct ReaderControlPanel {
     const next = readerPressPointer(event, this.quickOrModulePointer, enabled);
     if (next === this.quickOrModulePointer) return;
     this.quickOrModulePointer = next;
-    readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.quickOrModulePress = next < 0 ? '' : key; });
+    readerAnimatePress(this.getUIContext(), this.currentFacts().geometry.reduceMotion, (): void => { this.quickOrModulePress = next < 0 ? '' : key; });
   }
 
   @Builder
@@ -3213,9 +2953,9 @@ export struct ReaderControlPanel {
           .margin({ top: 5.78 });
       }.width('100%').height('100%').alignItems(HorizontalAlign.Center).accessibilityLevel('no-hide-descendants')
         .backgroundColor(readerPressSurface(readerAppColor('TOK_READ_ELEVATED', this.appScheme), this.appScheme,
-          this.quickOrModulePress === action, this.reduceMotion))
-        .borderRadius(8).scale(readerPressScale(this.quickOrModulePress === action, this.reduceMotion))
-        .opacity(readerPressOpacity(this.quickOrModulePress === action, this.reduceMotion));
+          this.quickOrModulePress === action, this.currentFacts().geometry.reduceMotion))
+        .borderRadius(8).scale(readerPressScale(this.quickOrModulePress === action, this.currentFacts().geometry.reduceMotion))
+        .opacity(readerPressOpacity(this.quickOrModulePress === action, this.currentFacts().geometry.reduceMotion));
     }
     .layoutWeight(1)
     .id('reader-control-entry-' + action)
@@ -3224,7 +2964,7 @@ export struct ReaderControlPanel {
     .backgroundColor(Color.Transparent)
     .borderRadius(8)
     .enabled(this.progressInputEnabled(true))
-    .accessibilityLevel(this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu' ? 'no-hide-descendants' : 'auto')
+    .accessibilityLevel(this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu' ? 'no-hide-descendants' : 'auto')
     .accessibilityText(label)
     .onTouch((event: TouchEvent): void => this.observeQuickOrModulePress(event, action, this.progressInputEnabled(true)))
     .onClick(this.controlActionHandler((): void => {
@@ -3234,8 +2974,8 @@ export struct ReaderControlPanel {
       } else if (action === 'search') {
         this.promoteSearch();
       } else if (action === 'replace') {
-        this.onInputActivity();
-        this.onOpenReplace();
+        this.onIntent({ kind: 'inputActivity' });
+        this.onIntent({ kind: 'openReplace' });
       }
     }));
   }
@@ -3266,29 +3006,29 @@ export struct ReaderControlPanel {
   }
   private bookmarkPillWidth(): number {
     // Four full-width glyphs at 11fp, plus the icon, gap, and side space.
-    return 42 + Math.ceil(44 * Math.max(1, this.sessionFontScale));
+    return 42 + Math.ceil(44 * Math.max(1, this.currentFacts().geometry.fontScale));
   }
   private bookmarkPillHeight(): number {
-    return Math.max(28, Math.ceil(15 * Math.max(1, this.sessionFontScale)) + 10);
+    return Math.max(28, Math.ceil(15 * Math.max(1, this.currentFacts().geometry.fontScale)) + 10);
   }
   private progressLaneHeight(): number { return Math.max(36, this.homeMetric('progressHeight', 50) - 14); }
 
   private onPageBookmarkStatusChanged(): void {
-    const fill = this.pageBookmarkStatus === 'bookmarked' ? 1 : 0;
+    const fill = this.currentFacts().document.bookmarks.pageStatus === 'bookmarked' ? 1 : 0;
     if (fill === this.pageBookmarkFill) return;
     if (!this.runtimeMounted) { this.pageBookmarkFill = fill; return; }
     const lifecycle = this.runtimeLifecycle;
     const finish = (): void => {
-      if (!this.reduceMotion && fill === 1 && this.runtimeMounted && this.runtimeLifecycle === lifecycle &&
+      if (!this.currentFacts().geometry.reduceMotion && fill === 1 && this.runtimeMounted && this.runtimeLifecycle === lifecycle &&
         this.pageBookmarkFill === 1) {
         this.getUIContext().animateTo(readerMotionAnimateParam('reader.control.handle.snap', false),
           (): void => { this.pageBookmarkTuck = 1; });
       }
     };
-    this.getUIContext().animateTo(this.reduceMotion ? readerMotionReducedFadeParam() :
+    this.getUIContext().animateTo(this.currentFacts().geometry.reduceMotion ? readerMotionReducedFadeParam() :
       readerMotionAnimateParam(fill === 1 ? 'reader.bookmark.pill.add' : 'reader.bookmark.pill.remove', false, finish), (): void => {
       this.pageBookmarkFill = fill;
-      this.pageBookmarkTuck = !this.reduceMotion && fill === 1 ? 1.025 : 1;
+      this.pageBookmarkTuck = !this.currentFacts().geometry.reduceMotion && fill === 1 ? 1.025 : 1;
     });
   }
 
@@ -3298,25 +3038,25 @@ export struct ReaderControlPanel {
       appScheme: this.appScheme, chapterTitle: this.presentedHomeChapterTitle(),
       titleHeight: this.homeMetric('chapterTitleHeight', 34), titleLaneHeight: this.chapterTitleLaneHeight(),
       cardHeight: this.homeChapterCardHeight(), totalChapters: this.presentedHomeTotalChapters(),
-      readableChapterPosition: this.readableChapterPosition, menuOccludesActions: this.moreMenuVisible || this.temporaryLayerKind === 'moreMenu',
+      readableChapterPosition: this.currentFacts().document.readableChapterPosition, menuOccludesActions: this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu',
       previousEnabled: this.progressInputEnabled(true) && this.canStepChapter(-1),
       nextEnabled: this.progressInputEnabled(true) && this.canStepChapter(1),
       actionScope: this.controlActionScope(),
       chapterActionsCurrent: (scope: string): boolean => this.controlActionScope() === scope &&
-        this.progressInputEnabled(true) && !this.moreMenuVisible && this.temporaryLayerKind === '',
+        this.progressInputEnabled(true) && !this.moreMenuVisible && this.currentFacts().geometry.temporary.layer === '',
       bookmarkLaneHeight: this.bookmarkLaneHeight(), bookmarkWidth: this.bookmarkPillWidth(), bookmarkHeight: this.bookmarkPillHeight(),
-      pageBookmarkStatus: this.pageBookmarkStatus, pageBookmarkEnabled: this.pageBookmarkEnabled,
-      bookmarkInputEnabled: this.pageBookmarkEnabled && this.progressInputEnabled(true),
+      pageBookmarkStatus: this.currentFacts().document.bookmarks.pageStatus, pageBookmarkEnabled: this.currentFacts().document.bookmarks.pageEnabled,
+      bookmarkInputEnabled: this.currentFacts().document.bookmarks.pageEnabled && this.progressInputEnabled(true),
       quickOrModulePress: $quickOrModulePress, pageBookmarkFill: $pageBookmarkFill, pageBookmarkTuck: $pageBookmarkTuck,
-      sessionFontScale: this.sessionFontScale, reduceMotion: this.reduceMotion,
+      sessionFontScale: this.currentFacts().geometry.fontScale, reduceMotion: this.currentFacts().geometry.reduceMotion,
       progressPercent: this.effectiveProgressPercent(), progressLabelWidth: this.homeMetric('percentWidth', 26.23),
       progressLaneHeight: this.progressLaneHeight(), progressInputRevision: this.progressInputRevision,
-      onPreviousChapter: (): void => { if (this.progressInputEnabled() && this.canStepChapter(-1)) this.onPreviousChapter(); },
-      onNextChapter: (): void => { if (this.progressInputEnabled() && this.canStepChapter(1)) this.onNextChapter(); },
+      onPreviousChapter: (): void => { if (this.progressInputEnabled() && this.canStepChapter(-1)) this.onIntent({ kind: 'previousChapter' }); },
+      onNextChapter: (): void => { if (this.progressInputEnabled() && this.canStepChapter(1)) this.onIntent({ kind: 'nextChapter' }); },
       onBookmarkPress: (event: TouchEvent): void => this.observeQuickOrModulePress(event, 'bookmark',
-        this.pageBookmarkEnabled && this.progressInputEnabled(true)),
+        this.currentFacts().document.bookmarks.pageEnabled && this.progressInputEnabled(true)),
       bookmarkClickHandler: (_scope: string): (() => void) => this.controlActionHandler((): void => {
-        if (this.pageBookmarkEnabled && this.progressInputEnabled()) this.onTogglePageBookmark();
+        if (this.currentFacts().document.bookmarks.pageEnabled && this.progressInputEnabled()) this.onIntent({ kind: 'togglePageBookmark' });
       }),
       progressChangeHandler: (revision: number): ((value: number, mode: SliderChangeMode) => void) =>
         this.progressChangeHandler(revision),
@@ -3328,12 +3068,12 @@ export struct ReaderControlPanel {
   }
 
   private effectiveProgressPercent(): number {
-    return this.progressPreviewPercent >= 0 ? this.progressPreviewPercent : this.clampPercent(this.progressPercent);
+    return this.progressPreviewPercent >= 0 ? this.progressPreviewPercent : this.clampPercent(this.currentFacts().document.progressPercent);
   }
 
   private progressInputEnabled(forAppearance: boolean = false): boolean {
     return this.runtimeMounted && this.contentLocation().level === 'home' && this.contentInputEnabled() &&
-      (this.temporaryLayerKind === '' || (forAppearance && this.temporaryLayerKind === 'moreMenu')) &&
+      (this.currentFacts().geometry.temporary.layer === '' || (forAppearance && this.currentFacts().geometry.temporary.layer === 'moreMenu')) &&
       (forAppearance || !this.moreMenuVisible);
   }
 
@@ -3346,7 +3086,7 @@ export struct ReaderControlPanel {
   }
 
   private syncProgressInput(): void {
-    const scope = JSON.stringify([this.runtimeLifecycle, this.controlOpenRevision,
+    const scope = JSON.stringify([this.runtimeLifecycle, this.currentFacts().geometry.openRevision,
       this.runtime?.ticket() ?? -1, this.progressInputEnabled()]);
     if (scope === this.progressInputScope) return;
     this.progressInputScope = scope;
@@ -3360,7 +3100,7 @@ export struct ReaderControlPanel {
       if (mode === SliderChangeMode.End) {
         const committed = this.progressPreviewPercent;
         this.progressPreviewPercent = -1;
-        this.onProgressChange(committed);
+        this.onIntent({ kind: 'progressChange', percent: committed });
       }
       this.refreshDockPlacement();
     };
@@ -3385,7 +3125,7 @@ export struct ReaderControlPanel {
 
   private brightnessRequiresChildClip(): boolean {
     const budget = this.currentLayout().contentBudget;
-    if (this.minimumIdentity.length === 0 || !this.minimumInputReady() ||
+    if (this.currentFacts().geometry.minimum.identity.length === 0 || !this.minimumInputReady() ||
       budget?.brightnessAutoWidthVp === undefined || budget.brightnessAutoHeightVp === undefined) return true;
     const width = budget.brightnessAutoWidthVp;
     const height = budget.brightnessAutoHeightVp;
@@ -3460,13 +3200,13 @@ export struct ReaderControlPanel {
             .fontWeight(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontWeight)
             .fontSize(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontSizeFp)
             .lineHeight(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.lineHeightFp as number)
-            .fontColor(this.brightnessAutomatic ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_READ_INK', this.appScheme))
+            .fontColor(this.currentFacts().preferences.brightness.automatic ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_READ_INK', this.appScheme))
             .textAlign(TextAlign.Center);
         }
         .width(this.currentLayout().contentBudget?.brightnessAutoWidthVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
         .height(this.currentLayout().contentBudget?.brightnessAutoHeightVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
-        .backgroundColor(this.brightnessAutomatic ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme) : readerAppColor('TOK_READ_ELEVATED', this.appScheme))
-        .border({ width: TOK_BORDER_W, color: this.brightnessAutomatic ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_LINE_STRONG', this.appScheme) })
+        .backgroundColor(this.currentFacts().preferences.brightness.automatic ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme) : readerAppColor('TOK_READ_ELEVATED', this.appScheme))
+        .border({ width: TOK_BORDER_W, color: this.currentFacts().preferences.brightness.automatic ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_LINE_STRONG', this.appScheme) })
         .borderRadius(Math.min(
           this.currentLayout().contentBudget?.brightnessAutoWidthVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE,
           this.currentLayout().contentBudget?.brightnessAutoHeightVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE) / 2).accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
@@ -3479,14 +3219,14 @@ export struct ReaderControlPanel {
       // Preserve the authored palette while exposing the automatic/manual
       // state through the existing control opacity; no unapproved color is
       // introduced for the selected endpoint.
-      .opacity(this.brightnessAutomatic ? 1 : 0.72)
-      .accessibilityText(this.brightnessAutomatic ? '跟随系统亮度，已开启，点击改为手动' : '手动亮度，点击跟随系统')
+      .opacity(this.currentFacts().preferences.brightness.automatic ? 1 : 0.72)
+      .accessibilityText(this.currentFacts().preferences.brightness.automatic ? '跟随系统亮度，已开启，点击改为手动' : '手动亮度，点击跟随系统')
       .onClick(this.controlActionHandler((): void => {
         if (!this.brightnessInputEnabled()) return;
         this.brightnessDragging = false;
         this.brightnessDragCurrent = undefined;
         this.brightnessPreviewPercent = -1;
-        this.onBrightnessAuto();
+        this.onIntent({ kind: 'brightnessAuto' });
       }));
     }
     .width(READER_CONTROL_BRIGHTNESS_RAIL_WIDTH)
@@ -3509,16 +3249,16 @@ export struct ReaderControlPanel {
 
   private effectiveBrightnessPercent(): number {
     return this.brightnessPreviewPercent >= 0 ? this.brightnessPreviewPercent :
-      this.clampBrightness(this.brightnessPercent);
+      this.clampBrightness(this.currentFacts().preferences.brightness.percent);
   }
 
   @Builder
   private accessibleBrightnessActions() {
-    Text(`降低阅读亮度，当前${Math.round(this.effectiveBrightnessPercent())}%，${this.brightnessAutomatic ? '跟随系统' : '手动模式'}`).width(1).height(1)
+    Text(`降低阅读亮度，当前${Math.round(this.effectiveBrightnessPercent())}%，${this.currentFacts().preferences.brightness.automatic ? '跟随系统' : '手动模式'}`).width(1).height(1)
       .accessibilityRole(AccessibilityRoleType.BUTTON)
       .enabled(this.brightnessInputEnabled() && this.effectiveBrightnessPercent() > READER_CONTROL_BRIGHTNESS_MIN)
       .onClick(this.controlActionHandler((): void => this.stepBrightness(-1)));
-    Text(`提高阅读亮度，当前${Math.round(this.effectiveBrightnessPercent())}%，${this.brightnessAutomatic ? '跟随系统' : '手动模式'}`).width(1).height(1)
+    Text(`提高阅读亮度，当前${Math.round(this.effectiveBrightnessPercent())}%，${this.currentFacts().preferences.brightness.automatic ? '跟随系统' : '手动模式'}`).width(1).height(1)
       .accessibilityRole(AccessibilityRoleType.BUTTON)
       .enabled(this.brightnessInputEnabled() && this.effectiveBrightnessPercent() < READER_CONTROL_BRIGHTNESS_MAX)
       .onClick(this.controlActionHandler((): void => this.stepBrightness(1)));
@@ -3528,17 +3268,17 @@ export struct ReaderControlPanel {
     if (!this.brightnessInputEnabled()) return;
     const current = this.effectiveBrightnessPercent();
     const value = this.roundBrightness(current + direction);
-    if (value !== current) this.onBrightnessChange(value);
+    if (value !== current) this.onIntent({ kind: 'brightnessChange', percent: value });
   }
 
   private brightnessInputEnabled(): boolean {
-    return this.runtimeMounted && this.contentInputEnabled() && this.temporaryLayerKind === '' &&
+    return this.runtimeMounted && this.contentInputEnabled() && this.currentFacts().geometry.temporary.layer === '' &&
       !this.moreMenuVisible && this.frame().brightness.opacity > 0;
   }
 
   private beginBrightnessDrag(): void {
     if (!this.brightnessInputEnabled()) return;
-    this.onInputActivity();
+    this.onIntent({ kind: 'inputActivity' });
     this.brightnessDragCurrent = this.controlCallbackGuard();
     this.brightnessDragStartPercent = this.effectiveBrightnessPercent();
     this.brightnessPreviewPercent = this.brightnessDragStartPercent;
@@ -3566,7 +3306,7 @@ export struct ReaderControlPanel {
     // the final MOVE before a held pause; no UP-dependent trailing throttle.
     if (this.brightnessPreviewPercent !== this.brightnessLastEmittedPercent) {
       this.brightnessLastEmittedPercent = this.brightnessPreviewPercent;
-      this.onBrightnessChange(this.brightnessPreviewPercent);
+      this.onIntent({ kind: 'brightnessChange', percent: this.brightnessPreviewPercent });
     }
   }
 
@@ -3581,7 +3321,7 @@ export struct ReaderControlPanel {
     this.brightnessDragging = false;
     this.brightnessDragCurrent = undefined;
     // Keep the optimistic rail until the latest native write is acknowledged.
-    this.onBrightnessChange(this.effectiveBrightnessPercent());
+    this.onIntent({ kind: 'brightnessChange', percent: this.effectiveBrightnessPercent() });
     this.brightnessLastEmittedPercent = -1;
     this.refreshDockPlacement();
   }
@@ -3595,7 +3335,7 @@ export struct ReaderControlPanel {
     const current = this.brightnessDragCurrent?.() ?? true;
     this.brightnessDragging = false;
     this.brightnessDragCurrent = undefined;
-    if (current) this.onBrightnessCancel();
+    if (current) this.onIntent({ kind: 'brightnessCancel' });
     else this.brightnessPreviewPercent = -1;
     // Keep the current preview until the writer settles any already-issued
     // native call. onBrightnessConfirmed then projects that successful ACK.
@@ -3616,7 +3356,7 @@ export struct ReaderControlPanel {
     const range = READER_CONTROL_BRIGHTNESS_MAX - READER_CONTROL_BRIGHTNESS_MIN;
     const value = READER_CONTROL_BRIGHTNESS_MIN +
       (1 - clampedY / trackHeight) * range;
-    this.onBrightnessChange(this.roundBrightness(value));
+    this.onIntent({ kind: 'brightnessChange', percent: this.roundBrightness(value) });
   }
 
   private roundBrightness(value: number): number {
@@ -3624,8 +3364,8 @@ export struct ReaderControlPanel {
     return this.clampBrightness(stepped);
   }
   private navigationInputEnabled(forAppearance: boolean = false): boolean {
-    return this.controlActionInputEnabled(true, forAppearance) && (!this.preparedMinimumRequired || this.minimumPresentationAvailable()) &&
-      (!this.preparedMinimumRequired || this.presentationReceipt?.environmentKey === this.minimumEnvironmentKey) &&
+    return this.controlActionInputEnabled(true, forAppearance) && (!this.currentFacts().geometry.minimum.preparedRequired || this.minimumPresentationAvailable()) &&
+      (!this.currentFacts().geometry.minimum.preparedRequired || this.currentFacts().geometry.minimum.receipt?.environmentKey === this.currentFacts().geometry.minimum.environmentKey) &&
       this.frame().navigation.opacity > 0 && this.frame().navigation.height > 0;
   }
 
@@ -3637,8 +3377,8 @@ export struct ReaderControlPanel {
       topRadius: this.geo.moduleNavRadiusTop,
       labelHeight: this.selectedMinimumProfile()?.navigationLabelHeight ?? 13.889,
       hasMeasuredProfile: this.selectedMinimumProfile() !== undefined,
-      ttsUnavailable: this.ttsState.status === 'unavailable', quickOrModulePress: $quickOrModulePress,
-      reduceMotion: this.reduceMotion, actionEnabled: this.navigationInputEnabled(true),
+      ttsUnavailable: this.currentFacts().playback.speech.state.status === 'unavailable', quickOrModulePress: $quickOrModulePress,
+      reduceMotion: this.currentFacts().geometry.reduceMotion, actionEnabled: this.navigationInputEnabled(true),
       actionScope: this.controlActionScope(),
       onModulePress: (event: TouchEvent, module: ReaderControlNavigationModule): void =>
         this.observeQuickOrModulePress(event, module, this.navigationInputEnabled(true)),
@@ -3658,12 +3398,12 @@ export struct ReaderControlPanel {
   }
 
   private canStepChapter(delta: number): boolean {
-    if (this.readableChapterPosition >= 0) {
-      const target = this.readableChapterPosition + delta;
-      return target >= 0 && target < this.totalChapters;
+    if (this.currentFacts().document.readableChapterPosition >= 0) {
+      const target = this.currentFacts().document.readableChapterPosition + delta;
+      return target >= 0 && target < this.currentFacts().document.totalChapters;
     }
     for (let position = 0; position < this.currentDirectoryEntries().length; position += 1) {
-      if (this.currentDirectoryEntries()[position].index !== this.currentChapterIndex) continue;
+      if (this.currentDirectoryEntries()[position].index !== this.currentFacts().document.chapterIndex) continue;
       for (let target = position + delta; target >= 0 && target < this.currentDirectoryEntries().length; target += delta) {
         if (this.currentDirectoryEntries()[target].navigable !== false) return true;
       }
