@@ -29,128 +29,37 @@ import { MangaReaderChrome, MangaChromeRenderState, MangaReaderChromeContent, Ma
   MangaActionPanelHeader, MangaActionPanelBody } from './MangaReaderChrome';
 import { MangaReadingViewportHost, MangaViewportRenderState, MangaBoundaryViewport, MangaImageViewport } from './MangaReadingViewportHost';
 import { MangaChapterBoundaryHost, MangaBoundaryRenderState, MangaRetainedChapterPixels, MangaBoundaryHint } from './MangaChapterBoundaryHost';
+import type { MangaDirectoryActions, MangaDirectoryBook, MangaDirectoryChapter, MangaDirectoryChapterNavigation, MangaDirectoryMount, MangaDirectoryNativeSlots, MangaDirectoryPosition, MangaDirectorySheetControls, MangaDirectoryWindow } from './MangaDirectoryDrawer';
+import type { MangaChromeActions, MangaChromeBook, MangaChromeChapter, MangaChromeChapterNavigation, MangaChromeDirectory, MangaChromeMount, MangaChromeNativeSlots, MangaChromeReaderControls, MangaChromeWindow } from './MangaReaderChrome';
+import type { MangaViewportActions, MangaViewportBook, MangaViewportBoundaryAdmission, MangaViewportChapter, MangaViewportChromeInput, MangaViewportDirectory, MangaViewportMount, MangaViewportNativeSlots, MangaViewportWindow } from './MangaReadingViewportHost';
+import type { MangaBoundaryActions, MangaBoundaryBook, MangaBoundaryChapter, MangaBoundaryChromeControls, MangaBoundaryMount, MangaBoundaryViewportPort, MangaBoundaryWindow } from './MangaChapterBoundaryHost';
 
-interface MangaReadingBook {
-  readonly sourceId: string;
-  readonly bookId: string;
-  readonly bookTitle: string;
-  controller: MangaSessionController | undefined;
-  readonly runtime: ReadingGatewayRuntime | undefined;
-  readonly remoteSession: RemoteReadingSession | undefined;
-  readonly remoteBookSeed: RemoteReadingBookSeed | undefined;
-  readonly offline: boolean;
-  readonly directoryCurrentChapterIndex: number;
-  readonly directoryProjection: LocalReadingTocEntry[];
-  readonly directoryRecovery: ReadingDirectoryRecovery;
-  readonly downloadEnabled: boolean;
-  readonly inBookshelf: boolean;
-  readonly moreMenuVariant: ActionSheetSpecId;
-  readonly isReaderIdentityCurrent: () => boolean;
-  readonly inputCurrent: (() => boolean) | undefined;
-  readonly settingsGateway: ReaderSettingsGateway | undefined;
+interface MangaReadingBook extends MangaDirectoryBook, MangaChromeBook, MangaViewportBook, MangaBoundaryBook {}
+interface MangaReadingWindow extends MangaDirectoryWindow, MangaChromeWindow, MangaViewportWindow, MangaBoundaryWindow {}
+interface MangaReadingChapter extends MangaDirectoryChapter, MangaChromeChapter, MangaViewportChapter, MangaBoundaryChapter {}
+interface MangaReadingActions extends MangaDirectoryActions, MangaChromeActions, MangaViewportActions, MangaBoundaryActions {}
+interface MangaReadingNativeSlots extends MangaDirectoryNativeSlots, MangaChromeNativeSlots, MangaViewportNativeSlots {}
+
+interface MangaReadingMounts {
+  readonly directory: MangaDirectoryMount;
+  readonly chrome: MangaChromeMount;
+  readonly viewport: MangaViewportMount;
+  readonly boundary: MangaBoundaryMount;
 }
 
-interface MangaReadingWindow {
-  readonly getUIContext: () => UIContext;
-  readonly appForeground: boolean;
-  readonly appThemeScheme: string;
-  backgroundPreference: 'paper' | 'white' | 'ink';
-  controlsVisible: boolean;
-  readonly interactionBlocked: boolean;
-  panel: string;
-  readonly reduceMotion: boolean;
-  readonly stageWidth: number;
-  readonly stageHeight: number;
-  readonly systemScheme: string;
-  readonly windowChromeActive: boolean;
-  readonly windowChromeOverlayActive: boolean;
-  readonly windowInteractiveInsets: (_revision: number) => ReaderInsetsVp;
-  readonly interactiveInsets: (revision: number) => ReaderInsetsVp;
-  readonly windowMetricsRevision: number;
-  readonly navigationPreferences: ReaderNavigationPreferences;
-  readonly smartGestureSettings: ReaderSmartGestureSettings;
-  readonly onWindowChromeChanged: () => void;
-}
-
-interface MangaReadingChapter {
-  readonly mounted: boolean;
-  readonly exiting: boolean;
-  chapterCommitted: boolean;
-  chapterEnd: boolean;
-  error: string;
-  readonly loggingIn: boolean;
-  readonly loginRequiredForControls: boolean;
-  readonly opened: boolean;
-  readonly openingRetry: boolean;
-  presentationGeneration: number;
-  readonly pageTurnInputRevision: number;
-  recovering: boolean;
-  readonly refreshing: boolean;
-  title: string;
-  readonly offlineProbeStatus: string;
-  readonly notifyPreparationFailure: () => void;
-  readonly refreshLoginRequiredForControls: () => void;
-  readonly configureAdjacentChapter: (session: RemoteReadingSession, controller: MangaSessionController) => void;
-}
-
-interface MangaReadingActions {
-  readonly confirmRecovery: () => Promise<void>;
-  readonly handleBack: (intent?: 'navigation') => Promise<void>;
-  readonly loginAndRetry: () => Promise<void>;
-  readonly onAdjacentChapterCommitted: (index: number, title: string) => void;
-  readonly onChapterCommitted: (index: number, title: string) => void;
-  readonly onContinueOffline: (generation: number, presentationId: string) => void;
-  readonly onDetail: () => void;
-  readonly onDirectory: () => void;
-  readonly onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number) => Promise<void>;
-  readonly onDownloadBook: () => void;
-  readonly onDownloadChapter: () => void;
-  readonly onLoadDownloadActions: (chapterIndex?: number) => Promise<MangaDownloadAction[]>;
-  readonly onOpenDownloads: () => void;
-  readonly onReconcileOffline: (generation: number, presentationId: string) => void;
-  readonly onRemoteSessionReady: (session: RemoteReadingSession, refreshDirectoryDisplay?: boolean) => void;
-  readonly onSaveFailure: (message: string) => void;
-  readonly onSelectDirectoryTarget: (chapterIndex: number, proof?: ReaderDirectoryTargetProof) => void;
-  readonly onSwitchSource: (focusId?: string) => void;
-  readonly onToggleShelf: () => void;
-  readonly openSourceSwitch: () => Promise<void>;
-  readonly refreshImages: () => Promise<void>;
-}
-
-interface MangaReadingNativeSlots {
-  readonly viewportImages: () => void;
-  readonly boundaryHint: () => void;
-  readonly directoryFallback: (catalog: boolean, identity: string) => void;
-  readonly topBarBack: () => void;
-  readonly topBarActions: () => void;
-  readonly actionPanelHeader: (opening: number) => void;
-  readonly actionPanelBody: (opening: number) => void;
-}
-
-export interface MangaReadingScene {
-  readonly book: MangaReadingBook;
-  readonly window: MangaReadingWindow;
-  readonly chapter: MangaReadingChapter;
-  readonly actions: MangaReadingActions;
-  readonly slots: MangaReadingNativeSlots;
-  readonly directory: () => MangaDirectoryDrawer;
-  readonly chrome: () => MangaReaderChrome;
-  readonly viewport: () => MangaReadingViewportHost;
-  readonly boundary: () => MangaChapterBoundaryHost;
-}
 /** Mounted chapter, window policy, and the native reader stage. */
 @Component
 export struct MangaReadingSurface {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  private readonly scene: MangaReadingScene = this.bindScene();
+  private readonly mounts: MangaReadingMounts = this.bindMounts();
   @State private directoryState: MangaDirectoryRenderState = new MangaDirectoryRenderState();
-  private readonly directory: MangaDirectoryDrawer = new MangaDirectoryDrawer(this.scene, (): MangaDirectoryRenderState => this.directoryState);
+  private readonly directory: MangaDirectoryDrawer = new MangaDirectoryDrawer(this.mounts.directory, (): MangaDirectoryRenderState => this.directoryState);
   @State private chromeState: MangaChromeRenderState = new MangaChromeRenderState();
-  private readonly chrome: MangaReaderChrome = new MangaReaderChrome(this.scene, (): MangaChromeRenderState => this.chromeState, this.transientFeedback);
+  private readonly chrome: MangaReaderChrome = new MangaReaderChrome(this.mounts.chrome, (): MangaChromeRenderState => this.chromeState, this.transientFeedback);
   @State private viewportState: MangaViewportRenderState = new MangaViewportRenderState();
-  private readonly viewport: MangaReadingViewportHost = new MangaReadingViewportHost(this.scene, (): MangaViewportRenderState => this.viewportState);
+  private readonly viewport: MangaReadingViewportHost = new MangaReadingViewportHost(this.mounts.viewport, (): MangaViewportRenderState => this.viewportState);
   @State private boundaryState: MangaBoundaryRenderState = new MangaBoundaryRenderState();
-  private readonly boundary: MangaChapterBoundaryHost = new MangaChapterBoundaryHost(this.scene, (): MangaBoundaryRenderState => this.boundaryState, this.transientFeedback);
+  private readonly boundary: MangaChapterBoundaryHost = new MangaChapterBoundaryHost(this.mounts.boundary, (): MangaBoundaryRenderState => this.boundaryState, this.transientFeedback);
   @StorageLink('readerWindowMetricsRevision') @Watch('onDirectoryMetricsChanged') private windowMetricsRevision: number = 0;
   @StorageLink('readerAppForeground') @Watch('onPanelForegroundChanged') private appForeground: boolean = true;
   @StorageLink('readerSmartGestureSettings') @Watch('syncSmartGestureMonitor')
@@ -251,10 +160,8 @@ export struct MangaReadingSurface {
     MangaBookPresentation.useOwner(this.runtime);
     if (MangaBookPresentation.revision !== presentationRevision)
       AppStorage.setOrCreate('readerMangaPresentationRevision', MangaBookPresentation.revision);
-    this.viewport.state.horizontal = this.settingsGateway?.current()?.mangaDirection === 'horizontal';
-    this.viewport.state.fitPreference = this.settingsGateway?.current()?.mangaFit ?? 'source';
-    this.chrome.state.showPageNumbers = this.settingsGateway?.current()?.mangaPageNumbers !== false;
-    this.chrome.loadBrightness();
+    this.viewport.loadInitialPreferences();
+    this.chrome.loadInitialPreferences();
     this.withdrawExitRequest = this.onExitRequestHandler((intent?: 'navigation'): void => {
       if (this.mounted) void this.handleBack(intent);
     });
@@ -277,7 +184,7 @@ export struct MangaReadingSurface {
     this.chrome.releasePanel();
     this.refreshing = false;
     this.chrome.releaseBrightness();
-    this.viewport.layoutGeneration++; this.viewport.viewportGeneration++; this.loginGeneration++; this.presentationGeneration++;
+    this.viewport.invalidateLayout(); this.loginGeneration++; this.presentationGeneration++;
     this.loggingIn = false;
     this.viewport.releaseMountedPosition();
     const retainPreparation = this.retainPreparationOnDisappear();
@@ -298,14 +205,13 @@ export struct MangaReadingSurface {
   }
   // Access the live mount. In particular, watched flags publish through ArkUI
   // at the original assignment, even during an asynchronous chapter transfer.
-  private bindScene(): MangaReadingScene {
+  private bindMounts(): MangaReadingMounts {
     const surface = this;
     const book: MangaReadingBook = {
       get sourceId(): string { return surface.sourceId; },
       get bookId(): string { return surface.bookId; },
       get bookTitle(): string { return surface.bookTitle; },
       get controller(): MangaSessionController | undefined { return surface.controller; },
-      set controller(value: MangaSessionController | undefined) { surface.controller = value; },
       get runtime(): ReadingGatewayRuntime | undefined { return surface.runtime; },
       get remoteSession(): RemoteReadingSession | undefined { return surface.remoteSession; },
       get remoteBookSeed(): RemoteReadingBookSeed | undefined { return surface.remoteBookSeed; },
@@ -321,16 +227,16 @@ export struct MangaReadingSurface {
       get settingsGateway(): ReaderSettingsGateway | undefined { return surface.settingsGateway; },
     };
     const window: MangaReadingWindow = {
+      setBackgroundPreference: (value: 'paper' | 'white' | 'ink'): void => { surface.backgroundPreference = value; },
+      setPanel: (value: string): void => { surface.panel = value; },
+      setControlsVisible: (value: boolean): void => { surface.controlsVisible = value; },
       getUIContext: (): UIContext => surface.getUIContext(),
       get appForeground(): boolean { return surface.appForeground; },
       get appThemeScheme(): string { return surface.appThemeScheme; },
       get backgroundPreference(): 'paper' | 'white' | 'ink' { return surface.backgroundPreference; },
-      set backgroundPreference(value: 'paper' | 'white' | 'ink') { surface.backgroundPreference = value; },
       get controlsVisible(): boolean { return surface.controlsVisible; },
-      set controlsVisible(value: boolean) { surface.controlsVisible = value; },
       get interactionBlocked(): boolean { return surface.interactionBlocked; },
       get panel(): string { return surface.panel; },
-      set panel(value: string) { surface.panel = value; },
       get reduceMotion(): boolean { return surface.reduceMotion; },
       get stageWidth(): number { return surface.stageWidth; },
       get stageHeight(): number { return surface.stageHeight; },
@@ -345,26 +251,27 @@ export struct MangaReadingSurface {
       onWindowChromeChanged: (): void => surface.onWindowChromeChanged(),
     };
     const chapter: MangaReadingChapter = {
+      setTitle: (value: string): void => { surface.title = value; },
+      setRecovering: (value: boolean): void => { surface.recovering = value; },
+      reportError: (value: string): void => { surface.error = value; },
+      setChapterEnd: (value: boolean): void => { surface.chapterEnd = value; },
+      setChapterCommitted: (value: boolean): void => { surface.chapterCommitted = value; },
+      replaceController: (value: MangaSessionController): void => { surface.controller = value; },
       get mounted(): boolean { return surface.mounted; },
       get exiting(): boolean { return surface.exiting; },
       get chapterCommitted(): boolean { return surface.chapterCommitted; },
-      set chapterCommitted(value: boolean) { surface.chapterCommitted = value; },
       get chapterEnd(): boolean { return surface.chapterEnd; },
-      set chapterEnd(value: boolean) { surface.chapterEnd = value; },
       get error(): string { return surface.error; },
-      set error(value: string) { surface.error = value; },
       get loggingIn(): boolean { return surface.loggingIn; },
       get loginRequiredForControls(): boolean { return surface.loginRequiredForControls; },
       get opened(): boolean { return surface.opened; },
       get openingRetry(): boolean { return surface.openingRetry; },
       get presentationGeneration(): number { return surface.presentationGeneration; },
-      set presentationGeneration(value: number) { surface.presentationGeneration = value; },
+      advancePresentation: (): number => ++surface.presentationGeneration,
       get pageTurnInputRevision(): number { return surface.pageTurnInputRevision; },
       get recovering(): boolean { return surface.recovering; },
-      set recovering(value: boolean) { surface.recovering = value; },
       get refreshing(): boolean { return surface.refreshing; },
       get title(): string { return surface.title; },
-      set title(value: string) { surface.title = value; },
       get offlineProbeStatus(): string { return surface.offlineProbeStatus; },
       notifyPreparationFailure: (): void => surface.notifyPreparationFailure(),
       refreshLoginRequiredForControls: (): void => surface.refreshLoginRequiredForControls(),
@@ -402,18 +309,45 @@ export struct MangaReadingSurface {
       actionPanelHeader: (opening: number): void => surface.renderActionPanelHeader(opening),
       actionPanelBody: (opening: number): void => surface.renderActionPanelBody(opening),
     };
-    const scene: MangaReadingScene = {
+    const directory: MangaDirectoryMount = {
       book: book,
       window: window,
       chapter: chapter,
       actions: actions,
       slots: slots,
-      directory: (): MangaDirectoryDrawer => surface.directory,
-      chrome: (): MangaReaderChrome => surface.chrome,
-      viewport: (): MangaReadingViewportHost => surface.viewport,
-      boundary: (): MangaChapterBoundaryHost => surface.boundary,
+      sheet: (): MangaDirectorySheetControls => surface.chrome,
+      position: (): MangaDirectoryPosition => surface.viewport,
+      navigation: (): MangaDirectoryChapterNavigation => surface.boundary,
     };
-    return scene;
+    const chrome: MangaChromeMount = {
+      book: book,
+      window: window,
+      chapter: chapter,
+      actions: actions,
+      slots: slots,
+      directory: (): MangaChromeDirectory => surface.directory,
+      reader: (): MangaChromeReaderControls => surface.viewport,
+      navigation: (): MangaChromeChapterNavigation => surface.boundary,
+    };
+    const viewport: MangaViewportMount = {
+      book: book,
+      window: window,
+      chapter: chapter,
+      actions: actions,
+      slots: slots,
+      input: (): MangaViewportChromeInput => surface.chrome,
+      directory: (): MangaViewportDirectory => surface.directory,
+      admission: (): MangaViewportBoundaryAdmission => surface.boundary,
+    };
+    const boundary: MangaBoundaryMount = {
+      book: book,
+      window: window,
+      chapter: chapter,
+      actions: actions,
+      controls: (): MangaBoundaryChromeControls => surface.chrome,
+      viewport: (): MangaBoundaryViewportPort => surface.viewport,
+    };
+    return { directory: directory, chrome: chrome, viewport: viewport, boundary: boundary };
   }
   private async open(controller: MangaSessionController, resumePosition: boolean = false): Promise<void> {
     const current = (): boolean => this.mounted && this.controller === controller && this.isReaderIdentityCurrent?.() !== false;
@@ -436,8 +370,8 @@ export struct MangaReadingSurface {
             throw new Error('MANGA_SESSION_IDENTITY_MISMATCH');
           }
           let catalogRecoveryAttempted = false;
-          this.viewport.state.horizontalPage = startAtChapterFirst ? 0 : prepared.targetOrdinal;
-          await controller.setPreviewMode(this.viewport.state.fitPreference === 'contain' || (this.viewport.state.fitPreference === 'source' && prepared.chapter.manifest.displayHints?.fit === 'contain'));
+          await controller.setPreviewMode(this.viewport.prepareEntryOrientation(
+            startAtChapterFirst ? 0 : prepared.targetOrdinal, prepared.chapter.manifest));
           if (!current()) return;
           await controller.openPrepared(prepared, this.offline, startAtChapterFirst);
           if (!current()) return;
@@ -529,12 +463,7 @@ export struct MangaReadingSurface {
       if (!this.recovering && saved !== null && saved.chapter.chapterId === controller.chapter?.manifest.chapter.chapterId) {
         const ordinal = saved.pageOrdinalFallback;
         if (ordinal >= 0 && controller.pageAt(ordinal)?.pageId === saved.pageId) {
-          if (this.viewport.state.horizontal) {
-            this.viewport.state.horizontalPage = ordinal;
-            this.viewport.data.projection.publish(controller.chapter!.manifest, (index: number) => controller.pageGeometry(index), ordinal, controller.totalPages, (pageOrdinal: number) => controller.pageAt(pageOrdinal));
-            this.refreshLoginRequiredForControls();
-            this.viewport.data.notify(true, 0, 0);
-          }
+          this.viewport.publishOpenedHorizontalPosition(controller, ordinal);
           this.viewport.restore(ordinal, saved.y, saved.x);
         }
       } else this.viewport.updateViewport();
@@ -612,30 +541,27 @@ export struct MangaReadingSurface {
   private loginRequired(): boolean {
     if (this.offline) return false;
     const errors = [this.error];
-    if (this.viewport.data.totalCount() > this.viewport.first) errors.push(this.viewport.imageError(this.viewport.data.getData(this.viewport.first)));
+    const row = this.viewport.visibleRow();
+    if (row !== undefined) errors.push(this.viewport.imageError(row));
     return errors.some(code => code === 'READING_IMAGE_AUTH_REQUIRED' || code === 'READING_IMAGE_ACCESS_DENIED');
   }
   private async loginAndRetry(): Promise<void> {
     if (!this.mounted || this.exiting || this.loggingIn || !this.loginRequired() ||
-      this.controller === undefined || this.viewport.data.totalCount() <= this.viewport.first) return;
+      this.controller === undefined) return;
     const controller = this.controller;
-    const row = this.viewport.data.getData(this.viewport.first);
+    const row = this.viewport.visibleRow();
+    if (row === undefined) return;
     const chapter = controller.chapter;
     const manifestVersion = chapter?.manifest.manifestVersion;
-    const first = this.viewport.first;
+    const first = this.viewport.visibleRowIndex();
     const openingError = this.error;
     const generation = ++this.loginGeneration;
     let retryDispatched = false;
     const current = (): boolean => {
       if (!this.mounted || this.exiting || this.offline || this.appForeground === false || this.windowChromeActive === false ||
         this.windowChromeOverlayActive || this.isReaderIdentityCurrent?.() === false || generation !== this.loginGeneration ||
-        this.controller !== controller || controller.chapter !== chapter || controller.chapter?.manifest.manifestVersion !== manifestVersion ||
-        this.viewport.first !== first || this.viewport.data.totalCount() <= first) return false;
-      const visible = this.viewport.data.getData(first);
-      if (visible.ordinal !== row.ordinal || visible.tileIndex !== row.tileIndex) return false;
-      // A successful page retry may materialize its own placeholder geometry.
-      if (retryDispatched && !row.known && visible.known) return true;
-      return visible.key === row.key && visible.known === row.known;
+        this.controller !== controller || controller.chapter !== chapter || controller.chapter?.manifest.manifestVersion !== manifestVersion) return false;
+      return this.viewport.matchesVisibleRow(first, row, retryDispatched);
     };
     this.loggingIn = true;
     try {
@@ -657,7 +583,7 @@ export struct MangaReadingSurface {
     const chapter = controller?.chapter;
     if (controller === undefined || chapter === undefined || this.refreshing || !this.chrome.readerPanelForeground()) return;
     this.refreshing = true;
-    this.viewport.pendingTurnOrdinal = undefined; this.viewport.mountedTurnRowKey = '';
+    this.viewport.clearMountedTurn();
     const generation = ++this.presentationGeneration;
     const current = (): boolean => this.mounted && !this.exiting && this.controller === controller && this.isReaderIdentityCurrent();
     const feedbackCurrent = (): boolean => current() && this.opened && this.chrome.readerPanelForeground();
@@ -686,10 +612,7 @@ export struct MangaReadingSurface {
       this.error = ''; this.recovering = controller.recoveryRequired;
       const saved = !this.recovering ? controller.savedLocation : null;
       const ordinal = controller.displayedOrdinal;
-      this.viewport.state.horizontalPage = ordinal;
-      this.viewport.visibleAnchor = undefined;
-      this.viewport.publish();
-      this.viewport.restore(ordinal, saved?.y ?? 0, saved?.x ?? 0);
+      this.viewport.restoreRefreshedPosition(ordinal, saved?.y ?? 0, saved?.x ?? 0);
       const installed = controller.chapter;
       if (installed !== undefined && installed.manifest.manifestVersion !== chapter.manifest.manifestVersion &&
         !this.recovering && this.error.length === 0) {
@@ -725,15 +648,15 @@ export struct MangaReadingSurface {
     if (intent === 'navigation') this.navigationExitRequested = true;
     if (this.exiting) return;
     if (intent !== 'navigation') {
-      if (this.boundary.state.boundaryBusy || this.boundary.boundaryDragging) { await this.boundary.cancelBoundaryChapter(); return; }
-      if (this.panel.length > 0 || this.chrome.state.panelPhase === 'preparing') { void this.chrome.closePanel(); return; }
+      if (this.boundary.busy || this.boundary.boundaryDragging) { await this.boundary.cancelBoundaryChapter(); return; }
+      if (this.panel.length > 0 || this.chrome.phase === 'preparing') { void this.chrome.closePanel(); return; }
       if (this.chapterEnd) { this.chapterEnd = false; return; }
-      if (this.viewport.state.zoom > 1) { this.viewport.changeZoom(1); return; }
+      if (this.viewport.zoomed) { this.viewport.changeZoom(1); return; }
     }
     this.exiting = true;
     let delivered = false;
     try {
-      if (this.boundary.state.boundaryBusy || this.boundary.boundaryDragging) await this.boundary.cancelBoundaryChapter();
+      if (this.boundary.busy || this.boundary.boundaryDragging) await this.boundary.cancelBoundaryChapter();
       await this.chrome.performPanelAction(async (): Promise<void> => {
         if (!this.mounted || this.isReaderIdentityCurrent?.() === false) return;
         const controller = this.controller;
@@ -802,10 +725,7 @@ export struct MangaReadingSurface {
     if (!this.mounted || controller === undefined || this.openingRetry) return;
     this.resumeChangedContent = true;
     this.openingRetry = true; this.opened = false; this.error = '';
-    this.presentationGeneration++; this.viewport.viewportGeneration++;
-    this.viewport.first = 0; this.viewport.last = 0; this.viewport.viewportRangeObserved = false;
-    this.viewport.visibleAnchor = undefined; this.viewport.confirmedPosition = undefined;
-    this.viewport.publishedManifestVersion = ''; this.viewport.publishedRowKeys.clear();
+    this.presentationGeneration++; this.viewport.resetReopeningChapter();
     this.detachOfflineProbe?.(); this.detachOfflineProbe = undefined;
     controller.close('chapter');
     try { await this.open(controller, true); }
@@ -826,8 +746,10 @@ export struct MangaReadingSurface {
   }
   private async confirmRecovery(): Promise<void> {
     const controller = this.controller;
-    if (!this.recovering || controller === undefined || this.viewport.data.totalCount() <= this.viewport.first) return;
-    const ordinal = this.viewport.data.getData(this.viewport.first).ordinal;
+    if (!this.recovering || controller === undefined) return;
+    const row = this.viewport.visibleRow();
+    if (row === undefined) return;
+    const ordinal = row.ordinal;
     const generation = this.presentationGeneration;
     const current = (): boolean => this.mounted && this.controller === controller &&
       generation === this.presentationGeneration;
@@ -835,7 +757,7 @@ export struct MangaReadingSurface {
       if (controller.replacementRecoveryRequired) {
         await controller.confirmReplacement();
         if (!current()) return;
-        this.viewport.visibleAnchor = undefined; this.viewport.publish(); this.viewport.restore(0, 0, 0);
+        this.viewport.restoreReplacedChapter();
       } else await controller.selectPage(ordinal);
       if (!current()) return;
       // A signed-image retry may replace the manifest during confirmation.
@@ -856,10 +778,7 @@ export struct MangaReadingSurface {
     if (!this.opened || !this.chrome.readerPanelForeground() || this.error === 'MANGA_SESSION_CANCELLED') return;
     // Image failures stay with their own logical image. Preserve the error
     // fact for the existing login/recovery decisions without a global alert.
-    for (let index = Math.max(0, this.viewport.first); index <= this.viewport.requestedLast(); index++) {
-      const row = this.viewport.data.getData(index);
-      if (this.viewport.rowHasError(row) && this.viewport.imageError(row) === this.error) return;
-    }
+    if (this.viewport.hasWindowImageError(this.error)) return;
     const key = JSON.stringify([this.sourceId, this.bookId, this.controller?.chapter?.manifest.manifestVersion,
       this.presentationGeneration, this.error]);
     if (key === this.openedErrorNoticeKey) return;
@@ -879,12 +798,12 @@ export struct MangaReadingSurface {
   }
   private onReaderInteractionBlockedChanged(): void {
     this.onPanelForegroundChanged();
-    if (this.mounted && this.interactionBlocked && (this.boundary.state.boundaryBusy || this.boundary.boundaryDragging)) {
+    if (this.mounted && this.interactionBlocked && (this.boundary.busy || this.boundary.boundaryDragging)) {
       void this.boundary.cancelBoundaryChapter().catch((): void => {});
     }
   }
   private onWindowChromeChanged(): void {
-    if ((this.boundary.state.boundaryBusy || this.boundary.boundaryDragging) && (!this.windowChromeActive || this.windowChromeOverlayActive))
+    if ((this.boundary.busy || this.boundary.boundaryDragging) && (!this.windowChromeActive || this.windowChromeOverlayActive))
       void this.boundary.cancelBoundaryChapter().catch((): void => {});
     if (!this.mounted || this.isReaderIdentityCurrent?.() === false) return;
     this.refreshLoginRequiredForControls();
@@ -934,7 +853,7 @@ export struct MangaReadingSurface {
     this.chrome.invalidatePanelFocus();
     this.pageTurnInputRevision += 1;
     this.viewport.clearPageSliderPreview();
-    this.viewport.pinchAnchor = undefined;
+    this.viewport.cancelPinchAnchor();
     this.chrome.dropForegroundPanelInput();
   }
   private windowInteractiveInsets(_revision: number): ReaderInsetsVp {
@@ -1007,9 +926,9 @@ export struct MangaReadingSurface {
           Stack({ alignContent: Alignment.Center }) {
             MangaBoundaryViewport({host: this.viewport });
             if (!this.opened) { this.chapterLoadState(); }
-            if (this.boundary.state.previousChapterPixels.length > 0) { MangaRetainedChapterPixels({host: this.boundary }); }
-            if (this.opened && this.chrome.state.showPageNumbers && !this.chapterEnd && !this.boundary.state.boundaryBusy) MangaPageBadge({host: this.chrome });
-            if (this.chrome.controlsPresentedForWindow() && !this.boundary.state.boundaryBusy) {
+            if (this.boundary.hasRetainedPixels) { MangaRetainedChapterPixels({host: this.boundary }); }
+            if (this.opened && this.chrome.showsPageNumbers && !this.chapterEnd && !this.boundary.busy) MangaPageBadge({host: this.chrome });
+            if (this.chrome.controlsPresentedForWindow() && !this.boundary.busy) {
               MangaReaderChromeContent({ host: this.chrome });
             }
             MangaRefreshProgress({host: this.chrome });
@@ -1027,8 +946,8 @@ export struct MangaReadingSurface {
           // viewport releases touch, gesture and accessibility input.
           if (this.chapterEnd) { MangaChapterEndContent({host: this.chrome }); }
           if (this.panel.length > 0) {
-            ForEach([this.chrome.state.actionPanelPresentationGeneration], (opening: number): void => {
-              MangaPanelOverlay(this.chrome, this.directory.directoryOuterIdentity(), opening);
+            ForEach([this.chrome.actionPanelPresentationGeneration], (opening: number): void => {
+              MangaPanelOverlay(this.chrome, this.directory, this.directory.directoryOuterIdentity(), opening);
             }, (opening: number): string => opening.toString());
           }
         }.layoutWeight(1).height('100%');
