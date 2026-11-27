@@ -338,21 +338,9 @@ export struct SourceJourneySurface {
                 readerAppColor('app.scrim.warmModal', this.scheme)))
               .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
               .accessibilityLevel('no').onClick((): void => this.chooseListDialog(generation, 'cancel'));
-            ReaderDialogViewport({ host: this.paneRect, content: (width: number): void => {
-              ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: width,
-                title: this.deleteSourceIds.length > 0 ? '删除书源' : '移动书源', actions: this.listDialogActions(),
-                onAction: (action: string): void => this.chooseListDialog(generation, action),
-                body: (): void => {
-                  if (this.deleteSourceIds.length > 0) {
-                    this.deleteDialogBody();
-                  } else {
-                    ReaderPageState({ variant: 'inline', padded: false, loading: this.moveCatalogLoading,
-                      loadingActive: this.inputEnabled,
-                      message: this.moveCatalogLoading ? '正在读取书源分组' : '无法读取书源分组，请重试。' });
-                  }
-                },
-              });
-            } }).transition(readerDialogCardTransition(this.reduceMotion));
+            ReaderDialogViewport({ host: this.paneRect,
+              content: (width: number): void => { this.listDialogCard(width, generation); },
+            }).transition(readerDialogCardTransition(this.reduceMotion));
           }.width('100%').height('100%').transition(readerDialogScrimTransition(this.reduceMotion));
         }, (generation: number): string => generation.toString());
       }
@@ -372,6 +360,23 @@ export struct SourceJourneySurface {
       .onAreaChange((_previous: Area, next: Area): void => {
         if (this.mounted) this.recordPane(next);
       });
+  }
+
+  @Builder
+  private listDialogCard(width: number, generation: number) {
+    ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: width,
+      title: this.deleteSourceIds.length > 0 ? '删除书源' : '移动书源', actions: this.listDialogActions(),
+      onAction: (action: string): void => this.chooseListDialog(generation, action),
+      body: (): void => {
+        if (this.deleteSourceIds.length > 0) {
+          this.deleteDialogBody();
+        } else {
+          ReaderPageState({ variant: 'inline', padded: false, loading: this.moveCatalogLoading,
+            loadingActive: this.inputEnabled,
+            message: this.moveCatalogLoading ? '正在读取书源分组' : '无法读取书源分组，请重试。' });
+        }
+      },
+    });
   }
 
   private recordPane(area: Area): void {

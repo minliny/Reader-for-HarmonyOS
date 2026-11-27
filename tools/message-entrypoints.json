@@ -52,10 +52,10 @@
   ],
   "entries": [
     {
-      "id": "entry/src/main/ets/app/composition/JsonImportDialog.ets#JsonImportDialog.build::shared.dialog-surface",
+      "id": "entry/src/main/ets/app/composition/JsonImportDialog.ets#JsonImportDialog.formCard::shared.dialog-surface",
       "file": "entry/src/main/ets/app/composition/JsonImportDialog.ets",
       "owner": "JsonImportDialog",
-      "member": "build",
+      "member": "formCard",
       "family": "shared.dialog-surface",
       "category": "自绘确认/输入的公共有限外框",
       "effectiveHost": "调用方当前 JSON 导入呈现及原 isBusy/内容状态；公共外框只承载当前输入和动作。",
@@ -141,10 +141,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/bookshelf/ui/BookshelfGroupDialog.ets#BookshelfGroupDialog.surface::shared.dialog-surface",
+      "id": "entry/src/main/ets/features/bookshelf/ui/BookshelfGroupDialog.ets#BookshelfGroupDialog.groupCard::shared.dialog-surface",
       "file": "entry/src/main/ets/features/bookshelf/ui/BookshelfGroupDialog.ets",
       "owner": "BookshelfGroupDialog",
-      "member": "surface",
+      "member": "groupCard",
       "family": "shared.dialog-surface",
       "category": "共享确认与编辑对话框",
       "effectiveHost": "BookshelfGroupPresentation当前identity及snapshot.receipt generation；groupInputIsCurrent验证foreground和输入准入。",
@@ -1605,10 +1605,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets#SourceJourneySurface.managementJourney::shared.dialog-surface",
+      "id": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets#SourceJourneySurface.listDialogCard::shared.dialog-surface",
       "file": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
       "owner": "SourceJourneySurface",
-      "member": "managementJourney",
+      "member": "listDialogCard",
       "family": "shared.dialog-surface",
       "category": "批量删除确认与移动分组读取反馈",
       "effectiveHost": "当前书源管理列表以公共弹窗确认删除原选中书源及关联登录会话，或承载移动操作读取目录时的等待和重试。",
@@ -1616,10 +1616,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets#SourceJourneySurface.managementJourney::shared.page-state",
+      "id": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets#SourceJourneySurface.listDialogCard::shared.page-state",
       "file": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
       "owner": "SourceJourneySurface",
-      "member": "managementJourney",
+      "member": "listDialogCard",
       "family": "shared.page-state",
       "category": "批量移动书源的分组目录读取状态",
       "effectiveHost": "当前书源管理列表的移动弹窗在读取 Core 分组目录时显示等待，读取失败时显示提示并通过弹窗动作重试。",
@@ -1671,10 +1671,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceV9GroupsPage.ets#SourceV9GroupsPage.groupDialog::shared.dialog-surface",
+      "id": "entry/src/main/ets/features/source/ui/SourceV9GroupsPage.ets#SourceV9GroupsPage.groupDialogCard::shared.dialog-surface",
       "file": "entry/src/main/ets/features/source/ui/SourceV9GroupsPage.ets",
       "owner": "SourceV9GroupsPage",
-      "member": "groupDialog",
+      "member": "groupDialogCard",
       "family": "shared.dialog-surface",
       "category": "书源分组表单与删除确认",
       "effectiveHost": "有效分组页或列表批量移动当前表单持有名称、成员选择、目标和删除确认；分组写入转交当前书源管理 owner。",
@@ -1682,10 +1682,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceV9CheckDialog.ets#SourceV9CheckDialog.build::shared.dialog-surface",
+      "id": "entry/src/main/ets/features/source/ui/SourceV9CheckDialog.ets#SourceV9CheckDialog.checkCard::shared.dialog-surface",
       "file": "entry/src/main/ets/features/source/ui/SourceV9CheckDialog.ets",
       "owner": "SourceV9CheckDialog",
-      "member": "build",
+      "member": "checkCard",
       "family": "shared.dialog-surface",
       "category": "书源检测配置、进度和报告",
       "effectiveHost": "当前单源、批量或整组检测会话的公共弹窗，动作绑定当前检测范围、实际阶段与 Core 报告。",

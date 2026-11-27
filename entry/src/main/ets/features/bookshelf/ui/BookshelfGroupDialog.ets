@@ -52,13 +52,7 @@ export struct BookshelfGroupDialog {
       ReaderDialogViewport({
         onScrollAppeared: (): void => this.requestFocusAfterFrame((): boolean => this.presentation.identity === identity,
           this.selectorFocusKey(identity), this.focusScopeKey(identity)),
-        content: (widthVp: number, _heightVp: number): void => {
-          ReaderDialogSurface({ specId: 'shelf-group', containerWidthVp: widthVp, title: '编辑分组',
-            actions: [], showCloseButton: true,
-            onClose: (): void => { if (this.groupInputIsCurrent(identity)) this.presentation.dismiss(identity); },
-            body: (): void => { this.selector(identity); } })
-            .transition(this.cardTransition());
-        },
+        content: (widthVp: number, _heightVp: number): void => { this.groupCard(widthVp, identity); },
       });
       Column() {
         if (this.presentation.snapshot.receipt !== undefined) {
@@ -75,6 +69,15 @@ export struct BookshelfGroupDialog {
       .transition(this.surfaceTransition())
       .id(this.focusScopeKey(identity)).focusable(true).focusScopeId(this.focusScopeKey(identity), true, false)
       .onDisAppear(this.restoreFocusAction(identity));
+  }
+
+  @Builder
+  private groupCard(widthVp: number, identity: string) {
+    ReaderDialogSurface({ specId: 'shelf-group', containerWidthVp: widthVp, title: '编辑分组',
+      actions: [], showCloseButton: true,
+      onClose: (): void => { if (this.groupInputIsCurrent(identity)) this.presentation.dismiss(identity); },
+      body: (): void => { this.selector(identity); } })
+      .transition(this.cardTransition());
   }
 
   private modalAnimation(entering: boolean): AnimateParam {

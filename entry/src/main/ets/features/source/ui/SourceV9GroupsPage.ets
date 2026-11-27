@@ -847,18 +847,22 @@ export struct SourceV9GroupsPage {
           this.color('app.scrim.warmModal')))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no').onClick((): void => { this.consumeBack(); });
-      ReaderDialogViewport({ host: this.modalHost, content: (width: number, height: number): void => {
-          ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: width,
-            primarySurfaceColor: this.color('app.sourceUi.primary'), title: this.dialogTitle(),
-            actions: [new DialogActionView('cancel', '取消', 'default', this.dialogEditable(), true),
-              new DialogActionView('confirm', this.confirmLabel(), this.dialog === 'delete' ? 'danger' : 'primary',
-                this.dialogParams() !== undefined)],
-            onAction: (id: string): void => { void this.confirmDialog(id); },
-            body: (): void => { this.dialogBody(this.bodyLimit(height)); },
-          });
-        },
+      ReaderDialogViewport({ host: this.modalHost,
+        content: (width: number, height: number): void => { this.groupDialogCard(width, height); },
       }).transition(readerDialogCardTransition(this.reduceMotion));
     }.width('100%').height('100%').transition(readerDialogScrimTransition(this.reduceMotion));
+  }
+
+  @Builder
+  private groupDialogCard(width: number, height: number) {
+    ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: width,
+      primarySurfaceColor: this.color('app.sourceUi.primary'), title: this.dialogTitle(),
+      actions: [new DialogActionView('cancel', '取消', 'default', this.dialogEditable(), true),
+        new DialogActionView('confirm', this.confirmLabel(), this.dialog === 'delete' ? 'danger' : 'primary',
+          this.dialogParams() !== undefined)],
+      onAction: (id: string): void => { void this.confirmDialog(id); },
+      body: (): void => { this.dialogBody(this.bodyLimit(height)); },
+    });
   }
 
   @Builder
