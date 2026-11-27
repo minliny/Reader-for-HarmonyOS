@@ -35,6 +35,7 @@ import { readerTtsConfigChoices, readerTtsVoiceId, readerTtsLanguageLabel,
   type ReaderTtsConfigChoice, type ReaderTtsConfigField } from '../presentation/ReaderTtsConfigOptions';
 import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
 import type { ReaderTtsConfigurationDraft } from '../application/ReaderTtsConfigurationHost';
+import { readerTtsVoicePickerAuditionCurrent } from '../application/ReaderTtsConfigAdmission';
 import type { ReaderControlForm } from './ReaderControlSessionState';
 import { readerControlExtentFits, type ReaderControlCandidateWidths, type ReaderControlModuleMinimum, type ReaderControlModuleMeasurer } from './ReaderLayoutGeometry';
 
@@ -592,7 +593,11 @@ export struct ReaderControlTtsContent {
   }
 
   private async previewConfigurationVoice(id: string, identity: string): Promise<void> {
-    if (!this.fullInput() || identity !== this.configIdentity || this.configField !== 'voice') return;
+    // The modal keeps its own editor admission during its measurement reflow.
+    if (!readerTtsVoicePickerAuditionCurrent({
+      mounted: this.configMounted, pickerIdentity: this.configIdentity, callbackIdentity: identity,
+      voicePicker: this.configField === 'voice', editorInputCurrent: this.editorInputCurrent?.() ?? this.fullInput(),
+    })) return;
     const voice = this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => readerTtsVoiceId(item) === id);
     if (voice === undefined) throw new Error('当前音色已不可用，请重新选择');
     await this.onVoiceAudition(voice.language, voice.person);

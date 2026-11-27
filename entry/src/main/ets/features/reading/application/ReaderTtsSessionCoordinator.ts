@@ -35,6 +35,7 @@ const DEFAULT_START_CALLBACK_TIMEOUT_MS = 15000;
 const MAX_RETAINED_COMPLETED_UTTERANCES = 128;
 
 let READER_TTS_COORDINATOR_SEQ = 0;
+let READER_TTS_AUDITION_OPERATION_SEQ = 0;
 
 export type ReaderTtsHostResumeOrigin = 'mediaPlay' | 'interruptionResume';
 
@@ -129,9 +130,29 @@ export interface ReaderTtsAuditionInput {
   person: number;
   rate?: number;
   pitch?: number;
+  observe?: (receipt: ReaderTtsAuditionReceipt) => void;
 }
+type ReaderTtsAuditionState = 'started' | 'completed' | 'failed' | 'unavailable';
+type ReaderTtsAuditionCode = 'system-capability-missing' | 'book-pause' | 'engine-selection' | 'voice-probe' |
+  'audio-session' | 'native-speak' | 'native-error' | 'native-stop' | 'timeout' | 'cleanup';
+
+export interface ReaderTtsAuditionReceipt {
+  readonly schemaVersion: 1;
+  readonly operationId: number;
+  readonly state: ReaderTtsAuditionState;
+  readonly code?: ReaderTtsAuditionCode;
+}
+
+interface ReaderTtsAuditionOutcome {
+  readonly state: 'completed' | 'failed' | 'unavailable';
+  readonly code?: ReaderTtsAuditionCode;
+}
+
 interface ReaderTtsAuditionSession {
   requestId: string;
+  operationId: number;
+  started: boolean;
+  observe?: (receipt: ReaderTtsAuditionReceipt) => void;
   restoreEngine: string | undefined;
   timer: number;
   resolve: () => void;
@@ -265,9 +286,17 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     const audition = this.audition;
     if (audition !== undefined) {
       if ('requestId' in event && event.requestId === audition.requestId) {
-        if (event.type === 'error') this.voidLogged(this.finishAudition(audition, new Error(event.message)), 'audition.error');
-        else if (event.type === 'stop' || (event.type === 'complete' && event.completion === 'audio')) {
-          this.voidLogged(this.finishAudition(audition), 'audition.complete');
+        if (event.type === 'start' && !audition.started) {
+          audition.started = true;
+          this.reportAudition(audition, 'started');
+        } else if (event.type === 'error') {
+          this.voidLogged(this.finishAudition(audition, { state: 'failed', code: 'native-error' },
+            new Error(event.message)), 'audition.error');
+        } else if (event.type === 'stop') {
+          this.voidLogged(this.finishAudition(audition, { state: 'failed', code: 'native-stop' },
+            new Error('试听已停止，请重试')), 'audition.stop');
+        } else if (event.type === 'complete' && event.completion === 'audio') {
+          this.voidLogged(this.finishAudition(audition, { state: 'completed' }), 'audition.complete');
         }
         return; // Audition callbacks never enter Core's book queue or progress path.
       }
@@ -343,44 +372,61 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     const completed = new Promise<void>((accept, fail): void => { resolve = accept; reject = fail; });
     const session: ReaderTtsAuditionSession = {
       requestId: `${this.ownerToken}-audition-${++this.auditionSequence}`,
+      operationId: ++READER_TTS_AUDITION_OPERATION_SEQ,
+      started: false,
+      observe: input.observe,
       restoreEngine: this.active?.config?.engine ?? this.probedConfig?.engine,
       timer: -1, resolve, reject,
     };
     this.audition = session;
     session.timer = globalThis.setTimeout((): void => {
-      this.voidLogged(this.finishAudition(session, new Error('试听超时，请重试')), 'audition.timeout');
+      this.voidLogged(this.finishAudition(session, { state: 'failed', code: 'timeout' },
+        new Error('试听超时，请重试')), 'audition.timeout');
     }, 15000) as number;
     const current = (): boolean => this.audition === session && !this.disposed;
     const prepare = this.enqueue(async (): Promise<void> => {
+      let stage: ReaderTtsAuditionCode = 'book-pause';
       try {
         await previous;
         await pause;
         if (!current()) return;
+        stage = 'engine-selection';
         const selected = await this.host.selectEngine(input.engine ?? session.restoreEngine);
         if (!current()) return;
         if (!selected) throw new Error('当前试听引擎不可用');
+        stage = 'voice-probe';
         const probe = await this.host.probe(input.language, input.person, true);
         if (!current()) return;
+        if (!probe.available && probe.unavailableCode !== undefined) {
+          this.voidLogged(this.finishAudition(session, { state: 'unavailable', code: probe.unavailableCode },
+            new Error(probe.reason ?? '当前音色不可用')), 'audition.probe');
+          return;
+        }
         if (!probe.available) throw new Error(probe.reason ?? '当前音色不可用');
+        stage = 'audio-session';
         this.host.setBackgroundPlaybackEnabled?.(false);
         await this.host.activateAudioSession(false);
         if (!current()) return;
         // Speaking is an owned transport operation. Its completion is delivered by
         // the existing Host listener; a missing acceptance ACK must not hold
         // the config lane and prevent cancellation/engine restoration.
-        void this.host.speak({ requestId: session.requestId,
+        stage = 'native-speak';
+        void this.host.speak({ requestId: session.requestId, exactVoice: true,
           text: '这是音色试听。愿你在阅读中，发现更广阔的世界。',
           language: input.language, person: input.person, rate: input.rate ?? 1,
           pitch: input.pitch ?? 1, engine: input.engine ?? session.restoreEngine })
           .catch((error: Error): void => {
-            if (current()) void this.finishAudition(session, error).catch((): void => {});
+            this.voidLogged(this.finishAudition(session, { state: 'failed', code: 'native-speak' }, error), 'audition.speak');
           });
       } catch (error) {
         // Release after this operation returns; awaiting our own queued cleanup would deadlock.
-        void this.finishAudition(session, new Error(errorMessageOf(error))).catch((): void => {});
+        this.voidLogged(this.finishAudition(session, { state: 'failed', code: stage },
+          new Error(errorMessageOf(error))), 'audition.prepare');
       }
     });
-    void prepare.catch((error: Error): void => { void this.finishAudition(session, error).catch((): void => {}); });
+    void prepare.catch((error: Error): void => {
+      this.voidLogged(this.finishAudition(session, { state: 'failed', code: 'book-pause' }, error), 'audition.prepare');
+    });
     return completed;
   }
 
@@ -389,19 +435,35 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     return session === undefined ? Promise.resolve() : this.finishAudition(session);
   }
 
-  private finishAudition(session: ReaderTtsAuditionSession, failure?: Error): Promise<void> {
+  private reportAudition(session: ReaderTtsAuditionSession, state: ReaderTtsAuditionState,
+    code?: ReaderTtsAuditionCode): void {
+    try {
+      session.observe?.({ schemaVersion: 1, operationId: session.operationId, state, code });
+    } catch (_) {
+      // The optional diagnostic sink has no authority over native playback or its promise.
+    }
+  }
+
+  private finishAudition(session: ReaderTtsAuditionSession, outcome?: ReaderTtsAuditionOutcome,
+    failure?: Error): Promise<void> {
     if (this.audition !== session) return Promise.resolve();
     this.audition = undefined;
     globalThis.clearTimeout(session.timer);
     const stopping = this.stopHostTransportImmediately();
     return this.enqueue(async (): Promise<void> => {
       let result = failure;
+      let terminal = outcome;
       try {
         const stopError = await stopping;
         if (stopError !== undefined) throw stopError;
         await this.host.deactivateAudioSession();
         if (!await this.host.selectEngine(session.restoreEngine)) throw new Error('试听后恢复朗读引擎失败');
-      } catch (error) { result = new Error(errorMessageOf(error)); }
+      } catch (error) {
+        this.logTtsEvent('audition.cleanup', errorMessageOf(error));
+        result ??= new Error(errorMessageOf(error));
+        terminal = { state: 'failed', code: 'cleanup' };
+      }
+      if (terminal !== undefined) this.reportAudition(session, terminal.state, terminal.code);
       if (result === undefined) session.resolve();
       else session.reject(result);
     });

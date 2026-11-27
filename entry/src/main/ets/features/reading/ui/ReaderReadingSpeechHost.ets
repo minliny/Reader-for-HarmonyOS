@@ -24,8 +24,9 @@ import { ReaderTtsPreferencesGateway } from '../application/ReaderTtsPreferences
 import type { ReaderTtsVoiceOption } from '../application/ReaderTtsPreferencesState';
 import type {
   HostTtsTransportState, ReaderTtsChapterAdvanceInput, ReaderTtsChapterAdvanceRange,
-  ReaderTtsProgressCommit, ReaderTtsSessionCoordinator, ReaderTtsStartInput,
+  ReaderTtsAuditionReceipt, ReaderTtsProgressCommit, ReaderTtsSessionCoordinator, ReaderTtsStartInput,
 } from '../application/ReaderTtsSessionCoordinator';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import {
   createReaderTtsState, readerTtsCoreRateForMultiplier, readerTtsRatePercentForMultiplier,
   READER_TTS_RATE_MAX, READER_TTS_RATE_MIN, READER_TTS_RATE_STEP_SCALE, READER_TTS_TIMER_DEFAULT_MINUTES,
@@ -481,10 +482,17 @@ export class ReaderReadingSpeechHost {
   async auditionReaderTtsVoice(language: string, person: number): Promise<void> {
     const coordinator = this.ttsTransport.coordinator;
     const lifecycle = this.session.scope().lifecycleToken;
-    if (!this.session.active(lifecycle) || coordinator === undefined || !this.controls.controlVisible() ||
-      !this.controls.controlInputEnabled() || this.controls.chromeOverlayActive()) return;
+    if (!this.session.active(lifecycle) || !this.controls.controlVisible() ||
+      !this.controls.controlInputEnabled() || this.controls.chromeOverlayActive()) {
+      throw new Error('当前阅读界面无法试听，请返回朗读配置后重试。');
+    }
+    if (coordinator === undefined) throw new Error('朗读服务尚未就绪，请重试。');
+    const observe = READER_LAYOUT_DEBUG_BUILD && AppStorage.get<boolean>('readerLayoutInvariantAutomation') === true ?
+      (receipt: ReaderTtsAuditionReceipt): void => {
+        hilog.info(0x5244, 'Reader', 'READER_VM_TTS_AUDITION %{public}s', JSON.stringify(receipt));
+      } : undefined;
     this.controls.pauseAutoPage();
-    await coordinator.auditionVoice({ engine: this.ttsEngine, language, person, rate: this.ttsState.rate, pitch: 1 });
+    await coordinator.auditionVoice({ engine: this.ttsEngine, language, person, rate: this.ttsState.rate, pitch: 1, observe });
     if (!this.session.active(lifecycle) && this.ttsTransport.coordinator === coordinator) await coordinator.stopAudition();
   }
 
