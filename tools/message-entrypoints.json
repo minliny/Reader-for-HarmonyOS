@@ -933,10 +933,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.sourceSwitchCompletionChanged::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "sourceSwitchCompletionChanged",
+      "id": "entry/src/main/ets/features/reading/ui/ReadingSourceSwitchOverlayHost.ets#ReadingSourceSwitchOverlayHost.refresh::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReadingSourceSwitchOverlayHost.ets",
+      "owner": "ReadingSourceSwitchOverlayHost",
+      "member": "refresh",
       "family": "shared.transient",
       "category": "文字换源确认后的短反馈",
       "effectiveHost": "当前前景文字阅读会话。源、书、阅读就绪代次及正文选择验证通过后，按原回执身份消费一次。",
