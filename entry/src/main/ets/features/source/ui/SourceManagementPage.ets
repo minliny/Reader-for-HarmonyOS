@@ -673,6 +673,7 @@ export struct SourceManagementPage {
       geometry: this.geometry,
       headerMeasurementKey: this.measurementKey,
       footerMeasurementKey: this.footerMeasurementKey,
+      auditFooterDock: false,
       content: (): void => { this.pageContent(); },
       header: (): void => { this.backBar(); },
       footer: (): void => { this.pageFooter(); },

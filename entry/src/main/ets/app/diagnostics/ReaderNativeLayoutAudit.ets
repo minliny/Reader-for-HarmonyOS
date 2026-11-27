@@ -52,7 +52,7 @@ interface ReaderNativeSurfaceSpec {
 const INTERACTIVE_TYPES: string[] = ['Button', 'TextInput', 'TextArea', 'Toggle', 'CheckBox', 'Checkbox', 'Radio',
   'Slider', 'Select', 'MenuItem', 'TextPicker', 'DatePicker', 'TimePicker', 'Search', 'Stepper', 'Rating'];
 const PAINT_LEAF_TYPES: string[] = ['Canvas', 'Rect', 'Shape', 'Path', 'Circle', 'Line', 'Ellipse'];
-const ADDITIONAL_FOOTERS: string[] = ['reader-source-footer', 'reader-source-v9-batch-dock'];
+const ADDITIONAL_FOOTERS: string[] = ['reader-source-footer-row', 'reader-source-footer-stacked', 'reader-source-v9-batch-dock'];
 const READER_NATIVE_SURFACES: ReaderNativeSurfaceSpec[] = [
   { id: 'reader-control-tts-overlay', close: 'close-action', contentId: 'reader-tts-choice-content' },
   { id: 'reader-control-tts-manager-overlay', close: 'close-action',
@@ -153,6 +153,28 @@ function nativeSurfaceHint(node: FrameNode): LayoutInvariantSurfaceHint | undefi
   } catch (_) { return undefined; }
 }
 
+function nativePopupBubbleBounds(context: UIContext, node: FrameNode, contentBounds?: LayoutInvariantRect):
+  LayoutInvariantRect | undefined {
+  if (contentBounds === undefined || !hasArea(contentBounds)) return undefined;
+  // The Popup node owns the full-window mask. Its direct child owns the bubble and arrow.
+  try {
+    let child = node;
+    for (let depth = 0; depth < 16; depth += 1) {
+      const parent = child.getParent();
+      if (parent === null) return undefined;
+      if (parent.getNodeType().toLowerCase() === 'popup') {
+        const offset = child.getPositionToWindowWithTransform();
+        const measured = child.getMeasuredSize();
+        const bubble: LayoutInvariantRect = { x: Number(offset.x), y: Number(offset.y),
+          width: context.px2vp(Number(measured.width)), height: context.px2vp(Number(measured.height)) };
+        return containedFrame(contentBounds, bubble) ? bubble : undefined;
+      }
+      child = parent;
+    }
+  } catch (_) { return undefined; }
+  return undefined;
+}
+
 function nativeBooleanProperty(node: FrameNode, name: string): boolean {
   try { return node.getCustomProperty(name) === true; } catch (_) { return false; }
 }
@@ -197,6 +219,7 @@ export class ReaderNativeLayoutAudit {
       attrs.hitTestBehavior === undefined ? 'default' : undefined);
     const enabled = bool(attrs?.enabled) ?? (interactive && attrs !== undefined && attrs.enabled === undefined ? true : undefined);
     const paintLayer = Number(attrs?.zIndex);
+    const surfaceHint = id.length > 0 || type === 'Column' ? nativeSurfaceHint(node) : undefined;
     const scrollClip = parent?.scrollClip === true;
     const observation: LayoutInvariantNativeNode = { key, id: id.length > 0 ? id : `${type}:${key}`, type,
       parentKey: parent?.key ?? '', parentType: parent?.type ?? '', bounds, parentBounds: parent?.bounds,
@@ -207,7 +230,8 @@ export class ReaderNativeLayoutAudit {
         attrs?.accessibilityText === '关闭' || attrs?.accessibilityText === '取消' || attrs?.accessibilityText === '收起' ||
         nativeBooleanProperty(node, READER_LAYOUT_CLOSE_CONTROL)),
       paintedLeaf: leaf && (PAINT_LEAF_TYPES.includes(type) || mayPaint(attrs?.backgroundColor)),
-      surfaceHint: id.length > 0 || type === 'Column' ? nativeSurfaceHint(node) : undefined,
+      surfaceHint,
+      nativePopupBounds: surfaceHint?.nativePopupBubble === true ? nativePopupBubbleBounds(context, node, bounds) : undefined,
       dock: type === 'Column' && nativeBooleanProperty(node, READER_LAYOUT_FOOTER),
       nativeMaterialPaint: nativeBooleanProperty(node, READER_LAYOUT_NATIVE_MATERIAL) ?
         inspectReaderNativeMaterialPaint(attrs) : undefined,
@@ -257,13 +281,15 @@ export class ReaderNativeLayoutAudit {
       if (node.surfaceHint?.dialog !== true || node.opacity < .1) continue;
       if (node.bounds !== undefined && node.clip !== undefined && !hasArea(node.clip)) continue;
       const hint = node.surfaceHint;
-      const viewport = hint.windowEdge === true ? windowViewport : node.clip ?? safeViewport;
+      const bounds = hint.nativePopupBubble === true ? node.nativePopupBounds : node.bounds;
+      const viewport = hint.windowEdge === true ? windowViewport :
+        hint.nativePopupBubble === true ? safeViewport : node.clip ?? safeViewport;
       const descendants = hint.contentMeasured === true ? this.descendants(node.key) : [];
       const body = descendants.find((item: LayoutInvariantNativeNode): boolean => item.parentType === 'Scroll' &&
         item.type === 'Column' && item.bounds !== undefined);
       const contentHeight = body?.bounds?.height;
-      const overhead = node.bounds === undefined || body?.clip === undefined ? 0 : Math.max(0, node.bounds.height - body.clip.height);
-      result.push({ id: node.id, bounds: node.bounds, viewport: hint.viewport ?? viewport, placement: hint.placement, anchor: hint.anchor,
+      const overhead = bounds === undefined || body?.clip === undefined ? 0 : Math.max(0, bounds.height - body.clip.height);
+      result.push({ id: node.id, bounds, viewport: hint.viewport ?? viewport, placement: hint.placement, anchor: hint.anchor,
         close: hint.nativeDismiss === true ? 'native-dismiss' : this.closeAction(node), scrollable: node.scrollClip, windowEdge: hint.windowEdge,
         contentBounds: body?.bounds, contentViewport: body?.clip, naturalHeight: contentHeight === undefined ? undefined : contentHeight + overhead,
         expectsContentMeasurement: hint.contentMeasured });

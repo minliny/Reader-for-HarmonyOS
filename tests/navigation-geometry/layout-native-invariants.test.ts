@@ -60,6 +60,22 @@ test('R10 detects detached, overlapping and falsely centered popovers', () => {
   assert.deepEqual(gate({ surfaces: [panel({ placement: 'center' })] }).violations.map(issue => issue.rule), ['R10']);
 });
 
+test('R10 uses the measured arrow bubble while R9 still checks the menu scroll viewport', () => {
+  const anchor = rect(250, 54, 44, 44);
+  const bubble = rect(100, 106, 200, 174);
+  const scrollViewport = rect(112, 118.25, 176, 150);
+  const moreMenu = panel({ id: 'reader-control-more-menu', anchor, bounds: bubble, close: 'native-dismiss',
+    contentBounds: scrollViewport, contentViewport: scrollViewport, naturalHeight: bubble.height,
+    expectsContentMeasurement: true, scrollable: true });
+
+  assert.deepEqual(gate({ surfaces: [moreMenu] }).violations, []);
+  assert.deepEqual(gate({ surfaces: [{ ...moreMenu, bounds: scrollViewport }] }).violations.map(issue => issue.rule), ['R10']);
+  assert.deepEqual(gate({ surfaces: [{ ...moreMenu, contentBounds: rect(112, 118.25, 176, 156) }] })
+    .violations.map(issue => issue.rule), ['R9']);
+  assert.ok(gate({ surfaces: [{ ...moreMenu, bounds: undefined }], requiredRules: ['R10'] })
+    .missing.includes('R10:no-applicable-evidence'));
+});
+
 test('a long scroll-backed dialog can reach its close action while a bounded drawer must meet the correct window edge', () => {
   const longDialog = panel({ placement: 'center', bounds: rect(66, 30, 184, 800), scrollable: true,
     viewport: safeViewport, close: 'scroll-reachable' });

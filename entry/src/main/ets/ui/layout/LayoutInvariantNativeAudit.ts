@@ -14,6 +14,7 @@ export interface LayoutInvariantSurfaceHint {
   windowEdge?: boolean;
   contentMeasured?: boolean;
   nativeDismiss?: boolean;
+  nativePopupBubble?: boolean;
 }
 
 export interface LayoutInvariantNativeNode {
@@ -35,6 +36,7 @@ export interface LayoutInvariantNativeNode {
   textClipped?: boolean;
   paintedLeaf?: boolean;
   surfaceHint?: LayoutInvariantSurfaceHint;
+  nativePopupBounds?: LayoutInvariantRect;
   inputAdmissionSuppressed?: boolean;
   dock?: boolean;
   nativeMaterialPaint?: ReaderNativeMaterialPaint;

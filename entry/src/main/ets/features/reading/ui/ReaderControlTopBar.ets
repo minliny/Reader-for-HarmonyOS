@@ -428,7 +428,7 @@ export function ReaderControlTopBar($$: ReaderControlTopBarSlot) {
 export function ReaderControlMoreMenu($$: ReaderControlMoreMenuInput) {
   ReaderActionMenuSurface({
     specId: 'reader-more-menu', nativeId: 'reader-control-more-menu',
-    auditAnchoredPopup: true, auditPopupAnchor: $$.owner.readerMoreAnchor(),
+    auditAnchoredPopup: true, auditNativePopupBubble: true, auditPopupAnchor: $$.owner.readerMoreAnchor(),
     nativePopupMaterial: $$.owner.popupMaterial().native,
     scheme: $$.owner.scheme(), actions: $$.owner.readerMoreActions(),
     viewportHeight: Math.max(0, $$.owner.readerMorePopupRect().height - $$.owner.readerMoreSurfaceSpec().pointerHeight -
