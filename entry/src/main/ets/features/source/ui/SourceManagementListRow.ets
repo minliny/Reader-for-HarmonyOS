@@ -209,6 +209,7 @@ export interface SourceManagementListView {
 @Observed
 export class SourceManagementListPaint {
   @Track pressedRowKey: string = '';
+  @Track batchMode: boolean = false;
   @Track batchSourceIds: string[] = [];
   @Track statusCounts: SourceV9Counts = { all: 0, enabled: 0, disabled: 0, abnormal: 0 };
   @Track hasReadableSources: boolean = false;
@@ -1004,7 +1005,7 @@ export function SourceManagementList($$: SourceManagementListOwnerSlot, surfaces
     // 23 even though the surrounding count text had already updated.
     LazyForEach($$.owner.listDataSource(), (source: BookSource) => {
       ListItem() {
-        SourceListSourceRow({ owner: $$.owner }, source);
+        SourceListSourceRowView({ owner: $$.owner, paint: $$.owner.paint(), source: source });
       }
     }, (source: BookSource): string => $$.owner.sourceRowKey(source));
   }
@@ -1031,150 +1032,158 @@ export function SourceManagementList($$: SourceManagementListOwnerSlot, surfaces
   });
 }
 
-@Builder
-function SourceListSourceRow($$: SourceManagementListOwnerSlot, source: BookSource) {
-  Column() {
-    if ($$.owner.host.presentation.batchMode()) {
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        SourceListSourceRowContent({ owner: $$.owner }, source);
-      }.width('100%').padding(10)
-        .attributeModifier(new ReaderPressFeedback(Color.Transparent, $$.owner.host.presentation.appThemeScheme(), 0, 0, true,
-          $$.owner.rowPressed(source, 'row'), false))
-        .onTouch((event: TouchEvent): void => $$.owner.rowPressTouch(source, 'row', event))
-        .accessibilitySelected($$.owner.paint().batchSourceIds.includes(source.sourceId))
-        .accessibilityText(source.name)
-        .onClick((): void => $$.owner.toggleBatchSource($$.owner.currentSourceRow(source),
-          !$$.owner.paint().batchSourceIds.includes(source.sourceId)));
-    } else {
-      SourceListSourceRowContent({ owner: $$.owner }, source);
-    }
-  }
-  .id($$.owner.verificationRowId(source.sourceId))
-  .width($$.owner.host.native.contentFrame().width)
-  .constraintSize({ minHeight: $$.owner.layoutBudget($$.owner.currentSourceRow(source)).rowMinHeight })
-  .padding($$.owner.host.presentation.batchMode() ? 0 : 10)
-  .alignItems(HorizontalAlign.Start)
-  .backgroundColor(readerAppColor('TOK_CARD_BG', $$.owner.host.presentation.appThemeScheme()))
-  .borderRadius({ topLeft: $$.owner.isFirstSource(source) ? 14 : 0, topRight: $$.owner.isFirstSource(source) ? 14 : 0,
-    bottomLeft: $$.owner.isLastSource(source) ? 14 : 0, bottomRight: $$.owner.isLastSource(source) ? 14 : 0 })
-  .border({ width: { left: 1, right: 1, bottom: $$.owner.isLastSource(source) ? 1 : 0, top: 1 },
-    color: readerAppColor('TOK_LINE', $$.owner.host.presentation.appThemeScheme()) })
-  .clip(true);
-}
+@Component
+struct SourceListSourceRowView {
+  owner!: SourceManagementListOwner;
+  source!: BookSource;
+  @ObjectLink paint: SourceManagementListPaint;
 
-@Builder
-function SourceListSourceRowContent($$: SourceManagementListOwnerSlot, source: BookSource) {
-  Column({ space: TOK_SPACE_XS }) {
-    if ($$.owner.layoutBudget($$.owner.currentSourceRow(source)).rowForm === 'stacked-leading') {
-      SourceListSourceLeading({ owner: $$.owner }, source);
-      SourceListCurrentSourceInfo({ owner: $$.owner }, source);
-      SourceListSourceActions({ owner: $$.owner }, source);
-    } else {
-      Row({ space: TOK_SPACE_XS }) {
-        SourceListSourceLeading({ owner: $$.owner }, source);
-        SourceListCurrentSourceInfo({ owner: $$.owner }, source);
-        if ($$.owner.layoutBudget($$.owner.currentSourceRow(source)).rowForm === 'inline') {
-          SourceListSourceActions({ owner: $$.owner }, source);
-        }
-      }.width('100%').alignItems(VerticalAlign.Center);
-      if ($$.owner.layoutBudget($$.owner.currentSourceRow(source)).rowForm === 'stacked-actions') {
-        SourceListSourceActions({ owner: $$.owner }, source);
+  build() {
+    Column() {
+      if (this.paint.batchMode) {
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
+          this.rowContent();
+        }.id('reader-source-batch-row:' + this.source.sourceId)
+          .width('100%').padding(10)
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.owner.host.presentation.appThemeScheme(), 0, 0, true,
+            this.paint.pressedRowKey.length > 0 && this.owner.rowPressed(this.source, 'row'), false))
+          .onTouch((event: TouchEvent): void => this.owner.rowPressTouch(this.source, 'row', event))
+          .accessibilitySelected(this.paint.batchSourceIds.includes(this.source.sourceId))
+          .accessibilityText(this.source.name)
+          .onClick((): void => this.owner.toggleBatchSource(this.owner.currentSourceRow(this.source),
+            !this.paint.batchSourceIds.includes(this.source.sourceId)));
+      } else {
+        this.rowContent();
       }
     }
+    .id(this.owner.verificationRowId(this.source.sourceId))
+    .width(this.owner.host.native.contentFrame().width)
+    .constraintSize({ minHeight: this.owner.layoutBudget(this.owner.currentSourceRow(this.source)).rowMinHeight })
+    .padding(this.paint.batchMode ? 0 : 10)
+    .alignItems(HorizontalAlign.Start)
+    .backgroundColor(readerAppColor('TOK_CARD_BG', this.owner.host.presentation.appThemeScheme()))
+    .borderRadius({ topLeft: this.owner.isFirstSource(this.source) ? 14 : 0, topRight: this.owner.isFirstSource(this.source) ? 14 : 0,
+      bottomLeft: this.owner.isLastSource(this.source) ? 14 : 0, bottomRight: this.owner.isLastSource(this.source) ? 14 : 0 })
+    .border({ width: { left: 1, right: 1, bottom: this.owner.isLastSource(this.source) ? 1 : 0, top: 1 },
+      color: readerAppColor('TOK_LINE', this.owner.host.presentation.appThemeScheme()) })
+    .clip(true);
   }
-  .width('100%')
-  .alignItems(HorizontalAlign.Start)
-  .accessibilityLevel($$.owner.host.presentation.batchMode() ? 'no-hide-descendants' : 'auto')
-  .hitTestBehavior($$.owner.host.presentation.batchMode() ? HitTestMode.None : HitTestMode.Default);
-}
 
-@Builder
-function SourceListCurrentSourceInfo($$: SourceManagementListOwnerSlot, source: BookSource) {
-  ForEach([$$.owner.currentSourceRow(source)], (current: BookSource): void => {
-    SourceListSourceInfo({ owner: $$.owner }, current);
-  }, (current: BookSource): string => $$.owner.sourceRenderKey(current));
-}
-
-@Builder
-function SourceListSourceLeading($$: SourceManagementListOwnerSlot, source: BookSource) {
-  if ($$.owner.host.presentation.batchMode()) {
-    Stack({ alignContent: Alignment.Center }) {
-      SourceV9CircleCheck({ selected: $$.owner.paint().batchSourceIds.includes(source.sourceId), interactive: false });
-    }.width(SOURCE_ROW_ICON_WIDTH).height(34);
-  } else {
-    Stack({ alignContent: Alignment.Center }) {
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        SourceV9TypeSeal({ category: source.category, paintSurface: false });
-      }.width('100%').height('100%').padding(0)
-        .attributeModifier(new ReaderPressFeedback(readerAppColor(source.category === 'comic' ? 'app.status.warningSoft' :
-          'app.sourceUi.selected', $$.owner.host.presentation.appThemeScheme()), $$.owner.host.presentation.appThemeScheme(), 10, 10, $$.owner.sourceDetectEnabled(source.sourceId),
-          $$.owner.rowPressed(source, 'leading'), false))
-        .onTouch((event: TouchEvent): void => $$.owner.rowPressTouch(source, 'leading', event))
-        .enabled($$.owner.sourceDetectEnabled(source.sourceId))
-        .onClick($$.owner.sourceRowCommand($$.owner.currentSourceRow(source), 'check'));
-    }.width(SOURCE_ROW_ICON_WIDTH).height(34).accessibilityLevel('no-hide-descendants');
+  @Builder
+  private rowContent() {
+    Column({ space: TOK_SPACE_XS }) {
+      if (this.owner.layoutBudget(this.owner.currentSourceRow(this.source)).rowForm === 'stacked-leading') {
+        this.leading();
+        this.currentSourceInfo();
+        this.actions();
+      } else {
+        Row({ space: TOK_SPACE_XS }) {
+          this.leading();
+          this.currentSourceInfo();
+          if (this.owner.layoutBudget(this.owner.currentSourceRow(this.source)).rowForm === 'inline') {
+            this.actions();
+          }
+        }.width('100%').alignItems(VerticalAlign.Center);
+        if (this.owner.layoutBudget(this.owner.currentSourceRow(this.source)).rowForm === 'stacked-actions') {
+          this.actions();
+        }
+      }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    .accessibilityLevel(this.paint.batchMode ? 'no-hide-descendants' : 'auto')
+    .hitTestBehavior(this.paint.batchMode ? HitTestMode.None : HitTestMode.Default);
   }
-}
 
-@Builder
-function SourceListSourceInfo($$: SourceManagementListOwnerSlot, source: BookSource) {
-  Column({ space: 3 }) {
-    Text(source.name, $$.owner.host.view.textLayoutOptions()?.('row/title', source.sourceId, source.name))
-      .id($$.owner.verificationTitleId(source.sourceId))
-      .width('100%')
-      .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-      .fontWeight(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontWeight)
-      .fontSize(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontSizeFp)
-      .maxFontScale($$.owner.host.native.fontScale())
-      .lineHeight(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.lineHeightFp as number)
-      .fontColor(readerAppColor('TOK_INK', $$.owner.host.presentation.appThemeScheme()))
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
-      .ellipsisMode($$.owner.ellipsisMode());
-    Text($$.owner.sourceDomain(source), $$.owner.host.view.textLayoutOptions()?.('row/domain', source.sourceId, $$.owner.sourceDomain(source)))
-      .id($$.owner.verificationRowTextId(source.sourceId, 'reader-source-text-row-domain'))
-      .width('100%')
-      .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontFamily as string)
-      .fontWeight(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontWeight ?? 400)
-      .fontSize(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontSizeFp)
-      .maxFontScale($$.owner.host.native.fontScale())
-      .lineHeight(TYPE_SOURCE_MANAGEMENT_ROW_URL.lineHeightFp as number)
-      .fontColor(readerAppColor('app.sourceUi.muted', $$.owner.host.presentation.appThemeScheme()))
-      .wordBreak(WordBreak.BREAK_ALL)
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
-      .ellipsisMode($$.owner.ellipsisMode());
+  @Builder
+  private currentSourceInfo() {
+    ForEach([this.owner.currentSourceRow(this.source)], (current: BookSource): void => {
+      this.sourceInfo(current);
+    }, (current: BookSource): string => this.owner.sourceRenderKey(current));
   }
-  .layoutWeight($$.owner.layoutBudget(source).rowForm === 'stacked-leading' ? 0 : 1)
-  .width($$.owner.layoutBudget(source).rowForm === 'stacked-leading' ? '100%' : undefined)
-  .constraintSize({ minWidth: $$.owner.layoutBudget(source).textMinWidth })
-  .accessibilityGroup(true)
-  .accessibilityText(`${source.name}，${readerSourceCategoryLabel(source.category)}，${source.baseUrl}`)
-  .alignItems(HorizontalAlign.Start)
-  .attributeModifier(new ReaderPressFeedback(Color.Transparent, $$.owner.host.presentation.appThemeScheme(), 6, 6,
-    !$$.owner.host.presentation.batchMode() && $$.owner.sourceDetectEnabled(source.sourceId), $$.owner.rowPressed(source, 'info'), false))
-  .onTouch((event: TouchEvent): void => { if (!$$.owner.host.presentation.batchMode()) $$.owner.rowPressTouch(source, 'info', event); })
-  .onClick((): void => {
-    if (!$$.owner.host.presentation.batchMode()) $$.owner.sourceRowCommand(source, 'check')();
-  });
-}
 
-@Builder
-function SourceListSourceActions($$: SourceManagementListOwnerSlot, source: BookSource) {
-  if ($$.owner.host.presentation.batchMode()) {
-    Text($$.owner.currentSourceRow(source).enabled ? '已启用' : '已停用').fontSize(11).maxLines(1)
-      .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-      .fontColor(readerAppColor($$.owner.currentSourceRow(source).enabled ? 'app.sourceUi.primary' : 'app.sourceUi.muted',
-        $$.owner.host.presentation.appThemeScheme()));
-  } else {
-    Row({ space: SOURCE_ROW_ACTION_GAP }) {
-      ForEach([$$.owner.currentSourceRow(source)], (current: BookSource): void => {
-        if (current.loginUrl !== undefined && current.loginUrl.trim().length > 0) SourceListLoginButton({ owner: $$.owner }, current);
-        SourceListDetectButton({ owner: $$.owner }, current);
-      }, (current: BookSource): string => $$.owner.sourceRenderKey(current));
-      SourceListSourceSwitch({ owner: $$.owner }, source.enabled, (next: boolean): void => $$.owner.sourceRowToggle($$.owner.currentSourceRow(source))(next), source.sourceId, source.name);
-    }.width($$.owner.layoutBudget($$.owner.currentSourceRow(source)).trailingWidth)
-      .justifyContent(FlexAlign.End).constraintSize({ minHeight: $$.owner.layoutBudget($$.owner.currentSourceRow(source)).actionsHeight });
+  @Builder
+  private leading() {
+    if (this.paint.batchMode) {
+      Stack({ alignContent: Alignment.Center }) {
+        SourceV9CircleCheck({ selected: this.paint.batchSourceIds.includes(this.source.sourceId), interactive: false });
+      }.width(SOURCE_ROW_ICON_WIDTH).height(34);
+    } else {
+      Stack({ alignContent: Alignment.Center }) {
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
+          SourceV9TypeSeal({ category: this.source.category, paintSurface: false });
+        }.width('100%').height('100%').padding(0)
+          .attributeModifier(new ReaderPressFeedback(readerAppColor(this.source.category === 'comic' ? 'app.status.warningSoft' :
+            'app.sourceUi.selected', this.owner.host.presentation.appThemeScheme()), this.owner.host.presentation.appThemeScheme(), 10, 10, this.owner.sourceDetectEnabled(this.source.sourceId),
+            this.paint.pressedRowKey.length > 0 && this.owner.rowPressed(this.source, 'leading'), false))
+          .onTouch((event: TouchEvent): void => this.owner.rowPressTouch(this.source, 'leading', event))
+          .enabled(this.owner.sourceDetectEnabled(this.source.sourceId))
+          .onClick(this.owner.sourceRowCommand(this.owner.currentSourceRow(this.source), 'check'));
+      }.width(SOURCE_ROW_ICON_WIDTH).height(34).accessibilityLevel('no-hide-descendants');
+    }
+  }
+
+  @Builder
+  private sourceInfo(source: BookSource) {
+    Column({ space: 3 }) {
+      Text(source.name, this.owner.host.view.textLayoutOptions()?.('row/title', source.sourceId, source.name))
+        .id(this.owner.verificationTitleId(source.sourceId))
+        .width('100%')
+        .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
+        .fontWeight(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontWeight)
+        .fontSize(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontSizeFp)
+        .maxFontScale(this.owner.host.native.fontScale())
+        .lineHeight(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_INK', this.owner.host.presentation.appThemeScheme()))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .ellipsisMode(this.owner.ellipsisMode());
+      Text(this.owner.sourceDomain(source), this.owner.host.view.textLayoutOptions()?.('row/domain', source.sourceId, this.owner.sourceDomain(source)))
+        .id(this.owner.verificationRowTextId(source.sourceId, 'reader-source-text-row-domain'))
+        .width('100%')
+        .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontFamily as string)
+        .fontWeight(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontWeight ?? 400)
+        .fontSize(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontSizeFp)
+        .maxFontScale(this.owner.host.native.fontScale())
+        .lineHeight(TYPE_SOURCE_MANAGEMENT_ROW_URL.lineHeightFp as number)
+        .fontColor(readerAppColor('app.sourceUi.muted', this.owner.host.presentation.appThemeScheme()))
+        .wordBreak(WordBreak.BREAK_ALL)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .ellipsisMode(this.owner.ellipsisMode());
+    }
+    .layoutWeight(this.owner.layoutBudget(source).rowForm === 'stacked-leading' ? 0 : 1)
+    .width(this.owner.layoutBudget(source).rowForm === 'stacked-leading' ? '100%' : undefined)
+    .constraintSize({ minWidth: this.owner.layoutBudget(source).textMinWidth })
+    .accessibilityGroup(true)
+    .accessibilityText(`${source.name}，${readerSourceCategoryLabel(source.category)}，${source.baseUrl}`)
+    .alignItems(HorizontalAlign.Start)
+    .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.owner.host.presentation.appThemeScheme(), 6, 6,
+      !this.paint.batchMode && this.owner.sourceDetectEnabled(source.sourceId),
+      this.paint.pressedRowKey.length > 0 && this.owner.rowPressed(source, 'info'), false))
+    .onTouch((event: TouchEvent): void => { if (!this.paint.batchMode) this.owner.rowPressTouch(source, 'info', event); })
+    .onClick((): void => {
+      if (!this.paint.batchMode) this.owner.sourceRowCommand(source, 'check')();
+    });
+  }
+
+  @Builder
+  private actions() {
+    if (this.paint.batchMode) {
+      Text(this.owner.currentSourceRow(this.source).enabled ? '已启用' : '已停用').fontSize(11).maxLines(1)
+        .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
+        .fontColor(readerAppColor(this.owner.currentSourceRow(this.source).enabled ? 'app.sourceUi.primary' : 'app.sourceUi.muted',
+          this.owner.host.presentation.appThemeScheme()));
+    } else {
+      Row({ space: SOURCE_ROW_ACTION_GAP }) {
+        ForEach([this.owner.currentSourceRow(this.source)], (current: BookSource): void => {
+          if (current.loginUrl !== undefined && current.loginUrl.trim().length > 0) SourceListLoginButton({ owner: this.owner }, current);
+          SourceListDetectButton({ owner: this.owner }, current);
+        }, (current: BookSource): string => this.owner.sourceRenderKey(current));
+        SourceListSourceSwitch({ owner: this.owner }, this.source.enabled, (next: boolean): void => this.owner.sourceRowToggle(this.owner.currentSourceRow(this.source))(next), this.source.sourceId, this.source.name);
+      }.width(this.owner.layoutBudget(this.owner.currentSourceRow(this.source)).trailingWidth)
+        .justifyContent(FlexAlign.End).constraintSize({ minHeight: this.owner.layoutBudget(this.owner.currentSourceRow(this.source)).actionsHeight });
+    }
   }
 }
 

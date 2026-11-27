@@ -119,7 +119,10 @@ export struct SourceManagementPage {
       reduceMotion: (): boolean => this.reduceMotion,
       groupOpen: (): boolean => this.groupOpen,
       batchMode: (): boolean => this.batchMode,
-      setBatchMode: (active: boolean): void => { this.batchMode = active; },
+      setBatchMode: (active: boolean): void => {
+        this.batchMode = active;
+        this.listPaint.batchMode = active;
+      },
     },
     opening: {
       mounted: (): boolean => this.mounted,

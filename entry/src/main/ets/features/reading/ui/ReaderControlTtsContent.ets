@@ -976,7 +976,7 @@ export struct ReaderControlTtsContent {
     // Row resolves the fractional native width before distributing weights.
     Row({ space: READER_ISLAND_PLAYBACK_ACTION_GAP }) {
       ForEach(kinds, (kind: ReaderControlTransportKind): void => {
-        this.islandTransport(kind, this.islandTransportAvailable(kind), kinds.length === 4);
+        this.islandTransport(kind, kinds.length === 4);
       }, (kind: ReaderControlTransportKind): string => kind);
     }.width('100%').height(this.islandPlaybackLayout().rowHeight);
   }
@@ -1000,7 +1000,7 @@ export struct ReaderControlTtsContent {
   }
 
   @Builder
-  private islandTransport(kind: ReaderControlTransportKind, available: boolean, emphasizeToggle: boolean) {
+  private islandTransport(kind: ReaderControlTransportKind, emphasizeToggle: boolean) {
     ReaderIslandAction({
       scheme: this.appScheme, kind: 'transport',
       label: kind === 'toggle' ? this.isActivelySpeaking() ? '暂停' : '播放' : kind === 'stop' ? '停止' : this.controlText(kind),
@@ -1008,8 +1008,8 @@ export struct ReaderControlTtsContent {
       nativeId: this.sourceOnly === 'none' ? 'reader-control-tts-transport-' + kind : '',
       tone: kind === 'toggle' ? 'selected' : kind === 'stop' ? 'stop' : 'normal',
       icon: $r(`app.media.${this.islandTransportAsset(kind)}`),
-      visualAvailable: available,
-      actionReady: this.sourceOnly === 'none' && this.currentInputEnabled() && available,
+      visualAvailable: this.islandTransportAvailable(kind),
+      actionReady: this.sourceOnly === 'none' && this.currentInputEnabled() && this.islandTransportAvailable(kind),
       onAction: (): void => {
         if (this.sourceOnly !== 'none' || !this.currentInputEnabled() || !this.islandTransportAvailable(kind)) return;
         if (kind === 'previous') this.onPrevious();

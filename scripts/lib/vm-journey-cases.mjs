@@ -456,9 +456,15 @@ export const journeys = {
     const pageB = { id: 'reader-page-slot-b', enabled: 'true' };
     if (mode === 'paged') {
       const [beforeSwipe, afterSwipe] = ui.has(pageA) ? [pageA, pageB] : [pageB, pageA];
-      await ui.swipe('左滑翻页并核对绘制页面切换', readingStage, 'left', {
-        route: 'reading', all: [readingStage, afterSwipe], none: [beforeSwipe], screenCapture: true,
-      });
+      const atLastChapter = ui.has({ text: /第三十二章/u, within: beforeSwipe });
+      await ui.swipe(
+        atLastChapter ? '右滑翻页并核对绘制页面切换' : '左滑翻页并核对绘制页面切换',
+        readingStage,
+        atLastChapter ? 'right' : 'left',
+        {
+          route: 'reading', all: [readingStage, afterSwipe], none: [beforeSwipe], screenCapture: true,
+        },
+      );
     } else {
       await ui.swipe('连续正文向上滚动', stageMode(mode), 'up', { ...steadyReader(mode), screenCapture: true });
     }
@@ -1009,10 +1015,10 @@ export const journeys = {
     await ui.tap('打开新导入书源的检测', check, {
       route: 'source', all: [text('书源检测报告'), text(importedSource)], requiredRules: ['R9', 'R10'],
     });
-    const checkStart = action('开始检测');
+    const checkStart = { id: 'reader-source-v9-check-run', enabled: 'true' };
     if (ui.has(checkStart)) {
       await ui.tap('仅检测受控公开样本并核对状态', checkStart, {
-        route: 'source', all: [action('重新检测')], none: [checkStart], screenCapture: true,
+        route: 'source', all: [action('重新检测')], none: [action('开始检测')], screenCapture: true,
       });
     } else {
       ui.defer('触发新源的可用性检测', '当前检测面板未暴露启用的开始检测按钮');
@@ -1024,7 +1030,7 @@ export const journeys = {
     const reversed = String(original) === 'true' ? 'false' : 'true';
     await ui.tap('切换新源启用状态并等待写入回读', switchSource, { route: 'source', all: [{ ...switchSource, [state]: reversed }] });
     await ui.tap('恢复新源原启用状态', switchSource, { route: 'source', all: [{ ...switchSource, [state]: original }] });
-    const item = action(importedSource);
+    const item = enabled('reader-source-batch-row:https://v9-import.reader-journeys.invalid');
     const remove = id('reader-source-batch-delete');
     const batchMode = { ...enabled(/^source-back:\d+:tools:footer$/u), type: 'Button', clickable: 'true' };
     await ui.tap('进入批量管理以仅选择测试样本', batchMode, { route: 'source', all: [item, remove] });

@@ -237,7 +237,7 @@ export function AppReadingRouteSurface($$: AppReadingRouteSurfaceInput) {
       RetainedReaderScene({
         reading: $$.reading, commits: $$.commits, source: $$.source, manga: $$.manga,
         visibleRoute: $$.detail !== undefined ? 'reading' : retainedReaderRoute($$.route, $$.directoryTarget),
-        ownsWindowChrome: retainedReaderRoute($$.route, $$.directoryTarget) !== undefined,
+        ownsWindowChrome: retainedReaderRoute($$.route, $$.directoryTarget) !== undefined && $$.detail === undefined,
         expandedLayout: $$.expanded, reduceMotion: $$.reduceMotion,
         inputAllowed: $$.reading.sessionActive && $$.foreground && !$$.covered && $$.detail === undefined,
         ports: $$.ports(),
