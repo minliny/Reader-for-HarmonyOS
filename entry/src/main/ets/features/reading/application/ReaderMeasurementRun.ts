@@ -1,7 +1,7 @@
-import { ReadingSurfaceLayoutMap, type ReadingSurfaceLineMetric } from '../application/ReadingSurfaceLayoutMap.ts';
+import { ReadingSurfaceLayoutMap, type ReadingSurfaceLineMetric } from './ReadingSurfaceLayoutMap.ts';
 
-import type { ReadingSessionChapter } from '../application/ReadingChapterWindow';
-import type { RemoteReadingPositionContext } from '../application/RemoteReadingPositionMigration';
+import type { ReadingSessionChapter } from './ReadingChapterWindow';
+import type { RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 
 export const READER_MEASUREMENT_UNICODE_PROBE = 'A😀B';
 

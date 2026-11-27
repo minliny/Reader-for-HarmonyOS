@@ -15,7 +15,7 @@ const bundleName = 'io.reader.minliny';
 const uid = 20020064;
 const hash = 'a'.repeat(64);
 const compatible = { sqliteMaxUserVersion: 47, sqliteStorageSourceSha256: hash };
-const pipelineSource = readFileSync(new URL('../hap-pipeline.mjs', import.meta.url), 'utf8');
+const pipelineSource = readFileSync(new URL('../hap-pipeline/deploy-and-verify.mjs', import.meta.url), 'utf8');
 const legacyPipelineSource = readFileSync(new URL('./fixtures/hap-install-before-uid-fence.mjs.txt', import.meta.url), 'utf8');
 
 test('only one complete compiled marker establishes candidate storage compatibility', () => {
@@ -254,7 +254,9 @@ test('stopped target capture hashes app-owned DB/WAL without reading source Nati
 });
 
 function productionFunction(source, name, next, ports) {
-  const start = source.indexOf(`function ${name}(`), end = source.indexOf(`\nfunction ${next}(`, start);
+  const start = source.indexOf(`function ${name}(`);
+  const nextDeclaration = next ? source.indexOf(`function ${next}(`, start) : source.length;
+  const end = next && nextDeclaration >= 0 ? source.lastIndexOf('\n', nextDeclaration) : nextDeclaration;
   assert.ok(start >= 0 && end > start, `actual production ${name} boundary`);
   return new Function(...Object.keys(ports), `return (${source.slice(start, end)});`)(...Object.values(ports));
 }
@@ -420,7 +422,7 @@ test('actual install checks UID before start and rejects the old missing-UID-fen
       deploymentSigningRoute, assertInstalledDeploymentIdentity,
       BUNDLE_NAME: bundleName, timestampId: () => 'synthetic', rmSync: () => calls.push('cleanup'),
       console: { log: () => {} } };
-    const install = productionFunction(source, 'installDeployment', 'usage', ports);
+    const install = productionFunction(source, 'installDeployment', source === legacyPipelineSource ? 'usage' : undefined, ports);
     let error;
     try { install(options); } catch (caught) { error = caught; }
     return { calls, error, receipt, storageAdmission, dataRecheck, storageCandidateBinding };

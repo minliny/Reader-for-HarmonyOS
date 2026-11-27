@@ -1,346 +1,428 @@
-import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
-import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
-import { ReaderDelayedRowPress } from '../../../ui/foundation/ReaderPressMotion';
-import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
-import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
-import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
-import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
-import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
-import { ReaderRectVp, readerInteractiveSafeTop, readerStableInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerInteractiveSafeTop, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
-import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS, readerTransientTextObserver,
-  type ReaderTransientTextObserver } from '../../../ui/feedback/ReaderTransientFeedback';
 import { consumeReaderControlKeyboardBack, readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerPageAreaLength, readerStandardPageSpec, READER_STANDARD_PAGE_CONTENT_GAP } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
-import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
-import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
-import { readerOverlayListHeight, readerOverlayPanel } from '../../../ui/layout/ReaderOverlayGeometry';
-import { resolveSourceManagementLayout, SOURCE_ROW_ACTION_GAP, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP, type SourceManagementLayout } from '../presentation/SourceManagementLayout';
-import { sourceManagementFilterKey, copySourceManagementScroll, type SourceManagementScrollState } from '../presentation/SourceManagementScrollState';
-import { projectSourceManagementV9, sourceV9DisplayUrl, sourceV9ReportTone, sourceV9Supports,
-  type SourceV9Counts, type SourceV9ListAction, type SourceV9Projection, type SourceV9View } from '../presentation/SourceManagementV9';
-import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { readerReadableFontScale } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { type SourceManagementScrollState } from '../presentation/SourceManagementScrollState';
+import { type SourceV9Counts, type SourceV9ListAction, type SourceV9View } from '../presentation/SourceManagementV9';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
-import { resolveReaderLabeledIconActionSpec } from '../../../ui/controls/ReaderLabeledIconActionSpecs';
-import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
-import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
-import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import type { SourceManagementViewState, SourceToolsEntry } from '../presentation/SourceJourneyPresentation';
-import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
-import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
-import { ReaderRecoveryNotice, type ReaderRecoveryBodyPresentation, type ReaderRecoveryTextAction } from '../../../ui/feedback/ReaderRecoveryNotice';
-import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { TYPE_SELECT_SOURCE_GROUP_VALUE, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_ROW_TITLE, TYPE_SOURCE_MANAGEMENT_ROW_URL, TYPE_SOURCE_STATE_TITLE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
-import {
-  type BookSource,
-} from '../application/SourceGateway';
+import { type BookSource } from '../application/SourceGateway';
 import type { SourceManagementStatusKind, SourceManagementProjection } from '../application/SourceOrchestrator';
-import { readerSourceCategoryLabel, type ReaderSourceCategory } from '../application/ReaderSourceCategory';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
-import { sourceReadLoadingFrame, SOURCE_READ_FAILURE_TITLE } from './SourceReadLoadingVerification';
-import { ReaderSourceTextMetrics, type SourceTextLayoutLabel } from '../../../pages/ReaderSourceTextMetrics';
-import { sourceVerificationOfflineDetectIdentity, sourceVerificationOpening, sourceVerificationRowActions,
-  sourceVerificationReservedTypographyRow, sourceVerificationStatus, sourceVerificationToggleAnchor, SourceVerificationAnchors,
-  type SourceGeometryObservation, type SourceProjectionObservation,
-  type SourceProjectionState, type SourceProjectionTrigger, type SourceScrollObservation, type SourceVerificationOpening,
-  type SourceOverlayObservation, type SourceRecoveryBranch, type SourceRecoveryTitleObservation,
-  type SourceImportStatusActionObservation, type SourceRecoveryVerificationFacts,
-  type SourceToggleReadyObservation, type SourceV9ListReturnView, type SourceV9ListTransitionObservation } from './SourceManagementVerification';
+import { sourceVerificationOpening, type SourceGeometryObservation, type SourceOverlayObservation, type SourceProjectionTrigger, type SourceV9ListReturnView, type SourceV9ListTransitionObservation } from './SourceManagementVerification';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
-import { readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerNativeSurfaceOutline,
-  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
-import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
-import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
-import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
-import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
-import { ReaderSelect } from '../../../ui/controls/ReaderSelect';
-import { ReaderSelectPanel } from '../../../ui/controls/ReaderSelectPanel';
-import { SourceV9CircleCheck, SourceV9DetectButton, SourceV9TypeSeal } from './SourceV9Chrome';
-import {
-  SurfaceHorizontalFrame,
-} from '../../../ui/layout/SurfaceHorizontalGeometry';
-import {
-  TOK_BORDER_W,
-  TOK_SPACE_CONTROL_INLINE,
-  TOK_SPACE_MD,
-  TOK_SPACE_SM,
-  TOK_SPACE_XS,
-} from '../../../ui/foundation/ReaderTokens';
+import { SurfaceHorizontalFrame } from '../../../ui/layout/SurfaceHorizontalGeometry';
+import type { UIContext } from '@ohos.arkui.UIContext';
+import { SourceManagementFiltersOwner, SourceManagementFilterPaint, SourceManagementGroupSheet, SourceManagementMoreMenu, SourceManagementGroupSearch, SourceManagementGroupFooter, type SourceManagementFiltersHost } from './SourceManagementFiltersAndGroupSheet';
+import { SourceManagementListOwner, SourceManagementListPaint, SourceManagementList, SourceManagementBatchFooter, SourceManagementBatchHeaderAction, type SourceTextOptions, type SourceManagementListHost } from './SourceManagementListRow';
+import { SourceManagementRecoveryOwner, SourceManagementRecoveryBanner, type SourceManagementRecoveryHost } from './SourceManagementRecoveryBanner';
 
-const SOURCE_TEXT_ROLES = ['status/all', 'category/all', 'row/title',
-  'row/domain', 'footer/manage', 'footer/add'];
-const SOURCE_RESERVED_TEXT_ROLES = ['row/domain'];
 let sourceTemporaryGeneration: number = 0;
-
-class SourceListLayoutFrame extends ReaderPostLayoutFrame {}
-
-type SourceTextOptions = (role: string, sourceId?: string, text?: string) => TextOptions | undefined;
-type SourceSurfaceTextScope = 'read-empty' | 'read-failed' | 'retained-read-failed' | 'operation-status' | 'operation-recovery' |
-  'operation-recovery-body';
-
-interface SourceSurfaceTextFact {
-  scope: SourceSurfaceTextScope;
-  branch?: string;
-  generation?: number;
-  statusRevision?: number;
-  presentation?: ReaderRecoveryBodyPresentation;
-  expansionRevision?: number;
-}
-
-interface SourceTransientTextFact {
-  scope: 'operation-status' | 'retained-read-failed';
-  owner: SourceVerificationOpening;
-  readGeneration: number;
-  branch?: 'import';
-  generation?: number;
-}
-
-interface SourceRecoveryBodyAttachment {
-  branch: SourceRecoveryBranch;
-  generation: number;
-  presentation: ReaderRecoveryBodyPresentation;
-}
-type SourceFilterTextLane = 'status' | 'category';
-
-interface SourceTextLayoutScope {
-  owner: SourceVerificationOpening;
-  textProjectionRevision: number;
-  filterRevision: number;
-  readGeneration: number;
-  windowRevision: number;
-  widthVp: number;
-  heightVp: number;
-  density: number;
-  systemFontScale: number;
-  fontScale: number;
-  rowAnchor: number;
-}
-
-class SourceListDataSource implements IDataSource {
-  private items: BookSource[] = [];
-  private listeners: DataChangeListener[] = [];
-
-  totalCount(): number {
-    return this.items.length;
-  }
-
-  getData(index: number): BookSource {
-    return this.items[index];
-  }
-
-  registerDataChangeListener(listener: DataChangeListener): void {
-    if (this.listeners.indexOf(listener) < 0) {
-      this.listeners.push(listener);
-    }
-  }
-
-  unregisterDataChangeListener(listener: DataChangeListener): void {
-    const index = this.listeners.indexOf(listener);
-    if (index >= 0) {
-      this.listeners.splice(index, 1);
-    }
-  }
-
-  replace(items: BookSource[]): void {
-    this.items = items;
-    for (const listener of this.listeners) {
-      listener.onDataReloaded();
-    }
-  }
-}
 
 @Component
 export struct SourceManagementPage {
+
+  @State private filterPaint: SourceManagementFilterPaint = new SourceManagementFilterPaint();
+  @State private listPaint: SourceManagementListPaint = new SourceManagementListPaint();
+
+  // Read native state at use time so nested callbacks see the current opening and input gates.
+  private readonly filtersHost: SourceManagementFiltersHost = {
+    native: {
+      getUIContext: (): UIContext => this.getUIContext(),
+      contentFrame: (): SurfaceHorizontalFrame => this.contentFrame(),
+      fontScale: (): number => this.fontScale(),
+      geometry: (): ReaderPageGeometry => this.geometry,
+      originX: (): number => this.originX,
+      originY: (): number => this.originY,
+      viewportWidth: (): number => this.viewportWidth,
+      overlayBottom: (): number => this.overlayBottom(),
+      overlayTop: (): number => this.overlayTop(),
+      overlayLeft: (): number => this.overlayLeft(),
+      overlayRight: (): number => this.overlayRight(),
+      editingHost: (): ReaderEditingVisibility => this.editingHost,
+      numericAreaLength: (value: Length | undefined): number => this.numericAreaLength(value),
+    },
+    presentation: {
+      appThemeScheme: (): string => this.appThemeScheme,
+      systemScheme: (): string => this.systemScheme,
+      appearancePreferences: (): ReaderNavigationPreferences => this.appearancePreferences,
+      expandedLayout: (): boolean => this.expandedLayout,
+      reduceMotion: (): boolean => this.reduceMotion,
+      appForeground: (): boolean => this.appForeground,
+      groupOpen: (): boolean => this.groupOpen,
+      moreMenuOpen: (): boolean => this.moreMenuOpen,
+      batchMode: (): boolean => this.batchMode,
+      setGroupOpen: (open: boolean): void => { this.groupOpen = open; },
+      setMoreMenuOpen: (open: boolean): void => { this.moreMenuOpen = open; },
+    },
+    opening: {
+      mounted: (): boolean => this.mounted,
+      temporaryBackIdentity: (): string => this.temporaryBackIdentity,
+      managementBackIsCurrent: (identity: string): boolean => this.managementBackIsCurrent(identity),
+      managementOpeningIsCurrent: (): boolean => this.managementOpeningIsCurrent(),
+      managementInputIsCurrent: (): boolean => this.managementInputIsCurrent(),
+      isInputAllowed: (): boolean => this.isInputAllowed?.() !== false,
+      hideManagementKeyboard: (identity: string): boolean => this.hideManagementKeyboard(identity),
+      observeVerificationOverlay: (phase: string, overlay: 'group' | 'ime', selectionId?: string): void => this.observeVerificationOverlay(phase, overlay, selectionId),
+      nextTemporaryGeneration: (): number => ++sourceTemporaryGeneration,
+    },
+    view: {
+      v9Pane: (): SourceV9View => this.v9Pane,
+      sources: (): BookSource[] => this.sources,
+      catalogGroupNames: (): string[] => this.catalogGroupNames,
+    },
+    actions: {
+      onV9Action: (action: SourceV9ListAction, sourceIds: string[]): void => this.onV9Action(action, sourceIds),
+    },
+    focus: {
+      cancelToolsReturnFocus: (phase: string): void => this.cancelToolsReturnFocus(phase),
+      prepareV9ListReturn: (view: SourceV9ListReturnView): void => this.prepareV9ListReturn(view),
+      onToolsEntryLayout: (identity: string, entry: SourceToolsEntry, area: Area): void => this.onToolsEntryLayout(identity, entry, area),
+      toolsFocusId: (entry: SourceToolsEntry): string => this.toolsFocusId(entry),
+    },
+  };
+
+  private readonly listHost: SourceManagementListHost = {
+    native: {
+      getUIContext: (): UIContext => this.getUIContext(),
+      contentFrame: (): SurfaceHorizontalFrame => this.contentFrame(),
+      fontScale: (): number => this.fontScale(),
+      geometry: (): ReaderPageGeometry => this.geometry,
+      readerWindowMetricsRevision: (): number => this.readerWindowMetricsRevision,
+      originX: (): number => this.originX,
+      viewportWidth: (): number => this.viewportWidth,
+      viewportHeight: (): number => this.viewportHeight,
+      scrollLayout: (): ReaderScrollLayout => this.scrollLayout(),
+      editingHost: (): ReaderEditingVisibility => this.editingHost,
+    },
+    presentation: {
+      appThemeScheme: (): string => this.appThemeScheme,
+      expandedLayout: (): boolean => this.expandedLayout,
+      embeddedWide: (): boolean => this.embeddedWide,
+      reduceMotion: (): boolean => this.reduceMotion,
+      groupOpen: (): boolean => this.groupOpen,
+      batchMode: (): boolean => this.batchMode,
+      setBatchMode: (active: boolean): void => { this.batchMode = active; },
+    },
+    opening: {
+      mounted: (): boolean => this.mounted,
+      temporaryBackIdentity: (): string => this.temporaryBackIdentity,
+      verificationOpening: (): string => this.verificationOpening,
+      managementBackIsCurrent: (identity: string): boolean => this.managementBackIsCurrent(identity),
+      managementOpeningIsCurrent: (): boolean => this.managementOpeningIsCurrent(),
+      managementInputIsCurrent: (): boolean => this.managementInputIsCurrent(),
+      isInputAllowed: (): boolean => this.isInputAllowed?.() !== false,
+    },
+    view: {
+      initialViewState: (): SourceManagementViewState | undefined => this.initialViewState,
+      inputEnabled: (): boolean => this.inputEnabled,
+      sources: (): BookSource[] => this.sources,
+      operation: (): SourceManagementProjection => this.operation,
+      statusKind: (): SourceManagementStatusKind => this.statusKind,
+      ungroupedBatchIds: (): string[] => this.ungroupedBatchIds,
+      textLayoutOptions: (): SourceTextOptions | undefined => this.textLayoutOptions,
+    },
+    actions: {
+      onV9Action: (action: SourceV9ListAction, sourceIds: string[]): void => this.onV9Action(action, sourceIds),
+      onAddSource: (preferred?: string, fallback?: string): void => this.onAddSource(preferred, fallback),
+      onDetectSource: (id: string): void => this.onDetectSource(id),
+      onLoginSource: (id: string, loginUrl: string): void => this.onLoginSource(id, loginUrl),
+      onToggleSource: (id: string, enabled: boolean): void => this.onToggleSource(id, enabled),
+    },
+    focus: {
+      cancelToolsReturnFocus: (phase: string): void => this.cancelToolsReturnFocus(phase),
+      prepareV9ListReturn: (view: SourceV9ListReturnView): void => this.prepareV9ListReturn(view),
+      completeV9ListReturn: (view: SourceV9ListReturnView): void => this.completeV9ListReturn(view),
+      observeV9ListEntry: (view: SourceV9ListReturnView): void => this.observeV9ListEntry(view),
+      onToolsEntryFocused: (identity: string, entry: SourceToolsEntry): void => this.onToolsEntryFocused(identity, entry),
+      onToolsEntryLayout: (identity: string, entry: SourceToolsEntry, area: Area): void => this.onToolsEntryLayout(identity, entry, area),
+      toolsFocusId: (entry: SourceToolsEntry): string => this.toolsFocusId(entry),
+    },
+  };
+
+  private readonly recoveryHost: SourceManagementRecoveryHost = {
+    native: {
+      getUIContext: (): UIContext => this.getUIContext(),
+      contentFrame: (): SurfaceHorizontalFrame => this.contentFrame(),
+      geometry: (): ReaderPageGeometry => this.geometry,
+      readerWindowMetricsRevision: (): number => this.readerWindowMetricsRevision,
+      overlayBottom: (): number => this.overlayBottom(),
+    },
+    presentation: {
+      reduceMotion: (): boolean => this.reduceMotion,
+      groupOpen: (): boolean => this.groupOpen,
+    },
+    opening: {
+      mounted: (): boolean => this.mounted,
+      temporaryBackIdentity: (): string => this.temporaryBackIdentity,
+      verificationOpening: (): string => this.verificationOpening,
+      managementBackIsCurrent: (identity: string): boolean => this.managementBackIsCurrent(identity),
+      managementOpeningIsCurrent: (): boolean => this.managementOpeningIsCurrent(),
+      managementInputIsCurrent: (): boolean => this.managementInputIsCurrent(),
+      isInputAllowed: (): boolean => this.isInputAllowed?.() !== false,
+    },
+    view: {
+      v9Pane: (): SourceV9View => this.v9Pane,
+      inputEnabled: (): boolean => this.inputEnabled,
+      sources: (): BookSource[] => this.sources,
+      operation: (): SourceManagementProjection => this.operation,
+      statusActionGeneration: (): number => this.statusActionGeneration,
+      statusActionLabel: (): string => this.statusActionLabel,
+      statusKind: (): SourceManagementStatusKind => this.statusKind,
+      statusMessage: (): string => this.statusMessage,
+    },
+    actions: {
+      onContinueOriginal: (generation: number): void => this.onContinueOriginal(generation),
+      onReconcile: (generation: number): void => this.onReconcile(generation),
+      onRetryLoad: (): void => this.onRetryLoad(),
+      onStatusAction: (generation: number): void => this.onStatusAction(generation),
+    },
+  };
+
+  private readonly filters: SourceManagementFiltersOwner = new SourceManagementFiltersOwner({
+    host: this.filtersHost,
+    paint: (): SourceManagementFilterPaint => this.filterPaint,
+    results: {
+      visibleIds: (): string[] => this.list.visibleIds(),
+      hasReadableSources: (): boolean => this.list.hasReadableSources(),
+      projectedSourceCount: (): number => this.list.projectedSourceCount(),
+      statusCounts: (): SourceV9Counts => this.list.statusCounts(),
+      filterHeight: (): number => this.list.filterHeight(),
+      changed: (trigger: SourceProjectionTrigger): void => this.list.rebuildSourceProjection(trigger),
+    },
+    typography: {
+      hasProbe: () => this.list.hasTypographyProbe(),
+      scope: (scope) => this.list.verificationTextLayoutScope(scope),
+      options: (role, label) => this.list.typographyOptions(role, label),
+    },
+    paintGroupSearch: (identity: string): void => { this.sourceGroupSearch(identity); },
+    paintGroupFooter: (identity: string): void => { this.sourceGroupFooter(identity); },
+  });
+
+  private readonly list: SourceManagementListOwner = new SourceManagementListOwner({
+    host: this.listHost,
+    paint: (): SourceManagementListPaint => this.listPaint,
+    filters: {
+      searchQuery: () => this.filters.searchQuery(),
+      statusValue: () => this.filters.statusValue(),
+      categoryValue: () => this.filters.categoryValue(),
+      groupValue: () => this.filters.groupValue(),
+      groupClosing: () => this.filters.groupClosing(),
+      filtersInDefaultState: () => this.filters.filtersInDefaultState(),
+      project: () => this.filters.filterProjection(),
+      groupChoices: () => this.filters.groupOptions(),
+      clear: (): void => this.filters.clearFilters(),
+      chooseUngrouped: (): void => this.filters.selectUngrouped(),
+      closeMore: (): void => this.filters.closeMoreMenu(),
+    },
+    readback: {
+      pendingRecovery: () => this.recovery.hasPendingSourceRecovery(),
+      loading: () => this.recovery.sourceListLoading(),
+      emptyReadFailure: () => this.recovery.hasEmptyListReadFailure(),
+      recoveryFacts: () => this.recovery.verificationRecoveryFacts(),
+    },
+    typography: {
+      startFilter: (): void => this.filters.startTypography(),
+      startReadback: (): void => this.recovery.startReadTypography(),
+      retireReadback: (): void => this.recovery.retireTypography(),
+      retireFilter: (): void => this.filters.retireTypography(),
+      filtersPrepared: () => this.filters.typographyPrepared(),
+      measureInitialFilters: (): void => {
+        this.filters.scheduleVerificationFilterText('status', 'initial');
+        this.filters.scheduleVerificationFilterText('category', 'initial');
+      },
+      scheduleReadText: (): void => this.recovery.scheduleVerificationReadText(),
+      scheduleOperationText: (): void => this.recovery.scheduleVerificationOperationText(),
+    },
+  });
+
+  private readonly recovery: SourceManagementRecoveryOwner = new SourceManagementRecoveryOwner({
+    host: this.recoveryHost,
+    readback: {
+      listReadPending: () => this.list.sourceAnchorReadPending(),
+      filterHeight: () => this.list.filterHeight(),
+      filtersInDefaultState: () => this.filters.filtersInDefaultState(),
+      groupClosing: () => this.filters.groupClosing(),
+    },
+    diagnostics: {
+      hasTypographyProbe: () => this.list.hasTypographyProbe(),
+      projectionState: () => this.list.verificationProjectionState(),
+      typographyScope: (scope) => this.list.verificationTextLayoutScope(scope),
+      footerText: () => this.list.verificationFooterText(),
+    },
+  });
+
+  @Builder
+  private sourceGroupSearch(identity: string) {
+    SourceManagementGroupSearch({ owner: this.filters }, identity);
+  }
+
+  @Builder
+  private sourceGroupFooter(identity: string) {
+    SourceManagementGroupFooter({ owner: this.filters }, identity);
+  }
+
+  @Builder
+  private sourceBatchHeaderAction(label: string, run: () => void) {
+    SourceManagementBatchHeaderAction({ owner: this.list }, label, run);
+  }
+
+
   @Prop @Watch('onGeometryInputsChanged') embeddedWide: boolean = false;
-  private readonly metadataEllipsisMode: EllipsisMode = readerHarmonyApi24() ? EllipsisMode.CENTER : EllipsisMode.END;
+
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
-  private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding('reader-source-list');
-  private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
+
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
+
   @StorageLink('readerAppForeground') @Watch('onToolsFocusContextChanged') private appForeground: boolean = true;
 
   @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
+
   @Prop @Watch('onSourcesChanged') sources: BookSource[];
+
   @Prop initialViewState: SourceManagementViewState | undefined = undefined;
+
   @Prop @Watch('onV9PaneChanged') v9Pane: SourceV9View = 'list';
+
   @Prop expandedLayout: boolean;
+
   @Prop reduceMotion: boolean = false;
+
   verificationOpening: string = '';
+
   @Prop @Watch('onV9ListInputChanged') inputEnabled: boolean = true;
+
   @Prop @Watch('onMessageChanged') operation: SourceManagementProjection = { action: 'load', sourceId: '' };
+
   onReconcile: (generation: number) => void = (_generation: number): void => {};
+
   onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
+
   @Prop @Watch('onMessageChanged') statusKind: SourceManagementStatusKind = 'idle';
+
   @Prop @Watch('onMessageChanged') statusMessage: string = '';
+
   @Prop @Watch('scheduleImportStatusReadyObservation') statusActionLabel: string = '';
+
   @Prop @Watch('scheduleImportStatusReadyObservation') statusActionGeneration: number = 0;
-  // The existing diagnostic may supply its own controllers instead of the normal-route probe.
+
   textLayoutOptions: SourceTextOptions | undefined = undefined;
+
   isOpeningCurrent: (() => boolean) | undefined = undefined;
+
   isInputAllowed: (() => boolean) | undefined = undefined;
+
   onStatusAction: (generation: number) => void = (_generation: number): void => {};
+
   onBack: () => void = (): void => {};
+
   onToggleSource: (id: string, enabled: boolean) => void = (_id: string, _enabled: boolean): void => {};
+
   onDetectSource: (id: string) => void = (_id: string): void => {};
+
   onLoginSource: (id: string, loginUrl: string) => void = (_id: string, _loginUrl: string): void => {};
+
   onAddSource: (preferred?: string, fallback?: string) => void = (): void => {};
+
   onV9Action: (action: SourceV9ListAction, sourceIds: string[]) => void =
     (_action: SourceV9ListAction, _sourceIds: string[]): void => {};
+
   onRetryLoad: () => void = (): void => {};
-  // Rows paint press feedback only after a short still hold, so a scroll drag never highlights the touched row.
-  @State private pressedRowKey: string = '';
-  private readonly delayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
-    this.pressedRowKey = key;
-  });
-  @State private searchQuery: string = '';
-  @State private searchInputRevision: number = 0;
-  @State private statusValue: string = '全部';
-  @State private categoryValue: string = 'all';
-  @State private groupValue: string = '全部分组';
+
   @Prop @Watch('onSourcesChanged') catalogGroupNames: string[] = [];
+
   @Prop @Watch('onUngroupedBatch') ungroupedBatchIds: string[] = [];
+
   @Prop @Watch('onBatchApplied') batchApplied: number = 0;
-  @State private statusCounts: SourceV9Counts = { all: 0, enabled: 0, disabled: 0, abnormal: 0 };
-  @State private hasReadableSources: boolean = false;
+
   @State @Watch('publishBackPreviewBlock') private moreMenuOpen: boolean = false;
-  @State private moreAnchor: ReaderRectVp | undefined = undefined;
-  private moreFocusRevision: number = 0;
+
   @State @Watch('publishBackPreviewBlock') private batchMode: boolean = false;
-  @State private batchSourceIds: string[] = [];
+
   @State @Watch('publishBackPreviewBlock') private groupOpen: boolean = false;
-  @State private groupClosing: boolean = false;
-  @State private groupSearchQuery: string = '';
-  @State private groupSelectionId: string = '';
-  private pendingGroupFocus: string = '';
-  private groupFocusRevision: number = 0;
+
   private mounted: boolean = false;
-  private lastFeedbackIdentity: string = '';
-  private lastToastMessage: string = '';
+
   private temporaryBackIdentity: string = '';
+
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
+
   onBackPreviewBlocked: (blocked: boolean) => void = (): void => {};
+
   private lastBackPreviewBlocked: boolean = false;
-  // 838 条书源时 @State 会为每个对象建立观察代理，重建一次就产生数百 MB 峰值。
-  // 列表本身由 LazyForEach 数据源驱动，这里只保留普通引用并以计数触发重渲染。
-  private projectedSources: BookSource[] = [];
-  @State private projectedSourceCount: number = 0;
-  @State private firstSourceId: string = '';
-  @State private lastSourceId: string = '';
-  private groupOptionsCache: string[] = [];
-  private groupOptionsCacheSource: BookSource[] | undefined = undefined;
-  private projectionRebuildPending: boolean = false;
-  private readonly sourceDataSource: SourceListDataSource = new SourceListDataSource();
-  private readonly sourceScroller: Scroller = new Scroller();
-  private listMounted: boolean = false;
-  private pendingSourceAnchor: string = '';
-  private anchorRestoreScheduled: boolean = false;
-  private pendingScroll: SourceManagementScrollState | undefined;
-  private scrollRestoreEpoch: number = 0;
-  private firstVisibleListIndex: number = 0;
-  private lastProjectionFilterKey: string = '';
-  private verificationFilterRevision: number = 0;
+
   private verificationGeometryKey: string = '';
-  private verificationTextMetrics: ReaderSourceTextMetrics | undefined;
-  private verificationReadTextMetrics: ReaderSourceTextMetrics | undefined;
-  private readonly verificationSurfaceTextMetrics: Map<string, ReaderSourceTextMetrics> = new Map();
-  private readonly verificationSurfaceTextFrameKeys: Map<string, string> = new Map();
-  private verificationTextOptions: SourceTextOptions | undefined;
-  private readonly verificationFilterTextMetrics: Map<SourceFilterTextLane, ReaderSourceTextMetrics> = new Map();
-  private readonly verificationFilterTextRevisions: Map<SourceFilterTextLane, number> = new Map();
-  private verificationGroupTextMetrics: ReaderSourceTextMetrics | undefined;
-  private verificationGroupTextRevision: number = 0;
-  private verificationTextRowId: string = '';
-  private verificationTextFrameKey: string = '';
-  @State private verificationReservedTextRowId: string = '';
-  private verificationReservedTextMetrics: ReaderSourceTextMetrics | undefined;
-  private verificationReservedTextFrameKey: string = '';
-  private verificationTextProjectionRevision: number = 0;
-  private verificationImportStatusPending: string = '';
-  private verificationImportStatusReadyKey: string = '';
-  private verificationOperationTextKey: string = '';
-  private readonly verificationOperationTextRoles = new Set<string>();
-  private verificationRecoveryBodyKey: string = '';
-  private verificationRecoveryBodyRevision: number = 0;
-  private verificationRecoveryBodyExpanded: SourceRecoveryBodyAttachment | undefined;
-  private verificationRecoveryBodyAttachment: SourceRecoveryBodyAttachment | undefined;
+
   private pendingToolsFocus: SourceToolsEntry | undefined;
+
   private toolsFocusReady: boolean = false;
+
   private toolsFocusScheduled: boolean = false;
+
   private toolsFocusRevision: number = 0;
+
   private toolsFocusAttempt: number = 0;
+
   private v9ListReturnView: SourceV9ListReturnView | undefined = undefined;
+
   private v9ListReturnScroll: SourceManagementScrollState | undefined = undefined;
+
   private v9ListReturnFilterKey: string = '';
+
   private v9ListReturnEntered: boolean = false;
+
   private v9ListTransitionRevision: number = 0;
-  // 展开面板锚点: 触发条全局坐标 - 根 Stack 原点 = 面板相对根 Stack 位置。
-  @State private groupX: number = 0;
-  @State private groupY: number = 0;
-  @State private groupTriggerWidth: number = 0;
-  @State private groupTriggerHeight: number = 0;
-  @State private groupClosingAnchor: ReaderRectVp | undefined = undefined;
+
   @State private originX: number = 0;
+
   @State private originY: number = 0;
+
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
+
   @State private measurementKey: number = 0;
+
   @State private footerMeasurementKey: number = 0;
+
   private headerInputs: string = '';
-  private headerTopAlignmentScheduled: boolean = false;
+
   private footerInputs: string = '';
+
   @State private viewportWidth: number = 0;
+
   @State private viewportHeight: number = 0;
+
   private measurementRevision: number = 0;
+
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
-  private verificationReadLoadingGeneration: number = 0;
 
   aboutToAppear(): void {
     this.mounted = true;
-    if (this.textLayoutOptions === undefined && (this.verificationOpening ?? '').length > 0 && ReaderUIVerificationProbe.enabled()) {
-      const metrics = new ReaderSourceTextMetrics('');
-      this.verificationFilterTextMetrics.set('status', new ReaderSourceTextMetrics(''));
-      this.verificationFilterTextMetrics.set('category', new ReaderSourceTextMetrics(''));
-      this.verificationTextMetrics = metrics;
-      this.verificationReadTextMetrics = new ReaderSourceTextMetrics('');
-      this.verificationTextOptions = (role: string, sourceId?: string, text?: string): TextOptions | undefined => {
-        if (!this.mounted || this.verificationTextMetrics !== metrics || !ReaderUIVerificationProbe.enabled() ||
-          text === undefined) return undefined;
-        const measuredRole = role === 'chip/全部' ? 'status/all' : role;
-        if (sourceId !== undefined && sourceId === this.verificationReservedTextRowId &&
-          SOURCE_RESERVED_TEXT_ROLES.includes(measuredRole)) {
-          try { return this.verificationReservedTextMetrics?.track(measuredRole, text); }
-          catch (_unavailable) { return undefined; }
-        }
-        if (sourceId !== undefined && sourceId !== this.verificationTextRowId) return undefined;
-        if (!SOURCE_TEXT_ROLES.includes(measuredRole) && measuredRole !== 'row/login') return undefined;
-        try { return metrics.track(measuredRole, text); } catch (_unavailable) { return undefined; }
-      };
-      this.textLayoutOptions = this.verificationTextOptions;
-    }
-    this.searchQuery = this.initialViewState?.searchQuery ?? '';
-    this.statusValue = this.initialViewState?.status ?? '全部';
-    this.categoryValue = this.initialViewState?.category ?? 'all';
-    this.groupValue = this.initialViewState?.group ?? '全部分组';
-    this.pendingScroll = copySourceManagementScroll(this.initialViewState?.scroll);
-    this.pendingSourceAnchor = this.pendingScroll?.anchorId ?? this.initialViewState?.anchorSourceId ?? '';
+    this.textLayoutOptions = this.list.mountTypography(this.textLayoutOptions);
+    this.filters.restore(this.initialViewState);
+    this.list.startScrollRestore(this.initialViewState);
     this.pendingToolsFocus = this.initialViewState?.toolsEntry;
     this.toolsFocusRevision += 1;
     this.toolsFocusAttempt = 0;
@@ -349,57 +431,35 @@ export struct SourceManagementPage {
     const identity = `source-back:${++sourceTemporaryGeneration}`;
     this.temporaryBackIdentity = identity;
     this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity);
-    this.rebuildSourceProjection('mount');
-    this.lastFeedbackIdentity = this.feedbackIdentity();
+    this.list.rebuildSourceProjection('mount');
+    this.recovery.captureInitialFeedback();
     this.scheduleImportStatusReadyObservation();
     if (this.pendingToolsFocus !== undefined) this.traceToolsReturnFocus('armed');
   }
 
   aboutToDisappear(): void {
-    this.cancelRowPress();
+    this.list.cancelRowPress();
     this.cancelToolsReturnFocus('retire');
     this.v9ListReturnView = undefined;
     this.v9ListReturnScroll = undefined;
     this.v9ListReturnFilterKey = '';
-    this.transientFeedback.reset();
+    this.recovery.retireTransientFeedback();
     const identity = this.temporaryBackIdentity;
     this.mounted = false;
-    this.verificationOperationTextKey = '';
-    this.verificationOperationTextRoles.clear();
-    this.verificationRecoveryBodyKey = '';
-    this.verificationRecoveryBodyExpanded = undefined;
-    this.verificationRecoveryBodyAttachment = undefined;
-    if (this.verificationTextMetrics !== undefined) {
-      this.verificationTextMetrics = undefined;
-      this.verificationReadTextMetrics = undefined;
-      this.verificationSurfaceTextMetrics.clear();
-      this.verificationSurfaceTextFrameKeys.clear();
-      this.verificationTextOptions = undefined;
-      this.verificationFilterTextMetrics.clear();
-      this.verificationFilterTextRevisions.clear();
-      this.textLayoutOptions = undefined;
-      this.verificationTextRowId = '';
-      this.verificationTextFrameKey = '';
-      this.verificationReservedTextMetrics = undefined;
-      this.verificationReservedTextRowId = '';
-      this.verificationReservedTextFrameKey = '';
-    }
-    this.listMounted = false;
-    this.cancelScrollRestore();
-    this.pendingSourceAnchor = '';
-    this.anchorRestoreScheduled = false;
+    this.recovery.retireDiagnosticFacts();
+    if (this.list.retireTypography()) this.textLayoutOptions = undefined;
+    this.list.retireScroll();
     this.pendingToolsFocus = undefined;
     this.toolsFocusReady = false;
     this.toolsFocusScheduled = false;
-    this.closeMoreMenu();
-    this.moreAnchor = undefined;
+    this.filters.retireMoreMenu();
     this.temporaryBackIdentity = '';
     this.viewportWidth = 0;
     this.viewportHeight = 0;
     this.measurements.clear();
     this.headerInputs = '';
     this.footerInputs = '';
-    this.retireGroupSelection();
+    this.filters.retireGroupSelection();
     this.onTemporaryBackBridge(undefined, identity);
     this.lastBackPreviewBlocked = false;
     this.onBackPreviewBlocked(false);
@@ -420,15 +480,15 @@ export struct SourceManagementPage {
       this.observeVerificationOverlay('back', 'ime');
       return true;
     }
-    const consumed = this.requestGroupClose(this.groupSelectionId);
+    const consumed = this.filters.requestGroupClose(this.filters.currentSelection());
     if (consumed) this.observeVerificationOverlay('back', 'group');
     if (consumed) return true;
     if (this.moreMenuOpen) {
-      this.closeMoreMenu(true);
+      this.filters.closeMoreMenu(true);
       return true;
     }
     if (this.batchMode) {
-      this.endBatch();
+      this.list.endBatch();
       return true;
     }
     return false;
@@ -453,121 +513,8 @@ export struct SourceManagementPage {
     });
   }
 
-  private retireGroupSelection(): void {
-    this.cancelGroupFocus();
-    this.verificationGroupTextMetrics = undefined;
-    this.groupOpen = false;
-    this.groupClosing = false;
-    this.groupSearchQuery = '';
-    this.groupClosingAnchor = undefined;
-    this.groupSelectionId = '';
-  }
-
-  private ownsGroupSelection(identity: string): boolean {
-    return this.managementOpeningIsCurrent() && this.groupOpen && identity.length > 0 && identity === this.groupSelectionId;
-  }
-
   private managementInputIsCurrent(): boolean {
     return this.inputEnabled && this.managementOpeningIsCurrent() && this.appForeground && this.isInputAllowed?.() !== false;
-  }
-
-  private toggleGroupSelection(): void {
-    if (!this.managementInputIsCurrent()) return;
-    this.closeMoreMenu();
-    if (this.requestGroupClose(this.groupSelectionId) || this.groupOptions().length <= 1 ||
-      this.groupTriggerWidth <= 0 || this.groupTriggerHeight <= 0) return;
-    if (this.overlayBottom() - this.groupOverlayTop() < this.groupTriggerHeight + 44 * 2 + 2 * TOK_BORDER_W ||
-      this.groupX - this.originX >= this.overlayRight()) return;
-    this.cancelGroupFocus();
-    this.cancelToolsReturnFocus('group');
-    this.groupSelectionId = `source-group:${++sourceTemporaryGeneration}`;
-    this.pendingGroupFocus = this.groupSelectionId;
-    this.groupClosing = false;
-    this.groupOpen = true;
-    this.prepareVerificationGroupText();
-    this.observeVerificationOverlay('open', 'group', this.groupSelectionId);
-  }
-
-  private requestGroupClose(identity: string, outside: boolean = false): boolean {
-    if (!this.ownsGroupSelection(identity)) return false;
-    if (outside && !this.groupClosing) this.observeVerificationOverlay('outside', 'group', identity);
-    // The collapsing panel continues to consume Back until it dismisses.
-    this.cancelGroupFocus();
-    this.groupClosing = true;
-    if (outside) this.hideManagementKeyboard(this.temporaryBackIdentity);
-    return true;
-  }
-
-  private groupCloseAction(identity: string): () => void {
-    return (): void => { if (this.managementInputIsCurrent()) this.requestGroupClose(identity, true); };
-  }
-
-  private commitGroupSelection(option: string, identity: string): void {
-    if (!this.groupSearchIsCurrent(identity) || this.visibleGroupOptions().indexOf(option) < 0) return;
-    this.cancelGroupFocus();
-    // Applying a group can scroll the list to its top before the panel finishes closing.
-    this.groupClosingAnchor = new ReaderRectVp(this.groupX, this.groupY, this.groupTriggerWidth, this.groupTriggerHeight);
-    this.groupClosing = true;
-    this.hideManagementKeyboard(this.temporaryBackIdentity);
-    this.groupValue = option;
-    this.rebuildSourceProjection('group');
-  }
-
-  private groupSearchIsCurrent(identity: string): boolean {
-    return this.managementInputIsCurrent() && this.ownsGroupSelection(identity) && !this.groupClosing;
-  }
-
-  private changeGroupSearch(identity: string, value: string): void {
-    if (this.groupSearchIsCurrent(identity)) this.groupSearchQuery = value;
-  }
-
-  private collapseGroupSearch(identity: string): void {
-    if (this.groupSearchIsCurrent(identity) && this.requestGroupClose(identity)) {
-      this.hideManagementKeyboard(this.temporaryBackIdentity);
-    }
-  }
-
-  private dismissGroupSelection(identity: string): void {
-    if (!this.ownsGroupSelection(identity)) return;
-    this.retireGroupSelection();
-    this.observeVerificationOverlay('dismiss', 'group', identity);
-    const fallback = this.toolsFocusId('header');
-    this.scheduleGroupFocus(this.groupOptions().length > 1 ? [this.groupTriggerFocusId(), fallback] : [fallback]);
-  }
-
-  private cancelGroupFocus(): void {
-    this.pendingGroupFocus = '';
-    this.groupFocusRevision += 1;
-  }
-
-  private groupTriggerFocusId(): string { return `${this.temporaryBackIdentity}:group-trigger`; }
-  private groupPanelFocusPrefix(identity: string): string { return `${identity}:focus`; }
-
-  private groupPanelLayoutAction(identity: string): (_old: Area, next: Area) => void {
-    return (_old: Area, next: Area): void => {
-      if (identity !== this.pendingGroupFocus || !this.ownsGroupSelection(identity) || this.groupClosing ||
-        readerPageAreaLength(next.width) <= 0 || readerPageAreaLength(next.height) <= 0) return;
-      this.pendingGroupFocus = '';
-      this.scheduleGroupFocus([`${this.groupPanelFocusPrefix(identity)}:selected`], identity);
-      if (this.verificationGroupTextMetrics !== undefined) this.scheduleVerificationGroupText(identity, 'initial');
-    };
-  }
-
-  private scheduleGroupFocus(targets: string[], selection: string = ''): void {
-    if (!this.managementOpeningIsCurrent() || !this.appForeground) return;
-    const mount = this.temporaryBackIdentity;
-    const revision = ++this.groupFocusRevision;
-    try {
-      this.getUIContext().postFrameCallback(new SourceListLayoutFrame(this.getUIContext(), (): void => {
-        if (!this.managementOpeningIsCurrent() || !this.appForeground || mount !== this.temporaryBackIdentity ||
-          revision !== this.groupFocusRevision || (selection.length > 0 ?
-            !this.ownsGroupSelection(selection) || this.groupClosing : this.groupOpen)) return;
-        const controller = this.getUIContext().getFocusController();
-        for (const target of targets) {
-          try { controller.requestFocus(target); return; } catch (_unavailableTarget) {}
-        }
-      }));
-    } catch (_unmounted) {}
   }
 
   private toolsFocusId(entry: SourceToolsEntry): string { return `${this.temporaryBackIdentity}:tools:${entry}`; }
@@ -578,24 +525,24 @@ export struct SourceManagementPage {
     this.v9ListReturnEntered = false;
     this.v9ListTransitionRevision += 1;
     if (ReaderUIVerificationProbe.enabled()) {
-      this.v9ListReturnFilterKey = this.currentFilterKey();
-      this.v9ListReturnScroll = this.readCurrentScroll();
+      this.v9ListReturnFilterKey = this.list.currentFilterKey();
+      this.v9ListReturnScroll = this.list.readCurrentScroll();
       const saved = this.v9ListReturnScroll;
-      if (saved !== undefined) this.observeVerificationScroll('v9-list-enter', saved);
+      if (saved !== undefined) this.list.observeVerificationScroll('v9-list-enter', saved);
     }
   }
 
   private onV9PaneChanged(): void {
-    if (this.v9Pane !== 'list') this.closeMoreMenu();
-    if (this.v9Pane === 'list') this.scheduleImportStatusReadyObservation();
+    if (this.v9Pane !== 'list') this.filters.closeMoreMenu();
+    if (this.v9Pane === 'list') this.recovery.scheduleImportStatusReadyObservation();
     if (!this.mounted || this.v9ListReturnView !== 'groups') return;
     if (this.v9Pane === 'groups') this.observeV9ListEntry('groups');
     if (this.v9Pane === 'list' && this.v9ListReturnEntered) this.completeV9ListReturn('groups');
   }
 
   private onV9ListInputChanged(): void {
-    if (!this.inputEnabled) this.closeMoreMenu();
-    if (this.inputEnabled && this.v9Pane === 'list') this.scheduleImportStatusReadyObservation();
+    if (!this.inputEnabled) this.filters.closeMoreMenu();
+    if (this.inputEnabled && this.v9Pane === 'list') this.recovery.scheduleImportStatusReadyObservation();
   }
 
   private observeV9ListEntry(view: SourceV9ListReturnView): void {
@@ -617,15 +564,15 @@ export struct SourceManagementPage {
     const focusRevision = this.toolsFocusRevision;
     try {
       const context = this.getUIContext();
-      context.postFrameCallback(new SourceListLayoutFrame(context, (): void => {
+      context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
         if (!this.managementBackIsCurrent(identity) || this.v9Pane !== 'list' ||
           this.v9ListTransitionRevision !== transition || this.batchMode) return;
         if (ReaderUIVerificationProbe.enabled()) {
-          this.observeV9ListTransition(view, 'return', transition, filterKey === this.currentFilterKey());
-          this.observeVerificationProjection('v9-return');
+          this.observeV9ListTransition(view, 'return', transition, filterKey === this.list.currentFilterKey());
+          this.list.observeVerificationProjection('v9-return');
           if (saved !== undefined) {
-            const measured = this.readCurrentScroll();
-            if (measured !== undefined) this.observeVerificationScroll('v9-list-return', measured, saved);
+            const measured = this.list.readCurrentScroll();
+            if (measured !== undefined) this.list.observeVerificationScroll('v9-list-return', measured, saved);
           }
         }
         if (this.toolsFocusRevision !== focusRevision || !this.managementInputIsCurrent()) return;
@@ -668,7 +615,7 @@ export struct SourceManagementPage {
   }
 
   private onToolsFocusContextChanged(): void {
-    if (!this.appForeground) this.closeMoreMenu();
+    if (!this.appForeground) this.filters.closeMoreMenu();
     if (!this.appForeground || !this.managementOpeningIsCurrent() || this.isInputAllowed?.() === false || this.groupOpen)
       this.cancelToolsReturnFocus('inactive');
   }
@@ -694,7 +641,7 @@ export struct SourceManagementPage {
     const revision = this.toolsFocusRevision;
     this.toolsFocusScheduled = true;
     try {
-      this.getUIContext().postFrameCallback(new SourceListLayoutFrame(this.getUIContext(), (): void => {
+      this.getUIContext().postFrameCallback(new ReaderPostLayoutFrame(this.getUIContext(), (): void => {
         if (!this.mounted || identity !== this.temporaryBackIdentity || revision !== this.toolsFocusRevision) return;
         this.toolsFocusScheduled = false;
         if (!this.managementOpeningIsCurrent() || !this.appForeground || this.isInputAllowed?.() === false ||
@@ -729,7 +676,7 @@ export struct SourceManagementPage {
       content: (): void => { this.pageContent(); },
       header: (): void => { this.backBar(); },
       footer: (): void => { this.pageFooter(); },
-      overlayContent: (): void => { this.pendingRecovery(); this.groupOverlay(); this.sourceMoreMenu(); },
+      overlayContent: (): void => { this.sourceOverlays(); },
       onHeaderHeightChange: (height: number, presentedKey: number): void => {
         this.recordMeasurement('source:header', height, presentedKey);
       },
@@ -737,19 +684,24 @@ export struct SourceManagementPage {
         this.recordMeasurement('source:footer', height, presentedKey);
       },
     }).onTouch((event: TouchEvent): void => {
-      if (event.type === TouchType.Down) { this.cancelGroupFocus(); this.cancelToolsReturnFocus('touch'); }
+      if (event.type === TouchType.Down) { this.filters.cancelGroupFocus(); this.cancelToolsReturnFocus('touch'); }
     }).onKeyEvent((event: KeyEvent): void => {
-      if (event.type === KeyType.Down) { this.cancelGroupFocus(); this.cancelToolsReturnFocus('key'); }
+      if (event.type === KeyType.Down) { this.filters.cancelGroupFocus(); this.cancelToolsReturnFocus('key'); }
     });
   }
 
-  private sourceAddIcon(): Resource {
-    return this.appThemeScheme === 'night' ? $r('app.media.source_add_theme_night') : $r('app.media.source_add');
+  @Builder
+  private sourceOverlays() {
+    SourceManagementRecoveryBanner({ owner: this.recovery });
+    SourceManagementGroupSheet({ owner: this.filters });
+    SourceManagementMoreMenu({ owner: this.filters });
   }
 
   @Builder
   private pageContent() {
-    Column() { this.sourceList(); }
+    Column() {
+      SourceManagementList({ owner: this.list }, { filters: this.filters, recovery: this.recovery });
+    }
       .id('reader-source-content')
       .width('100%')
       .height('100%')
@@ -764,7 +716,7 @@ export struct SourceManagementPage {
 
   @Builder
   private pageFooter() {
-    Column() { this.bottomActionBar(); }
+    Column() { SourceManagementBatchFooter({ owner: this.list }, this.temporaryBackIdentity); }
       .id('reader-source-footer')
       .width('100%')
       .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
@@ -775,90 +727,15 @@ export struct SourceManagementPage {
   }
 
   @Builder
-  private groupOverlay() {
-    if (this.groupOpen) {
-      Row().width('100%').height('100%').backgroundColor(Color.Transparent)
-        .id(`reader-source-group-backdrop:${this.groupSelectionId}`)
-        .hitTestBehavior(HitTestMode.Default).accessibilityLevel('no')
-        .onClick(this.groupCloseAction(this.groupSelectionId));
-      ReaderSelectPanel({
-        inputCurrent: (): boolean => this.managementInputIsCurrent(),
-        value: this.groupValue,
-        options: this.visibleGroupOptions(),
-        variant: 'sourceGroup',
-        controlWidth: Math.max(148, this.groupClosingAnchor?.width ?? this.groupTriggerWidth),
-        menuHeaderHeight: this.groupClosingAnchor?.height ?? this.groupTriggerHeight,
-        emptyOptionsText: '没有匹配的分组',
-        menuHeader: (): void => { this.groupSearchField(this.groupSelectionId); },
-        menuFooter: (): void => { this.manageGroupsOption(this.groupSelectionId); },
-        menuFooterHeight: 44,
-        onMenuHeaderCollapse: (identity: string): void => this.collapseGroupSearch(identity),
-        reduceMotion: this.reduceMotion,
-        closing: this.groupClosing,
-        selectionId: this.groupSelectionId,
-        focusIdPrefix: this.groupPanelFocusPrefix(this.groupSelectionId),
-        x: (this.groupClosingAnchor?.left ?? this.groupX) - this.originX,
-        y: (this.groupClosingAnchor?.top ?? this.groupY) - this.originY,
-        hostTopVp: this.groupOverlayTop(), hostBottomVp: this.overlayBottom(),
-        hostLeftVp: this.overlayLeft(), hostRightVp: this.overlayRight(),
-        optionTextLayoutOptions: this.verificationGroupTextMetrics === undefined ? undefined :
-          (opt: string, identity: string): TextOptions | undefined => this.verificationGroupTextOptions(opt, identity),
-        onOptionsScrollStop: this.verificationGroupTextMetrics === undefined ? undefined :
-          (identity: string): void => this.scheduleVerificationGroupText(identity, 'settled'),
-        onCommit: (opt: string, identity: string): void => this.commitGroupSelection(opt, identity),
-        onDismiss: (identity: string): void => this.dismissGroupSelection(identity),
-      }).id('reader-source-group-panel').onAreaChange(this.groupPanelLayoutAction(this.groupSelectionId));
-    }
-  }
-
-  @Builder
-  private manageGroupsOption(identity: string) {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Row({ space: 7 }) {
-        Image($r('app.media.bookshelf_more_settings')).width(15).height(15)
-          .fillColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme)).accessibilityLevel('no');
-        Text('管理分组').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13).maxLines(1)
-          .fontColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme));
-      }.width('100%').padding({ left: 14, right: 14 });
-    }.id('reader-source-v9-manage-groups').width('100%').height(44).padding(0).borderRadius(0)
-      .attributeModifier(new ReaderPressFeedback(readerAppColor('app.surface.menuSolid', this.appThemeScheme),
-        this.appThemeScheme, 0, 0, !this.groupClosing))
-      .border({ width: { top: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-      .enabled(!this.groupClosing).onClick((): void => {
-        if (!this.groupSearchIsCurrent(identity)) return;
-        this.hideManagementKeyboard(this.temporaryBackIdentity);
-        this.retireGroupSelection();
-        this.prepareV9ListReturn('groups');
-        this.onV9Action('groups', []);
-      });
-  }
-
-  @Builder
-  private groupSearchField(identity: string) {
-    ReaderSearchField({
-      variant: 'sourceGroup',
-      sourceV9Chrome: true,
-      mode: 'live',
-      editingFocusId: `${identity}:search`,
-      naturalFieldHeightVp: this.groupClosingAnchor?.height ?? this.groupTriggerHeight,
-      text: this.groupSearchQuery,
-      placeholder: '搜索分组',
-      editingCurrent: (): boolean => this.groupSearchIsCurrent(identity),
-      onTextChange: (value: string): void => this.changeGroupSearch(identity, value),
-    }).id('reader-source-group-search').enabled(!this.groupClosing);
-  }
-
-  @Builder
   private backBar(identity: string = this.temporaryBackIdentity) {
     if (this.batchMode) {
       PageBackBar({ floating: true, centered: true, elevation: 'floating', showBack: false,
-        trailingWidthVp: 76, title: `已选 ${this.batchSourceIds.length} 项`,
-        leadingActionLabel: '取消', onLeadingAction: (): void => this.endBatch(),
+        trailingWidthVp: 76, title: `已选 ${this.list.batchSelectionCount()} 项`,
+        leadingActionLabel: '取消', onLeadingAction: (): void => this.list.endBatch(),
         trailing: (): void => {
-          this.batchHeaderAction(this.visibleBatchSelected() ? '取消全选' : '全选',
-            (): void => this.toggleVisibleBatch());
+          this.sourceBatchHeaderAction(this.list.visibleBatchSelected() ? '取消全选' : '全选', (): void => this.list.toggleVisibleBatch());
         },
-      }).transition(this.batchTransition());
+      }).transition(this.list.batchTransition());
     } else {
       PageBackBar({
         floating: true, centered: true, elevation: 'floating',
@@ -874,1692 +751,33 @@ export struct SourceManagementPage {
             specId: 'toolbar-standard', accessibilityLabel: '书源管理更多操作', focusId: this.toolsFocusId('header'),
             selectionState: this.moreMenuOpen ? 'selected' : 'none',
             onFocused: (): void => this.onToolsEntryFocused(identity, 'header'),
-            onTap: (): void => this.toggleMoreMenu() });
+            onTap: (): void => this.filters.toggleMoreMenu() });
         }.id('reader-source-header-tools').enabled(!this.groupOpen)
           .accessibilityLevel(this.groupOpen ? 'no-hide-descendants' : 'auto')
-          .onAreaChange((_old: Area, area: Area): void => this.recordMoreAnchor(identity, area));
+          .onAreaChange((_old: Area, area: Area): void => this.filters.recordMoreAnchor(identity, area));
       }
     }
   }
 
-  @Builder
-  private batchHeaderAction(label: string, run: () => void) {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Text(label).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13)
-        .maxLines(1).minFontSize(10).maxFontSize(13)
-        .fontColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme));
-    }.width('100%').height(44).padding(0)
-      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 22))
-      .onClick(run);
-  }
-
-  private recordMoreAnchor(identity: string, area: Area): void {
-    this.onToolsEntryLayout(identity, 'header', area);
-    if (identity !== this.temporaryBackIdentity) return;
-    this.moreAnchor = new ReaderRectVp(this.numericAreaLength(area.globalPosition.x),
-      this.numericAreaLength(area.globalPosition.y), readerPageAreaLength(area.width), readerPageAreaLength(area.height));
-  }
-
-  private toggleMoreMenu(): void {
-    if (!this.managementInputIsCurrent() || this.groupOpen || this.batchMode || this.v9Pane !== 'list') return;
-    if (this.moreMenuOpen) {
-      this.closeMoreMenu(true);
-      return;
-    }
-    this.hideManagementKeyboard(this.temporaryBackIdentity);
-    this.cancelToolsReturnFocus('more');
-    this.moreMenuOpen = true;
-    this.scheduleMoreFocus('reader-source-v9-open-subscriptions');
-  }
-
-  private closeMoreMenu(restoreFocus: boolean = false): void {
-    this.moreFocusRevision += 1;
-    if (!this.moreMenuOpen) return;
-    this.moreMenuOpen = false;
-    if (restoreFocus) this.scheduleMoreFocus(this.toolsFocusId('header'));
-  }
-
-  private scheduleMoreFocus(id: string): void {
-    const revision = ++this.moreFocusRevision;
-    const identity = this.temporaryBackIdentity;
-    const context = this.getUIContext();
-    try {
-      context.postFrameCallback(new SourceListLayoutFrame(context, (): void => {
-        if (!this.managementBackIsCurrent(identity) || !this.managementInputIsCurrent() || this.groupOpen ||
-          this.batchMode || this.v9Pane !== 'list' || revision !== this.moreFocusRevision) return;
-        try { context.getFocusController().requestFocus(id); } catch (_unbound) {}
-      }));
-    } catch (_unmounted) {}
-  }
-
-  private moreActions(): ReaderMenuActionView[] {
-    return [
-      new ReaderMenuActionView('subscriptions', '书源订阅', true, $r('app.media.source_v9_cloud')),
-      new ReaderMenuActionView('groups', '分组管理', true, readerActionIcon('folder', this.appThemeScheme)),
-      new ReaderMenuActionView('detect', '批量检测', this.projectedSourceCount > 0, $r('app.media.source_v9_wave')),
-      new ReaderMenuActionView('export', '导出全部书源', this.hasReadableSources, $r('app.media.source_v9_upload')),
-    ];
-  }
-
-  private chooseMoreAction(id: string): void {
-    if (!this.moreMenuOpen || !this.managementInputIsCurrent()) return;
-    const action = this.moreActions().find((item: ReaderMenuActionView): boolean => item.id === id && item.enabled);
-    if (action === undefined) return;
-    this.closeMoreMenu(id === 'export');
-    if (id === 'groups') this.prepareV9ListReturn('groups');
-    this.onV9Action(id as SourceV9ListAction, id === 'detect' ? this.visibleIds() : []);
-  }
-
-  private moreAnchorInPane(): ReaderRectVp {
-    const anchor = this.moreAnchor;
-    return anchor === undefined ? new ReaderRectVp(this.viewportWidth - this.geometry.header.insetRight - 44,
-      this.geometry.content.startInset - 50, 44, 44) :
-      new ReaderRectVp(anchor.left - this.originX, anchor.top - this.originY, anchor.width, anchor.height);
-  }
-
-  private moreMenuRect(): ReaderRectVp {
-    const spec = resolvePopupSpec('source-v9-more-menu');
-    const rowHeight = readerScaledControlHeight(spec.actionHeight, spec.actionLineHeight, this.fontScale());
-    const height = readerOverlayListHeight(0, rowHeight, this.moreActions().length, 0, 6, 6, 1, 0);
-    const left = this.overlayLeft();
-    const top = this.overlayTop() + 6;
-    const viewport = new ReaderRectVp(left, top, this.overlayRight() - left, this.overlayBottom() - top - 6);
-    return readerOverlayPanel(viewport, spec.width, height, 'anchor-end', this.moreAnchorInPane(), 8);
-  }
-
-  private morePointerX(): number {
-    const anchor = this.moreAnchorInPane();
-    const panel = this.moreMenuRect();
-    return Math.max(6, Math.min(panel.width - 18, anchor.left + anchor.width / 2 - panel.left - 6));
-  }
-
-  private moreTransition(): TransitionEffect {
-    if (this.reduceMotion) return TransitionEffect.OPACITY.animation(readerMotionAnimateParam('dropdown.menu.expand', true));
-    return TransitionEffect.asymmetric(
-      TransitionEffect.scale({ x: 0.96, y: 0.92, centerX: '100%', centerY: 0 })
-        .combine(TransitionEffect.OPACITY).animation(readerMotionAnimateParam('dropdown.menu.expand', false)),
-      TransitionEffect.OPACITY.animation(readerMotionAnimateParam('dropdown.menu.collapse', false)));
-  }
-
-  private moreMenuMaterial(): ReaderSurfaceMaterialDecision {
-    return readerSurfaceMaterialDecision('popoverMenu', this.appearancePreferences, this.appThemeScheme, this.systemScheme);
-  }
-
-  @Builder
-  private sourceMoreMenu() {
-    if (this.moreMenuOpen) {
-      Row().width('100%').height('100%')
-        .backgroundColor(Color.Transparent).hitTestBehavior(HitTestMode.Default)
-        .accessibilityLevel('no').onClick((): void => this.closeMoreMenu(true));
-      Stack({ alignContent: Alignment.TopStart }) {
-        Column() {
-          ReaderActionMenuSurface({ specId: 'source-v9-more-menu', nativeId: 'reader-source-v9-more-menu',
-            actionIdPrefix: 'reader-source-v9-open-', scheme: this.appThemeScheme, availableWidth: this.moreMenuRect().width,
-            viewportHeight: Math.max(0, this.moreMenuRect().height - 14),
-            reduceMotion: this.reduceMotion, actions: this.moreActions(),
-            onAction: (id: string): void => this.chooseMoreAction(id) });
-        }.width('100%').padding({ top: 6, bottom: 6 })
-          .borderRadius(resolvePopupSpec('source-v9-more-menu').borderRadius).clip(true)
-          .backgroundEffect(undefined)
-          .backgroundColor(this.moreMenuMaterial().native ? Color.Transparent : readerAppColor('app.surface.menuSolid', this.appThemeScheme))
-          .border(this.moreMenuMaterial().native ? { width: 0, color: Color.Transparent } :
-            { width: 1, color: readerAppColor('app.border.menu', this.appThemeScheme) })
-          .shadow(this.moreMenuMaterial().native ? undefined : readerSurfaceElevation('popover', this.appThemeScheme))
-          .attributeModifier(new ReaderImmersiveMaterialModifier(this.moreMenuMaterial(),
-            readerNativeSurfaceOutline(this.appThemeScheme, resolvePopupSpec('source-v9-more-menu').borderRadius)));
-        if (!this.moreMenuMaterial().native) {
-          Row().width(12).height(12).rotate({ angle: 45 })
-            .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
-            .border({ width: { top: 1, left: 1 }, color: readerAppColor('app.border.menu', this.appThemeScheme) })
-            .position({ x: this.morePointerX(), y: this.moreMenuRect().top < this.moreAnchorInPane().top ?
-              this.moreMenuRect().height - 6 : -6 }).zIndex(1)
-            .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
-        }
-      }.width(this.moreMenuRect().width).clip(false)
-        .position({ x: this.moreMenuRect().left, y: this.moreMenuRect().top })
-        .transition(this.moreTransition());
-    }
-  }
-
-  private visibleIds(): string[] {
-    return this.projectedSources.map((source: BookSource): string => source.sourceId);
-  }
-
-  private batchTransition(): TransitionEffect {
-    const fade = TransitionEffect.OPACITY;
-    if (this.reduceMotion) return fade.animation(readerMotionAnimateParam('app.navigation.tab', true));
-    return fade.combine(TransitionEffect.translate({ y: 4 }))
-      .animation(readerMotionAnimateParam('app.navigation.tab', false));
-  }
-
-  private endBatch(): void {
-    this.batchMode = false;
-    this.batchSourceIds = [];
-    this.completeV9ListReturn('batch');
-  }
-
-  private visibleBatchSelected(): boolean {
-    return this.projectedSources.length > 0 && this.visibleIds().every((id: string): boolean => this.batchSourceIds.includes(id));
-  }
-
-  private toggleVisibleBatch(): void {
-    if (!this.managementInputIsCurrent() || !this.batchMode) return;
-    const visible = this.visibleIds();
-    this.batchSourceIds = this.visibleBatchSelected() ?
-      this.batchSourceIds.filter((id: string): boolean => !visible.includes(id)) :
-      Array.from(new Set<string>(this.batchSourceIds.concat(visible)));
-  }
-
-  private toggleBatchSource(source: BookSource, checked: boolean): void {
-    if (!this.batchMode || !this.sourceRowIsCurrent(source, this.temporaryBackIdentity)) return;
-    const previous = this.batchSourceIds.includes(source.sourceId);
-    if (checked === previous) return;
-    this.batchSourceIds = checked ? this.batchSourceIds.concat([source.sourceId]) :
-      this.batchSourceIds.filter((id: string): boolean => id !== source.sourceId);
-  }
-
-
-  @Builder
-  private searchField() {
-    Row({ space: TOK_SPACE_XS }) {
-      Row() {
-        ForEach([this.sourceSearchInputIdentity()], (identity: string): void => {
-          ReaderSearchField({ editingHost: this.editingHost,
-            variant: 'sourceManagement', sourceV9Chrome: true,
-            editingFocusId: 'reader-source-editor',
-            mode: 'live',
-            text: this.searchQuery,
-            placeholder: '搜索书源',
-            accessibilityLabel: '搜索书源名称或域名',
-            editingCurrent: (): boolean => identity === this.sourceSearchInputIdentity() &&
-              this.managementInputIsCurrent() && !this.groupOpen,
-            onTextChange: (value: string): void => this.applySourceSearchInput(identity, value),
-            onSubmit: (): void => this.applySourceSearchInput(identity),
-          });
-        }, (identity: string): string => identity);
-      }
-      .layoutWeight(1)
-      .height(this.layoutBudget().filterHeight);
-
-      this.groupFilter();
-    }
-    .id('reader-source-search')
-    .width(this.contentFrame().width)
-    .constraintSize({ minHeight: this.layoutBudget().filterHeight })
-    .alignItems(VerticalAlign.Center)
-    .margin({ top: TOK_SPACE_XS });
-  }
-
-  private sourceSearchInputIdentity(): string {
-    return `${this.temporaryBackIdentity}:search:${this.searchInputRevision}`;
-  }
-
-  private applySourceSearchInput(identity: string, value?: string): void {
-    if (identity !== this.sourceSearchInputIdentity() || !this.managementOpeningIsCurrent()) return;
-    if (!this.appForeground || this.isInputAllowed?.() === false || this.groupOpen) {
-      // A queued native edit may already have changed the control's buffer.
-      // Rebind the field to the accepted draft while its foreground is suspended.
-      if (value !== undefined && value !== this.searchQuery) this.searchInputRevision += 1;
-      return;
-    }
-    if (value !== undefined) {
-      if (value === this.searchQuery) return;
-      this.cancelToolsReturnFocus('edit');
-      this.searchQuery = value;
-    }
-    this.rebuildSourceProjection('edit');
-  }
-
-  private importFocusId(identity: string): string { return `${identity}:import:footer`; }
-
-  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.operation.receipt, this.operation.readFacts, this.operation.confirmedParts ?? 0); }
-
-  private hasPendingSourceRecovery(): boolean {
-    return this.operation.original?.blocked === true || this.operation.receipt?.receipt.confirmation === 'unknown';
-  }
-
-  private sourceListLoading(): boolean {
-    return this.statusKind === 'loading' || this.sourceAnchorReadPending() || this.operation.receipt?.facts.fact === 'refreshing';
-  }
-
-  private hasEmptyListReadFailure(): boolean {
-    const fact = this.operation.readFacts?.fact;
-    return this.sources.length === 0 && (fact === 'failed' || fact === 'refreshFailed');
-  }
-
-  private hasEmptyImportReadbackFailure(): boolean {
-    const receipt = this.operation.receipt;
-    return this.sources.length === 0 && !this.hasPendingSourceRecovery() && !this.sourceListLoading() &&
-      !this.hasEmptyListReadFailure() && this.operation.action === 'import' &&
-      this.operation.importIdentity !== undefined && receipt?.receipt.confirmation === 'confirmed' &&
-      receipt.receipt.readback === 'failed' && this.recovery().canRetry;
-  }
-
-  private sourceListInputIsCurrent(opening: string): boolean {
-    return this.managementBackIsCurrent(opening) && this.inputEnabled && this.isInputAllowed?.() !== false &&
-      !this.groupOpen && !this.hasPendingSourceRecovery();
-  }
-
-  private retryEmptyListAction(opening: string): (generation: number) => void {
-    return (generation: number): void => {
-      if (!this.sourceListInputIsCurrent(opening) || this.sourceListLoading()) return;
-      if (this.hasEmptyImportReadbackFailure()) {
-        if (this.recovery().generation === generation) this.onReconcile(generation);
-        return;
-      }
-      const read = this.operation.readFacts;
-      if (!this.hasEmptyListReadFailure() || read === undefined || read.generation !== generation) return;
-      if (read.canRetry) this.onReconcile(generation);
-      else this.onRetryLoad();
-    };
-  }
-
-  private retryRetainedListAction(opening: string): (generation: number) => void {
-    return (generation: number): void => {
-      if (!this.sourceListInputIsCurrent(opening) || this.sourceListLoading() || this.sources.length === 0) return;
-      const recovery = this.recovery();
-      if (recovery.canRetry && recovery.generation === generation) this.onReconcile(generation);
-    };
-  }
-
-  private readPageStateTitle(): string {
-    return this.sourceListLoading() ? '正在读取书源' : this.hasEmptyImportReadbackFailure() ? '书源列表待刷新' :
-      this.hasEmptyListReadFailure() ? '书源读取失败' : '暂无书源';
-  }
-
-  private readPageStateMessage(): string {
-    return this.sourceListLoading() ? '请稍候' : this.hasEmptyImportReadbackFailure() ?
-      '已确认导入，但当前列表尚未核对完成，请刷新列表。' : this.hasEmptyListReadFailure() ?
-      '请稍后重试。' : '点击下方「＋ 导入书源」导入 Legado 书源 JSON';
-  }
-
-  private verificationReadTextScope(): SourceSurfaceTextScope | undefined {
-    if (this.verificationTextMetrics === undefined || this.groupOpen || this.groupClosing ||
-      this.searchQuery.length !== 0 || this.statusValue !== '全部' ||
-      this.categoryValue !== 'all' || this.groupValue !== '全部分组') return undefined;
-    const read = this.operation.readFacts?.fact;
-    const state = this.verificationProjectionState();
-    if (state === 'empty' && read === 'current' && !this.hasEmptyImportReadbackFailure()) return 'read-empty';
-    if (state === 'readFailure' && (read === 'failed' || read === 'refreshFailed')) return 'read-failed';
-    if (state === 'rows' && read === 'refreshFailed' && this.recovery().canRetry) return 'retained-read-failed';
-    return undefined;
-  }
-
-  private readPageStateTextOptions(role: 'title' | 'message' | 'retry'): TextOptions | undefined {
-    if (!this.mounted || !ReaderUIVerificationProbe.enabled()) return undefined;
-    // TextOptions is set when the child mounts, including its initial loading state.
-    try { return this.verificationReadTextMetrics?.options(role); }
-    catch (_unavailable) { return undefined; }
-  }
-
-  private readVerificationPageText(scope: 'read-empty' | 'read-failed'): SourceTextLayoutLabel[] {
-    const metrics = this.verificationReadTextMetrics;
-    if (metrics === undefined) return [];
-    metrics.track('title', this.readPageStateTitle());
-    metrics.track('message', this.readPageStateMessage());
-    const roles = ['title', 'message'];
-    if (scope === 'read-failed') {
-      metrics.track('retry', '重试');
-      roles.push('retry');
-    }
-    const state = scope === 'read-empty' ? 'empty' : 'failure';
-    const labels = metrics.readTracked(roles);
-    for (const label of labels) {
-      label.role = label.role === 'retry' ? 'read/retry' : `read/${state}-${label.role}`;
-    }
-    if (scope === 'read-empty') labels.push(...(this.verificationTextMetrics?.readTracked(['footer/add']) ?? []));
-    return labels;
-  }
-
-  private verificationSurfaceTextKey(scope: SourceSurfaceTextScope, branch?: string): string {
-    return branch === undefined ? scope : `${scope}/${branch}`;
-  }
-
-  private verificationSurfaceTextOptions(scope: SourceSurfaceTextScope, role: string, text: string,
-    branch?: string): TextOptions | undefined {
-    if (!this.mounted || this.verificationTextMetrics === undefined || !ReaderUIVerificationProbe.enabled()) return undefined;
-    try {
-      const key = this.verificationSurfaceTextKey(scope, branch);
-      let metrics = this.verificationSurfaceTextMetrics.get(key);
-      if (metrics === undefined) {
-        metrics = new ReaderSourceTextMetrics('');
-        this.verificationSurfaceTextMetrics.set(key, metrics);
-      }
-      return metrics.track(role, text);
-    } catch (_unavailable) { return undefined; }
-  }
-
-  private scheduleVerificationReadText(): void {
-    if (this.verificationTextMetrics === undefined) return;
-    const scope = this.verificationReadTextScope();
-    if (scope === undefined) return;
-    this.scheduleVerificationSurfaceText((): SourceSurfaceTextFact | undefined => {
-      const current = this.verificationReadTextScope();
-      return current === scope ? { scope: current } : undefined;
-    }, scope === 'retained-read-failed' ? 1 : 3);
-  }
-
-  private scheduleVerificationSurfaceText(current: () => SourceSurfaceTextFact | undefined, expectedRoles: number): void {
-    try {
-      const scope = this.verificationTextLayoutScope('surface');
-      const fact = current();
-      if (scope === undefined || fact === undefined) return;
-      const bucket = this.verificationSurfaceTextKey(fact.scope, fact.branch);
-      const key = JSON.stringify([scope, fact, expectedRoles]);
-      if (key === this.verificationSurfaceTextFrameKeys.get(bucket)) return;
-      const context = this.getUIContext();
-      let allowNextFrame = true;
-      const observe = (): void => {
-        try {
-          if (this.verificationSurfaceTextFrameKeys.get(bucket) !== key ||
-            JSON.stringify([this.verificationTextLayoutScope('surface'), current(), expectedRoles]) !== key) return;
-          const labels = fact.scope === 'read-empty' || fact.scope === 'read-failed' ? this.readVerificationPageText(fact.scope) :
-            this.verificationSurfaceTextMetrics.get(bucket)?.readTracked() ?? [];
-          if (allowNextFrame && (labels.length < expectedRoles || labels.some(label =>
-            label.lines.length === 0 || fact.scope === 'operation-recovery-body' && !label.complete))) {
-            allowNextFrame = false;
-            context.postFrameCallback(new SourceListLayoutFrame(context, observe));
-            return;
-          }
-          ReaderUIVerificationProbe.emit('source.surface-text-layout', 'business', {
-            owner: scope.owner, textProjectionRevision: scope.textProjectionRevision,
-            filterRevision: scope.filterRevision, readGeneration: scope.readGeneration,
-            windowRevision: scope.windowRevision, widthVp: scope.widthVp, heightVp: scope.heightVp,
-            density: scope.density, systemFontScale: scope.systemFontScale, fontScale: scope.fontScale,
-            rowAnchor: scope.rowAnchor, scope: fact.scope, branch: fact.branch, generation: fact.generation,
-            statusRevision: fact.statusRevision, presentation: fact.presentation,
-            expansionRevision: fact.expansionRevision, labels,
-          });
-        } catch (_detached) {}
-      };
-      context.postFrameCallback(new SourceListLayoutFrame(context, observe));
-      this.verificationSurfaceTextFrameKeys.set(bucket, key);
-    } catch (_detached) {}
-  }
-
-  private statusListAction(opening: string): (generation: number) => void {
-    return (generation: number): void => {
-      if (this.sourceListInputIsCurrent(opening) && this.statusActionLabel.length > 0 &&
-        this.statusActionGeneration === generation) {
-        this.observeImportStatusAction('accepted');
-        this.onStatusAction(generation);
-      }
-    };
-  }
-
-  private scheduleImportStatusReadyObservation(): void {
-    const opening = this.temporaryBackIdentity;
-    if (!ReaderUIVerificationProbe.enabled() || this.v9Pane !== 'list' || !this.managementInputIsCurrent() ||
-      !this.managementBackIsCurrent(opening) ||
-      this.statusActionLabel.length === 0 || this.verificationImportStatusPending === opening) return;
-    this.verificationImportStatusPending = opening;
-    try {
-      const context = this.getUIContext();
-      context.postFrameCallback(new SourceListLayoutFrame(context, (): void => {
-        if (this.verificationImportStatusPending !== opening) return;
-        this.verificationImportStatusPending = '';
-        if (this.managementBackIsCurrent(opening)) this.observeImportStatusAction('ready');
-      }));
-    } catch (_) {
-      this.verificationImportStatusPending = '';
-    }
-  }
-
-  private observeImportStatusAction(phase: 'ready' | 'accepted'): void {
-    if (!ReaderUIVerificationProbe.enabled() || !this.managementOpeningIsCurrent() ||
-      this.statusActionLabel.length === 0 || this.operation.action !== 'import' || this.hasPendingSourceRecovery()) return;
-    const owner = sourceVerificationOpening(this.verificationOpening);
-    const receipt = this.operation.receipt;
-    if (owner === undefined || receipt === undefined) return;
-    if (phase === 'ready') {
-      if (this.v9Pane !== 'list' || !this.managementInputIsCurrent() ||
-        this.statusActionGeneration <= 0 || this.sources.length === 0 || this.sourceListLoading() ||
-        receipt.receipt.confirmation !== 'confirmed' || receipt.receipt.readback !== 'succeeded') return;
-      const key = JSON.stringify([owner.mounting, owner.generation, receipt.facts.generation, this.statusActionGeneration]);
-      if (key === this.verificationImportStatusReadyKey) return;
-      this.verificationImportStatusReadyKey = key;
-    }
-    const fixtureUrl = 'https://status-research.reader-phase1.invalid/';
-    const fixturePresent = this.sources.some(source => source.sourceId === fixtureUrl && source.baseUrl === fixtureUrl &&
-      source.name === 'Reader Phase 1 Search Return' && !source.enabled && !source.enabledExplore);
-    const observation: SourceImportStatusActionObservation = {
-      owner, phase, statusRevision: this.statusActionGeneration, receiptGeneration: receipt.facts.generation,
-      confirmation: receipt.receipt.confirmation, readback: receipt.receipt.readback,
-      confirmedParts: this.operation.confirmedParts ?? 0, fixturePresent, count: this.sources.length,
-    };
-    ReaderUIVerificationProbe.emit('source.import-status-action', 'business', observation);
-    if (phase === 'ready' && this.verificationTextMetrics !== undefined) this.scheduleVerificationOperationText();
-  }
-
-  private verificationOperationTextFact(): SourceSurfaceTextFact | undefined {
-    if (!ReaderUIVerificationProbe.enabled() || !this.managementOpeningIsCurrent()) return undefined;
-    const recovery = this.verificationRecoveryFacts();
-    if (recovery !== undefined && this.recoveryOverlayVisible()) {
-      return { scope: 'operation-recovery', branch: recovery.branch, generation: recovery.generation };
-    }
-    const receipt = this.operation.receipt;
-    if (this.hasPendingSourceRecovery() || this.operation.action !== 'import' ||
-      this.statusActionLabel !== '重新搜索' || this.statusActionGeneration <= 0 || this.sourceListLoading() ||
-      this.sources.length === 0 || receipt?.receipt.confirmation !== 'confirmed' || receipt.receipt.readback !== 'succeeded') {
-      return undefined;
-    }
-    return { scope: 'operation-status', branch: 'import', generation: receipt.facts.generation,
-      statusRevision: this.statusActionGeneration };
-  }
-
-  private scheduleVerificationOperationText(): void {
-    const fact = this.verificationOperationTextFact();
-    if (fact === undefined) {
-      this.verificationOperationTextKey = '';
-      this.verificationOperationTextRoles.clear();
-      return;
-    }
-    this.prepareOperationGlyphs(fact);
-    if (this.verificationOperationTextRoles.size > 0) {
-      this.scheduleVerificationSurfaceText((): SourceSurfaceTextFact | undefined => this.verificationOperationTextFact(),
-        this.verificationOperationTextRoles.size);
-    }
-    this.scheduleVerificationRecoveryBody();
-  }
-
-  private prepareOperationGlyphs(fact: SourceSurfaceTextFact): void {
-    const key = JSON.stringify(fact);
-    if (this.verificationOperationTextKey === key) return;
-    this.verificationOperationTextKey = key;
-    this.verificationOperationTextRoles.clear();
-    const bucket = this.verificationSurfaceTextKey(fact.scope, fact.branch);
-    this.verificationSurfaceTextMetrics.delete(bucket);
-    this.verificationSurfaceTextFrameKeys.delete(bucket);
-  }
-
-  private operationGlyphOptions(fact: SourceSurfaceTextFact, role: string, label: string): TextOptions | undefined {
-    this.prepareOperationGlyphs(fact);
-    const options = this.verificationSurfaceTextOptions(fact.scope, role, label, fact.branch);
-    if (options === undefined) return undefined;
-    this.verificationOperationTextRoles.add(role);
-    this.scheduleVerificationOperationText();
-    return options;
-  }
-
-  private statusGlyphOptions(generation: number): TextOptions | undefined {
-    const fact = this.verificationOperationTextFact();
-    if (fact?.scope !== 'operation-status' || fact.statusRevision !== generation) return undefined;
-    return this.operationGlyphOptions(fact, 'operation/action', this.statusActionLabel);
-  }
-
-  private recoveryGlyphOptions(branch: SourceRecoveryBranch, generation: number):
-    (action: ReaderRecoveryTextAction, label: string) => TextOptions | undefined {
-    return (action: ReaderRecoveryTextAction, label: string): TextOptions | undefined => {
-      const fact = this.verificationOperationTextFact();
-      if (fact?.scope !== 'operation-recovery' || fact.branch !== branch || fact.generation !== generation) return undefined;
-      return this.operationGlyphOptions(fact, `recovery/${branch}/${action}`, label);
-    };
-  }
-
-  private verificationRecoveryBodyFact(attachment: SourceRecoveryBodyAttachment): SourceSurfaceTextFact | undefined {
-    const current = this.verificationOperationTextFact();
-    const expanded = this.verificationRecoveryBodyExpanded;
-    if (attachment.presentation === 'collapsed' || current?.scope !== 'operation-recovery' || current.branch !== attachment.branch ||
-      current.generation !== attachment.generation) return undefined;
-    const expansion = expanded?.branch === attachment.branch && expanded.generation === attachment.generation;
-    if ((attachment.presentation === 'expanded') !== expansion) return undefined;
-    return { scope: 'operation-recovery-body', branch: attachment.branch,
-      generation: attachment.generation, presentation: attachment.presentation,
-      expansionRevision: expansion ? this.verificationRecoveryBodyRevision : undefined };
-  }
-
-  private scheduleVerificationRecoveryBody(): void {
-    const attachment = this.verificationRecoveryBodyAttachment;
-    if (attachment === undefined ||
-      JSON.stringify([attachment.branch, attachment.generation]) !== this.verificationRecoveryBodyKey) return;
-    this.scheduleVerificationSurfaceText((): SourceSurfaceTextFact | undefined => this.verificationRecoveryBodyFact(attachment), 1);
-  }
-
-  private recoveryBodyGlyphOptions(branch: SourceRecoveryBranch):
-    (generation: number, presentation: ReaderRecoveryBodyPresentation, prefix: string) => TextOptions | undefined {
-    return (generation: number, presentation: ReaderRecoveryBodyPresentation, prefix: string): TextOptions | undefined => {
-      const attachment: SourceRecoveryBodyAttachment = { branch, generation, presentation };
-      const current = this.verificationOperationTextFact();
-      if (current?.scope !== 'operation-recovery' || current.branch !== branch || current.generation !== generation) return undefined;
-      const bucket = this.verificationSurfaceTextKey('operation-recovery-body', branch);
-      const key = JSON.stringify([branch, generation]);
-      if (key !== this.verificationRecoveryBodyKey) {
-        this.verificationRecoveryBodyKey = key;
-        this.verificationSurfaceTextMetrics.delete(bucket);
-        this.verificationSurfaceTextFrameKeys.delete(bucket);
-      }
-      try {
-        const metrics = this.verificationSurfaceTextMetrics.get(bucket) ?? new ReaderSourceTextMetrics('');
-        this.verificationSurfaceTextMetrics.set(bucket, metrics);
-        const options = metrics.track(`recovery/${branch}/message`, prefix, true);
-        this.verificationRecoveryBodyAttachment = options !== undefined && this.verificationRecoveryBodyFact(attachment) !== undefined
-          ? attachment : undefined;
-        if (this.verificationRecoveryBodyAttachment !== undefined) this.scheduleVerificationRecoveryBody();
-        return options;
-      } catch (_unavailable) { return undefined; }
-    };
-  }
-
-  private recoveryBodyExpansionObserver(branch: SourceRecoveryBranch): (generation: number, expanded: boolean) => void {
-    return (generation: number, expanded: boolean): void => {
-      const current = this.verificationOperationTextFact();
-      const owner = sourceVerificationOpening(this.verificationOpening);
-      if (owner === undefined || current?.scope !== 'operation-recovery' ||
-        current.branch !== branch || current.generation !== generation) return;
-      this.verificationRecoveryBodyExpanded = expanded ? { branch, generation, presentation: 'expanded' } : undefined;
-      this.verificationRecoveryBodyAttachment = this.verificationRecoveryBodyExpanded;
-      const expansionRevision = ++this.verificationRecoveryBodyRevision;
-      ReaderUIVerificationProbe.emit('source.recovery-body-state', 'business', {
-        owner, branch, generation, phase: expanded ? 'expanded' : 'collapsed', expansionRevision
-      });
-      if (expanded) this.scheduleVerificationRecoveryBody();
-    };
-  }
-
-  private originalRecoveryView(): ReaderRecoveryView {
-    const original = this.operation.original;
-    return { message: original?.message ?? '', visible: original?.blocked === true,
-      canRetry: true, generation: original?.generation ?? 0 };
-  }
-
-  private originalActionIdentities(): string[] {
-    const original = this.operation.original;
-    if (original?.blocked !== true) return [];
-    return [JSON.stringify([this.temporaryBackIdentity, original.operationId ?? '', original.generation, original.writeStage])];
-  }
-
-  private originalActionGeneration(identity: string): number { return Number((JSON.parse(identity) as string[])[2]); }
-  private originalActionCurrent(identity: string, generation: number): boolean {
-    return this.managementInputIsCurrent() && this.recoveryOverlayVisible() &&
-      this.originalActionIdentities().includes(identity) && generation === this.originalActionGeneration(identity) &&
-      this.operation.original?.busy !== true;
-  }
-
-  private verificationRecoveryTitleKey: string = '';
-
-  private verificationRecoveryFacts(): SourceRecoveryVerificationFacts | undefined {
-    const original = this.operation.original;
-    if (original?.blocked === true) {
-      return { branch: 'original', generation: original.generation, busy: original.busy === true,
-        canReconcile: true, canContinue: original.canRetryOriginal === true };
-    }
-    const receipt = this.operation.receipt;
-    if (receipt?.receipt.confirmation === 'unknown') {
-      return { branch: 'unknown', generation: receipt.facts.generation, busy: this.sourceListLoading(),
-        canReconcile: receipt.facts.canRetry, canContinue: false };
-    }
-    return undefined;
-  }
-
-  private observeVerificationRecoveryTitle(opening: string, branch: SourceRecoveryBranch, generation: number,
-    clipped: boolean | undefined): void {
-    if (!ReaderUIVerificationProbe.enabled() || !this.managementBackIsCurrent(opening) || !this.recoveryOverlayVisible()) return;
-    const owner = sourceVerificationOpening(this.verificationOpening);
-    const facts = this.verificationRecoveryFacts();
-    if (owner === undefined || facts?.branch !== branch || facts.generation !== generation) return;
-    const title = clipped === undefined ? 'unmeasured' : clipped ? 'clipped' : 'fits';
-    const key = JSON.stringify([owner.mounting, owner.generation, branch, generation, title, this.readerWindowMetricsRevision]);
-    if (key === this.verificationRecoveryTitleKey) return;
-    this.verificationRecoveryTitleKey = key;
-    const observation: SourceRecoveryTitleObservation = { owner, branch, generation, title };
-    ReaderUIVerificationProbe.emit('source.recovery-title', 'business', observation);
-    if (this.verificationTextMetrics !== undefined) this.scheduleVerificationOperationText();
-  }
-
-  private unknownRecoveryTitleObserver(opening: string): (generation: number, clipped: boolean | undefined) => void {
-    return (generation: number, clipped: boolean | undefined): void => {
-      this.observeVerificationRecoveryTitle(opening, 'unknown', generation, clipped);
-    };
-  }
-
-  @Builder
-  private originalRecovery() {
-    ForEach(this.originalActionIdentities(), (identity: string) => {
-      ReaderRecoveryNotice({ view: this.originalRecoveryView(), layoutWidthVp: this.contentFrame().width, actionLabel: '核对',
-        focusIdPrefix: 'reader-source-original', titleId: 'reader-source-recovery-message',
-        textLayoutOptions: this.verificationTextMetrics === undefined ? undefined :
-          this.recoveryGlyphOptions('original', this.originalActionGeneration(identity)),
-        bodyTextLayoutOptions: this.verificationTextMetrics === undefined ? undefined : this.recoveryBodyGlyphOptions('original'),
-        onBodyExpansion: this.verificationTextMetrics === undefined ? undefined : this.recoveryBodyExpansionObserver('original'),
-        busy: this.operation.original?.busy === true,
-        secondaryActionLabel: this.operation.original?.canRetryOriginal === true ?
-          (this.operation.original?.confirmation === 'confirmed' && this.operation.original?.writeStage === 'cleanup' ? '继续清理' : '继续') : '',
-        onReconcile: (generation: number): void => {
-          if (this.originalActionCurrent(identity, generation)) this.onReconcile(generation);
-        },
-        onSecondaryAction: (generation: number): void => {
-          if (this.originalActionCurrent(identity, generation) && this.operation.original?.canRetryOriginal === true)
-            this.onContinueOriginal(generation);
-        },
-        onTitleMeasured: (generation: number, clipped: boolean | undefined): void => {
-          if (this.originalActionIdentities().includes(identity) && generation === this.originalActionGeneration(identity)) {
-            this.observeVerificationRecoveryTitle(this.temporaryBackIdentity, 'original', generation, clipped);
-          }
-        } });
-    }, (identity: string): string => identity);
-  }
-
-  @Builder
-  private pendingRecovery() {
-    if (this.recoveryOverlayVisible()) {
-      Scroll() {
-        Column() {
-          if (this.operation.original?.blocked === true) { this.originalRecovery(); }
-          else if (this.operation.receipt?.receipt.confirmation === 'unknown') {
-            ReaderRecoveryNotice({ view: this.recovery(), layoutWidthVp: this.contentFrame().width, actionLabel: '核对',
-              focusIdPrefix: 'reader-source-unknown', titleId: 'reader-source-recovery-message', busy: this.sourceListLoading(),
-              textLayoutOptions: this.verificationTextMetrics === undefined ? undefined :
-                this.recoveryGlyphOptions('unknown', this.recovery().generation),
-              bodyTextLayoutOptions: this.verificationTextMetrics === undefined ? undefined : this.recoveryBodyGlyphOptions('unknown'),
-              onBodyExpansion: this.verificationTextMetrics === undefined ? undefined : this.recoveryBodyExpansionObserver('unknown'),
-              onReconcile: this.unknownReceiptAction(this.temporaryBackIdentity),
-              onTitleMeasured: this.unknownRecoveryTitleObserver(this.temporaryBackIdentity) });
-          }
-        }.width('100%');
-      }.id('reader-source-pending-recovery').width(this.contentFrame().width)
-        .constraintSize({ maxHeight: this.recoveryOverlayBottom() - this.recoveryOverlayTop() })
-        .margin({ left: this.contentFrame().left, top: this.recoveryOverlayTop() })
-        .scrollBar(BarState.Auto).clip(true).hitTestBehavior(HitTestMode.Default)
-        .onTouch((event: TouchEvent): void => event.stopPropagation());
-    }
-  }
-
-  private recoveryOverlayBottom(): number { return Math.min(this.overlayBottom(), this.geometry.footer.top); }
-  private recoveryOverlayTop(): number {
-    const start = this.geometry.content.startInset;
-    const searchBottom = start + Math.max(44, this.layoutBudget().filterHeight) + TOK_SPACE_XS * 2;
-    return this.recoveryOverlayBottom() - searchBottom >= 44 ? searchBottom : start;
-  }
-  private recoveryOverlayVisible(): boolean {
-    this.readerWindowMetricsRevision;
-    return this.managementInputIsCurrent() && !this.groupOpen && !this.groupClosing &&
-      !ReaderWindowCoordinator.metrics().keyboardArea.visible && this.hasPendingSourceRecovery() &&
-      this.recoveryOverlayBottom() > this.recoveryOverlayTop();
-  }
-
-  private unknownReceiptAction(opening: string): (generation: number) => void {
-    return (generation: number): void => {
-      const receipt = this.operation.receipt;
-      if (this.managementBackIsCurrent(opening) && this.managementInputIsCurrent() && this.recoveryOverlayVisible() &&
-        this.operation.original?.blocked !== true && !this.sourceListLoading() &&
-        receipt?.receipt.confirmation === 'unknown' && receipt.facts.canRetry && receipt.facts.generation === generation) {
-        this.onReconcile(generation);
-      }
-    };
-  }
-
-  private feedbackIdentity(): string {
-    return `${this.operation.receipt?.facts.generation ?? 0}:${this.operation.readFacts?.generation ?? 0}:` +
-      `${this.statusKind}:${this.statusMessage}`;
-  }
-
-  private transientTextFact(message: string): SourceTransientTextFact | undefined {
-    if (this.verificationTextMetrics === undefined || !ReaderUIVerificationProbe.enabled() ||
-      !this.managementOpeningIsCurrent()) return undefined;
-    const owner = sourceVerificationOpening(this.verificationOpening);
-    if (owner === undefined) return undefined;
-    const readGeneration = this.operation.readFacts?.generation ?? 0;
-    if (this.verificationReadTextScope() === 'retained-read-failed' && readGeneration > 0) {
-      return { scope: 'retained-read-failed', owner, readGeneration };
-    }
-    const receipt = this.operation.receipt;
-    if (this.operation.action === 'import' && this.statusKind === 'success' &&
-      this.statusMessage === message && message.startsWith('书源导入完成：') &&
-      receipt?.receipt.confirmation === 'confirmed' && receipt.receipt.readback === 'succeeded' &&
-      receipt.facts.generation > 0) {
-      return { scope: 'operation-status', owner, readGeneration, branch: 'import', generation: receipt.facts.generation };
-    }
-    return undefined;
-  }
-
-  private transientTextObserver(message: string): ReaderTransientTextObserver | undefined {
-    const fact = this.transientTextFact(message);
-    if (fact === undefined) return undefined;
-    const metrics = new ReaderSourceTextMetrics('');
-    const role = fact.scope === 'operation-status' ? 'operation/status' : 'read/retained-status';
-    const key = JSON.stringify(fact);
-    let windowSamplePublishedAt: number | undefined = undefined;
-    let stopWindowSamples: (() => void) | undefined = undefined;
-    return {
-      textOptions: (text: string): TextOptions | undefined => metrics.track(role, text),
-      onPublished: (toastGeneration: number, durationMs: number): void => {
-        if (fact.scope === 'operation-status' && fact.branch === 'import') {
-          windowSamplePublishedAt = ReaderUIVerificationProbe.sourceImportToastPublishedAt(durationMs);
-        }
-        ReaderUIVerificationProbe.emit('source.transient-feedback', 'business', {
-          scope: fact.scope, owner: fact.owner, readGeneration: fact.readGeneration,
-          branch: fact.branch, generation: fact.generation, phase: 'published',
-          toastGeneration, durationMs,
-        });
-      },
-      onLayout: (toastGeneration: number, hostId: number, durationMs: number): boolean => {
-        const current = this.transientTextFact(message);
-        const window = this.verificationTextLayoutScope('surface');
-        if (JSON.stringify(current) !== key || window === undefined || window.readGeneration !== fact.readGeneration) return false;
-        const status = fact.scope === 'operation-status' ? this.verificationOperationTextFact() : undefined;
-        if (fact.scope === 'operation-status' && (status?.scope !== 'operation-status' ||
-          status.generation !== fact.generation || status.statusRevision === undefined)) return false;
-        const labels = metrics.readTracked();
-        if (labels.length !== 1 || labels[0].lines.length === 0) return false;
-        ReaderUIVerificationProbe.emit('source.transient-text-layout', 'business', {
-          owner: window.owner, textProjectionRevision: window.textProjectionRevision,
-          filterRevision: window.filterRevision, readGeneration: window.readGeneration,
-          windowRevision: window.windowRevision, widthVp: window.widthVp, heightVp: window.heightVp,
-          density: window.density, systemFontScale: window.systemFontScale, fontScale: window.fontScale,
-          rowAnchor: window.rowAnchor, scope: fact.scope, branch: fact.branch,
-          generation: fact.generation, statusRevision: status?.statusRevision,
-          toastGeneration, hostId, durationMs, labels,
-        });
-        if (windowSamplePublishedAt !== undefined) {
-          const publishedAt = windowSamplePublishedAt;
-          windowSamplePublishedAt = undefined;
-          const windowId = ReaderWindowCoordinator.diagnosticWindowId();
-          if (windowId !== null) {
-            stopWindowSamples = ReaderUIVerificationProbe.sampleSourceImportToastWindow(publishedAt, durationMs,
-              windowId, window.windowRevision, (): boolean =>
-                ReaderWindowCoordinator.diagnosticWindowId() === windowId &&
-                readerTransientTextObserver(toastGeneration, hostId) !== undefined &&
-                JSON.stringify(this.transientTextFact(message)) === key);
-          }
-        }
-        return true;
-      },
-      onRetired: (toastGeneration: number, durationMs: number): void => {
-        windowSamplePublishedAt = undefined;
-        stopWindowSamples?.();
-        stopWindowSamples = undefined;
-        ReaderUIVerificationProbe.emit('source.transient-feedback', 'business', {
-          scope: fact.scope, owner: fact.owner, readGeneration: fact.readGeneration,
-          branch: fact.branch, generation: fact.generation, phase: 'retired',
-          toastGeneration, durationMs,
-        });
-      },
-    };
-  }
+  private scheduleImportStatusReadyObservation(): void { this.recovery.scheduleImportStatusReadyObservation(); }
 
   private onMessageChanged(): void {
-    this.scheduleSourceAnchorRestore();
-    this.observeVerificationProjection('owner-update');
-    this.scheduleImportStatusReadyObservation();
-    const identity = this.feedbackIdentity();
-    if (!this.mounted || identity === this.lastFeedbackIdentity) return;
-    this.lastFeedbackIdentity = identity;
-    if (this.sourceListLoading()) {
-      this.lastToastMessage = '';
-      return;
-    }
-    if (this.hasPendingSourceRecovery() || this.hasEmptyListReadFailure()) return;
-    const message = this.statusMessage || (this.recovery().visible ? this.recovery().message : '');
-    if (message.length === 0 || message.startsWith('正在') || message === this.lastToastMessage) return;
-    this.lastToastMessage = message;
-    let textObserver: ReaderTransientTextObserver | undefined;
-    try { if (this.verificationTextMetrics !== undefined) textObserver = this.transientTextObserver(message); } catch (_) {}
-    try {
-      this.transientFeedback.show(() => this.getUIContext(), { message, duration: READER_FEEDBACK_EXTENDED_MS, textObserver },
-        (): boolean => this.mounted);
-    } catch (_) {}
-  }
-
-  @Builder
-  private statusAction() {
-    if (this.statusActionLabel.length > 0 && !this.hasPendingSourceRecovery()) {
-      ForEach([this.statusActionGeneration], (generation: number): void => {
-        ReaderRecoveryAction({ label: this.statusActionLabel, generation,
-          focusId: 'reader-source-status-action',
-          textLayoutOptions: this.verificationTextMetrics === undefined ? undefined : this.statusGlyphOptions(generation),
-          onReconcile: this.statusListAction(this.temporaryBackIdentity) });
-      }, (generation: number): string => `source-status-action:${generation}`);
-    }
-  }
-
-  @Builder
-  private filterArea() {
-    this.statusFilter();
-  }
-
-  @Builder
-  private categoryFilter() {
-    Row({ space: 2 }) {
-      ForEach(['all', 'novel', 'comic'], (category: string): void => {
-        Button({ type: ButtonType.Normal, stateEffect: false }) {
-          Text(category === 'all' ? '全部' : readerSourceCategoryLabel(category as ReaderSourceCategory),
-            category === 'all' ? this.verificationTextOptions?.('category/all', undefined, '全部') : undefined)
-            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
-            .fontSize(12).maxLines(1)
-            .fontColor(readerAppColor(this.categoryValue === category ? 'app.sourceUi.primary' : 'app.sourceUi.muted', this.appThemeScheme));
-        }.layoutWeight(1).height('100%').padding(2).borderRadius(8)
-          .attributeModifier(new ReaderPressFeedback(this.categoryValue === category ?
-            readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent, this.appThemeScheme, 8))
-          .shadow(readerSurfaceElevation(this.categoryValue === category ? 'card' : 'embedded', this.appThemeScheme))
-          .animation(this.reduceMotion ? undefined : readerMotionAnimateParam('app.control.press', false))
-          .responseRegion({ x: 0, y: -8, width: '100%', height: 44 })
-          .accessibilityText(`书源类型，${category === 'all' ? '全部' : readerSourceCategoryLabel(category as ReaderSourceCategory)}`)
-          .accessibilitySelected(this.categoryValue === category)
-          .id(`source-category-${category}`)
-          .onClick((): void => {
-            if (!this.managementInputIsCurrent() || this.groupOpen) return;
-            this.cancelToolsReturnFocus('selection');
-            this.categoryValue = category;
-            this.rebuildSourceProjection('category');
-          });
-      }, (category: string): string => category);
-    }.id('reader-source-category-filter').width(this.contentFrame().width)
-      .height(32).padding(2).borderRadius(10).margin({ top: 12 })
-      .backgroundColor(readerAppColor('app.sourceUi.field', this.appThemeScheme));
-  }
-
-  @Builder
-  private statusFilter() {
-    Row({ space: 5 }) {
-      this.chip('全部', 'all');
-      this.chip('已启用', 'enabled');
-      this.chip('已停用', 'disabled');
-      this.chip('异常', 'error');
-    }.id('reader-source-status-filter').width(this.contentFrame().width).margin({ top: 8 });
-  }
-
-  private statusCount(id: string): number {
-    if (id === 'enabled') return this.statusCounts.enabled;
-    if (id === 'disabled') return this.statusCounts.disabled;
-    return id === 'error' ? this.statusCounts.abnormal : this.statusCounts.all;
-  }
-
-  @Builder
-  private chip(label: string, verificationId: string) {
-    Button({ type: ButtonType.Capsule, stateEffect: false }) {
-      Text(`${label} ${this.statusCount(verificationId)}`, verificationId === 'all' ? this.verificationTextOptions?.('status/all', undefined, `${label} ${this.statusCount(verificationId)}`) :
-        this.filterTextLayoutOptions('status', verificationId, `${label} ${this.statusCount(verificationId)}`))
-        .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
-        .fontSize(11).textAlign(TextAlign.Center).maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .fontColor(readerAppColor(this.statusValue === label ? 'app.sourceUi.onPrimary' : 'app.sourceUi.muted', this.appThemeScheme));
-    }.id(`reader-source-status-${verificationId}`).layoutWeight(1)
-      .height(32).padding({ left: 2, right: 2 })
-      .attributeModifier(new ReaderPressFeedback(readerAppColor(this.statusValue === label ? 'app.sourceUi.primary' :
-        'TOK_CARD_BG', this.appThemeScheme), this.appThemeScheme, 16))
-      .responseRegion({ x: 0, y: -6, width: '100%', height: 44 })
-      .border({ width: TOK_BORDER_W, color: this.statusValue === label ?
-        readerAppColor('app.sourceUi.primary', this.appThemeScheme) : readerAppColor('app.sourceUi.border', this.appThemeScheme) })
-      .accessibilityText(`书源状态，${label}，${this.statusCount(verificationId)} 项`).accessibilitySelected(this.statusValue === label)
-      .onClick((): void => {
-        if (!this.managementInputIsCurrent() || this.groupOpen) return;
-        this.cancelToolsReturnFocus('selection');
-        this.statusValue = label;
-        this.rebuildSourceProjection('status');
-      });
-  }
-
-
-  private filterTextLayoutOptions(lane: SourceFilterTextLane, role: string, label: string): TextOptions | undefined {
-    try { return this.verificationFilterTextMetrics.get(lane)?.track(`${lane}/${role}`, label); }
-    catch (_unavailable) { return undefined; }
-  }
-
-  @Builder
-  private groupFilter() {
-    Row() {
-      ReaderSelect({
-        value: this.groupValue,
-        options: this.groupOptions(),
-        controlWidth: this.groupSelectWidth(),
-        isOpen: this.groupOpen,
-        variant: 'sourceGroup',
-        reduceMotion: this.reduceMotion,
-        focusId: this.groupTriggerFocusId(),
-        onToggle: (): void => this.toggleGroupSelection(),
-      })
-      .id('reader-source-group-trigger')
-      .visibility(this.groupOpen ? Visibility.Hidden : Visibility.Visible)
-      .onAreaChange((_oldValue: Area, newValue: Area): void => this.recordGroupTrigger(newValue));
-    }
-    .id('reader-source-group-filter')
-    .width(this.groupSelectWidth())
-    .height(40)
-    .alignItems(VerticalAlign.Center);
-  }
-
-  @Builder
-  private sourceList() {
-    List({ scroller: this.sourceScroller }) {
-      // Filters remain ordinary scroll content; only the navigation and
-      // action bars float. The list viewport extends behind both bars.
-      ListItem() {
-        Column() {
-          this.searchField();
-          this.statusAction();
-          if (!this.hasPendingSourceRecovery() && !this.sourceListLoading() && this.recovery().canRetry && this.sources.length > 0) {
-            ReaderRecoveryAction({ label: '刷新列表', generation: this.recovery().generation,
-              focusId: 'reader-source-retained-read-retry',
-              textLayoutOptions: this.verificationReadTextScope() === 'retained-read-failed' ?
-                this.verificationSurfaceTextOptions('retained-read-failed', 'read/retained-retry', '刷新列表') : undefined,
-              onReconcile: this.retryRetainedListAction(this.temporaryBackIdentity) });
-          }
-          if (this.sourceListLoading() && this.sources.length > 0 && !this.hasPendingSourceRecovery()) {
-            ReaderPageState({ variant: 'inline', padded: false, loading: true,
-              loadingProgressId: 'reader-source-loading-progress',
-              onLoadingProgressVisible: this.verificationLoadingObserver(),
-              loadingActive: !this.reduceMotion, message: this.statusMessage || '正在读取书源' })
-              .padding({ top: 12, bottom: 12 });
-          }
-          this.filterArea();
-          this.categoryFilter();
-        }.id('reader-source-filter-block').width('100%').padding({ bottom: TOK_SPACE_CONTROL_INLINE });
-      }
-      if (!this.hasReadableSources && !this.hasPendingSourceRecovery()) {
-        ListItem() {
-          ReaderPageState({ title: this.readPageStateTitle(), message: this.readPageStateMessage(),
-            titleTextId: this.verificationTextMetrics === undefined ? '' :
-              this.hasEmptyListReadFailure() && !this.sourceListLoading() ? SOURCE_READ_FAILURE_TITLE : 'reader-source-text-read-title',
-            messageTextId: this.verificationTextMetrics === undefined ? '' : 'reader-source-text-read-message',
-            titleTextLayoutOptions: this.readPageStateTextOptions('title'),
-            messageTextLayoutOptions: this.readPageStateTextOptions('message'),
-            loading: this.sourceListLoading(),
-            loadingProgressId: 'reader-source-loading-progress',
-            onLoadingProgressVisible: this.verificationLoadingObserver(),
-            loadingActive: !this.reduceMotion,
-            actionLabel: this.hasEmptyImportReadbackFailure() ? '刷新列表' : this.hasEmptyListReadFailure() ? '重试' : '',
-            actionFocusId: this.hasEmptyImportReadbackFailure() ? 'reader-source-import-readback-retry' :
-              this.hasEmptyListReadFailure() ? 'reader-source-read-retry' : '',
-            actionTextLayoutOptions: this.readPageStateTextOptions('retry'),
-            actionGeneration: this.hasEmptyImportReadbackFailure() ? this.recovery().generation : this.operation.readFacts?.generation ?? 0,
-            onAction: this.retryEmptyListAction(this.temporaryBackIdentity) });
-        }.id('reader-source-empty-state');
-      }
-      if (this.hasFilteredEmpty()) {
-        ListItem() {
-          ReaderPageState({ title: '没有匹配的书源', message: '调整搜索、状态、分类或分组',
-            actionLabel: '清除筛选', actionFocusId: 'reader-source-clear-filters', onAction: (): void => this.clearFilters() });
-        }.id('reader-source-filtered-empty');
-      }
-      // LazyForEach owns an explicit data source so an empty-to-populated Core
-      // load and later filter replacements can notify ArkUI after mount. A
-      // reusable Repeat over a derived array retained zero stale rows on API
-      // 23 even though the surrounding count text had already updated.
-      LazyForEach(this.sourceDataSource, (source: BookSource) => {
-        ListItem() {
-          this.sourceRow(source);
-        }
-      }, (source: BookSource): string => this.sourceRowKey(source));
-    }
-    .id(this.editingScroll.id)
-    .width('100%')
-    .height('100%')
-    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-    .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
-    .contentEndOffset(readerScrollEndOffset(this.scrollLayout()))
-    .scrollBar(BarState.Off)
-    .onAppear((): void => {
-      this.editingScroll.mount(this.getUIContext(), this.editingHost, this.sourceScroller,
-        (): number => this.geometry.content.startInset);
-      this.listMounted = true;
-      if (this.pendingScroll === undefined && this.pendingSourceAnchor.length === 0) {
-        try { this.sourceScroller.scrollEdge(Edge.Top); } catch (_unbound) {}
-      } else this.scheduleSourceAnchorRestore();
-    })
-    .onAreaChange((): void => { this.editingHost.refresh(); this.scheduleSourceAnchorRestore(); })
-    .onDisAppear((): void => {
-      this.cancelRowPress();
-      this.editingScroll.unmount();
-      this.listMounted = false;
-    })
-    .onScrollIndex((start: number): void => {
-      if (!this.listMounted || this.pendingScroll !== undefined || this.pendingSourceAnchor.length > 0) return;
-      this.firstVisibleListIndex = Math.max(0, start);
-      // The permanent filter header is the first native ListItem.
-    })
-    .onScrollStart((): void => this.cancelRowPress())
-    .onScrollStop((): void => this.captureScroll('settled'))
-    .onTouch((event: TouchEvent): void => { if (event.type === TouchType.Down) this.cancelScrollRestore(); })
-    .onWillScroll((_offset: number, _state: ScrollState, source: ScrollSource): void => {
-      if (source === ScrollSource.DRAG || source === ScrollSource.OTHER_USER_INPUT || source === ScrollSource.SCROLL_BAR) {
-        this.cancelRowPress();
-        this.cancelScrollRestore();
-        this.cancelToolsReturnFocus('scroll');
-      }
-    });
-  }
-
-  private rowPressKey(source: BookSource, part: string): string {
-    return `${source.sourceId}\u0000${part}`;
-  }
-
-  private rowPressed(source: BookSource, part: string): boolean {
-    return this.pressedRowKey === this.rowPressKey(source, part);
-  }
-
-  private cancelRowPress(): void { this.delayedPress.cancel(); }
-
-  /** Observes touches without consuming them; the List keeps ownership of drag and fling. */
-  private rowPressTouch(source: BookSource, part: string, event: TouchEvent): void {
-    this.delayedPress.observe(event, this.rowPressKey(source, part), true);
-  }
-
-  private scheduleSourceAnchorRestore(): void {
-    if (!this.managementOpeningIsCurrent() || !this.listMounted || this.anchorRestoreScheduled ||
-      (this.pendingScroll === undefined && this.pendingSourceAnchor.length === 0) || this.sourceAnchorReadPending()) return;
-    if (!this.sourceReturnFiltersMatch()) { this.cancelScrollRestore(); return; }
-    const pending = this.pendingScroll;
-    if (pending !== undefined && pending.filterKey !== this.currentFilterKey()) { this.cancelScrollRestore(); return; }
-    const identity = this.temporaryBackIdentity, epoch = ++this.scrollRestoreEpoch;
-    this.anchorRestoreScheduled = true;
-    const current = (): boolean => this.managementOpeningIsCurrent() && this.listMounted &&
-      identity === this.temporaryBackIdentity && epoch === this.scrollRestoreEpoch && this.sourceReturnFiltersMatch();
-    try {
-      this.getUIContext().postFrameCallback(new SourceListLayoutFrame(this.getUIContext(), (): void => {
-        if (!current()) return;
-        if (this.sourceAnchorReadPending()) { this.anchorRestoreScheduled = false; return; }
-        const sourceId = pending?.anchorId ?? this.pendingSourceAnchor;
-        if (sourceId.length === 0 || this.projectedSources.length === 0) {
-          try {
-            if (sourceId.length === 0 && pending !== undefined && this.projectedSources.length > 0 &&
-              pending.layoutKey === this.scrollLayoutKey()) {
-              this.sourceScroller.scrollTo({ xOffset: 0, yOffset: pending.offset, animation: false });
-            } else this.sourceScroller.scrollEdge(Edge.Top);
-          } catch (_unbound) {}
-          this.cancelScrollRestore();
-          return;
-        }
-        const exact = this.projectedSources.findIndex((source: BookSource): boolean => source.sourceId === sourceId);
-        const fallback = pending === undefined ? this.initialViewState?.anchorFallbackIndex ?? -1 : pending.firstIndex - 1;
-        const index = exact >= 0 ? exact : Math.min(Math.max(0, fallback), this.projectedSources.length - 1);
-        const targetId = this.projectedSources[index].sourceId;
-        try { this.sourceScroller.scrollToIndex(index + 1, false, ScrollAlign.START); }
-        catch (_unbound) { this.cancelScrollRestore(); return; }
-        this.getUIContext().postFrameCallback(new SourceListLayoutFrame(this.getUIContext(), (): void => {
-          if (!current()) return;
-          try {
-            const latest = this.projectedSources.findIndex((source: BookSource): boolean => source.sourceId === sourceId);
-            const latestIndex = latest >= 0 ? latest : Math.min(Math.max(0, fallback), this.projectedSources.length - 1);
-            if (latestIndex < 0) this.sourceScroller.scrollEdge(Edge.Top);
-            else if (latestIndex !== index || this.projectedSources[index]?.sourceId !== targetId) {
-              this.sourceScroller.scrollToIndex(latestIndex + 1, false, ScrollAlign.START);
-            } else {
-              const rect = this.sourceScroller.getItemRect(index + 1);
-              const desired = pending !== undefined && pending.layoutKey === this.scrollLayoutKey() ?
-                pending.itemY : readerScrollStartOffset(this.scrollLayout());
-              if (rect.height > 0 && Number.isFinite(rect.y)) this.sourceScroller.scrollBy(0, rect.y - desired);
-              this.firstVisibleListIndex = index + 1;
-            }
-          } catch (_unbound) {}
-          this.cancelScrollRestore();
-          this.observeRestoredScroll(pending);
-        }));
-      }));
-    } catch (_unmounted) { this.cancelScrollRestore(); }
-  }
-
-  private currentFilterKey(): string {
-    return sourceManagementFilterKey({ searchQuery: this.searchQuery, status: this.statusValue,
-      category: this.categoryValue, group: this.groupValue });
-  }
-
-  private scrollLayoutKey(): string {
-    const metrics = ReaderWindowCoordinator.metrics();
-    // Opening and closing the keyboard in Tools advances the shared window
-    // revision even when the parent returns to the same layout.
-    return JSON.stringify([this.contentFrame().width, this.fontScale(), this.expandedLayout,
-      metrics.windowRect.height, metrics.densityPixels,
-      readerInteractiveSafeTop(metrics), readerStableInteractiveSafeBottom(metrics)]);
-  }
-
-  private cancelScrollRestore(): void {
-    this.scrollRestoreEpoch += 1;
-    this.pendingScroll = undefined;
-    this.pendingSourceAnchor = '';
-    this.anchorRestoreScheduled = false;
-  }
-
-  private readCurrentScroll(): SourceManagementScrollState | undefined {
-    if (!this.managementOpeningIsCurrent() || !this.listMounted || this.pendingScroll !== undefined ||
-      this.pendingSourceAnchor.length > 0 || this.anchorRestoreScheduled) return undefined;
-    try {
-      const offset = this.sourceScroller.currentOffset();
-      if (offset === undefined || !Number.isFinite(offset.yOffset)) return undefined;
-      const firstIndex = Math.max(0, this.firstVisibleListIndex);
-      const source = firstIndex > 0 ? this.projectedSources[firstIndex - 1] : undefined;
-      const itemY = source === undefined ? 0 : this.sourceScroller.getItemRect(firstIndex).y;
-      if (!Number.isFinite(itemY)) return undefined;
-      return { anchorId: source?.sourceId ?? '', firstIndex, itemY,
-        offset: offset.yOffset, filterKey: this.currentFilterKey(), layoutKey: this.scrollLayoutKey() };
-    } catch (_unbound) {
-      return undefined;
-    }
-  }
-
-  private captureScroll(trigger: string): void {
-    const measured = this.readCurrentScroll();
-    if (measured === undefined) return;
-    this.observeVerificationScroll(trigger, measured);
-  }
-
-  private observeRestoredScroll(saved?: SourceManagementScrollState): void {
-    if (!ReaderUIVerificationProbe.enabled() || this.verificationOpening.length === 0) return;
-    try {
-      const context = this.getUIContext();
-      context.postFrameCallback(new SourceListLayoutFrame(context, (): void => {
-        const measured = this.readCurrentScroll();
-        if (measured !== undefined) this.observeVerificationScroll('restored', measured, saved);
-      }));
-    } catch (_unmounted) {}
-  }
-
-  private sourceAnchorReadPending(): boolean {
-    const fact = this.operation.readFacts?.fact;
-    return fact === 'loading' || fact === 'refreshing' || (fact === undefined && this.statusKind === 'loading');
-  }
-
-  private sourceReturnFiltersMatch(): boolean {
-    const initial = this.initialViewState;
-    return initial !== undefined && initial.searchQuery === this.searchQuery && initial.status === this.statusValue &&
-      initial.category === this.categoryValue && initial.group === this.groupValue;
-  }
-
-  @Builder
-  private sourceRow(source: BookSource) {
-    Column() {
-      if (this.batchMode) {
-        Button({ type: ButtonType.Normal, stateEffect: false }) {
-          this.sourceRowContent(source);
-        }.width('100%').padding(10)
-          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, true,
-            this.rowPressed(source, 'row'), false))
-          .onTouch((event: TouchEvent): void => this.rowPressTouch(source, 'row', event))
-          .accessibilitySelected(this.batchSourceIds.includes(source.sourceId))
-          .accessibilityText(source.name)
-          .onClick((): void => this.toggleBatchSource(this.currentSourceRow(source),
-            !this.batchSourceIds.includes(source.sourceId)));
-      } else {
-        this.sourceRowContent(source);
-      }
-    }
-    .id(this.verificationRowId(source.sourceId))
-    .width(this.contentFrame().width)
-    .constraintSize({ minHeight: this.layoutBudget(this.currentSourceRow(source)).rowMinHeight })
-    .padding(this.batchMode ? 0 : 10)
-    .alignItems(HorizontalAlign.Start)
-    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-    .borderRadius({ topLeft: this.isFirstSource(source) ? 14 : 0, topRight: this.isFirstSource(source) ? 14 : 0,
-      bottomLeft: this.isLastSource(source) ? 14 : 0, bottomRight: this.isLastSource(source) ? 14 : 0 })
-    .border({ width: { left: 1, right: 1, bottom: this.isLastSource(source) ? 1 : 0, top: 1 },
-      color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-    .clip(true);
-  }
-
-  @Builder
-  private sourceRowContent(source: BookSource) {
-    Column({ space: TOK_SPACE_XS }) {
-      if (this.layoutBudget(this.currentSourceRow(source)).rowForm === 'stacked-leading') {
-        this.sourceLeading(source);
-        this.currentSourceInfo(source);
-        this.sourceActions(source);
-      } else {
-        Row({ space: TOK_SPACE_XS }) {
-          this.sourceLeading(source);
-          this.currentSourceInfo(source);
-          if (this.layoutBudget(this.currentSourceRow(source)).rowForm === 'inline') {
-            this.sourceActions(source);
-          }
-        }.width('100%').alignItems(VerticalAlign.Center);
-        if (this.layoutBudget(this.currentSourceRow(source)).rowForm === 'stacked-actions') {
-          this.sourceActions(source);
-        }
-      }
-    }
-    .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .accessibilityLevel(this.batchMode ? 'no-hide-descendants' : 'auto')
-    .hitTestBehavior(this.batchMode ? HitTestMode.None : HitTestMode.Default);
-  }
-
-  private isFirstSource(source: BookSource): boolean { return this.firstSourceId === source.sourceId; }
-  private isLastSource(source: BookSource): boolean {
-    return this.lastSourceId === source.sourceId;
-  }
-
-  private currentSourceRow(source: BookSource): BookSource {
-    // The retained row must observe the owner publication that changes its content slots.
-    return (this.sources ?? this.projectedSources).find(
-      (current: BookSource): boolean => current.sourceId === source.sourceId) ?? source;
-  }
-
-  @Builder
-  private currentSourceInfo(source: BookSource) {
-    ForEach([this.currentSourceRow(source)], (current: BookSource): void => {
-      this.sourceInfo(current);
-    }, (current: BookSource): string => this.sourceRenderKey(current));
-  }
-
-  @Builder
-  private sourceLeading(source: BookSource) {
-    if (this.batchMode) {
-      Stack({ alignContent: Alignment.Center }) {
-        SourceV9CircleCheck({ selected: this.batchSourceIds.includes(source.sourceId), interactive: false });
-      }.width(SOURCE_ROW_ICON_WIDTH).height(34);
-    } else {
-      Stack({ alignContent: Alignment.Center }) {
-        Button({ type: ButtonType.Normal, stateEffect: false }) {
-          SourceV9TypeSeal({ category: source.category, paintSurface: false });
-        }.width('100%').height('100%').padding(0)
-          .attributeModifier(new ReaderPressFeedback(readerAppColor(source.category === 'comic' ? 'app.status.warningSoft' :
-            'app.sourceUi.selected', this.appThemeScheme), this.appThemeScheme, 10, 10, this.sourceDetectEnabled(source.sourceId),
-            this.rowPressed(source, 'leading'), false))
-          .onTouch((event: TouchEvent): void => this.rowPressTouch(source, 'leading', event))
-          .enabled(this.sourceDetectEnabled(source.sourceId))
-          .onClick(this.sourceRowCommand(this.currentSourceRow(source), 'check'));
-      }.width(SOURCE_ROW_ICON_WIDTH).height(34).accessibilityLevel('no-hide-descendants');
-    }
-  }
-
-  private sourceDomain(source: BookSource): string {
-    return sourceV9DisplayUrl(source.baseUrl);
-  }
-
-
-  @Builder
-  private sourceInfo(source: BookSource) {
-    Column({ space: 3 }) {
-      Text(source.name, this.textLayoutOptions?.('row/title', source.sourceId, source.name))
-        .id(this.verificationTextOptions !== undefined && source.sourceId === this.verificationTextRowId ? 'reader-source-text-row-title' : '')
-        .width('100%')
-        .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-        .fontWeight(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontWeight)
-        .fontSize(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontSizeFp)
-        .maxFontScale(this.fontScale())
-        .lineHeight(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .ellipsisMode(this.metadataEllipsisMode);
-      Text(this.sourceDomain(source), this.textLayoutOptions?.('row/domain', source.sourceId, this.sourceDomain(source)))
-        .id(this.verificationRowTextId(source.sourceId, 'reader-source-text-row-domain'))
-        .width('100%')
-        .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontFamily as string)
-        .fontWeight(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontWeight ?? 400)
-        .fontSize(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontSizeFp)
-        .maxFontScale(this.fontScale())
-        .lineHeight(TYPE_SOURCE_MANAGEMENT_ROW_URL.lineHeightFp as number)
-        .fontColor(readerAppColor('app.sourceUi.muted', this.appThemeScheme))
-        .wordBreak(WordBreak.BREAK_ALL)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .ellipsisMode(this.metadataEllipsisMode);
-    }
-    .layoutWeight(this.layoutBudget(source).rowForm === 'stacked-leading' ? 0 : 1)
-    .width(this.layoutBudget(source).rowForm === 'stacked-leading' ? '100%' : undefined)
-    .constraintSize({ minWidth: this.layoutBudget(source).textMinWidth })
-    .accessibilityGroup(true)
-    .accessibilityText(`${source.name}，${readerSourceCategoryLabel(source.category)}，${source.baseUrl}`)
-    .alignItems(HorizontalAlign.Start)
-    .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 6, 6,
-      !this.batchMode && this.sourceDetectEnabled(source.sourceId), this.rowPressed(source, 'info'), false))
-    .onTouch((event: TouchEvent): void => { if (!this.batchMode) this.rowPressTouch(source, 'info', event); })
-    .onClick((): void => {
-      if (!this.batchMode) this.sourceRowCommand(source, 'check')();
-    });
-  }
-
-  @Builder
-  private sourceActions(source: BookSource) {
-    if (this.batchMode) {
-      Text(this.currentSourceRow(source).enabled ? '已启用' : '已停用').fontSize(11).maxLines(1)
-        .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-        .fontColor(readerAppColor(this.currentSourceRow(source).enabled ? 'app.sourceUi.primary' : 'app.sourceUi.muted',
-          this.appThemeScheme));
-    } else {
-      Row({ space: SOURCE_ROW_ACTION_GAP }) {
-        ForEach([this.currentSourceRow(source)], (current: BookSource): void => {
-          if (current.loginUrl !== undefined && current.loginUrl.trim().length > 0) this.loginButton(current);
-          this.detectButton(current);
-        }, (current: BookSource): string => this.sourceRenderKey(current));
-        this.sourceSwitch(source.enabled,
-          (next: boolean): void => this.sourceRowToggle(this.currentSourceRow(source))(next), source.sourceId, source.name);
-      }.width(this.layoutBudget(this.currentSourceRow(source)).trailingWidth)
-        .justifyContent(FlexAlign.End).constraintSize({ minHeight: this.layoutBudget(this.currentSourceRow(source)).actionsHeight });
-    }
-  }
-
-  @Builder
-  private detectButton(source: BookSource) {
-    SourceV9DetectButton({ tone: sourceV9ReportTone(source), checking: source.checkState === 'checking',
-      controlId: source.offlineDetectReportVersion !== undefined && ReaderUIVerificationProbe.enabled() ?
-        'reader-source-v9-fixture-detect' : this.verificationRowTextId(source.sourceId, 'reader-source-text-row-detect'),
-      iconId: this.offlineDetectBadgeId(source), actionEnabled: this.sourceDetectEnabled(source.sourceId),
-      label: this.sourceActionLabel(source, `检测，${this.sourceBadgeLabel(source)}`, this.sourceDetectEnabled(source.sourceId),
-        source.checkState === 'checking'),
-      nativePress: false, paintPressed: this.rowPressed(source, 'detect'),
-      onPressTouch: (event: TouchEvent): void => this.rowPressTouch(source, 'detect', event),
-      onTap: this.sourceRowCommand(source, 'check') });
-  }
-
-  private loginInk(source: BookSource): string {
-    return readerAppColor(source.loginState === 'verified' ? 'app.status.good' :
-      source.loginState === 'expired' ? 'app.sourceUi.danger' : 'app.sourceUi.muted', this.appThemeScheme);
-  }
-
-  private loginSurface(source: BookSource): string {
-    return readerAppColor(source.loginState === 'verified' ? 'app.status.goodSoft' :
-      source.loginState === 'expired' ? 'app.sourceUi.dangerSurface' : 'app.sourceUi.field', this.appThemeScheme);
-  }
-
-  @Builder
-  private loginButton(source: BookSource) {
-    Button({ type: ButtonType.Capsule, stateEffect: false }) {
-      Row({ space: 3 }) {
-        Image(source.loginState === 'verified' ? readerActionIcon('check', this.appThemeScheme) :
-          source.loginState === 'expired' ? readerActionIcon('close', this.appThemeScheme) : $r('app.media.source_v9_question'))
-          .width(12).height(12).fillColor(this.loginInk(source)).accessibilityLevel('no');
-        Text('登录', this.textLayoutOptions?.('row/login', source.sourceId, '登录'))
-          .fontSize(11).maxLines(1)
-          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
-          .fontColor(this.loginInk(source));
-      }.justifyContent(FlexAlign.Center);
-    }.id(this.verificationRowActionsCurrent(source) ? 'reader-source-text-row-login' : '')
-      .width(58).height(26).padding(2).flexShrink(0)
-      .responseRegion({ x: 0, y: -9, width: 58, height: 44 })
-      .attributeModifier(new ReaderPressFeedback(this.loginSurface(source), this.appThemeScheme, 13, 13,
-        this.sourceActionEnabled() && source.checkState !== 'checking', this.rowPressed(source, 'login'), false))
-      .onTouch((event: TouchEvent): void => this.rowPressTouch(source, 'login', event))
-      .border({ width: 1, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
-      .enabled(this.sourceActionEnabled() && source.checkState !== 'checking')
-      .accessibilityText(this.sourceActionLabel(source, source.loginState === 'verified' ? '登录，已验证' :
-        source.loginState === 'expired' ? '登录，验证失效' : '登录，状态未知', this.sourceActionEnabled(), false))
-      .onClick(this.sourceRowCommand(source, 'login'));
-  }
-
-
-  private sourceRowIsCurrent(source: BookSource, opening: string): boolean {
-    if (!this.managementBackIsCurrent(opening) || this.isInputAllowed?.() === false || this.groupOpen) return false;
-    const current = this.projectedSources.find((candidate: BookSource): boolean => candidate.sourceId === source.sourceId);
-    return current !== undefined && this.sourceRenderKey(current) === this.sourceRenderKey(source);
-  }
-
-  private sourceRowCommand(source: BookSource, command: 'check' | 'login'): () => void {
-    const opening = this.temporaryBackIdentity;
-    return (): void => {
-      if (!this.sourceRowIsCurrent(source, opening)) return;
-      if (command === 'check') {
-        if (this.sourceDetectEnabled(source.sourceId)) this.onDetectSource(source.sourceId);
-      } else if (source.loginUrl !== undefined && this.sourceActionEnabled() && source.checkState !== 'checking') {
-        this.onLoginSource(source.sourceId, source.loginUrl);
-      }
-    };
-  }
-
-  private sourceRowToggle(source: BookSource): (next: boolean) => void {
-    const opening = this.temporaryBackIdentity;
-    return (next: boolean): void => {
-      if (this.sourceRowIsCurrent(source, opening)) this.onToggleSource(source.sourceId, next);
-    };
-  }
-
-  private offlineDetectBadgeId(source: BookSource): string {
-    if (source.offlineDetectReportVersion === undefined || !ReaderUIVerificationProbe.enabled()) return '';
-    if (source.checkState === 'unchecked') return 'reader-source-offline-detect-ready';
-    if (source.checkState === 'failed') return 'reader-source-offline-detect-failed';
-    return '';
-  }
-
-  private verificationRowActionsCurrent(source: BookSource): boolean {
-    return this.verificationTextOptions !== undefined && source.sourceId === this.verificationTextRowId &&
-      this.projectedSources.length === 1 && sourceVerificationRowActions(source) !== undefined;
-  }
-
-  private sourceSwitchValue(sourceId: string, fallback: boolean): boolean {
-    // An unchanged LazyForEach key retains this control across owner publications.
-    const current = (this.sources ?? this.projectedSources).find((source: BookSource): boolean => source.sourceId === sourceId);
-    return current?.enabled ?? fallback;
-  }
-
-  private sourceSwitchName(sourceId: string, fallback: string): string {
-    return this.projectedSources.find((source: BookSource): boolean => source.sourceId === sourceId)?.name ?? fallback;
-  }
-
-  @Builder
-  private sourceSwitch(value: boolean, onTap: (next: boolean) => void, sourceId: string, sourceName: string = '') {
-    ForEach([`${this.temporaryBackIdentity}:${sourceId}`], (identity: string): void => {
-      ReaderToggle({ value: this.sourceSwitchValue(sourceId, value), specId: 'standard-toggle', inputIdentity: identity, checkedColor: readerAppColor('app.sourceUi.primary', this.appThemeScheme),
-        accessibilityLabel: `${this.sourceSwitchName(sourceId, sourceName).trim() || sourceId}，启用书源${this.sourceToggleBusy() ? '，忙碌' : this.sourceActionEnabled() ? '' : '，暂不可用'}`, actionEnabled: this.sourceActionEnabled(), isBusy: this.sourceToggleBusy(),
-        onToggle: (next: boolean): void => {
-          if (identity === `${this.temporaryBackIdentity}:${sourceId}` && this.sourceActionEnabled() && !this.sourceToggleBusy()) onTap(next);
-        } })
-        .id((this.verificationOpening ?? '').length > 0 && ReaderUIVerificationProbe.enabled() &&
-          this.projectedSources.length === 1 && this.projectedSources[0].sourceId === sourceId &&
-          sourceVerificationToggleAnchor(this.projectedSources[0]) > 0 ? 'reader-source-public-toggle-fixture' : '')
-        .flexShrink(0);
-    }, (identity: string): string => identity);
-  }
-
-  private sourceToggleBusy(): boolean {
-    return this.operation.original?.busy === true || this.operation.receipt?.facts.fact === 'refreshing';
-  }
-
-  private sourceActionEnabled(): boolean {
-    return this.inputEnabled && this.managementBackIsCurrent(this.temporaryBackIdentity) && this.isInputAllowed?.() !== false &&
-      !this.groupOpen && this.operation.original?.blocked !== true && this.operation.receipt?.receipt.confirmation !== 'unknown';
-  }
-
-  private sourceActionLabel(source: BookSource, action: string, enabled: boolean, busy: boolean): string {
-    const entity = source.name.trim().length > 0 ? source.name : source.sourceId;
-    return `${entity}，${action}${busy ? '，忙碌' : enabled ? '' : '，暂不可用'}`;
-  }
-
-  private sourceDetectEnabled(sourceId: string): boolean {
-    if (!this.inputEnabled || !this.managementBackIsCurrent(this.temporaryBackIdentity) || this.isInputAllowed?.() === false || this.groupOpen) return false;
-    const current = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === sourceId);
-    // Diagnostic intent neither confirms nor replays an unresolved source write.
-    return current !== undefined && current.checkState !== 'checking';
-  }
-
-  @Builder
-  private bottomActionBar(identity: string = this.temporaryBackIdentity) {
-    if (this.batchMode) {
-      Row() {
-        this.batchAction($r('app.media.reader_action_check'), '启用', 'enable');
-        this.batchAction($r('app.media.reader_action_pause'), '停用', 'disable');
-        this.batchAction($r('app.media.reader_action_folder'), '移至分组', 'move');
-        this.batchAction($r('app.media.source_v9_wave'), '检测', 'detect');
-        this.batchAction($r('app.media.download_visual_trash'), '删除', 'delete');
-      }.id('reader-source-v9-batch-dock').width(this.contentFrame().width).height(this.footerActionHeight())
-        .padding({ left: 6, right: 6 }).borderRadius(999).margin({ top: TOK_SPACE_SM, bottom: this.actionBottomInset() })
-        .border({ width: TOK_BORDER_W, color: readerAppColor('app.sourceUi.border', this.appThemeScheme) })
-        .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-        .shadow(readerSurfaceElevation('floating', this.appThemeScheme))
-        .transition(this.batchTransition());
-    } else {
-      Flex({ direction: this.footerStacked() ? FlexDirection.Column : FlexDirection.Row,
-        alignItems: ItemAlign.Center, space: { main: LengthMetrics.vp(TOK_SPACE_CONTROL_INLINE) } }) {
-        ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-manage', label: '批量管理', layout: 'full',
-          controlHeight: this.footerControlHeight(), actionEnabled: this.hasReadableSources,
-          textLayoutOptions: this.textLayoutOptions?.('footer/manage', undefined, '批量管理'),
-          focusId: this.toolsFocusId('footer'), onFocused: (): void => this.onToolsEntryFocused(identity, 'footer'),
-          onAction: (): void => {
-            if (this.managementInputIsCurrent() && !this.groupOpen) {
-              this.closeMoreMenu();
-              this.prepareV9ListReturn('batch');
-              this.batchSourceIds = [];
-              this.batchMode = true;
-              this.observeV9ListEntry('batch');
-            }
-          } })
-          .id(this.verificationTextOptions === undefined ? '' : 'reader-source-text-footer-manage')
-          .height(this.footerControlHeight())
-          .width(this.footerStacked() ? '100%' : this.footerManageWidth())
-          .onAreaChange((_old: Area, area: Area): void => this.onToolsEntryLayout(identity, 'footer', area));
-        ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'source-management-add', label: '导入书源', fillWidth: true, surfaceColor: readerAppColor('app.sourceUi.primary', this.appThemeScheme),
-          textLayoutOptions: this.textLayoutOptions?.('footer/add', undefined, '导入书源'),
-          icon: this.sourceAddIcon(), focusId: this.importFocusId(identity),
-          onAction: (): void => {
-            if (this.managementInputIsCurrent() && identity === this.temporaryBackIdentity && !this.groupOpen)
-              this.onAddSource(this.importFocusId(identity), this.toolsFocusId('header'));
-          } })
-          .id(this.verificationTextOptions === undefined ? '' : 'reader-source-text-footer-add')
-          .height(this.footerControlHeight())
-          .width(this.footerStacked() ? '100%' : undefined).layoutWeight(this.footerStacked() ? 0 : 1);
-      }.id(this.footerStacked() ? 'reader-source-footer-stacked' : 'reader-source-footer-row')
-        .width(this.contentFrame().width).constraintSize({ minHeight: this.layoutBudget().footerHeight })
-        .margin({ top: TOK_SPACE_SM, bottom: this.actionBottomInset() })
-        .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion());
-    }
-  }
-
-  private batchActionInk(action: SourceV9ListAction): string {
-    return readerAppColor(action === 'delete' ? 'app.sourceUi.danger' : action === 'disable' ? 'TOK_MUTED' :
-      action === 'move' ? 'TOK_INK' : 'app.sourceUi.primary', this.appThemeScheme);
-  }
-
-  @Builder
-  private batchAction(icon: Resource, label: string, action: SourceV9ListAction) {
-    Button({ type: ButtonType.Capsule, stateEffect: false }) {
-      Column({ space: 2 }) {
-        Image(icon).width(16).height(16).fillColor(this.batchActionInk(action)).accessibilityLevel('no');
-        Text(label).fontSize(10).maxLines(1).textAlign(TextAlign.Center)
-          .minFontSize(8).maxFontSize(10).textOverflow({ overflow: TextOverflow.Ellipsis })
-          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontColor(this.batchActionInk(action));
-      }
-    }.layoutWeight(1).height('100%').padding(2)
-      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 24, 24, this.batchSourceIds.length > 0))
-      .id(`reader-source-batch-${action}`).accessibilityText(label).enabled(this.batchSourceIds.length > 0)
-      .opacity(this.batchSourceIds.length > 0 ? 1 : 0.45)
-      .onClick((): void => {
-        if (this.managementInputIsCurrent() && this.batchMode && this.batchSourceIds.length > 0)
-          this.onV9Action(action, this.batchSourceIds.slice());
-      });
-  }
-
-
-  private actionBottomInset(actionHeight: number = this.footerActionHeight()): number {
-    if (this.readerWindowMetricsRevision < 0) { return TOK_SPACE_MD; }
-    const metrics = ReaderWindowCoordinator.metrics();
-    const safeBottom = readerFloatingBarBottomInset(metrics, TOK_SPACE_MD);
-    const density = metrics.densityPixels;
-    if (!Number.isFinite(density) || density <= 0) return safeBottom;
-    // Pay the final fractional pixel in the transparent inset of the bottom-aligned slot.
-    const extentPx = (actionHeight + TOK_SPACE_SM + safeBottom) * density;
-    if (!Number.isSafeInteger(Math.ceil(extentPx))) return safeBottom;
-    const epsilon = Number.EPSILON * Math.max(1, extentPx) * 4;
-    const extraPx = Math.max(0, Math.ceil(extentPx - epsilon) - extentPx);
-    return safeBottom + extraPx / density;
-  }
-
-  // Keep the toggle owner while the complete source digest and content slots update.
-  private sourceRowKey(source: BookSource): string { return source.sourceId; }
-
-  private sourceRenderKey(source: BookSource): string {
-    return `source-${source.sourceId}-${source.name}-${source.baseUrl}-${source.group ?? ''}-${source.category}-` +
-      `${source.loginUrl ?? ''}-${source.sourceVersion ?? ''}-${source.enabled}-${source.checkState ?? 'unchecked'}-` +
-      `${source.checkMessage ?? ''}-${source.loginState ?? 'unknown'}-${source.checkReports?.[0]?.report.traceId ?? ''}${source.sourceId === this.verificationReservedTextRowId ? '-reserved-text' : ''}`;
-  }
-
-  private verificationRowTextId(sourceId: string, textId: string): string {
-    return this.verificationTextOptions !== undefined &&
-      (sourceId === this.verificationTextRowId || sourceId === this.verificationReservedTextRowId) ? textId : '';
-  }
-
-  private sourceBadgeLabel(source: BookSource): string {
-    if (source.checkState === 'checking') return '检测中';
-    const tone = sourceV9ReportTone(source);
-    if (tone === 'partial' || tone === 'content') return '检测通过';
-    if (tone === 'earlyFailure' || tone === 'deepFailure') return '检测失败';
-    return '尚无有效检测报告';
-  }
-
-  private verificationRowId(sourceId: string): string {
-    if (this.verificationOpening.length === 0 || !ReaderUIVerificationProbe.enabled()) return '';
-    return `reader-source-row-${SourceVerificationAnchors.identify(sourceId)}`;
-  }
-
-  private hasFilteredEmpty(): boolean {
-    return this.hasReadableSources && this.projectedSourceCount === 0 &&
-      !this.sourceListLoading() && !this.hasPendingSourceRecovery();
-  }
-
-  private verificationProjectionState(): SourceProjectionState {
-    if (this.hasPendingSourceRecovery()) return 'recovery';
-    if (this.sourceListLoading()) return 'loading';
-    if (this.hasEmptyListReadFailure()) return 'readFailure';
-    if (this.sources.length === 0) return 'empty';
-    if (this.hasFilteredEmpty()) return 'filteredEmpty';
-    return 'rows';
-  }
-
-  private verificationLoadingObserver(): ((ratio: number) => void) | undefined {
-    return ReaderUIVerificationProbe.enabled() ? (ratio: number): void => this.observeVerificationReadLoading(ratio) : undefined;
-  }
-
-  private observeVerificationReadLoading(ratio: number): void {
-    if (!this.mounted || !ReaderUIVerificationProbe.enabled() || this.verificationProjectionState() !== 'loading') return;
-    const owner = sourceVerificationOpening(this.verificationOpening);
-    const read = this.operation.readFacts;
-    if (owner === undefined || read === undefined || read.generation <= this.verificationReadLoadingGeneration ||
-      (read.fact !== 'loading' && read.fact !== 'refreshing')) return;
-    const frame = sourceReadLoadingFrame(this.getUIContext(),owner,read.generation,ratio);
-    if (frame === undefined) return;
-    this.verificationReadLoadingGeneration = read.generation;
-    ReaderUIVerificationProbe.emit('source.read-loading-frame','probe',frame);
-  }
-
-  private observeVerificationProjection(trigger: SourceProjectionTrigger): void {
-    if (!this.mounted || !ReaderUIVerificationProbe.enabled()) return;
-    const owner = sourceVerificationOpening(this.verificationOpening);
-    if (owner === undefined) return;
-    const status = sourceVerificationStatus(this.statusValue);
-    const observation: SourceProjectionObservation = { owner, trigger, status, category: this.categoryValue,
-      textProjectionRevision: ++this.verificationTextProjectionRevision,
-      allGroups: this.groupValue === '全部分组', groupIndex: this.groupOptions().indexOf(this.groupValue),
-      filterRevision: this.verificationFilterRevision, queryLength: this.searchQuery.length,
-      count: this.sources.length, projected: this.projectedSources.length,
-      firstAnchor: SourceVerificationAnchors.identify(this.projectedSources[0]?.sourceId ?? ''),
-      rowActions: this.sources.length === 1 && this.projectedSources.length === 1 ?
-        sourceVerificationRowActions(this.projectedSources[0]) : undefined,
-      readGeneration: this.operation.readFacts?.generation ?? 0, readFact: this.operation.readFacts?.fact ?? 'idle',
-      state: this.verificationProjectionState(), recovery: this.verificationRecoveryFacts() };
-    ReaderUIVerificationProbe.emit('source.projection', 'business', observation);
-    if (this.verificationTextMetrics !== undefined) this.scheduleVerificationTextLayout();
-    if (this.verificationReservedTextMetrics !== undefined) this.scheduleVerificationTextLayout(true);
-    this.scheduleVerificationReadText();
-    if (this.verificationTextMetrics !== undefined) this.scheduleVerificationOperationText();
-    if (observation.state !== 'rows' || observation.readFact !== 'current' || this.projectedSources.length !== 1 ||
-      !this.sourceActionEnabled() || this.sourceToggleBusy()) return;
-    const source = this.projectedSources[0];
-    const detect = sourceVerificationOfflineDetectIdentity(source, owner, observation.readGeneration);
-    if (detect !== undefined) ReaderUIVerificationProbe.emit('source.row-detect', 'business', {
-      owner: detect.owner, anchor: detect.anchor, readGeneration: detect.readGeneration,
-      definition: detect.definition, reportVersion: detect.reportVersion, phase: 'ready',
-    });
-    const anchor = sourceVerificationToggleAnchor(source);
-    if (anchor === 0) return;
-    const toggle: SourceToggleReadyObservation = { phase: 'ready', owner, anchor, enabled: source.enabled,
-      filterRevision: observation.filterRevision, readGeneration: observation.readGeneration };
-    ReaderUIVerificationProbe.emit('source.toggle', 'business', toggle);
-  }
-
-  private observeVerificationScroll(trigger: string, scroll: SourceManagementScrollState, saved?: SourceManagementScrollState): void {
-    if (!ReaderUIVerificationProbe.enabled()) return;
-    const owner = sourceVerificationOpening(this.verificationOpening);
-    if (owner === undefined) return;
-    try {
-      const observation: SourceScrollObservation = { owner, trigger, filterRevision: this.verificationFilterRevision,
-        itemIndex: scroll.firstIndex, anchor: SourceVerificationAnchors.identify(scroll.anchorId),
-        lastAnchor: SourceVerificationAnchors.identify(this.projectedSources[this.projectedSources.length - 1]?.sourceId ?? ''),
-        itemYVp: scroll.itemY, offsetVp: scroll.offset, atEnd: this.sourceScroller.isAtEnd(),
-        viewportWidthVp: this.viewportWidth, viewportHeightVp: this.viewportHeight,
-        layoutMatchesSaved: saved !== undefined && saved.layoutKey === scroll.layoutKey,
-        filterMatchesSaved: saved !== undefined && saved.filterKey === scroll.filterKey };
-      ReaderUIVerificationProbe.emit('source.scroll', 'business', observation);
-    } catch (_unmounted) {}
+    this.list.scheduleSourceAnchorRestore();
+    this.list.observeVerificationProjection('owner-update');
+    this.recovery.onMessageChanged();
   }
 
   private observeVerificationGeometry(): void {
     if (!ReaderUIVerificationProbe.enabled() || this.viewportWidth <= 0 || this.viewportHeight <= 0) return;
     const owner = sourceVerificationOpening(this.verificationOpening);
     if (owner === undefined) return;
-    if (this.verificationTextMetrics !== undefined) this.scheduleVerificationTextLayout();
-    if (this.verificationReservedTextMetrics !== undefined) this.scheduleVerificationTextLayout(true);
-    this.scheduleVerificationReadText();
-    if (this.verificationTextMetrics !== undefined) this.scheduleVerificationOperationText();
+    if (this.list.hasTypographyProbe()) this.list.scheduleVerificationTextLayout();
+    if (this.list.hasReservedTypographyProbe()) this.list.scheduleVerificationTextLayout(true);
+    this.recovery.scheduleVerificationReadText();
+    if (this.list.hasTypographyProbe()) this.recovery.scheduleVerificationOperationText();
     const scroll = this.scrollLayout();
     const observation: SourceGeometryObservation = { owner, expanded: this.expandedLayout,
-      footerStacked: this.footerStacked(), fontScale: this.fontScale(),
+      footerStacked: this.list.footerStacked(), fontScale: this.fontScale(),
       viewportWidthVp: this.viewportWidth, viewportHeightVp: this.viewportHeight,
       headerHeightVp: this.geometry.header.height, footerHeightVp: this.geometry.footer.height,
       headerTopVp: this.geometry.header.top, footerTopVp: this.geometry.footer.top,
@@ -2572,168 +790,6 @@ export struct SourceManagementPage {
     ReaderUIVerificationProbe.emit('source.geometry', 'business', observation);
   }
 
-  private verificationTextLayoutScope(scope: 'default' | 'group' | 'surface' | 'reserved' = 'default'): SourceTextLayoutScope | undefined {
-    const owner = sourceVerificationOpening(this.verificationOpening);
-    const read = this.operation.readFacts;
-    const window = ReaderWindowCoordinator.metrics();
-    if (!ReaderUIVerificationProbe.enabled() || !owner || this.verificationTextProjectionRevision < 1 ||
-      !this.managementOpeningIsCurrent() || (scope !== 'group' && this.groupOpen) || this.groupClosing ||
-      this.viewportWidth <= 0 || this.viewportHeight <= 0 || !window.ready || !window.keyboardArea.available || window.keyboardArea.visible) {
-      return undefined;
-    }
-    if (scope === 'reserved') {
-      if (read?.fact !== 'current' || this.verificationProjectionState() !== 'rows' ||
-        this.verificationReservedTextRowId.length === 0 ||
-        this.verificationReservedTypographyRow(this.projectedSources) !== this.verificationReservedTextRowId) return undefined;
-    } else if (scope !== 'surface' && (read?.fact !== 'current' || this.verificationProjectionState() !== 'rows' || this.searchQuery.length !== 0 ||
-      this.statusValue !== '全部' || this.categoryValue !== 'all' || this.groupValue !== '全部分组' ||
-      this.verificationTextRowId.length === 0 || this.projectedSources[0]?.sourceId !== this.verificationTextRowId)) return undefined;
-    const density = window.densityPixels;
-    if (!Number.isFinite(density) || density <= 0 || !Number.isFinite(window.systemFontScale) || window.systemFontScale <= 0)
-      return undefined;
-    return { owner, textProjectionRevision: this.verificationTextProjectionRevision,
-      filterRevision: this.verificationFilterRevision, readGeneration: read?.generation ?? 0,
-      windowRevision: window.revision, widthVp: window.windowRect.width, heightVp: window.windowRect.height,
-      density, systemFontScale: window.systemFontScale, fontScale: this.fontScale(),
-      rowAnchor: SourceVerificationAnchors.identify(scope === 'reserved' ? this.verificationReservedTextRowId : this.verificationTextRowId) };
-  }
-
-  private scheduleVerificationTextLayout(reserved: boolean = false): void {
-    try {
-      const scopeKind: 'default' | 'reserved' = reserved ? 'reserved' : 'default';
-      const scope = this.verificationTextLayoutScope(scopeKind);
-      const metrics = reserved ? this.verificationReservedTextMetrics : this.verificationTextMetrics;
-      if (scope === undefined || metrics === undefined) return;
-      const key = JSON.stringify(scope);
-      if (key === (reserved ? this.verificationReservedTextFrameKey : this.verificationTextFrameKey)) return;
-      const context = this.getUIContext();
-      let allowNextFrame = true;
-      const observe = (): void => {
-        try {
-          if ((reserved ? this.verificationReservedTextMetrics : this.verificationTextMetrics) !== metrics ||
-            (reserved ? this.verificationReservedTextFrameKey : this.verificationTextFrameKey) !== key ||
-            JSON.stringify(this.verificationTextLayoutScope(scopeKind)) !== key) return;
-          const labels = metrics.readTracked();
-          const first = this.projectedSources.length === 1 ? this.projectedSources[0] : undefined;
-          const count = reserved ? SOURCE_RESERVED_TEXT_ROLES.length :
-            SOURCE_TEXT_ROLES.length + (first !== undefined && this.verificationRowActionsCurrent(first) ? 1 : 0);
-          if (allowNextFrame && (labels.length < count || labels.some(label => label.lines.length === 0))) {
-            allowNextFrame = false;
-            context.postFrameCallback(new SourceListLayoutFrame(context, observe));
-            return;
-          }
-          ReaderUIVerificationProbe.emit('source.text-layout', 'business', {
-            owner: scope.owner, textProjectionRevision: scope.textProjectionRevision,
-            filterRevision: scope.filterRevision, readGeneration: scope.readGeneration,
-            windowRevision: scope.windowRevision, widthVp: scope.widthVp, heightVp: scope.heightVp,
-            density: scope.density, systemFontScale: scope.systemFontScale, fontScale: scope.fontScale,
-            rowAnchor: scope.rowAnchor, labels,
-          });
-        } catch (_detached) {}
-      };
-      context.postFrameCallback(new SourceListLayoutFrame(context, observe));
-      if (reserved) {
-        this.verificationReservedTextFrameKey = key;
-      } else {
-        this.verificationTextFrameKey = key;
-        if (this.verificationFilterTextMetrics?.size > 0) {
-          this.scheduleVerificationFilterText('status', 'initial');
-          this.scheduleVerificationFilterText('category', 'initial');
-        }
-      }
-    } catch (_detached) {}
-  }
-
-  private scheduleVerificationFilterText(lane: SourceFilterTextLane, phase: 'initial' | 'settled'): void {
-    const metrics = this.verificationFilterTextMetrics.get(lane);
-    if (metrics === undefined) return;
-    try {
-      const scope = this.verificationTextLayoutScope();
-      if (scope === undefined || scope.fontScale < 1.99 || scope.fontScale > 2.01 ||
-        (Math.abs(scope.widthVp - 320) > 0.4 && Math.abs(scope.widthVp - 366) > 0.4)) return;
-      const revision = (this.verificationFilterTextRevisions.get(lane) ?? 0) + 1;
-      this.verificationFilterTextRevisions.set(lane, revision);
-      const key = JSON.stringify(scope);
-      const context = this.getUIContext();
-      const expectedRoles = lane === 'status' ? 4 : 6;
-      const initiallyVisible = lane === 'status' ? 'status/enabled' : 'category/novel';
-      let allowNextFrame = true;
-      const observe = (): void => {
-        try {
-          if (this.verificationFilterTextMetrics.get(lane) !== metrics || this.verificationFilterTextRevisions.get(lane) !== revision ||
-            JSON.stringify(this.verificationTextLayoutScope()) !== key) return;
-          const labels = metrics.readTracked();
-          if (allowNextFrame && (labels.length !== expectedRoles ||
-            phase === 'initial' && !labels.some(label => label.role === initiallyVisible && label.lines.length > 0))) {
-            allowNextFrame = false;
-            context.postFrameCallback(new SourceListLayoutFrame(context, observe));
-            return;
-          }
-          ReaderUIVerificationProbe.emit('source.filter-text-layout', 'business', {
-            owner: scope.owner, textProjectionRevision: scope.textProjectionRevision,
-            filterRevision: scope.filterRevision, readGeneration: scope.readGeneration,
-            windowRevision: scope.windowRevision, widthVp: scope.widthVp, heightVp: scope.heightVp,
-            density: scope.density, systemFontScale: scope.systemFontScale, fontScale: scope.fontScale,
-            rowAnchor: scope.rowAnchor, lane, phase, revision, labels,
-          });
-        } catch (_detached) {}
-      };
-      context.postFrameCallback(new SourceListLayoutFrame(context, observe));
-    } catch (_detached) {}
-  }
-
-  private prepareVerificationGroupText(): void {
-    if (this.verificationTextMetrics === undefined || this.sources.length !== 12) return;
-    const options = this.groupOptions();
-    if (options.length !== 14 || !options.slice(2).every((option: string, index: number): boolean =>
-      option === `Phase1 Scroll ${String(index + 1).padStart(2, '0')}`)) return;
-    this.verificationGroupTextMetrics = new ReaderSourceTextMetrics('');
-  }
-
-  private verificationGroupTextOptions(option: string, identity: string): TextOptions | undefined {
-    if (!this.ownsGroupSelection(identity) || this.groupClosing || !ReaderUIVerificationProbe.enabled()) return undefined;
-    const role = option === 'Phase1 Scroll 01' ? 'group/option-head' :
-      option === 'Phase1 Scroll 12' ? 'group/option-tail' : '';
-    if (role.length === 0) return undefined;
-    try { return this.verificationGroupTextMetrics?.track(role, option); }
-    catch (_unavailable) { return undefined; }
-  }
-
-  private scheduleVerificationGroupText(identity: string, phase: 'initial' | 'settled'): void {
-    const metrics = this.verificationGroupTextMetrics;
-    if (metrics === undefined || !this.ownsGroupSelection(identity) || this.groupClosing) return;
-    try {
-      const scope = this.verificationTextLayoutScope('group');
-      if (scope === undefined || this.expandedLayout || Math.abs(scope.fontScale - 1) > 0.01) return;
-      const key = JSON.stringify(scope);
-      const revision = ++this.verificationGroupTextRevision;
-      const role = phase === 'initial' ? 'group/option-head' : 'group/option-tail';
-      const context = this.getUIContext();
-      let allowNextFrame = true;
-      const observe = (): void => {
-        try {
-          if (this.verificationGroupTextMetrics !== metrics || this.verificationGroupTextRevision !== revision ||
-            !this.ownsGroupSelection(identity) || this.groupClosing || JSON.stringify(this.verificationTextLayoutScope('group')) !== key) return;
-          const labels = metrics.readTracked().filter(label => label.role === role);
-          if (allowNextFrame && !labels.some(label => label.lines.length > 0)) {
-            allowNextFrame = false;
-            context.postFrameCallback(new SourceListLayoutFrame(context, observe));
-            return;
-          }
-          ReaderUIVerificationProbe.emit('source.surface-text-layout', 'business', {
-            owner: scope.owner, textProjectionRevision: scope.textProjectionRevision,
-            filterRevision: scope.filterRevision, readGeneration: scope.readGeneration,
-            windowRevision: scope.windowRevision, widthVp: scope.widthVp, heightVp: scope.heightVp,
-            density: scope.density, systemFontScale: scope.systemFontScale, fontScale: scope.fontScale,
-            rowAnchor: scope.rowAnchor, scope: 'group-menu', phase, selectionId: identity,
-            revision, labels,
-          });
-        } catch (_detached) {}
-      };
-      context.postFrameCallback(new SourceListLayoutFrame(context, observe));
-    } catch (_detached) {}
-  }
-
   private observeVerificationOverlay(phase: string, overlay: 'group' | 'ime', selectionId?: string): void {
     if (!ReaderUIVerificationProbe.enabled()) return;
     const owner = sourceVerificationOpening(this.verificationOpening);
@@ -2742,134 +798,14 @@ export struct SourceManagementPage {
     ReaderUIVerificationProbe.emit('source.overlay', 'business', observation);
   }
 
-  private filterProjection(): SourceV9Projection {
-    return projectSourceManagementV9(this.sources, { keyword: this.searchQuery,
-      group: this.groupValue === '全部分组' ? undefined : this.groupValue === '未分组' ? '' : this.groupValue,
-      category: this.categoryValue, status: this.statusValue });
-  }
+  private onBatchApplied(): void { this.list.onBatchApplied(); }
 
-
-  private onBatchApplied(): void { this.endBatch(); }
-
-  private onUngroupedBatch(): void {
-    if (!this.mounted || this.ungroupedBatchIds.length === 0) return;
-    this.searchQuery = '';
-    this.searchInputRevision += 1;
-    this.statusValue = '全部';
-    this.categoryValue = 'all';
-    this.groupValue = '未分组';
-    this.closeMoreMenu();
-    this.batchMode = true;
-    this.batchSourceIds = this.ungroupedBatchIds.slice();
-    this.rebuildSourceProjection('group');
-  }
+  private onUngroupedBatch(): void { this.list.onUngroupedBatch(); }
 
   private onSourcesChanged(): void {
-    // 同一轮内多次 owner 更新会各自触发全量重建；合并到下一帧只做一次。
-    this.groupOptionsCacheSource = undefined;
-    if (this.projectionRebuildPending) {
-      this.scheduleImportStatusReadyObservation();
-      return;
-    }
-    this.projectionRebuildPending = true;
-    setTimeout((): void => {
-      this.projectionRebuildPending = false;
-      if (!this.mounted) return;
-      this.rebuildSourceProjection('owner-update');
-    }, 0);
-    this.scheduleImportStatusReadyObservation();
-  }
-
-  private rebuildSourceProjection(trigger: SourceProjectionTrigger): void {
-    const key = this.currentFilterKey();
-    const changed = this.lastProjectionFilterKey.length > 0 && this.lastProjectionFilterKey !== key;
-    if (changed || this.verificationFilterRevision === 0) this.verificationFilterRevision += 1;
-    this.lastProjectionFilterKey = key;
-    const projection = this.filterProjection();
-    this.statusCounts = projection.counts;
-    this.hasReadableSources = this.sources.some(sourceV9Supports);
-    const projected = projection.rows;
-    if (this.batchMode) {
-      const available = new Set<string>(this.sources.filter(sourceV9Supports)
-        .map((source: BookSource): string => source.sourceId));
-      this.batchSourceIds = this.batchSourceIds.filter((id: string): boolean => available.has(id));
-    }
-    if (this.verificationTextMetrics !== undefined && this.verificationTextRowId.length === 0 && this.searchQuery.length === 0 &&
-      this.statusValue === '全部' && this.categoryValue === 'all' && this.groupValue === '全部分组')
-      this.verificationTextRowId = projected[0]?.sourceId ?? '';
-    if (this.verificationTextMetrics !== undefined) {
-      const reservedRow = this.verificationReservedTypographyRow(projected);
-      if (reservedRow !== this.verificationReservedTextRowId) {
-        this.verificationReservedTextMetrics = reservedRow.length > 0 ? new ReaderSourceTextMetrics(reservedRow) : undefined;
-        this.verificationReservedTextFrameKey = '';
-        this.verificationReservedTextRowId = reservedRow;
-      }
-    }
-    this.projectedSources = projected;
-    this.firstSourceId = projected[0]?.sourceId ?? '';
-    this.lastSourceId = projected[projected.length - 1]?.sourceId ?? '';
-    this.projectedSourceCount = projected.length;
-    this.sourceDataSource.replace(projected);
-    if (changed && this.mounted) {
-      this.cancelScrollRestore();
-      this.firstVisibleListIndex = 0;
-      // 过滤条件变化后的大列表重排不能占用点击回调的同一帧：先让本次状态提交返回，
-      // 再在下一帧请求回顶，避免 800+ 行场景下主线程被连续重排阻塞。
-      if (this.listMounted) {
-        const scroller = this.sourceScroller;
-        setTimeout((): void => {
-          if (!this.mounted || !this.listMounted) return;
-          try { scroller.scrollEdge(Edge.Top); } catch (_unbound) {}
-        }, 0);
-      }
-    } else this.scheduleSourceAnchorRestore();
-    this.observeVerificationProjection(trigger);
-  }
-
-  private verificationReservedTypographyRow(projected: BookSource[]): string {
-    return sourceVerificationReservedTypographyRow(this.sources.length, projected, this.searchQuery, this.statusValue,
-      this.categoryValue, this.groupValue);
-  }
-
-
-
-  private normalizedSourceGroup(source: BookSource): string {
-    return source.group?.trim() ?? '';
-  }
-
-  private groupOptions(): string[] {
-    // 每次渲染都遍历全部书源并用 indexOf 去重是 O(n^2)；结果只在书源集合变化时失效。
-    if (this.groupOptionsCacheSource === this.sources) return this.groupOptionsCache;
-    const options: string[] = ['全部分组', '未分组'];
-    const seen: Set<string> = new Set<string>(options);
-    for (const name of this.catalogGroupNames) {
-      if (!seen.has(name) && name.trim().length > 0) { options.push(name); seen.add(name); }
-    }
-    for (const source of this.sources) {
-      if (!sourceV9Supports(source)) continue;
-      const group = this.normalizedSourceGroup(source);
-      if (group === '' || group === '全部分组' || seen.has(group)) continue;
-      seen.add(group);
-      options.push(group);
-    }
-    this.groupOptionsCache = options;
-    this.groupOptionsCacheSource = this.sources;
-    return options;
-  }
-
-  private visibleGroupOptions(): string[] {
-    const options = this.groupOptions();
-    const query = this.groupSearchQuery.trim().toLowerCase();
-    return query.length === 0 ? options : options.filter((option: string): boolean => option.toLowerCase().includes(query));
-  }
-
-  private clearFilters(): void {
-    if (!this.managementInputIsCurrent() || this.groupOpen) return;
-    this.searchQuery = '';
-    this.statusValue = '全部';
-    this.categoryValue = 'all';
-    this.groupValue = '全部分组';
-    this.rebuildSourceProjection('clear');
+    this.filters.invalidateGroupChoices();
+    this.list.scheduleProjectionRefresh();
+    this.recovery.scheduleImportStatusReadyObservation();
   }
 
   private recordViewport(area: Area): void {
@@ -2887,17 +823,6 @@ export struct SourceManagementPage {
     }
   }
 
-  private recordGroupTrigger(area: Area): void {
-    const width = this.numericAreaLength(area.width);
-    const height = this.numericAreaLength(area.height);
-    if (!this.mounted || width <= 0 || height <= 0) return;
-    // Area already reports vp. Use the actual trigger box in the overlay's coordinates.
-    this.groupX = this.numericAreaLength(area.globalPosition.x);
-    this.groupY = this.numericAreaLength(area.globalPosition.y);
-    this.groupTriggerWidth = width;
-    this.groupTriggerHeight = height;
-  }
-
   private onGeometryInputsChanged(): void {
     if (!this.mounted) return;
     this.publishBackPreviewBlock();
@@ -2905,7 +830,7 @@ export struct SourceManagementPage {
     const headerInputs = JSON.stringify([this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width, metrics.systemFontScale,
       metrics.densityPixels, readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics),
       this.embeddedWide ? this.originX : undefined]);
-    const footerInputs = JSON.stringify([headerInputs, this.footerFallbackHeight()]);
+    const footerInputs = JSON.stringify([headerInputs, this.list.footerFallbackHeight()]);
     if (headerInputs !== this.headerInputs) {
       this.headerInputs = headerInputs;
       this.measurementKey += 1;
@@ -2924,90 +849,13 @@ export struct SourceManagementPage {
     if (!this.measurements.record(slot, height, presentedKey)) return;
     this.refreshGeometry();
     if (slot === 'source:header' && Math.abs(previousTop - this.geometry.content.startInset) > .5) {
-      this.alignListTopAfterHeaderChange(previousTop);
+      this.list.alignListTopAfterHeaderChange(previousTop);
     }
-  }
-
-  private alignListTopAfterHeaderChange(previousTop: number): void {
-    if (!this.listMounted || this.headerTopAlignmentScheduled || this.pendingScroll !== undefined ||
-      this.pendingSourceAnchor.length > 0) return;
-    const opening = this.temporaryBackIdentity, scrollEpoch = this.scrollRestoreEpoch;
-    // Changing contentStartOffset updates the native boundary. The list can
-    // still be at its old absolute offset after the first header measurement.
-    const stillAtPreviousTop = (): boolean => {
-      const first = this.sourceScroller.getItemRect(0);
-      return first.height > 0 && Math.abs(first.y - previousTop) <= .5;
-    };
-    try {
-      if (!stillAtPreviousTop()) return;
-      this.headerTopAlignmentScheduled = true;
-      this.getUIContext().postFrameCallback(new SourceListLayoutFrame(this.getUIContext(), (): void => {
-        this.headerTopAlignmentScheduled = false;
-        if (!this.managementBackIsCurrent(opening) || !this.listMounted || scrollEpoch !== this.scrollRestoreEpoch ||
-          this.pendingScroll !== undefined || this.pendingSourceAnchor.length > 0 ||
-          Math.abs(this.geometry.content.startInset - previousTop) <= .5) return;
-        try {
-          if (stillAtPreviousTop()) this.sourceScroller.scrollEdge(Edge.Top);
-        } catch (_unbound) {}
-      }));
-    } catch (_detached) {
-      this.headerTopAlignmentScheduled = false;
-    }
-  }
-
-  private footerFallbackHeight(): number {
-    const actionHeight = this.footerActionHeight();
-    return actionHeight + TOK_SPACE_SM + this.actionBottomInset(actionHeight);
   }
 
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
     return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
-  }
-
-  private layoutBudget(source?: BookSource): SourceManagementLayout {
-    const scale = this.fontScale();
-    return resolveSourceManagementLayout({ availableWidth: this.contentFrame().width, fontScale: scale,
-      hasLogin: !this.batchMode && source?.loginUrl !== undefined && source.loginUrl.trim().length > 0,
-      detectWidth: this.batchMode ? 0 : 28, batchStatusWidth: this.batchMode ? Math.ceil(35 * scale) : 0,
-      actionWidth: 58, actionHeight: this.batchMode ? 34 : 44,
-      loginHeight: 26,
-      filterHeight: 40, footerHeight: this.footerActionHeight(),
-      titleLineHeight: TYPE_SOURCE_MANAGEMENT_ROW_TITLE.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontSizeFp * 1.5,
-      metaLineHeight: TYPE_SOURCE_MANAGEMENT_ROW_URL.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_ROW_URL.fontSizeFp * 1.5 });
-  }
-
-  private footerControlHeight(): number {
-    return readerScaledControlHeight(44, resolveReaderLabeledIconActionSpec('source-management-add').text.lineHeightFp ?? 20, this.fontScale());
-  }
-
-  private footerContentWidth(): number {
-    const input = new ReaderPageGeometryInput(ReaderWindowCoordinator.metrics());
-    input.originX = this.embeddedWide ? this.originX : undefined;
-    input.viewportWidth = this.viewportWidth;
-    input.viewportHeight = this.viewportHeight;
-    input.contentMaxWidth = readerStandardPageSpec('sourceManagement').maxWidth;
-    input.contentHorizontalPadding = 19;
-    input.contentHorizontalSafeArea = 'interactive';
-    return resolveReaderPageGeometry(input).content.frame.width;
-  }
-
-  private footerManageWidth(): number {
-    return Math.max(112, Math.ceil(4 * 16 * this.fontScale()) + 28);
-  }
-
-  private footerStacked(): boolean {
-    const scale = this.fontScale();
-    const add = resolveReaderLabeledIconActionSpec('source-management-add');
-    // Both current labels are four full-width CJK glyphs in their shared font.
-    const addWidth = Math.ceil(add.text.fontSizeFp * scale) * '导入书源'.length + add.iconSize + add.gap;
-    return this.footerContentWidth() < this.footerManageWidth() + TOK_SPACE_CONTROL_INLINE + addWidth;
-  }
-
-  private footerActionHeight(): number {
-    if (this.batchMode) return Math.max(54, Math.ceil(37 * this.fontScale()));
-    const controlHeight = this.footerControlHeight();
-    return this.footerStacked() ? controlHeight * 2 + TOK_SPACE_CONTROL_INLINE : controlHeight;
   }
 
   private scrollLayout(): ReaderScrollLayout {
@@ -3023,7 +871,7 @@ export struct SourceManagementPage {
     input.headerHeight = this.measurements.readForGeneration('source:header', this.measurementKey, APP_FLOATING_HEADER_BAR_HEIGHT);
     applyReaderStandardFloatingHeader(input);
     input.contentGap = READER_STANDARD_PAGE_CONTENT_GAP;
-    input.footerHeight = this.measurements.readForGeneration('source:footer', this.footerMeasurementKey, this.footerFallbackHeight());
+    input.footerHeight = this.measurements.readForGeneration('source:footer', this.footerMeasurementKey, this.list.footerFallbackHeight());
     input.contentMaxWidth = readerStandardPageSpec('sourceManagement').maxWidth;
     input.contentHorizontalPadding = 19;
     input.contentHorizontalSafeArea = 'interactive';
@@ -3050,11 +898,6 @@ export struct SourceManagementPage {
     return Math.max(0, readerInteractiveSafeTop(ReaderWindowCoordinator.metrics(), true) - this.originY);
   }
 
-  private groupOverlayTop(): number {
-    const anchor = this.groupClosingAnchor?.top ?? this.groupY;
-    return Math.max(this.overlayTop(), Math.min(anchor - this.originY, this.overlayBottom()));
-  }
-
   private overlayBottom(): number {
     const metrics = ReaderWindowCoordinator.metrics();
     return Math.max(this.overlayTop(), readerKeyboardHostBottom(metrics, this.originY,
@@ -3067,18 +910,6 @@ export struct SourceManagementPage {
       return new SurfaceHorizontalFrame(0, 0, 0);
     }
     return this.geometry.content.frame;
-  }
-
-  private groupSelectWidth(): number {
-    const available = this.contentFrame().width;
-    const text = this.groupValue.length > 4 ? this.groupValue : '全部分组';
-    const style = TYPE_SELECT_SOURCE_GROUP_VALUE;
-    const fallback = Math.ceil(style.fontSizeFp * text.length * this.fontScale());
-    const context = this.getUIContext();
-    const measured = context.px2vp(context.getMeasureUtils().measureText({ textContent: text,
-      fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight }));
-    const label = Number.isFinite(measured) && measured > 0 ? Math.ceil(measured) : fallback;
-    return Math.min(Math.max(96, label + 42), Math.max(0, Math.min(Math.round(132 * this.fontScale()), available * 0.42)));
   }
 
   private numericAreaLength(value: Length | undefined): number {

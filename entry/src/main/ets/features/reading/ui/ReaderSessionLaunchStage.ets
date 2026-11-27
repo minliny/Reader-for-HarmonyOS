@@ -7,6 +7,7 @@ import { READER_SESSION_CAPSULE_RADIUS, ReaderSessionCapsuleFrame, ReaderSession
   readerSessionCapsuleAccessibility, ReaderSessionCapsuleMetricsCache, type ReaderSessionCapsuleMetrics } from './ReaderSessionCapsule';
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
+import { ReaderSessionLaunchSharpSource, type ReaderSessionLaunchSharpSourceInput } from './ReaderSessionLaunchSharpSource';
 import { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } from './ReaderPageChromeLayout';
 import type { ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
@@ -48,7 +49,7 @@ export struct ReaderSessionLaunchStage {
   @Prop onPrimaryColor: string = '';
   @Prop themeScheme: string = 'day';
   @Prop shadowColor: string = '';
-  @BuilderParam sourceSharpContent: () => void;
+  @Prop sharpSource: ReaderSessionLaunchSharpSourceInput;
   onToggle: () => void = (): void => {};
   @State private pressPointer: number = -1;
   private readonly metricsCache: ReaderSessionCapsuleMetricsCache = new ReaderSessionCapsuleMetricsCache();
@@ -158,7 +159,15 @@ export struct ReaderSessionLaunchStage {
       }.id(READER_LAUNCH_SOURCE).width('100%').height('100%')
         .opacity(this.sample.sourceSurfaceOpacity).hitTestBehavior(HitTestMode.None);
       if (this.sample.sharpOpacity > 0) {
-        Stack({ alignContent: Alignment.TopStart }) { this.sourceSharpContent(); }
+        Stack({ alignContent: Alignment.TopStart }) {
+          ReaderSessionLaunchSharpSource({
+            generation: this.sharpSource.generation,
+            source: this.sharpSource.source,
+            reduceMotion: this.sharpSource.reduceMotion,
+            automatic: this.sharpSource.automatic,
+            speech: this.sharpSource.speech,
+          });
+        }
           .id(READER_LAUNCH_SHARP)
           .customProperty(READER_LAUNCH_SHARP_SCALE, readerTransitionsEnabled() ? this.sample.sourceContentScale : undefined)
           .customProperty(READER_LAUNCH_SOURCE_CLIP, this.sourceClipInsets())

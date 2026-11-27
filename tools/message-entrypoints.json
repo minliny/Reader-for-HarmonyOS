@@ -47,7 +47,7 @@
       "scope": "SourceManagementPage.statusBanner",
       "status": "retired-unreachable",
       "authority": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "rule": "The private hand-drawn legacy banner has been removed after its only references were obsolete tool probes. Production sourceList/statusAction/pendingRecovery use ReaderRecoveryAction, ReaderPageState and ReaderRecoveryNotice; onMessageChanged retains the transient adapter. Old tool samples now target those real producers; no business owner, write or retry policy is replaced."
+      "rule": "The private hand-drawn legacy banner was removed after its only references were obsolete tool probes. SourceManagementList owns the filtered empty state. SourceManagementRecoveryBanner and the adjacent read and status builders use ReaderRecoveryAction, ReaderPageState and ReaderRecoveryNotice. SourceManagementRecoveryOwner.onMessageChanged owns the existing transient adapter. Old tool samples target those real producers and the original business owner retains writes and retries."
     }
   ],
   "entries": [
@@ -482,10 +482,10 @@
       "status": "retained-disabled"
     },
     {
-      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets#SharedDownloadPage.bookPage::shared.page-state",
-      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-      "owner": "SharedDownloadPage",
-      "member": "bookPage",
+      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadBookList.ets#<module>.SharedDownloadBookList::shared.page-state",
+      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadBookList.ets",
+      "owner": "<module>",
+      "member": "SharedDownloadBookList",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
       "effectiveHost": "已挂载下载页 mountedIdentity/presentationIdentity、presentationGeneration 和 presentationIsCurrent；确认框使用当前 confirming/generation。",
@@ -493,10 +493,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets#SharedDownloadPage.chapterPage::shared.page-state",
-      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-      "owner": "SharedDownloadPage",
-      "member": "chapterPage",
+      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadChapterList.ets#<module>.SharedDownloadChapterList::shared.page-state",
+      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadChapterList.ets",
+      "owner": "<module>",
+      "member": "SharedDownloadChapterList",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
       "effectiveHost": "已挂载下载页 mountedIdentity/presentationIdentity、presentationGeneration 和 presentationIsCurrent；确认框使用当前 confirming/generation。",
@@ -504,10 +504,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets#SharedDownloadPage.confirmationOverlay::shared.dialog-surface",
-      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-      "owner": "SharedDownloadPage",
-      "member": "confirmationOverlay",
+      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadSheets.ets#<module>.DownloadConfirmationSurface::shared.dialog-surface",
+      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadSheets.ets",
+      "owner": "<module>",
+      "member": "DownloadConfirmationSurface",
       "family": "shared.dialog-surface",
       "category": "自绘确认/输入的公共有限外框",
       "effectiveHost": "已挂载下载页 mountedIdentity/presentationIdentity、presentationGeneration 和 presentationIsCurrent；确认框使用当前 confirming/generation。",
@@ -548,10 +548,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets#SharedDownloadPage.pageOverlays::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-      "owner": "SharedDownloadPage",
-      "member": "pageOverlays",
+      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadSheets.ets#<module>.SharedDownloadSheets::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadSheets.ets",
+      "owner": "<module>",
+      "member": "SharedDownloadSheets",
       "family": "shared.recovery-notice",
       "category": "下载批操作结果未确认的持续提示",
       "effectiveHost": "当前 Runtime 的下载展示层投影批操作回执。页面覆盖时隐藏持续提示，刷新列表为只读。",
@@ -559,10 +559,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets#SharedDownloadPage.rangeSheet::shared.page-state",
-      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-      "owner": "SharedDownloadPage",
-      "member": "rangeSheet",
+      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadSheets.ets#<module>.DownloadRangeSheet::shared.page-state",
+      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadSheets.ets",
+      "owner": "<module>",
+      "member": "DownloadRangeSheet",
       "family": "shared.page-state",
       "category": "当前下载范围草稿的目录版本失效",
       "effectiveHost": "当前range sheet/opening、rangeBookKey、rangeDraftRevision和rangeCatalogChanged，展示本地字段/目录校验事实，复用PageState局部反馈。",
@@ -614,10 +614,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.recoveryOverlay::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
-      "member": "recoveryOverlay",
+      "id": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets#<module>.MangaRecoveryOverlay::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets",
+      "owner": "<module>",
+      "member": "MangaRecoveryOverlay",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
       "effectiveHost": "当前漫画 reader 的 sourceId/bookId/presentationGeneration；独立 recoveryOverlay 使用实时 viewport/insets 的有界 Stack 层，controls、panel、章末或冷几何持有前景时关闭命中和读屏。",
@@ -625,9 +625,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.turnBoundaryChapter::shared.transient",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
+      "id": "entry/src/main/ets/features/manga/ui/MangaChapterBoundaryHost.ets#MangaChapterBoundaryHost.turnBoundaryChapter::shared.transient",
+      "file": "entry/src/main/ets/features/manga/ui/MangaChapterBoundaryHost.ets",
+      "owner": "MangaChapterBoundaryHost",
       "member": "turnBoundaryChapter",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -768,9 +768,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.changeChineseConversionMode::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingContentMutationHost.ets#ReaderReadingContentMutationHost.changeChineseConversionMode::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingContentMutationHost.ets",
+      "owner": "ReaderReadingContentMutationHost",
       "member": "changeChineseConversionMode",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -779,9 +779,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.changeReaderPageTurnStyle::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingPreferencesHost.ets#ReaderReadingPreferencesHost.changeReaderPageTurnStyle::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingPreferencesHost.ets",
+      "owner": "ReaderReadingPreferencesHost",
       "member": "changeReaderPageTurnStyle",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -790,10 +790,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.hydrateEntryCatalog::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "hydrateEntryCatalog",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingMountHost.ets#ReaderReadingMountHost.onEntryCatalogFailure::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingMountHost.ets",
+      "owner": "ReaderReadingMountHost",
+      "member": "onEntryCatalogFailure",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
@@ -801,9 +801,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.notifyPreservedContentRefresh::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingChapterAcquisitionHost.ets#ReaderReadingChapterAcquisitionHost.notifyPreservedContentRefresh::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingChapterAcquisitionHost.ets",
+      "owner": "ReaderReadingChapterAcquisitionHost",
       "member": "notifyPreservedContentRefresh",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -812,9 +812,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.notifyTtsConfigurationFailure::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingSpeechHost.ets#ReaderReadingSpeechHost.notifyTtsConfigurationFailure::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingSpeechHost.ets",
+      "owner": "ReaderReadingSpeechHost",
       "member": "notifyTtsConfigurationFailure",
       "family": "shared.transient",
       "category": "朗读配置明确失败短反馈",
@@ -823,9 +823,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.onControlBookmarkFailureChanged::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryOperationsHost.ets#ReaderControlDirectoryOperationsHost.onControlBookmarkFailureChanged::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryOperationsHost.ets",
+      "owner": "ReaderControlDirectoryOperationsHost",
       "member": "onControlBookmarkFailureChanged",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -834,10 +834,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.onReaderBookmarkGestureUnavailable::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "onReaderBookmarkGestureUnavailable",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderBookmarkInteractionHost.ets#ReaderBookmarkInteractionHost.gestureUnavailable::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderBookmarkInteractionHost.ets",
+      "owner": "ReaderBookmarkInteractionHost",
+      "member": "gestureUnavailable",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。 The existing gesture feedback reports a refused global bookmarkWriteEnabled fact as a generic temporary-unavailability message without inferring a foreign operation identity. The Host remains the write authority.",
@@ -845,9 +845,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.projectTtsConfigurationRecovery::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingSpeechHost.ets#ReaderReadingSpeechHost.projectTtsConfigurationRecovery::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingSpeechHost.ets",
+      "owner": "ReaderReadingSpeechHost",
       "member": "projectTtsConfigurationRecovery",
       "family": "shared.transient",
       "category": "朗读配置刷新失败及已提交后的读回提示",
@@ -862,7 +862,7 @@
       "member": "failureActions",
       "family": "shared.recovery-action",
       "category": "阅读/换源失败恢复及设置/书源导航动作",
-      "effectiveHost": "当前ReadingExperience生命周期与章节selection；换回原书源捕获待处理换源标识、scope和章节尝试代次，原恢复动作捕获readerRecoveryView.generation；普通retryReading仍走原reader准入。",
+      "effectiveHost": "当前 ReadingExperience 的生命周期与章节 selection 由 ReaderReadingRecoveryHost 同步核对；换回原书源捕获待处理换源标识、scope和章节尝试代次，原恢复动作捕获readerRecoveryView.generation；普通retryReading仍走原reader准入。",
       "retireRule": "正文离开失败或阅读实体、章节尝试、待处理换源标识、scope变化即拒绝旧动作；SourceSwitchHost再核对精确事务、目标和当前租约，并串行化回滚与另选书源。",
       "status": "registered-source-entry"
     },
@@ -884,14 +884,14 @@
       "member": "readerRecoveryItems",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "ReaderRecoveryOverlay draws the mounted ReadingExperience’s lifecycle/source/book-scoped projections and calls its live input and identity checks before forwarding actions. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added. Its bounded active Scroll uses Default to block sibling hit collection and stops ancestor touch propagation. It forwards the readonly bookmark recoveryAction to the shared Surface. Returned-attempt short feedback leaves an unknown original receipt unresolved. 当前阅读的恢复面板由更多→待处理事项显式展开，多个未决事项共享绘制且保留原身份。 当前书籍原离线清理在可用性读回成功后仍未确认时，也进入同一阅读恢复入口，离线pending归组，confirmed读回失败提供所属只读重读，明确任务结果沿专用宿主。 Appearance保存事实从同一Runtime共享ReaderAppearanceStore订阅；生命周期/source/book/chapter与原revision共同交接展示代次，busy/ready保持同一代。经更多→待处理事项进入既有有界RecoveryGroup，不增加正文inset。",
+      "effectiveHost": "ReaderRecoveryOverlay draws the mounted ReadingExperience’s lifecycle/source/book-scoped projections and calls the mounted ReaderReadingRecoveryHost’s live input and identity checks before forwarding actions. Bookmarks delegate pending/result/readback classification to ReaderDirectoryRecoverySurface. The floating surface yields paint, hit testing and accessibility while controls display, using the actual reactive controlSession plus immediate motion lease. Controls closing restores the same original facts and readback action. No directory-list prefix or body/control obstruction budget is added. Its bounded active Scroll uses Default to block sibling hit collection and stops ancestor touch propagation. It forwards the readonly bookmark recoveryAction to the shared Surface. Returned-attempt short feedback leaves an unknown original receipt unresolved. 当前阅读的恢复面板由更多→待处理事项显式展开，多个未决事项共享绘制且保留原身份。 当前书籍原离线清理在可用性读回成功后仍未确认时，也进入同一阅读恢复入口，离线pending归组，confirmed读回失败提供所属只读重读，明确任务结果沿专用宿主。 Appearance保存事实从同一Runtime共享ReaderAppearanceStore订阅；生命周期/source/book/chapter与原revision共同交接展示代次，busy/ready保持同一代。经更多→待处理事项进入既有有界RecoveryGroup，不增加正文inset。",
       "retireRule": "Switching book, exit, background, temporary-layer coverage, controls display or a replaced presentation/generation retires old floating actions. The delegated surface also checks feedbackMounted and its caller lease. Canonical read success cannot confirm an original unknown write. Hiding feedback never cancels or confirms the intent. Back、正文操作或开控制只收起展示，原回执保持。 Appearance订阅退场只退投影，原saved回执与accepted snapshot继续由Store保留；当前前景/显示代次和源revision匹配才允许原Store.retrySave；只有实际最新revision保存ACK清除，warm读回不作ACK；busy仅由该原retry事实提供。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.requestPageTurnChapter::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingChapterAcquisitionHost.ets#ReaderReadingChapterAcquisitionHost.requestPageTurnChapter::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingChapterAcquisitionHost.ets",
+      "owner": "ReaderReadingChapterAcquisitionHost",
       "member": "requestPageTurnChapter",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -900,9 +900,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.selectBookmarkAnchor::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryOperationsHost.ets#ReaderControlDirectoryOperationsHost.selectBookmarkAnchor::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryOperationsHost.ets",
+      "owner": "ReaderControlDirectoryOperationsHost",
       "member": "selectBookmarkAnchor",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -911,9 +911,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.showAppearanceFailure::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingPreferencesHost.ets#ReaderReadingPreferencesHost.showAppearanceFailure::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingPreferencesHost.ets",
+      "owner": "ReaderReadingPreferencesHost",
       "member": "showAppearanceFailure",
       "family": "shared.transient",
       "category": "外观读取或新修改准入明确失败的普通短反馈；已接受保存未确认由原Store恢复宿主呈现",
@@ -922,9 +922,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.showReaderSettingsFailure::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingPreferencesHost.ets#ReaderReadingPreferencesHost.showReaderSettingsFailure::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingPreferencesHost.ets",
+      "owner": "ReaderReadingPreferencesHost",
       "member": "showReaderSettingsFailure",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -933,10 +933,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.sourceSwitchCompletionChanged::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "sourceSwitchCompletionChanged",
+      "id": "entry/src/main/ets/features/reading/ui/ReadingSourceSwitchOverlayHost.ets#ReadingSourceSwitchOverlayHost.refresh::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReadingSourceSwitchOverlayHost.ets",
+      "owner": "ReadingSourceSwitchOverlayHost",
+      "member": "refresh",
       "family": "shared.transient",
       "category": "文字换源确认后的短反馈",
       "effectiveHost": "当前前景文字阅读会话。源、书、阅读就绪代次及正文选择验证通过后，按原回执身份消费一次。",
@@ -944,9 +944,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.toggleAutoPage::shared.transient",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingPlaybackFlowHost.ets#ReaderReadingPlaybackFlowHost.toggleAutoPage::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingPlaybackFlowHost.ets",
+      "owner": "ReaderReadingPlaybackFlowHost",
       "member": "toggleAutoPage",
       "family": "shared.transient",
       "category": "自动翻页接管时朗读暂停失败的短反馈",
@@ -1704,32 +1704,32 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#SourceManagementPage.onMessageChanged::shared.transient",
-      "file": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "owner": "SourceManagementPage",
-      "member": "onMessageChanged",
-      "family": "shared.transient",
-      "category": "普通完成/失败短反馈",
-      "effectiveHost": "当前书源页的有界 Scaffold 覆盖槽。容量允许时从搜索和新增行之后开始，结束于固定页脚或键盘上方。原 operation/original/receipt 身份与 loading/blocked 控制展示。",
-      "retireRule": "退场或原操作/投影变化后失效；未确认写入保留原核对/继续权限，不以列表读取或通知消失确认写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
+      "id": "entry/src/main/ets/features/source/ui/SourceManagementListRow.ets#<module>.SourceManagementList::shared.page-state",
+      "file": "entry/src/main/ets/features/source/ui/SourceManagementListRow.ets",
+      "owner": "<module>",
+      "member": "SourceManagementList",
+      "family": "shared.page-state",
+      "category": "页面或局部内容的加载/空态/无内容失败",
+      "effectiveHost": "当前已挂载书源页有可读书源，但当前搜索、状态、分类或分组无匹配时的原列表空态。",
+      "retireRule": "清除筛选沿用当前开页与输入准入；筛选恢复、有匹配或退场后移除空态。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#SourceManagementPage.originalRecovery::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "owner": "SourceManagementPage",
-      "member": "originalRecovery",
-      "family": "shared.recovery-notice",
-      "category": "原操作待核对/待继续或明确结果的消息表面",
-      "effectiveHost": "当前书源管理开页、当前原操作代次及前景。继续动作复查原记录的继续权限。原生核对、继续及标题展开分别继承当前通知作用域。",
-      "retireRule": "分组打开及退场、切到后台或代次变化时拒绝旧动作。原回执由书源 owner 保留。",
+      "id": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets#<module>.SourceManagementReadState::shared.page-state",
+      "file": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets",
+      "owner": "<module>",
+      "member": "SourceManagementReadState",
+      "family": "shared.page-state",
+      "category": "页面或局部内容的加载/空态/无内容失败",
+      "effectiveHost": "当前已挂载书源页的空列表槽，按加载、无内容、读取失败及已确认导入待读回事实呈现。原操作待核对时由覆盖提示呈现。",
+      "retireRule": "普通读取失败使用列表读取代次，已确认导入的空态刷新使用导入回执代次。当前读取、原操作待核对、旧开页和旧代次拒绝动作。加载动效沿用前景和减少动态效果门控。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#SourceManagementPage.pendingRecovery::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "owner": "SourceManagementPage",
-      "member": "pendingRecovery",
+      "id": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets#<module>.SourceManagementRecoveryBanner::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets",
+      "owner": "<module>",
+      "member": "SourceManagementRecoveryBanner",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
       "effectiveHost": "当前书源管理有界覆盖层，原 operation/original/receipt 身份与 loading/blocked 控制展示。原操作优先，未知回执通知独立原生核对和标题展开作用域。",
@@ -1737,21 +1737,21 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#SourceManagementPage.sourceList::shared.page-state",
-      "file": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "owner": "SourceManagementPage",
-      "member": "sourceList",
+      "id": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets#<module>.SourceManagementRetainedReadFeedback::shared.page-state",
+      "file": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets",
+      "owner": "<module>",
+      "member": "SourceManagementRetainedReadFeedback",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "当前已挂载书源页。原操作待核对时由覆盖提示呈现。加载、空内容及读取失败由列表事实决定。已有内容的加载使用 ReaderPageState inline。列表为空且确认导入的回执仍需读回时，空态显示待刷新提示。",
-      "retireRule": "重试按当前开页和输入准入转交原 owner。普通读取失败使用列表读取代次，已确认导入的空态刷新使用导入回执代次。当前读取、原操作待核对、旧开页和旧代次拒绝动作。加载动效沿用前景与减少动态效果门控。",
+      "effectiveHost": "当前已挂载书源页有旧列表且读取进行中时，保留内容并在筛选头呈现内联加载。",
+      "retireRule": "读回完成、原操作待核对或退场后移除内联状态。加载动效沿用前景和减少动态效果门控。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#SourceManagementPage.sourceList::shared.recovery-action",
-      "file": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "owner": "SourceManagementPage",
-      "member": "sourceList",
+      "id": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets#<module>.SourceManagementRetainedReadFeedback::shared.recovery-action",
+      "file": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets",
+      "owner": "<module>",
+      "member": "SourceManagementRetainedReadFeedback",
       "family": "shared.recovery-action",
       "category": "书源有旧内容且无未决原操作时的列表刷新",
       "effectiveHost": "当前书源管理有可用旧列表、可重试且无读取中或待核对原操作时，显示列表刷新动作。",
@@ -1759,14 +1759,36 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#SourceManagementPage.statusAction::shared.recovery-action",
-      "file": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-      "owner": "SourceManagementPage",
-      "member": "statusAction",
+      "id": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets#<module>.SourceManagementStatusAction::shared.recovery-action",
+      "file": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets",
+      "owner": "<module>",
+      "member": "SourceManagementStatusAction",
       "family": "shared.recovery-action",
       "category": "书源当前状态事实的原动作转交",
       "effectiveHost": "当前书源管理状态动作按 statusActionGeneration 挂载。待核对原操作优先呈现。",
       "retireRule": "按当前开页、输入准入及登记代次转交 onStatusAction。待核对和代次变化时拒绝旧动作。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets#<module>.SourceRecoveryOriginalRecovery::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets",
+      "owner": "<module>",
+      "member": "SourceRecoveryOriginalRecovery",
+      "family": "shared.recovery-notice",
+      "category": "原操作待核对/待继续或明确结果的消息表面",
+      "effectiveHost": "当前书源管理开页、当前原操作代次及前景。继续动作复查原记录的继续权限。原生核对、继续及标题展开分别继承当前通知作用域。",
+      "retireRule": "分组打开及退场、切到后台或代次变化时拒绝旧动作。原回执由书源 owner 保留。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets#SourceManagementRecoveryOwner.onMessageChanged::shared.transient",
+      "file": "entry/src/main/ets/features/source/ui/SourceManagementRecoveryBanner.ets",
+      "owner": "SourceManagementRecoveryOwner",
+      "member": "onMessageChanged",
+      "family": "shared.transient",
+      "category": "普通完成/失败短反馈",
+      "effectiveHost": "当前书源页的有界 Scaffold 覆盖槽。容量允许时从搜索和新增行之后开始，结束于固定页脚或键盘上方。原 operation/original/receipt 身份与 loading/blocked 控制展示。",
+      "retireRule": "退场或原操作/投影变化后失效；未确认写入保留原核对/继续权限，不以列表读取或通知消失确认写入。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },
     {
@@ -2059,9 +2081,9 @@
       "status": "retained-disabled"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.chooseCachedChapterRefresh::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.chooseCachedChapterRefresh::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "chooseCachedChapterRefresh",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -2070,9 +2092,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.directoryJourneyPorts::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.directoryJourneyPorts::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "directoryJourneyPorts",
       "family": "shared.transient",
       "category": "普通短反馈",
@@ -2081,20 +2103,20 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.libraryJourneyPorts::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.libraryJourneyPorts::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "libraryJourneyPorts",
       "family": "shared.transient",
       "category": "普通短反馈",
-      "effectiveHost": "Index.libraryJourneyPorts 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
+      "effectiveHost": "AppRouteJourneyBindings.libraryJourneyPorts 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
       "retireRule": "调用方身份或原操作generation失效后由原owner拒绝动作；关闭展示按原生命周期清理。登记只确认当前源码入口，运行时退休与可达性证据另行记录。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.mangaSourceSwitchPorts::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.mangaSourceSwitchPorts::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "mangaSourceSwitchPorts",
       "family": "shared.transient",
       "category": "漫画换源确认后读回失败或核对结果短反馈",
@@ -2103,9 +2125,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.openCurrentDetailGroup::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.openCurrentDetailGroup::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "openCurrentDetailGroup",
       "family": "shared.transient",
       "category": "详情分组操作明确失败或确认后刷新失败的短反馈",
@@ -2114,43 +2136,43 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.feedbackOverlays::shared.transient-presentation",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "feedbackOverlays",
+      "id": "entry/src/main/ets/pages/AppOverlayHost.ets#<module>.AppOverlayHost::shared.transient-presentation",
+      "file": "entry/src/main/ets/pages/AppOverlayHost.ets",
+      "owner": "<module>",
+      "member": "AppOverlayHost",
       "family": "shared.transient-presentation",
       "category": "普通短反馈公共呈现宿主",
-      "effectiveHost": "Index.pageSurfaces 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
+      "effectiveHost": "Index.pageSurfaces 中的 AppOverlayHost 消费原展示／业务 owner 提供的事实及动作，遵守当前调用方身份和代次。",
       "retireRule": "调用方身份或原操作generation失效后由原owner拒绝动作；关闭展示按原生命周期清理。登记只确认当前源码入口，运行时退休与可达性证据另行记录。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.readingExitActionPorts::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.readingExitActionPorts::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "readingExitActionPorts",
       "family": "shared.transient",
       "category": "普通短反馈",
-      "effectiveHost": "Index.readingExitActionPorts 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
+      "effectiveHost": "AppRouteJourneyBindings.readingExitActionPorts 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
       "retireRule": "调用方身份或原操作generation失效后由原owner拒绝动作；关闭展示按原生命周期清理。登记只确认当前源码入口，运行时退休与可达性证据另行记录。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.shelfCatalog::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "shelfCatalog",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.createShelfCatalog::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
+      "member": "createShelfCatalog",
       "family": "shared.transient",
       "category": "普通短反馈",
-      "effectiveHost": "Index.shelfCatalog 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
+      "effectiveHost": "AppRouteJourneyBindings.createShelfCatalog 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
       "retireRule": "调用方身份或原操作generation失效后由原owner拒绝动作；关闭展示按原生命周期清理。登记只确认当前源码入口，运行时退休与可达性证据另行记录。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.shelfMutations::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "shelfMutations",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.createShelfMutations::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
+      "member": "createShelfMutations",
       "family": "shared.transient",
       "category": "书架移除普通结果和清理、多选读取与确认前核对反馈",
       "effectiveHost": "BookshelfMutationPresentation 的当前 Runtime 与书架、详情或多选呈现。移除结果按回执代次去重，多选核对绑定本次打开。",
@@ -2158,9 +2180,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.showIndexAlert::native.alert",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.showIndexAlert::native.alert",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "showIndexAlert",
       "family": "native.alert",
       "category": "经 ReaderNativeAlertOwner 的原生确认/选择桥",
@@ -2170,9 +2192,9 @@
       "bridge": "owned-alert-native-callback"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.showIndexAlert::shared.alert-owner",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.showIndexAlert::shared.alert-owner",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "showIndexAlert",
       "family": "shared.alert-owner",
       "category": "原生确认/选择的原宿主 owner 入口",
@@ -2181,9 +2203,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.showOfflineDownloadFeedback::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.showOfflineDownloadFeedback::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "showOfflineDownloadFeedback",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -2192,9 +2214,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.showReadingFailure::shared.transient",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
+      "id": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets#AppRouteJourneyBindings.showReadingFailure::shared.transient",
+      "file": "entry/src/main/ets/app/composition/AppRouteJourneyBindings.ets",
+      "owner": "AppRouteJourneyBindings",
       "member": "showReadingFailure",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -2247,9 +2269,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.openPanel::shared.transient",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
+      "id": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets#MangaReaderChrome.openPanel::shared.transient",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets",
+      "owner": "MangaReaderChrome",
       "member": "openPanel",
       "family": "shared.transient",
       "category": "当前手机面板打开明确失败，原漫画内容仍可用的短反馈",
@@ -2258,10 +2280,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.tabletDirectory::shared.page-state",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
-      "member": "tabletDirectory",
+      "id": "entry/src/main/ets/features/manga/ui/MangaDirectoryDrawer.ets#<module>.MangaTabletDirectory::shared.page-state",
+      "file": "entry/src/main/ets/features/manga/ui/MangaDirectoryDrawer.ets",
+      "owner": "<module>",
+      "member": "MangaTabletDirectory",
       "family": "shared.page-state",
       "category": "常驻目录局部内容的加载与无可用目录内容失败",
       "effectiveHost": "当前漫画常驻目录的原内容盒，真实panelFontTask/failed/ready及source/book/font generation；原成功标题/目录布局保持。",
@@ -2269,9 +2291,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.savePageImage::shared.transient",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
+      "id": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets#MangaReaderChrome.savePageImage::shared.transient",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets",
+      "owner": "MangaReaderChrome",
       "member": "savePageImage",
       "family": "shared.transient",
       "category": "当前页图片另存完成或明确失败",
@@ -2459,9 +2481,9 @@
     },
     {
       "id": "DEDICATED-BOOKMARK-GESTURE",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "bookmarkCornerFeedback",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderBookmarkInteractionHost.ets",
+      "owner": "ReaderBookmarkInteractionHost",
+      "member": "hintAlpha",
       "category": "书签下拉的纸面手势反馈",
       "effectiveHost": "当前 reader lifecycle/selection/pageBookmarkFeedbackAnchor 和实体；沿原 gesture arena。",
       "retireRule": "松手、回弹、当前页/实体代次变化或退场按原 gesture/feedback owner 清理，拒绝旧回调。",
@@ -2470,8 +2492,8 @@
     },
     {
       "id": "DEDICATED-TEXT-CHAPTER-BOUNDARY",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingSurfaceHost.ets",
+      "owner": "ReaderReadingSurfaceHost",
       "member": "onContinuousBoundaryDrag",
       "category": "小说章末/章首的拖动反馈",
       "effectiveHost": "当前 reader 的连续阅读边界、当前章和原拖动/换章 owner。",
@@ -2481,9 +2503,9 @@
     },
     {
       "id": "DEDICATED-MANGA-CHAPTER-BOUNDARY",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
-      "member": "boundaryHint",
+      "file": "entry/src/main/ets/features/manga/ui/MangaChapterBoundaryHost.ets",
+      "owner": "MangaChapterBoundaryHost",
+      "member": "boundaryCaption",
       "category": "漫画章末/章首拖动提示",
       "effectiveHost": "当前 reader boundaryGeneration、当前章节、原 ChapterTransitions 和实际手势。已派发切章保留原边界加载反馈。",
       "retireRule": "不足阈值回弹，阈值合格松手派发切章。边界终态释放加载反馈；退场或新边界使旧回执失效，失败保留原章节回退。",
@@ -2492,9 +2514,9 @@
     },
     {
       "id": "DEDICATED-MANGA-IMAGE-UNAVAILABLE",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
-      "member": "imageViewport",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReadingViewportHost.ets",
+      "owner": "MangaReadingViewportHost",
+      "member": "rowHasError",
       "category": "漫画单图/多图不可用占位",
       "effectiveHost": "当前 controller、manifest、可见逻辑图像行和 renderKey。按原默认图像单元格和边界逐格呈现失败及就地重试。",
       "retireRule": "行退出视口或 controller、manifest、renderKey 变化后旧重试动作失效。当前行重试使用新请求代次。单图失败在原占位呈现，书源和整章失败由 ReaderPageState 承载。",
@@ -2536,9 +2558,9 @@
     },
     {
       "id": "DEDICATED-MANGA-CHAPTER-REFRESH",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
-      "member": "refreshProgress",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets",
+      "owner": "MangaReaderChrome",
+      "member": "refreshProgressVisible",
       "category": "漫画本章刷新进度",
       "effectiveHost": "当前前景漫画 reader 的已打开章节与原刷新操作，面板和章末打开时暂退。",
       "retireRule": "原刷新返回或当前 reader 退场时结束进度展示；图像和位置继续由章节控制器管理。",

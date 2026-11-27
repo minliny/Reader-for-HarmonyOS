@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { sampleReaderControlMotionComposition } from '../../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts';
-import { ReaderPageSettlementTimeline } from '../../entry/src/main/ets/features/reading/ui/ReaderPageSettlementTimeline.ts';
+import { ReaderPageSettlementTimeline } from '../../entry/src/main/ets/features/reading/application/ReaderPageSettlementTimeline.ts';
 import { buildReaderSessionLaunchGeometry, sampleReaderSessionLaunch }
   from '../../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts';
 import { readerSessionCapsuleColor } from '../../entry/src/main/ets/features/reading/ui/ReaderSessionCapsulePaint.ts';
