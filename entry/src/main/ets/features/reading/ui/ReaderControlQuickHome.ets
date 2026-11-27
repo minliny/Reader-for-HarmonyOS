@@ -99,10 +99,8 @@ export class ReaderControlQuickHomeOwner {
     return this.host.paint().progressPreviewPercent >= 0 || this.brightnessDragging;
   }
 
-  retireUnavailableBrightness(minimumReady: boolean): void {
-    if (!minimumReady || (this.brightnessDragging && this.brightnessDragCurrent?.() === false)) {
-      this.cancelBrightnessDrag();
-    }
+  brightnessDragInvalid(): boolean {
+    return this.brightnessDragging && this.brightnessDragCurrent?.() === false;
   }
 
   guardedAction(action: () => void): () => void {
