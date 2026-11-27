@@ -24,7 +24,7 @@ import { ReaderTtsPreferencesGateway } from '../application/ReaderTtsPreferences
 import type { ReaderTtsVoiceOption } from '../application/ReaderTtsPreferencesState';
 import type {
   HostTtsTransportState, ReaderTtsChapterAdvanceInput, ReaderTtsChapterAdvanceRange,
-  ReaderTtsAuditionReceipt, ReaderTtsProgressCommit, ReaderTtsSessionCoordinator, ReaderTtsStartInput,
+  ReaderTtsAuditionPhase, ReaderTtsAuditionReceipt, ReaderTtsProgressCommit, ReaderTtsSessionCoordinator, ReaderTtsStartInput,
 } from '../application/ReaderTtsSessionCoordinator';
 import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import {
@@ -499,8 +499,14 @@ export class ReaderReadingSpeechHost {
       (receipt: ReaderTtsAuditionReceipt): void => {
         hilog.info(0x5244, 'Reader', 'READER_VM_TTS_AUDITION %{public}s', JSON.stringify(receipt));
       } : undefined;
+    const trace = observing ?
+      (operationId: number, phase: ReaderTtsAuditionPhase): void => {
+        hilog.info(0x5244, 'Reader', 'READER_VM_TTS_AUDITION_INPUT coordinator operation=%{public}d phase=%{public}s',
+          operationId, phase);
+      } : undefined;
     this.controls.pauseAutoPage();
-    await coordinator.auditionVoice({ engine: this.ttsEngine, language, person, rate: this.ttsState.rate, pitch: 1, observe });
+    await coordinator.auditionVoice({ engine: this.ttsEngine, language, person, rate: this.ttsState.rate, pitch: 1,
+      observe, trace });
     if (!this.session.active(lifecycle) && this.ttsTransport.coordinator === coordinator) await coordinator.stopAudition();
   }
 

@@ -22,7 +22,8 @@ test('voice picker admits its current editor during module reflow and rejects st
   assert.equal(readerTtsVoicePickerAuditionCurrent({ ...current, editorInputCurrent: false }), false);
 });
 
-function fixture(probe: ReaderTtsHostProbe = { available: true }, observe?: (receipt: ReaderTtsAuditionReceipt) => void) {
+function fixture(probe: ReaderTtsHostProbe = { available: true }, observe?: (receipt: ReaderTtsAuditionReceipt) => void,
+  noticeOnActivate?: ReaderTtsHostEvent) {
   const observations: ReaderTtsAuditionReceipt[] = [];
   const calls: string[] = [];
   let dispatch: ((event: ReaderTtsHostEvent) => void) | undefined;
@@ -36,7 +37,10 @@ function fixture(probe: ReaderTtsHostProbe = { available: true }, observe?: (rec
       calls.push(`probe:${language}:${person}:${exactVoice}`);
       return probe;
     },
-    activateAudioSession: async (allowMixing) => { calls.push(`activate:${allowMixing}`); },
+    activateAudioSession: async (allowMixing) => {
+      calls.push(`activate:${allowMixing}`);
+      if (noticeOnActivate !== undefined) dispatch?.(noticeOnActivate);
+    },
     deactivateAudioSession: async () => { calls.push('deactivate'); },
     speak: async (received) => { request = received; },
     stop: async () => { calls.push('stop'); },
@@ -138,6 +142,46 @@ test('diagnostic observer errors cannot change native audition callbacks or comp
     audition.emit({ type: 'complete', requestId, completion: 'audio' });
     await completed;
     assert.deepEqual(audition.observations.map(({ state }) => state), ['started', 'completed']);
+  } finally {
+    await audition.dispose();
+  }
+});
+
+test('output-device continue and audio resume preserve the ongoing audition', async () => {
+  const audition = fixture(undefined, undefined, { type: 'deviceChange', action: 'continue' });
+  try {
+    const completed = audition.begin();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    const request = audition.request();
+    assert.ok(request);
+    const requestId = request.requestId;
+    audition.emit({ type: 'start', requestId });
+    audition.emit({ type: 'interruption', action: 'resume' });
+    audition.emit({ type: 'interruption', action: 'duck' });
+    audition.emit({ type: 'interruption', action: 'unduck' });
+    assert.equal(audition.calls.includes('stop'), false);
+    audition.emit({ type: 'complete', requestId, completion: 'audio' });
+    await completed;
+    assert.deepEqual(audition.observations.map(({ state }) => state), ['started', 'completed']);
+  } finally {
+    await audition.dispose();
+  }
+});
+
+test('native pause or output-device stop rejects the audition with the actual reason', async () => {
+  const audition = fixture();
+  try {
+    const paused = assert.rejects(audition.begin(), /系统音频会话已暂停/);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    audition.emit({ type: 'interruption', action: 'pause' });
+    await paused;
+
+    const deviceStopped = assert.rejects(audition.begin(), /音频输出设备已切换/);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    audition.emit({ type: 'deviceChange', action: 'stop' });
+    await deviceStopped;
+    assert.deepEqual(audition.observations.map(({ state, code }) => [state, code]),
+      [['failed', 'audio-session-paused'], ['failed', 'output-device-stopped']]);
   } finally {
     await audition.dispose();
   }

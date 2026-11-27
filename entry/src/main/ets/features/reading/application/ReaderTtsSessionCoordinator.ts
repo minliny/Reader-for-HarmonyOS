@@ -131,10 +131,15 @@ export interface ReaderTtsAuditionInput {
   rate?: number;
   pitch?: number;
   observe?: (receipt: ReaderTtsAuditionReceipt) => void;
+  trace?: (operationId: number, phase: ReaderTtsAuditionPhase) => void;
 }
 type ReaderTtsAuditionState = 'started' | 'completed' | 'failed' | 'unavailable';
 type ReaderTtsAuditionCode = 'system-capability-missing' | 'book-pause' | 'engine-selection' | 'voice-probe' |
-  'audio-session' | 'native-speak' | 'native-error' | 'native-stop' | 'timeout' | 'cleanup';
+  'audio-session' | 'native-speak' | 'native-error' | 'native-stop' | 'timeout' | 'cleanup' |
+  'audio-session-paused' | 'audio-session-stopped' | 'output-device-stopped';
+export type ReaderTtsAuditionPhase = 'admitted' | 'book-paused' | 'engine-selected' | 'voice-probed' |
+  'audio-activated' | 'speak-dispatched' | 'audio-complete-callback' | 'owner-cancelled' | 'timeout' |
+  'audio-session-resumed' | 'output-device-continue';
 
 export interface ReaderTtsAuditionReceipt {
   readonly schemaVersion: 1;
@@ -153,6 +158,7 @@ interface ReaderTtsAuditionSession {
   operationId: number;
   started: boolean;
   observe?: (receipt: ReaderTtsAuditionReceipt) => void;
+  trace?: (operationId: number, phase: ReaderTtsAuditionPhase) => void;
   restoreEngine: string | undefined;
   timer: number;
   resolve: () => void;
@@ -295,12 +301,32 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
           this.voidLogged(this.finishAudition(audition, { state: 'failed', code: 'native-stop' },
             new Error('试听已停止，请重试')), 'audition.stop');
         } else if (event.type === 'complete' && event.completion === 'audio') {
+          this.traceAudition(audition, 'audio-complete-callback');
           this.voidLogged(this.finishAudition(audition, { state: 'completed' }), 'audition.complete');
         }
         return; // Audition callbacks never enter Core's book queue or progress path.
       }
-      if (event.type === 'interruption' || event.type === 'deviceChange') {
-        this.voidLogged(this.stopAudition(), 'audition.interruption');
+      // The audition owns the audio session until it settles. AudioKit's
+      // resume and continue hints preserve it, without resuming the book queue.
+      if (event.type === 'interruption') {
+        if (event.action === 'pause' || event.action === 'stop') {
+          const paused = event.action === 'pause';
+          this.voidLogged(this.finishAudition(audition,
+            { state: 'failed', code: paused ? 'audio-session-paused' : 'audio-session-stopped' },
+            new Error(paused ? '系统音频会话已暂停，请重试试听' : '系统音频会话已停止，请重试试听')), 'audition.interruption');
+        } else if (event.action === 'resume') {
+          this.traceAudition(audition, 'audio-session-resumed');
+        }
+        return;
+      }
+      if (event.type === 'deviceChange') {
+        if (event.action === 'stop') {
+          this.voidLogged(this.finishAudition(audition, { state: 'failed', code: 'output-device-stopped' },
+            new Error('音频输出设备已切换，请重试试听')), 'audition.deviceChange');
+        } else {
+          this.traceAudition(audition, 'output-device-continue');
+        }
+        return;
       }
     }
     if (event.type === 'mediaControl') {
@@ -377,11 +403,14 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       operationId,
       started: false,
       observe: input.observe,
+      trace: input.trace,
       restoreEngine: this.active?.config?.engine ?? this.probedConfig?.engine,
       timer: -1, resolve, reject,
     };
     this.audition = session;
+    this.traceAudition(session, 'admitted');
     session.timer = globalThis.setTimeout((): void => {
+      this.traceAudition(session, 'timeout');
       this.voidLogged(this.finishAudition(session, { state: 'failed', code: 'timeout' },
         new Error('试听超时，请重试')), 'audition.timeout');
     }, 15000) as number;
@@ -392,10 +421,12 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
         await previous;
         await pause;
         if (!current()) return;
+        this.traceAudition(session, 'book-paused');
         stage = 'engine-selection';
         const selected = await this.host.selectEngine(input.engine ?? session.restoreEngine);
         if (!current()) return;
         if (!selected) throw new Error('当前试听引擎不可用');
+        this.traceAudition(session, 'engine-selected');
         stage = 'voice-probe';
         const probe = await this.host.probe(input.language, input.person, true);
         if (!current()) return;
@@ -405,14 +436,17 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
           return;
         }
         if (!probe.available) throw new Error(probe.reason ?? '当前音色不可用');
+        this.traceAudition(session, 'voice-probed');
         stage = 'audio-session';
         this.host.setBackgroundPlaybackEnabled?.(false);
         await this.host.activateAudioSession(false);
         if (!current()) return;
+        this.traceAudition(session, 'audio-activated');
         // Speaking is an owned transport operation. Its completion is delivered by
         // the existing Host listener; a missing acceptance ACK must not hold
         // the config lane and prevent cancellation/engine restoration.
         stage = 'native-speak';
+        this.traceAudition(session, 'speak-dispatched');
         void this.host.speak({ requestId: session.requestId, exactVoice: true,
           text: '这是音色试听。愿你在阅读中，发现更广阔的世界。',
           language: input.language, person: input.person, rate: input.rate ?? 1,
@@ -434,7 +468,17 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
 
   stopAudition(): Promise<void> {
     const session = this.audition;
-    return session === undefined ? Promise.resolve() : this.finishAudition(session);
+    if (session === undefined) return Promise.resolve();
+    this.traceAudition(session, 'owner-cancelled');
+    return this.finishAudition(session);
+  }
+
+  private traceAudition(session: ReaderTtsAuditionSession, phase: ReaderTtsAuditionPhase): void {
+    try {
+      session.trace?.(session.operationId, phase);
+    } catch (_) {
+      // A diagnostic callback cannot veto audio or cleanup.
+    }
   }
 
   private reportAudition(session: ReaderTtsAuditionSession, state: ReaderTtsAuditionState,
