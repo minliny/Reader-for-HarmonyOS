@@ -35,11 +35,19 @@ import { ReaderRecoveryOverlay } from './ReaderRecoveryOverlay';
 import { ReaderReadingFailureSurface, type ReaderSourceSwitchRecoveryTarget } from './ReaderReadingFailureSurface';
 import vibrator from '@ohos.vibrator';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
-import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from '../../../app/BookRequestScheduler';
 import { ReaderReadingImageResources, sameReaderReadingImageResource, sameReadingImageChapter } from '../application/ReaderReadingImageResources';
 import { ReaderPreparedPageSettlement, type ReaderPageTurnOriginReceipt,
   type ReaderPageTurnProgressGateway, type ReaderPageTurnProgressTarget } from '../application/ReaderPreparedPageSettlement';
-import { ReaderProgressProducerHost, type ReaderProgressProducerIntent, type ReaderContinuousProgressDependencies } from '../application/ReaderProgressProducerHost';
+import { ReaderProgressProducerHost, type ReaderProgressProducerIntent } from '../application/ReaderProgressProducerHost';
+import {
+  ReadingExitProgressCoordinator,
+  type ReadingContinuousProgressSample,
+  type ReadingExitFailure,
+  type ReadingExitProgressSample,
+  type ReadingExitSpeech,
+  type ReadingProgressIdentity,
+  type ReadingVisibleProgressSample,
+} from '../application/ReadingExitProgressCoordinator';
 import { TYPE_READER_IMMERSIVE_PROGRESS } from '../../../ui/foundation/ReaderTypography';
 import { SourceSwitchProgress } from '../../source/ui/SourceSwitchProgress';
 import { ReaderSourceSwitchReveal } from '../presentation/ReaderSourceSwitchReveal';
@@ -970,6 +978,7 @@ export struct ReadingExperience {
   private ttsConfigurationHost: ReaderTtsConfigurationHost | undefined = undefined;
   private ttsConfigurationNotice: string | undefined = undefined;
   private readonly progressProducers: ReaderProgressProducerHost = new ReaderProgressProducerHost();
+  private readonly exitProgress: ReadingExitProgressCoordinator = new ReadingExitProgressCoordinator(this.progressProducers);
   private readonly physicalPagination: ReaderPhysicalPaginationOwner<ReadingSurfacePageFragment> =
     new ReaderPhysicalPaginationOwner<ReadingSurfacePageFragment>();
   private readonly chapterWindow: ReadingChapterWindow = new ReadingChapterWindow();
@@ -1081,7 +1090,7 @@ export struct ReadingExperience {
         chapterIndex: prepared.context.chapter.chapterIndex, chapterOffset: prepared.page.startScalar,
         bodyVersion: prepared.context.chapter.bodyVersion, processingVersion: prepared.context.chapter.processingVersion,
       }),
-      origin: (): ReaderPageTurnOriginReceipt | undefined => this.lastCommittedProgress,
+      origin: (): ReaderPageTurnOriginReceipt | undefined => this.exitProgress.committed,
       releaseUnknownInput: (): void => this.releasePageTurnRecoveryInput(),
       finish: (generation: number, presented?: boolean): void => this.finishPreparedPageTurnSettlement(generation, presented),
       reportFailure: (error: Error): void => hilog.error(0x5244, 'Reader', '%{private}s',
@@ -1129,7 +1138,7 @@ export struct ReadingExperience {
     finishDirectGesture: (): void => this.completeDirectPageTurnGesture(),
     pointerHeld: (): boolean => this.activePagePointerId >= 0,
     workInFlight: (): boolean => this.pageTurnSettlementActive || this.preparedSettlement.prepared !== undefined ||
-      this.pageTurnPreparation !== undefined || this.commitInFlight || this.progressProducers.continuousInFlight,
+      this.pageTurnPreparation !== undefined || this.exitProgress.writeActive || this.progressProducers.continuousInFlight,
     openControl: (): void => this.openReaderControl(),
     canTurnPage: (): boolean => this.canTurnPage(),
     continuous: (): boolean => this.readerSettingsSnapshot.navigationMode === 'continuous',
@@ -1274,8 +1283,6 @@ export struct ReadingExperience {
   private currentMeasurementGeneration(): number { return this.physicalPagination.index.measurementGeneration(); }
   /** Covers pagination, resolveLocation, and the initial progress write. */
   private measurementCompleting: boolean = false;
-  private commitInFlight: boolean = false;
-  private progressCommitGeneration: number = 0;
   private readonly measurementRun: ReaderMeasurementRun = new ReaderMeasurementRun({
     set: (delay: number, callback: () => void): number => setTimeout(callback, delay),
     clear: (handle: number): void => clearTimeout(handle),
@@ -1325,7 +1332,7 @@ export struct ReadingExperience {
       beginFailure: (error: Error): void => this.beginControlSelectionFailure(error),
       invalidateUnverifiedDisplay: (): void => {
         this.clearChapterPresentation();
-        this.lastCommittedProgress = undefined;
+        this.exitProgress.clearCommitted();
         this.phase = 'failed';
       },
       showFailure: (ticket: ReaderControlSelectionTicket, error: Error, detail: string): void =>
@@ -1404,8 +1411,6 @@ export struct ReadingExperience {
       (): Promise<ReaderQuoteCardCopy | undefined> => exportReaderQuoteCard(this.getUIContext(), text, title, author, appearance, current),
       current);
   };
-  private exitDelivered: boolean = false;
-  private exitAttemptGeneration: number = 0;
   private readonly readingRecordHost: ReaderReadingRecordHost = new ReaderReadingRecordHost(
     this.readingRecordGateway, (): string => this.bookTitle.trim().length > 0 ? this.bookTitle.trim() : this.bookId,
     (error: Error): void => hilog.error(0x5244, 'Reader', '%{private}s', `Reading duration: ${this.errorMessage(error)}`));
@@ -1430,12 +1435,8 @@ export struct ReadingExperience {
    */
   private controlDirectoryDataRetained: boolean = false;
   private readonly controlDirectoryPublication: ReaderDirectoryDataPublication = new ReaderDirectoryDataPublication();
-  private lastCommittedProgress: ReadingCommit | undefined = undefined;
   /** A retained receipt supplies the page, but only this actual foreground
    * visit can admit one same-position renewal through the existing writer. */
-  private retainedReadingRecencyReceipt: ReadingCommit | undefined = undefined;
-  private retainedReadingRecencyVisible: boolean = false;
-  private retainedReadingRecencySkipped: boolean = false;
   /** Exact durable TTS receipt; a later page or manual commit replaces ownership. */
   private lastTtsCommittedProgress: ReadingCommit | undefined = undefined;
   private lastTtsCommittedChapter: ReadingSessionChapter | undefined = undefined;
@@ -1531,9 +1532,9 @@ export struct ReadingExperience {
     this.applyWindowPolicyForChromeOwner();
     this.exitRequested = false;
     this.bindAppearanceSaveRecovery(lifecycleToken);
-    this.exitDelivered = false;
+    this.exitProgress.resetExitDelivery();
     this.readingRecordHost.retire();
-    this.commitInFlight = false;
+    this.exitProgress.resetWriteActivity();
     this.progressProducers.retireContinuous();
     this.continuousUserInteractionActive = false;
     this.readingImageResources.resetChapter();
@@ -1556,10 +1557,7 @@ export struct ReadingExperience {
     this.controlCatalogRouting.invalidate();
     this.contentMetrics = undefined;
     this.contentMetricsLoading = false;
-    this.lastCommittedProgress = undefined;
-    this.retainedReadingRecencyReceipt = undefined;
-    this.retainedReadingRecencyVisible = false;
-    this.retainedReadingRecencySkipped = false;
+    this.exitProgress.resetProgress();
     this.chapterSelection.reset();
     this.clearChapterPresentation();
     this.ttsPreparation.reset();
@@ -1722,7 +1720,7 @@ export struct ReadingExperience {
     this.traceInitialReadingPhase?.('input-ready', lifecycleToken);
     this.admitCommittedProgress(snapshot.progress);
     if (!isCurrent()) return true;
-    this.retainedReadingRecencyReceipt = this.lastCommittedProgress;
+    this.exitProgress.retainCommittedVisit();
     this.admitRetainedReadingRecency();
     ReaderRuntimeOwner.current().readingEntryPreparations().setPaused(true);
     this.configureReaderScreenAwakeLease(this.readerSettingsSnapshot);
@@ -1741,27 +1739,27 @@ export struct ReadingExperience {
   }
 
   private admitRetainedReadingRecency(): void {
-    const receipt = this.retainedReadingRecencyReceipt;
+    const receipt = this.exitProgress.retainedVisit;
     const page = this.visiblePage;
     const chapter = this.chapter;
-    if (receipt === undefined || this.retainedReadingRecencyVisible || !this.mounted ||
+    if (receipt === undefined || this.exitProgress.retainedVisitVisible || !this.mounted ||
       !this.appForeground || !this.windowChromeActive || this.exitRequested ||
-      this.isReaderIdentityCurrent?.() === false || receipt !== this.lastCommittedProgress ||
+      this.isReaderIdentityCurrent?.() === false || receipt !== this.exitProgress.committed ||
       page === undefined || chapter === undefined || receipt.sourceId !== this.sourceId ||
       receipt.bookId !== this.bookId || receipt.chapterIndex !== chapter.chapterIndex ||
       receipt.chapterOffset !== page.startScalar ||
       !this.isVisiblePageCurrent(page, chapter, this.visiblePageSelectionToken, this.lifecycleToken)) return;
-    this.retainedReadingRecencyVisible = true;
+    this.exitProgress.presentRetainedVisit();
   }
 
   private retainConfirmedEntryPresentation(): void {
     const owner = ReaderRuntimeOwner.current();
     const handoff = readingEntryHandoff(owner);
     handoff.clear();
-    if (!owner.optionalReadingEntryMemoryEnabled() || this.resumeOnlyChapterIndex !== undefined || this.retainedReadingRecencySkipped) return;
+    if (!owner.optionalReadingEntryMemoryEnabled() || this.resumeOnlyChapterIndex !== undefined || this.exitProgress.retainedVisitSkipped) return;
     const page = this.visiblePage;
     const chapter = this.chapter;
-    const progress = this.lastCommittedProgress;
+    const progress = this.exitProgress.committed;
     if (this.phase !== 'ready' || page === undefined || chapter === undefined ||
       progress === undefined || this.sessionGateway === undefined || !this.hasMeasuredViewport() ||
       this.readerSettingsSnapshot.navigationMode !== 'paged' || this.appearanceSnapshot.customFont !== undefined ||
@@ -1818,8 +1816,7 @@ export struct ReadingExperience {
     this.controlMinimum.clearCandidates();
     this.controlMinimumReady = false;
     this.transientFeedback.reset();
-    this.retainedReadingRecencyReceipt = undefined;
-    this.retainedReadingRecencyVisible = false;
+    this.exitProgress.retireRetainedVisit();
     this.cancelSourceSwitchCompletion();
     this.progressProducers.retireContinuous();
     this.staticSessionCapsuleOrigin = undefined;
@@ -2517,7 +2514,7 @@ export struct ReadingExperience {
     kind: 'general' | 'progress' | 'presentation' = 'general'): void {
     this.readerRecoveryKind = kind;
     this.readerRecoveryIdentity = this.readerRecoveryOwnerKey();
-    this.readerRecoveryProgressRevision = this.lastCommittedProgress?.progressRevision;
+    this.readerRecoveryProgressRevision = this.exitProgress.committed?.progressRevision;
     this.readerRecoveryAction = action;
     this.readerRecoveryActionLabel = actionLabel;
     this.readerRecoveryView = { message, visible: message.length > 0, canRetry: action !== undefined,
@@ -3428,7 +3425,7 @@ export struct ReadingExperience {
       this.controlVisible() || this.controlObscured || this.interactionBlocked ||
       this.activePagePointerId >= 0 || this.pageTurn.deferredPointerReserved ||
       this.pageTurnSettlementActive || this.preparedSettlement.prepared !== undefined ||
-      this.pageTurnPreparation !== undefined || this.commitInFlight || this.progressProducers.continuousInFlight ||
+      this.pageTurnPreparation !== undefined || this.exitProgress.writeActive || this.progressProducers.continuousInFlight ||
       this.pageTurn.hasRapidWork()) return;
     if (this.ttsPageFollow.positioning !== undefined) return;
     if (target.chapterIndex !== this.currentChapterIndex()) {
@@ -4499,7 +4496,7 @@ export struct ReadingExperience {
     // A newly admitted chapter body owns a fresh location revision. Even when
     // its visible scalar offset matches the prior body, the next ready-page
     // commit must cross Core once before exit deduplication is allowed again.
-    this.lastCommittedProgress = undefined;
+    this.exitProgress.clearCommitted();
     this.chapterLayoutMap = chapterMap;
     this.materializedContentVersion = chapter.contentVersion;
     const target = resolveReadingChapterOpeningAnchor(chapter, chapterMap,
@@ -5576,267 +5573,165 @@ export struct ReadingExperience {
   }
 
   private beginExit(): void {
-    const lifecycleToken = this.lifecycleToken;
-    if (!this.isSessionActive(lifecycleToken) || this.exitRequested) {
-      return;
-    }
-    this.pageTurn.cancelRapid();
-    this.pageTurn.releaseDeferredPointer();
-    this.autoPageCoordinator.cancelPendingTurn();
-    if (this.pageTurnSettlementActive && this.preparedSettlement.commitStarted && !this.preparedSettlement.commitFinished) {
-      this.activeGateway().handoffPendingProgress();
-      this.pageTurn.deferExit(false);
-      this.releasePageTurnRecoveryInput();
-    }
-    const inputPhase = this.pageTurnInputPhase();
-    if (inputPhase === 'tracking' || inputPhase === 'dragging') {
-      // Back wins over an uncommitted page turn, but it must first return the
-      // visible sheet to rest. The deferred exit resumes from the rollback
-      // completion, so the visible page cannot disappear mid-frame.
-      this.pageTurn.deferExit(true);
-      const cancelled = cancelReaderPagePan(this.pageTurn.gesture);
-      if (cancelled !== this.pageTurn.gesture) {
+    const lifecycle = this.lifecycleToken;
+    this.exitProgress.beginExit({
+      isActive: (): boolean => this.isSessionActive(lifecycle) && !this.exitRequested,
+      isMounted: (): boolean => this.isMountedToken(lifecycle),
+      cancelRapidInput: (): void => {
+        this.pageTurn.cancelRapid();
+        this.pageTurn.releaseDeferredPointer();
+        this.autoPageCoordinator.cancelPendingTurn();
+      },
+      unknownTurnWrite: (): boolean => this.pageTurnSettlementActive &&
+        this.preparedSettlement.commitStarted && !this.preparedSettlement.commitFinished,
+      handoffTurnWrite: (): void => this.activeGateway().handoffPendingProgress(),
+      deferExit: (pending: boolean): void => this.pageTurn.deferExit(pending),
+      releaseTurnRecoveryInput: (): void => this.releasePageTurnRecoveryInput(),
+      inputPhase: (): ReaderPageTurnInputPhase => this.pageTurnInputPhase(),
+      cancelTracking: (): boolean => {
+        const cancelled = cancelReaderPagePan(this.pageTurn.gesture);
+        if (cancelled === this.pageTurn.gesture) return false;
         this.onReaderPageGestureStateChanged(cancelled);
         if (cancelled.owner === 'bookmark') this.onReaderBookmarkGestureReleased(false);
-        // The no-animation actor can finish the rollback synchronously. In
-        // that case there is no completion callback to resume this exit.
-        if (!this.isSessionActive(lifecycleToken) || this.pageTurnInputPhase() !== 'idle') return;
-      }
-      this.pageTurn.deferExit(false);
-    }
-    if (this.pageTurnInputPhase() === 'settling') {
-      this.pageTurn.deferExit(true);
-      if (this.rollbackUncommittedBookTurnSettlement()) return;
-    }
-    if (this.pageTurnInputPhase() !== 'idle') {
-      this.pageTurn.deferExit(true);
-      return;
-    }
-    this.exitRequested = true;
-    this.observeReadingPrefetch?.();
-    this.exitAttemptGeneration += 1;
-    this.stopReaderTtsAudition();
-    this.captureReadingRecordElapsed(false);
-    this.staticSessionCapsuleOrigin = undefined;
-    this.finishSessionCapsuleMorph();
-    this.clearReadingRecordTimer();
-    this.autoPageCoordinator.dispose();
-    this.clearAutoPageTimer();
-    this.clearAutoPageSessionTimer();
-    this.entryHydration.cancelReadyDeadline();
-    void this.finishExit(lifecycleToken);
+        return true;
+      },
+      rollbackUncommittedTurn: (): boolean => this.rollbackUncommittedBookTurnSettlement(),
+      markRequested: (): void => { this.exitRequested = true; },
+      observePrefetch: (): void => this.observeReadingPrefetch?.(),
+      retireInputEffects: (): void => {
+        this.stopReaderTtsAudition();
+        this.captureReadingRecordElapsed(false);
+        this.staticSessionCapsuleOrigin = undefined;
+        this.finishSessionCapsuleMorph();
+        this.clearReadingRecordTimer();
+        this.autoPageCoordinator.dispose();
+        this.clearAutoPageTimer();
+        this.clearAutoPageSessionTimer();
+        this.entryHydration.cancelReadyDeadline();
+      },
+      handoffDuration: (): void => this.readingRecordHost.handoff(),
+      speech: (): ReadingExitSpeech | undefined => {
+        const speech = this.ttsTransport.coordinator;
+        return speech === undefined ? undefined : {
+          capture: (): ReaderTtsProgressCommit | undefined => speech.captureCompletedProgress(),
+          stop: (): Promise<void> => speech.stop('lifecycle'),
+        };
+      },
+      handoffProgress: (spoken: ReaderTtsProgressCommit | undefined): void => this.handoffExitProgress(lifecycle, spoken),
+      retainEntry: (): void => this.retainConfirmedEntryPresentation(),
+      exit: (): void => this.onExit(),
+      reportFailure: (phase: ReadingExitFailure, error: Error): void => {
+        try {
+          if (phase === 'retention') hilog.warn(0x5244, 'Reader', '%{private}s', `Reading entry retention skipped: ${this.errorMessage(error)}`);
+          else {
+            const label = phase === 'speech' ? 'Reading TTS stop' : `Reading ${phase} handoff`;
+            hilog.error(0x5244, 'Reader', '%{private}s', `${label}: ${this.errorMessage(error)}`);
+          }
+        } catch (_) {}
+      },
+    });
   }
 
-  private async finishExit(lifecycleToken: number): Promise<void> {
-    if (!this.isMountedToken(lifecycleToken) || this.exitDelivered) return;
-    const exitAttemptGeneration = this.exitAttemptGeneration;
-    // Runtime owns every accepted tail before the page can retire. Disk and
-    // Native receipts have no place in the navigation dependency chain.
-    try { this.readingRecordHost.handoff(); }
-    catch (error) { try { hilog.error(0x5244, 'Reader', '%{private}s', `Reading duration handoff: ${this.errorMessage(error as Error)}`); } catch (_) {} }
-    const coordinator = this.ttsTransport.coordinator;
-    const spoken = coordinator?.captureCompletedProgress();
-    try { this.handoffExitProgress(lifecycleToken, spoken); }
-    catch (error) { try { hilog.error(0x5244, 'Reader', '%{private}s', `Reading progress handoff: ${this.errorMessage(error as Error)}`); } catch (_) {} }
-    if (coordinator !== undefined) {
-      // stop() invalidates the transport synchronously; its ordered storage
-      // tail remains independent of the mounted page and its route.
-      void coordinator.stop('lifecycle').catch((error: Error): void => {
-        try { hilog.error(0x5244, 'Reader', '%{private}s', `Reading TTS stop: ${this.errorMessage(error)}`); } catch (_) {}
-      });
-    }
-    if (!this.isMountedToken(lifecycleToken) || exitAttemptGeneration !== this.exitAttemptGeneration || this.exitDelivered) return;
-    this.exitDelivered = true;
-    // Optional in-memory retention must never become another exit condition.
-    try {
-      this.retainConfirmedEntryPresentation();
-    } catch (error) {
-      try { hilog.warn(0x5244, 'Reader', '%{private}s', `Reading entry retention skipped: ${this.errorMessage(error as Error)}`); } catch (_) {}
-    }
-    this.onExit();
+  private readingProgressIdentity(): ReadingProgressIdentity {
+    return { sourceId: this.sourceId, bookId: this.bookId };
   }
 
-  private handoffExitProgress(lifecycleToken: number, spoken?: ReaderTtsProgressCommit): void {
-    const gateway = this.activeGateway();
-    gateway.handoffPendingProgress();
-    const chapter = this.chapter;
-    if (!this.isMountedToken(lifecycleToken) || this.phase !== 'ready' || chapter === undefined) return;
-    const continuous = this.readerSettingsSnapshot.navigationMode === 'continuous';
-    if (continuous) this.continuousAnchorSampler?.();
-    const spokenCurrent = spoken !== undefined && spoken.chapter.sourceId === this.sourceId &&
-      spoken.chapter.bookId === this.bookId && spoken.chapter.chapterIndex === chapter.chapterIndex &&
-      spoken.chapter.bodyVersion === chapter.bodyVersion && spoken.chapter.processingVersion === chapter.processingVersion;
-    const ttsOwnsPosition = this.lastTtsCommittedProgress !== undefined &&
-      this.lastTtsCommittedProgress === this.lastCommittedProgress && this.lastTtsCommittedChapter === chapter &&
-      this.lastTtsCommittedSelectionToken === this.chapterSelectionToken;
-    if (!spokenCurrent && ttsOwnsPosition) return;
-    const scalar = spokenCurrent ? spoken.charEnd : continuous ? this.continuousVisibleScalar : this.visiblePage?.startScalar;
-    if (scalar === undefined || (!continuous && !spokenCurrent && (this.visiblePage === undefined ||
-      !this.isVisiblePageCurrent(this.visiblePage, chapter, this.visiblePageSelectionToken, lifecycleToken)))) return;
-    const count = this.requireChapterLayoutMap().scalarCount();
-    const offset = Math.max(0, Math.min(count, scalar));
-    const committed = this.lastCommittedProgress;
-    const samePosition = committed?.sourceId === this.sourceId && committed.bookId === this.bookId &&
-      committed.chapterIndex === chapter.chapterIndex && committed.chapterOffset === offset;
-    const renewal = samePosition && this.retainedReadingRecencyVisible && this.retainedReadingRecencyReceipt === committed;
-    if (samePosition && !renewal) return;
-    const anchor = new CoreReadingAnchor(chapter.chapterIndex, offset,
-      renewal && committed !== undefined ? committed.chapterProgress : count === 0 ? 0 : offset / count,
-      chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof);
-    if (renewal && committed !== undefined) anchor.retainedProgressReceipt = {
-      progressRevision: committed.progressRevision, updatedAt: committed.updatedAt, locationRevision: committed.locationRevision };
-    gateway.handoffPresentedProgress(this.bookId, chapter.chapterTitle, anchor, this.coreLayout(),
-      committed?.progressRevision === undefined || committed.sourceId !== this.sourceId || committed.bookId !== this.bookId ? undefined :
-        { kind: 'restored', progress: committed, progressRevision: committed.progressRevision });
-    if (renewal) {
-      this.retainedReadingRecencyVisible = false;
-      this.retainedReadingRecencyReceipt = undefined;
-    }
+  private handoffExitProgress(lifecycle: number, spoken?: ReaderTtsProgressCommit): void {
+    this.exitProgress.handoff(this.activeGateway(), spoken, (): ReadingExitProgressSample | undefined => {
+      const chapter = this.chapter;
+      if (!this.isMountedToken(lifecycle) || this.phase !== 'ready' || chapter === undefined) return undefined;
+      const continuous = this.readerSettingsSnapshot.navigationMode === 'continuous';
+      if (continuous) this.continuousAnchorSampler?.();
+      return {
+        identity: this.readingProgressIdentity(), chapter, continuous,
+        continuousScalar: (): number => this.continuousVisibleScalar,
+        visibleScalar: (): number | undefined => this.visiblePage?.startScalar,
+        visibleCurrent: (): boolean => this.visiblePage !== undefined &&
+          this.isVisiblePageCurrent(this.visiblePage, chapter, this.visiblePageSelectionToken, lifecycle),
+        ttsOwnsPosition: (committed: ReadingCommit | undefined): boolean => this.lastTtsCommittedProgress !== undefined &&
+          this.lastTtsCommittedProgress === committed && this.lastTtsCommittedChapter === chapter &&
+          this.lastTtsCommittedSelectionToken === this.chapterSelectionToken,
+        scalarCount: (): number => this.requireChapterLayoutMap().scalarCount(),
+        layout: (): LocalReadingLayout => this.coreLayout(),
+      };
+    });
   }
 
-  private async commitVisiblePage(lifecycleToken: number): Promise<void> {
-    if (!this.isMountedToken(lifecycleToken) || this.phase !== 'ready' || this.commitInFlight ||
-      this.chapter === undefined || this.visiblePage === undefined) {
-      return;
-    }
-    const page = this.visiblePage;
-    const chapter = this.chapter;
-    const selectionToken = this.visiblePageSelectionToken;
-    if (!this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken)) {
-      return;
-    }
-    const committed = this.lastCommittedProgress;
-    const sameCommittedPosition = committed?.sourceId === this.sourceId && committed.bookId === this.bookId &&
-      committed.chapterIndex === chapter.chapterIndex && committed.chapterOffset === page.startScalar;
-    const renewRetainedReading = sameCommittedPosition && this.retainedReadingRecencyVisible &&
-      this.retainedReadingRecencyReceipt === committed;
-    if (sameCommittedPosition && !renewRetainedReading) return;
-    const commitGeneration = (this.progressCommitGeneration ?? 0) + 1;
-    this.progressCommitGeneration = commitGeneration;
-    this.commitInFlight = true;
-    let progressRequested = false;
-    try {
-      const scalarCount = this.requireChapterLayoutMap().scalarCount();
-      const current = (): boolean => this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken) &&
-        (!renewRetainedReading || (this.appForeground && this.windowChromeActive && this.isReaderIdentityCurrent?.() !== false &&
-          this.retainedReadingRecencyReceipt === committed && this.lastCommittedProgress === committed));
-      const anchor = new CoreReadingAnchor(chapter.chapterIndex, page.startScalar,
-        renewRetainedReading && committed !== undefined ? committed.chapterProgress : scalarCount === 0 ? 0 : page.startScalar / scalarCount,
-        chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof);
-      if (renewRetainedReading && committed !== undefined) {
-        anchor.retainedProgressReceipt = { progressRevision: committed.progressRevision,
-          updatedAt: committed.updatedAt, locationRevision: committed.locationRevision };
-        anchor.deviceId = await this.readingRecordGateway.currentDeviceId();
-      }
-      const intent = this.progressProducerIntent(chapter, anchor, this.coreLayout(),
-        current, current, (stored: LocalReadingProgress): void => this.admitCommittedProgress(stored));
-      progressRequested = true;
-      await this.progressProducers.commitVisible(intent);
-    } catch (error) {
-      if (renewRetainedReading && (!progressRequested || (error instanceof ReaderCoreNotDispatchedError &&
-        error.message === 'READING_RETAINED_RECENCY_NOT_DISPATCHED'))) {
-        if (this.retainedReadingRecencyReceipt === committed) {
-          this.retainedReadingRecencyReceipt = undefined;
-          this.retainedReadingRecencyVisible = false;
-          this.retainedReadingRecencySkipped = true;
-        }
-        return;
-      }
-      // The visible static reading page remains valid. Persistence failures are
-      // logged rather than replaced by an unapproved visual state.
-      hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience progress commit failed: ${this.errorMessage(error as Error)}`);
-      throw new Error(this.errorMessage(error as Error));
-    } finally {
-      if (this.isMountedToken(lifecycleToken) && this.progressCommitGeneration === commitGeneration) {
-        this.commitInFlight = false;
-      }
-    }
+  private commitVisiblePage(lifecycle: number): Promise<void> {
+    return this.exitProgress.commitVisible({
+      ready: (): boolean => this.isMountedToken(lifecycle) && this.phase === 'ready',
+      mounted: (): boolean => this.isMountedToken(lifecycle),
+      identity: (): ReadingProgressIdentity => this.readingProgressIdentity(),
+      capture: (): ReadingVisibleProgressSample | undefined => {
+        const chapter = this.chapter;
+        const page = this.visiblePage;
+        const selection = this.visiblePageSelectionToken;
+        if (chapter === undefined || page === undefined) return undefined;
+        return {
+          chapter, pageStart: page.startScalar, scalarCount: (): number => this.requireChapterLayoutMap().scalarCount(),
+          isCurrent: (): boolean => this.isVisiblePageCurrent(page, chapter, selection, lifecycle),
+          mayRenewVisit: (): boolean => this.appForeground && this.windowChromeActive && this.isReaderIdentityCurrent?.() !== false,
+          deviceId: (): Promise<string> => this.readingRecordGateway.currentDeviceId(),
+        };
+      },
+      gateway: (): ReadingSessionFlowGateway => this.activeGateway(),
+      layout: (): LocalReadingLayout => this.coreLayout(),
+      publish: (stored: LocalReadingProgress): void => this.admitCommittedProgress(stored),
+      reportFailure: (error: Error): string => {
+        // A persistence failure leaves the already-visible static page valid.
+        hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience progress commit failed: ${this.errorMessage(error)}`);
+        return this.errorMessage(error);
+      },
+    });
   }
 
-  /**
-   * Persists the first visible continuous fragment as the same canonical
-   * Unicode-scalar anchor used by paged reading. Scroll notifications can
-   * arrive while Core is writing, so one trailing commit coalesces every
-   * intermediate offset without allowing an older position to win.
-   */
-  private async commitContinuousProgress(lifecycleToken: number): Promise<void> {
-    await this.progressProducers.commitContinuous(this.continuousProgressDependencies(lifecycleToken));
-  }
-
-  private continuousProgressDependencies(lifecycleToken: number): ReaderContinuousProgressDependencies {
-    let capturedIntent: ReaderProgressProducerIntent | undefined = undefined;
-    let capturedChapter: ReadingSessionChapter | undefined = undefined;
-    let capturedRevision = -1;
-    const active = (): boolean => this.isMountedToken(lifecycleToken) && this.phase === 'ready' &&
+  private commitContinuousProgress(lifecycle: number): Promise<void> {
+    const active = (): boolean => this.isMountedToken(lifecycle) && this.phase === 'ready' &&
       this.readerSettingsSnapshot.navigationMode === 'continuous' && this.chapter !== undefined &&
       this.chapterLayoutMap !== undefined && this.continuousProjection.fragments.length > 0;
-    return {
+    return this.exitProgress.commitContinuous({
       active,
-      capture: (): ReaderProgressProducerIntent | undefined => {
-        if (!active() || this.chapter === undefined || this.chapterLayoutMap === undefined) return undefined;
+      identity: (): ReadingProgressIdentity => this.readingProgressIdentity(),
+      capture: (): ReadingContinuousProgressSample | undefined => {
         const chapter = this.chapter;
+        const map = this.chapterLayoutMap;
+        if (chapter === undefined || map === undefined) return undefined;
         const selection = this.chapterSelectionToken;
-        const scalarCount = this.chapterLayoutMap.scalarCount();
-        const scalar = Math.max(0, Math.min(scalarCount, this.continuousVisibleScalar));
-        const revision = this.continuousProgressRevision;
-        const isOwner = (): boolean => active() && this.chapter === chapter &&
-          this.chapterSelectionToken === selection && this.materializedChapterSelectionToken === selection;
-        const isCurrent = (): boolean => isOwner() && this.continuousProgressRevision === revision &&
-          this.continuousVisibleScalar === scalar;
-        capturedChapter = chapter;
-        capturedRevision = revision;
-        capturedIntent = this.progressProducerIntent(chapter,
-          new CoreReadingAnchor(chapter.chapterIndex, scalar, scalarCount === 0 ? 0 : scalar / scalarCount,
-            chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof),
-          this.coreLayout(), isOwner, isCurrent, (stored: LocalReadingProgress): void => this.admitCommittedProgress(stored));
-        return capturedIntent;
+        return {
+          chapter, scalarCount: map.scalarCount(), scalar: this.continuousVisibleScalar, revision: this.continuousProgressRevision,
+          ownsSample: (): boolean => active() && this.chapter === chapter &&
+            this.chapterSelectionToken === selection && this.materializedChapterSelectionToken === selection,
+        };
       },
-      newerSample: (intent: ReaderProgressProducerIntent): boolean => capturedIntent === intent &&
-        this.chapter === capturedChapter && this.continuousProgressRevision !== capturedRevision,
+      latestSample: (): ReadingSessionChapter | undefined => this.chapter,
+      revision: (): number => this.continuousProgressRevision,
+      visibleScalar: (): number => this.continuousVisibleScalar,
+      gateway: (): ReadingSessionFlowGateway => this.activeGateway(),
+      layout: (): LocalReadingLayout => this.coreLayout(),
+      publish: (stored: LocalReadingProgress): void => this.admitCommittedProgress(stored),
       completed: (): void => this.onAutoPagePageCommitted(),
       settled: (): void => { this.drainRapidPageTurn(); },
       failed: (error: Error): void => hilog.error(0x5244, 'Reader', '%{private}s',
         `ReadingExperience continuous progress commit failed: ${this.errorMessage(error)}`),
-    };
+    });
   }
 
   private progressProducerIntent(chapter: ReadingSessionChapter, anchor: LocalReadingAnchor,
     layout: LocalReadingLayout, isOwner: () => boolean, isCurrent: () => boolean,
     publish: (stored: LocalReadingProgress) => void): ReaderProgressProducerIntent {
-    const sourceId = this.sourceId;
-    const bookId = this.bookId;
-    const owner = (): boolean => this.sourceId === sourceId && this.bookId === bookId && isOwner();
-    const current = (): boolean => owner() && isCurrent();
-    return { sourceId, bookId, title: chapter.chapterTitle, anchor, layout, gateway: this.activeGateway(),
-      isOwner: owner, isCurrent: current, committed: (): ReadingCommit | undefined => this.lastCommittedProgress,
-      publish: (stored: LocalReadingProgress): void => { if (owner()) publish(stored); } };
+    return this.exitProgress.intent(chapter, anchor, layout, (): ReadingProgressIdentity => this.readingProgressIdentity(),
+      (): ReadingSessionFlowGateway => this.activeGateway(), isOwner, isCurrent, publish);
   }
 
   private admitCommittedProgress(stored: ReadingSessionCommittedProgress): void {
-    const commit = new ReadingCommit(
-      this.sourceId,
-      this.bookId,
-      stored.chapterIndex,
-      stored.chapterOffset,
-      stored.chapterProgress,
-      stored.locationRevision,
-      stored.updatedAt,
-      stored.sourceSwitchTransactionId,
-      stored.bodyVersion,
-      stored.processingVersion,
-      stored.progressRevision,
-    );
-    this.lastCommittedProgress = commit;
-    this.settleReaderRecovery('progress', stored.progressRevision);
-    // An acknowledged page/manual/TTS write already renewed this visit.
-    this.retainedReadingRecencyReceipt = undefined;
-    this.retainedReadingRecencyVisible = false;
-    this.retainedReadingRecencySkipped = false;
-    try {
-      this.onReadingCommitted(commit);
-    } catch (error) {
-      hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience committed-progress observer failed: ${this.errorMessage(error as Error)}`);
-    }
+    this.exitProgress.admitCommitted(this.readingProgressIdentity(), stored,
+      (): void => this.settleReaderRecovery('progress', stored.progressRevision),
+      (commit: ReadingCommit): void => {
+        try { this.onReadingCommitted(commit); }
+        catch (error) {
+          hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience committed-progress observer failed: ${this.errorMessage(error as Error)}`);
+        }
+      });
   }
 
   private coreLayout(): CoreReadingLayout {
@@ -7261,7 +7156,7 @@ export struct ReadingExperience {
       isCurrent, isCurrent, (stored: LocalReadingProgress): void => {
         this.admitCommittedProgress(stored);
         if (!isCurrent()) return;
-        this.lastTtsCommittedProgress = this.lastCommittedProgress;
+        this.lastTtsCommittedProgress = this.exitProgress.committed;
         this.lastTtsCommittedChapter = chapter;
         this.lastTtsCommittedSelectionToken = selectionToken;
       });
@@ -7420,8 +7315,8 @@ export struct ReadingExperience {
       this.windowChromeActive && !this.windowChromeOverlayActive && !this.interactionBlocked && !this.controlObscured &&
       !this.readingPrefetchScreenLocked && this.phase === 'ready';
     this.onReadingPrefetchActivity({ chapterIndex: chapter.chapterIndex,
-      chapterOffset: this.lastCommittedProgress?.chapterIndex === chapter.chapterIndex ?
-        this.lastCommittedProgress.chapterOffset : this.visiblePage?.startScalar ?? 0,
+      chapterOffset: this.exitProgress.committed?.chapterIndex === chapter.chapterIndex ?
+        this.exitProgress.committed.chapterOffset : this.visiblePage?.startScalar ?? 0,
       active, playing: this.ttsState.status === 'playing' || this.automaticReadingState().status === 'running',
       interacted, yieldToReading });
   }
@@ -9563,7 +9458,7 @@ export struct ReadingExperience {
       (continuous ? this.continuousVisibleScalar : this.visiblePage?.startScalar) === offset;
     if (continuous) await this.commitContinuousProgress(lifecycleToken);
     else await this.commitVisiblePage(lifecycleToken);
-    const confirmed = this.lastCommittedProgress;
+    const confirmed = this.exitProgress.committed;
     if (!isCurrent() || confirmed?.sourceId !== sourceId || confirmed.bookId !== bookId ||
       confirmed.chapterIndex !== chapter.chapterIndex || confirmed.chapterOffset !== offset) {
       throw new Error('READING_CONTENT_POSITION_NOT_CONFIRMED');
@@ -9834,7 +9729,7 @@ export struct ReadingExperience {
 
   private captureVisibleControlSelectionOrigin(): ReaderControlSelectionOrigin | undefined {
     const page = this.visiblePage;
-    const committed = this.lastCommittedProgress;
+    const committed = this.exitProgress.committed;
     const continuous = this.readerSettingsSnapshot.navigationMode === 'continuous';
     const visibleScalar = continuous ? this.continuousVisibleScalar : (page?.startScalar ?? 0);
     if (this.hasCurrentMaterializedChapter() && page !== undefined && committed !== undefined &&
@@ -11448,14 +11343,7 @@ export struct ReadingExperience {
   }
 
   private acquirePreparedPageWrite(lifecycleToken: number): () => void {
-    const commitGeneration = (this.progressCommitGeneration ?? 0) + 1;
-    this.progressCommitGeneration = commitGeneration;
-    this.commitInFlight = true;
-    return (): void => {
-      if (this.isMountedToken(lifecycleToken) && this.progressCommitGeneration === commitGeneration) {
-        this.commitInFlight = false;
-      }
-    };
+    return this.exitProgress.acquireWrite((): boolean => this.isMountedToken(lifecycleToken));
   }
 
   private writePreparedPageTurn(prepared: PreparedReaderPageTurn, current: () => boolean): Promise<LocalReadingProgress> {
@@ -11589,8 +11477,7 @@ export struct ReadingExperience {
 
   private releasePageTurnRecoveryInput(): void {
     this.bookTurnRuntimeFailed = true;
-    this.progressCommitGeneration = (this.progressCommitGeneration ?? 0) + 1;
-    this.commitInFlight = false;
+    this.exitProgress.invalidateWrite();
     // Invalidates every old completion before releasing the pointer. This
     // keeps the current materialized page; it never promotes the candidate
     // whose persistence outcome is still unknown.
@@ -11782,7 +11669,7 @@ export struct ReadingExperience {
     if (origin !== 'manual' && (!this.mounted || !this.appForeground || this.exitRequested ||
       this.controlVisible() || this.controlObscured || this.interactionBlocked || this.pageTurn.deferredPointerReserved ||
       this.pageTurnSettlementActive || this.preparedSettlement.prepared !== undefined ||
-      this.commitInFlight || this.progressProducers.continuousInFlight || this.pageTurn.hasRapidWork())) return { kind: 'busy' };
+      this.exitProgress.writeActive || this.progressProducers.continuousInFlight || this.pageTurn.hasRapidWork())) return { kind: 'busy' };
     if (origin === 'ttsFollow' && (ttsOwner === undefined || !this.isTtsFollowLeaseCurrent(ttsOwner))) return { kind: 'blocked', reason: 'lifecycle' };
     if (this.activePagePointerId >= 0) return { kind: 'busy' };
     this.observeReadingPrefetch?.(origin === 'manual', true);
@@ -12093,7 +11980,7 @@ export struct ReadingExperience {
       !this.controlVisible() && this.phase === 'ready' &&
       !this.measurementCompleting && this.pageTurnPreparation === undefined &&
       this.preparedSettlement.prepared === undefined &&
-      !this.commitInFlight && this.visiblePage !== undefined && this.chapter !== undefined &&
+      !this.exitProgress.writeActive && this.visiblePage !== undefined && this.chapter !== undefined &&
       this.visiblePageSelectionToken === this.chapterSelectionToken &&
       this.materializedChapterSelectionToken === this.chapterSelectionToken;
   }
