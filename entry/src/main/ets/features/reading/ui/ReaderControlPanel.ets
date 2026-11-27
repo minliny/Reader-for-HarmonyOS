@@ -1,50 +1,40 @@
-import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
+import { readerAnimatePress, readerPressPointer } from '../../../ui/foundation/ReaderPressMotion';
 import type { ReaderControlTemporaryInputKind } from './ReaderControlSessionState';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { readerKeyboardViewport } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
-import { ReaderInsetsVp, ReaderRectVp, readerVisualSafeBottom, readerVisualSafeRight, readerVisualSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
-import { readerOverlayListHeight, readerOverlayPanel, readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
-import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { ReaderRectVp, readerVisualSafeBottom, readerVisualSafeRight, readerVisualSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
 import { READER_FULL_PANEL_TOP, readerControlIslandHeight, type ReaderControlContentBudget } from './ReaderLayoutGeometry';
 import { measureReaderControlMinimum, readerControlModuleFactsGeometryKey, readerControlModuleFactsDisplayEqual,
   type ReaderControlHomeFormProfile, type ReaderControlMeasuredProfile,
   type ReaderControlMeasuredProfileReader, type ReaderControlModuleFacts, type ReaderControlPreparedModuleProfile,
   type ReaderControlPresentationReceipt } from './ReaderControlMinimumMeasurement';
-import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision, ReaderSurfaceMaterialRole } from '../../../app/HarmonyCapabilityPolicy';
-import { applyReaderPopupMaterial, defaultNavigationPreferences, ReaderModalScrimModifier,
-  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences, ReaderModalScrimModifier, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderControlChapterProgressCard } from './ReaderControlChapterProgressCard';
 import { ReaderControlModuleNavigation, type ReaderControlNavigationModule } from './ReaderControlModuleNavigation';
-import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
-import { ReaderReadingTopBar, readerReadingTopBarHeight } from '../../../ui/chrome/ReaderReadingTopBar';
-import { TYPE_READER_CONTROL_BOOK_TITLE, TYPE_READER_CONTROL_CHAPTER_SOURCE, TYPE_READER_CONTROL_COLLAPSE_INTER, TYPE_READER_CONTROL_COLLAPSE_UI, TYPE_READER_CONTROL_COLLAPSE_TTS, TYPE_READER_CONTROL_HEADER_INTER, TYPE_READER_CONTROL_HEADER_UI, type ReaderTextStyle } from '../../../ui/foundation/ReaderTypography';
-import { TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL, TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL, TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL, TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY } from '../../../ui/foundation/ReaderTypography';
-import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
+import { readerReadingTopBarHeight } from '../../../ui/chrome/ReaderReadingTopBar';
+import { TYPE_READER_CONTROL_BOOK_TITLE, TYPE_READER_CONTROL_CHAPTER_SOURCE, TYPE_READER_CONTROL_COLLAPSE_INTER, TYPE_READER_CONTROL_COLLAPSE_UI, TYPE_READER_CONTROL_HEADER_INTER, TYPE_READER_CONTROL_HEADER_UI } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL, TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL, TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL } from '../../../ui/foundation/ReaderTypography';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerTtsWaveformSnapshot } from './ReaderTtsWaveform';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 import { ReaderSessionLaunchStage } from './ReaderSessionLaunchStage';
 import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerControlIsDirectSheet } from './ReaderControlHostSession';
-import { readerPaperActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import type { ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
-import { PopupSurfaceSpec, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { ReaderControlMotionFrameCache } from './ReaderControlMotionGeometry';
 import { readerControlPlaybackProfileMatches, readerControlPlaybackSourceKindMatches, type ReaderControlPlaybackProfileData, type ReaderControlPlaybackProfileReader, type ReaderControlPlaybackProfileReceipt } from './ReaderControlPlaybackProfile';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerControlMotionMs, sampleReaderControlMorphProgress } from './ReaderControlMotionPolicy';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
-import { ReaderControlVerificationMotion, readReaderControlNativeActor, readReaderControlPopupOwner,
-  type MotionActor, type ReaderControlPopupOwnerObservation, type ReaderControlVerificationLayoutInputs } from './ReaderControlVerificationMotion';
+import { ReaderControlVerificationMotion, type ReaderControlVerificationLayoutInputs } from './ReaderControlVerificationMotion';
 import type { ReaderControlVerificationOrigin, ReaderControlVerificationRequest } from './ReaderControlVerificationSession';
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS } from '../../../ui/foundation/ProductMotionTiming';
 import { registerReaderFonts, prepareReaderFontFamily } from '../../../ui/foundation/ReaderFonts';
@@ -80,15 +70,11 @@ import { readerControlAppearanceMinimumFacts } from './ReaderControlAppearanceMi
 import { readerControlTtsMinimumFacts } from './ReaderControlTtsMinimum';
 import { readerControlAutoPageMinimumFacts } from './ReaderControlAutoPageMinimum';
 import { readerControlReplaceMinimumFacts } from './ReaderControlReplaceMinimum';
-import { readerControlHeaderRole, readerControlHeaderTitle, readerControlHeaderActionLabel,
-  readerControlHeaderLayout, readerControlHeaderTargetFrame, readerControlHeaderGrabRegions,
-  type ReaderControlHeaderRole, type ReaderControlHeaderLayout } from './ReaderControlHeaderGeometry';
-import type { ReaderControlActorFrame } from './ReaderControlActorGeometry';
-import type { ReaderControlReplaceHeaderFrame } from './ReaderControlReplaceGeometry';
+import { readerControlHeaderRole, readerControlHeaderTitle } from './ReaderControlHeaderGeometry';
 import type { ReaderReplacePreview } from '../application/ReaderReplaceQuickGateway';
 import type { ReaderReplaceRule, ReaderControlReplaceDraft } from '../application/ReaderReplaceQuickState';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
-import { ReaderControlGeometry, READER_CONTROL_BRIGHTNESS_AUTO_HIT_WIDTH, READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE, READER_CONTROL_BRIGHTNESS_CONTROL_GAP, READER_CONTROL_BRIGHTNESS_ICON_SIZE, READER_CONTROL_BRIGHTNESS_ICON_TOP, READER_CONTROL_BRIGHTNESS_MAX, READER_CONTROL_BRIGHTNESS_MIN, READER_CONTROL_BRIGHTNESS_RAIL_WIDTH, READER_CONTROL_BRIGHTNESS_STEP, READER_CONTROL_BRIGHTNESS_TRACK_HIT_WIDTH, READER_CONTROL_BRIGHTNESS_TRACK_WIDTH, READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT, READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT, READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT, READER_CONTROL_HOME_QUICK_ACTION_HEIGHT, READER_CONTROL_HOME_SECTION_GAP, READER_CONTROL_HOME_SHORT_ACTION_HEIGHT, READER_CONTROL_TOP_BAR_HEIGHT, READER_CONTROL_PROGRESS_MAX, READER_CONTROL_PROGRESS_MIN, readerControlBrightnessTrackHeight } from './ReaderControlGeometry';
+import { ReaderControlGeometry, READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT, READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT, READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT, READER_CONTROL_HOME_QUICK_ACTION_HEIGHT, READER_CONTROL_HOME_SECTION_GAP, READER_CONTROL_TOP_BAR_HEIGHT } from './ReaderControlGeometry';
 import { ReaderControlLayoutSnapshot, readerControlExtentFits, type ReaderControlCandidateWidths, type ReaderControlCandidateMinimum, type ReaderControlModuleMeasurer, type ReaderControlContentModule } from './ReaderLayoutGeometry';
 import { ReaderControlPlacement, readerControlAlignment, readerControlDockLeft,
   type ReaderControlAlignment } from './ReaderControlPlacement';
@@ -119,41 +105,28 @@ import {
   createReaderControlFactDelivery, defaultReaderControlIntent, type ReaderControlFactWatch,
   type ReaderControlPanelFacts, type ReaderControlIntentHandler, type ReaderControlPanelFrame,
 } from './ReaderControlPanelNativeContract';
+import {
+  ReaderControlHeaderChrome, ReaderControlHeaderAction, ReaderControlHeaderGrabCap, ReaderControlHeaderScene,
+} from './ReaderControlHeaderChrome';
+import type { ReaderControlHeaderPaintProfile } from './ReaderControlHeaderGeometry';
+import type { UIContext } from '@ohos.arkui.UIContext';
+import { ReaderControlTopBar, ReaderControlShortWindowActions, ReaderControlTopBarPaint, ReaderControlTopBarOwner,
+  ReaderControlTopBarBack, ReaderControlTopBarActions, ReaderControlMoreMenu,
+  type ReaderControlTopBarView, type ReaderControlTopBarOrigin } from './ReaderControlTopBar';
+import {
+  ReaderControlQuickHomeActions, ReaderControlBrightnessRail, ReaderControlAccessibleBrightnessActions,
+  ReaderControlQuickHomeOwner, ReaderControlQuickHomePaint,
+} from './ReaderControlQuickHome';
+import type { ReaderControlDocumentSnapshot, ReaderControlIntent, ReaderControlIntentResult } from './ReaderControlPanelNativeContract';
 
-interface ReaderControlMenuVerificationFrame {
-  frameTimeNs: number;
-  menu: MotionActor;
-  popupOwner: ReaderControlPopupOwnerObservation;
-  trigger?: MotionActor;
-  mountedActions: string[];
-}
-
-interface ReaderControlMenuNativeState {
-  visible: boolean;
-  generation: number;
-}
-
-interface ReaderControlMenuNativeTrace extends ReaderControlMenuNativeState {
-  layout: string;
-  frames: ReaderControlMenuVerificationFrame[];
-}
 
 export type { ReaderControlPage } from './ReaderControlRouting';
-type ReaderQuickAction = 'directory' | 'search' | 'replace';
 
 class ReaderControlFrameCallback extends FrameCallback {
   private callback: (time: number) => void;
   constructor(callback: (time: number) => void) { super(); this.callback = callback; }
   onFrame(time: number): void { this.callback(time); }
   onIdle(_remaining: number): void {}
-}
-
-class ReaderControlHeaderLineHeight implements AttributeModifier<TextAttribute> {
-  private readonly height: number | undefined;
-  constructor(height: number | undefined) { this.height = height; }
-  applyNormalAttribute(instance: TextAttribute): void {
-    if (this.height !== undefined) instance.lineHeight(this.height);
-  }
 }
 
 @Component
@@ -166,6 +139,95 @@ export struct ReaderControlPanel {
     positionScope?: RemoteReadingPositionScope): void => {
     this.onIntent({ kind: 'selectBookmark', bookmarkId, chapterIndex, chapterOffset, positionScope });
   };
+
+  @State private topBarPaint: ReaderControlTopBarPaint = new ReaderControlTopBarPaint();
+  @State private quickHomePaint: ReaderControlQuickHomePaint = new ReaderControlQuickHomePaint();
+
+  private readonly topBarView: ReaderControlTopBarView = {
+    paint: (): ReaderControlTopBarPaint => this.topBarPaint,
+    facts: (): ReaderControlPanelFacts => this.currentFacts(),
+    layout: (): ReaderControlLayoutSnapshot => this.currentLayout(),
+    frame: (): ReaderControlMotionFrame => this.frame(),
+    visualSession: (): ReaderControlSessionState => this.visualSession,
+    runtimeMounted: (): boolean => this.runtimeMounted, scheme: (): string => this.appScheme,
+    buildLeading: (): void => { this.controlTopBarLeading(); },
+    buildTrailing: (): void => { this.controlTopBarTrailing(); },
+    buildMoreMenu: (generation: number): void => { this.controlMoreMenu(generation); },
+    uiContext: (): UIContext => this.getUIContext(),
+    origin: (): ReaderControlTopBarOrigin => ({ x: this.rootScreenX, y: this.rootScreenY }),
+    editingMetricsRevision: (): number => this.editingMetricsRevision,
+    popupMaterial: (): ReaderSurfaceMaterialDecision => this.surfaceMaterial('popoverMenu'),
+    directSheetVisible: (): boolean => this.directSheetVisible(),
+    shortHomeContentInput: (): boolean => this.contentLocation().level === 'home' && this.contentInputEnabled(),
+    currentOwnerScope: (): string => this.currentMoreMenuOwnerScope(),
+    guardAction: (action: () => void): (() => void) => this.controlActionHandler(action),
+    onIntent: (intent: ReaderControlIntent): ReaderControlIntentResult => this.onIntent(intent),
+    syncProgressInput: (): void => this.quickHome.syncProgressInput(),
+    refreshDockPlacement: (): void => this.refreshDockPlacement(),
+    reportBackdropRegions: (): void => this.reportBackdropRegions(),
+  };
+  private readonly topBarOwner = new ReaderControlTopBarOwner(this.topBarView);
+
+  private readonly quickHome = new ReaderControlQuickHomeOwner({
+    paint: (): ReaderControlQuickHomePaint => this.quickHomePaint,
+    geometry: {
+      layout: (): ReaderControlLayoutSnapshot => this.currentLayout(),
+      frame: (): ReaderControlMotionFrame => this.frame(),
+      profile: (): ReaderControlMeasuredProfile | undefined => this.selectedMinimumProfile(),
+      scheme: (): string => this.appScheme, reducedMotion: (): boolean => this.currentFacts().geometry.reduceMotion,
+      fontScale: (): number => this.currentFacts().geometry.fontScale,
+    },
+    reading: {
+      document: (): ReaderControlDocumentSnapshot => this.currentFacts().document,
+      directoryEntries: (): LocalReadingTocEntry[] => this.currentDirectoryEntries(),
+      brightness: () => this.currentFacts().preferences.brightness,
+    },
+    input: {
+      openRevision: (): number => this.currentFacts().geometry.openRevision,
+      lifecycle: (): number => this.runtimeLifecycle, runtimeTicket: (): number => this.runtime?.ticket() ?? -1,
+      temporaryLayer: (): ReaderControlTemporaryInputKind => this.currentFacts().geometry.temporary.layer,
+      minimumIdentity: (): string => this.currentFacts().geometry.minimum.identity,
+      minimumInputReady: (): boolean => this.minimumInputReady(), mounted: (): boolean => this.runtimeMounted,
+      canUseContent: (): boolean => this.contentInputEnabled(), menuVisible: (): boolean => this.topBarOwner.menuVisible(),
+      pressed: (): string => this.quickOrModulePress, location: (): ReaderControlLocation => this.contentLocation(),
+    },
+    effects: {
+      observePress: (event: TouchEvent, action: string, enabled: boolean): void => this.observeQuickOrModulePress(event, action, enabled),
+      captureAction: (): (() => boolean) => this.controlCallbackGuard(),
+      placementChanged: (): void => this.refreshDockPlacement(),
+      buildBrightnessActions: (): void => { this.controlBrightnessAccessibility(); },
+      navigateDirectory: (): void => this.requestPage('moduleDirectory'),
+      navigateSearch: (): void => this.promoteSearch(),
+      intent: (intent: ReaderControlIntent): ReaderControlIntentResult => this.onIntent(intent),
+    },
+  });
+
+  private readonly headerScene = new ReaderControlHeaderScene({
+    layout: (): ReaderControlLayoutSnapshot => this.currentLayout(),
+    frame: (): ReaderControlMotionFrame => this.frame(),
+    location: (): ReaderControlLocation => this.contentLocation(),
+    headerPaint: (): ReaderControlHeaderPaintProfile | undefined => this.selectedMinimumProfile()?.headerPaint,
+    scheme: (): string => this.appScheme, fixedIsland: (): boolean => this.currentFacts().geometry.fixedIsland,
+    surfaceHeight: (): number => this.controlPanelHeight(), directSheetVisible: (): boolean => this.directSheetVisible(),
+    directSheetClosing: (): boolean => this.directSheetClosing,
+    actionInputEnabled: (): boolean => this.controlActionInputEnabled(),
+  }, {
+    guard: (action: () => void): (() => void) => this.controlActionHandler(action),
+    collapse: (): void => this.collapseControl(),
+    grabTouch: (): ((event: TouchEvent) => void) => this.controlTouchHandler(),
+  });
+
+  @Builder
+  private controlTopBarLeading() { ReaderControlTopBarBack({ owner: this.topBarOwner }); }
+
+  @Builder
+  private controlTopBarTrailing() { ReaderControlTopBarActions({ owner: this.topBarOwner }); }
+
+  @Builder
+  private controlMoreMenu(generation: number) { ReaderControlMoreMenu({ owner: this.topBarOwner, generation }); }
+
+  @Builder
+  private controlBrightnessAccessibility() { ReaderControlAccessibleBrightnessActions({ quick: this.quickHome }); }
 
   private currentFacts(): ReaderControlPanelFacts {
     return this.factDelivery.active() ?? this.panelFrame;
@@ -181,7 +243,7 @@ export struct ReaderControlPanel {
         case 'placement': this.refreshDockPlacement(); break;
         case 'launch': this.onLaunchSampleChanged(); break;
         case 'runtimeInput': this.onRuntimeEnabledChanged(); break;
-        case 'openRevision': this.syncProgressInput(); break;
+        case 'openRevision': this.quickHome.syncProgressInput(); break;
         case 'minimumIdentity': this.onMinimumIdentityChanged(); break;
         case 'minimumCommit': this.onCommittedMinimumIdentityChanged(); break;
         case 'measure': this.publishMinimumMeasurer(); break;
@@ -193,8 +255,8 @@ export struct ReaderControlPanel {
         case 'minimumFacts': this.onMinimumFactsPropsChanged(); break;
         case 'layout': this.onLayoutChanged(); break;
         case 'bookmark': this.onPageBookmarkStatusChanged(); break;
-        case 'brightness': this.onBrightnessConfirmed(); break;
-        case 'recovery': this.onRecoveryIdentityChanged(); break;
+        case 'brightness': this.quickHome.onBrightnessConfirmed(); break;
+        case 'recovery': this.topBarOwner.recoveryIdentityChanged(); break;
       }
     });
   }
@@ -356,8 +418,6 @@ export struct ReaderControlPanel {
   private verificationMotion: ReaderControlVerificationMotion | undefined = undefined;
   private verificationPointerFramePending: boolean = false;
   private verificationPointerStartY: number | undefined = undefined;
-  private verificationMenuTicket: number = 0;
-  private verificationPopupOwnerId: number = -1;
   private verificationLayerGeneration: number = 0;
   private pendingRuntimeFrame: boolean = false;
   private pendingRuntimeTicket: number = -1;
@@ -410,15 +470,7 @@ export struct ReaderControlPanel {
   private directBudget: ReaderControlContentBudget | undefined = undefined;
   private directBudgetAvailable: number = 0;
   private modulePaintKey: string = '';
-  @State private moreMenuVisible: boolean = false;
-  @State private moreTopAnchor: ReaderRectVp | undefined = undefined;
-  @State private moreShortAnchor: ReaderRectVp | undefined = undefined;
-  private moreMenuGeneration: number = 0;
-  private moreMenuRecoveryIdentity: string = '';
   private previousTopBarVisibility: boolean = true;
-  private moreMenuMeasuredWidth: number = 0;
-  private moreMenuWidthKey: string = '';
-  private moreMenuOwnerScope: string = '';
   private sessionMorphMeasurementRevision: number = 0;
 
   private reportSessionMorphSource(
@@ -456,37 +508,10 @@ export struct ReaderControlPanel {
       this.currentFacts().geometry.fixedIsland || kind === 'quickAutoPage' ? 12 : kind === 'fullTtsPlayback' ? 14 : 8,
     ) });
   }
-
-  private isLocalBook(): boolean {
-    return this.currentFacts().document.source.id === 'local';
-  }
-
-  private sourceLabel(): string {
-    const label = this.currentFacts().document.source.name.trim();
-    if (this.isLocalBook()) {
-      return label.length > 0 && label !== this.currentFacts().document.source.id ? label : '本地书籍';
-    }
-    return label.length > 0 && label !== this.currentFacts().document.source.id ? label : '在线书源';
-  }
-
-  private topBarSubtitle(): string {
-    const chapter = this.currentFacts().document.chapterTitle.trim();
-    return chapter.length > 0 ? `${chapter} · ${this.sourceLabel()}` : this.sourceLabel();
-  }
-
-  @State private progressPreviewPercent: number = -1;
-  @State private progressInputRevision: number = 0;
-  private progressInputScope: string = '';
-  @State private brightnessPreviewPercent: number = -1;
   private appearanceFontReorderActive: boolean = false;
-  private brightnessDragStartPercent: number = READER_CONTROL_BRIGHTNESS_MAX;
-  private brightnessDragging: boolean = false;
-  private brightnessDragCurrent: (() => boolean) | undefined = undefined;
-  private brightnessLastEmittedPercent: number = -1;
   private geo: ReaderControlGeometry = new ReaderControlGeometry(false);
   private dockRect: ReaderControlBackdropRect = { x: 0, y: 0, width: 0, height: 0, borderRadius: 24 };
   private dockMeasured: boolean = false;
-  private topBarRect: ReaderControlBackdropRect = { x: 0, y: 0, width: 0, height: 0 };
   // The host stores these as a non-reactive input snapshot. Keep the array and
   // its two rects stable while the motion clock changes; replacing them every
   // VSync needlessly allocates and makes the host reassign the same geometry.
@@ -533,9 +558,9 @@ export struct ReaderControlPanel {
     this.quickOrModulePointer = -1;
     this.verificationMotion?.finish('unmounted');
     this.verificationPointerFramePending = false;
-    this.verificationMenuTicket += 1;
+    this.topBarOwner.retireMenuTrace();
     this.editingHost.unmount();
-    this.dismissMoreMenu();
+    this.topBarOwner.dismissMoreMenu();
     this.runtimeMounted = false;
     this.retireDockPlacement();
     this.runtimeLifecycle += 1;
@@ -544,9 +569,9 @@ export struct ReaderControlPanel {
     this.minimumProfiles.clear();
     this.launchNaturalMinimum = undefined;
     this.launchMotionBounds = undefined;
-    this.syncProgressInput();
+    this.quickHome.syncProgressInput();
     this.pendingRuntimeFrame = false;
-    this.cancelBrightnessDrag();
+    this.quickHome.cancelBrightnessDrag();
     this.runtime?.stop();
     this.onIntent({ kind: 'backdropRegionsChange', regions: [], ready: false });
     this.onIntent({ kind: 'temporaryLayerChange', active: false });
@@ -593,14 +618,14 @@ export struct ReaderControlPanel {
     // continuity. The first open command itself admits the tree at progress 0.
     if (visual.visibilityProgress > 0 || (update.session.transition?.to.visibilityProgress ?? 0) > 0 ||
       update.session.heldPointerId >= 0) this.controlActorsRetained = true;
-    if (this.moreMenuVisible && visual.visibilityProgress <= 0) this.dismissMoreMenu();
+    if (this.topBarOwner.menuVisible() && visual.visibilityProgress <= 0) this.topBarOwner.dismissMoreMenu();
     this.visualExpansionProgress = visual.expansionProgress;
     this.visualVisibilityProgress = visual.visibilityProgress;
     this.visualHeldPointerId = update.session.heldPointerId;
     this.visualTransitionKind = update.session.transition?.kind ?? '';
     this.updateModuleMotion(update.session);
     this.motionOffsetY = update.offsetY;
-    this.syncProgressInput();
+    this.quickHome.syncProgressInput();
     if (placementInputChanged) this.refreshDockPlacement();
     if (sessionChanged) this.onIntent({ kind: 'visualSessionChange', state: update.session });
     if (update.endpoint !== undefined) this.commitVisualSession(update.endpoint);
@@ -759,7 +784,7 @@ export struct ReaderControlPanel {
     this.refreshDockPlacement();
     this.geo = new ReaderControlGeometry(this.isExpanded());
     this.configureRuntime();
-    if (this.previousTopBarVisibility !== this.currentLayout().topBarVisible && this.moreMenuVisible) this.setMoreMenuVisible(false);
+    if (this.previousTopBarVisibility !== this.currentLayout().topBarVisible && this.topBarOwner.menuVisible()) this.topBarOwner.dismissMoreMenu();
     this.previousTopBarVisibility = this.currentLayout().topBarVisible;
     this.onMinimumAvailabilityChanged();
     this.publishSelectedPlaybackProfile();
@@ -965,8 +990,8 @@ export struct ReaderControlPanel {
         String(this.currentFacts().geometry.minimum.ready), String(this.currentFacts().geometry.minimum.key.startsWith(`${this.currentFacts().geometry.minimum.identity}|`)),
         String(this.minimumInputReady()), String(this.currentFacts().geometry.inputEnabled), String(this.currentFacts().geometry.obscured));
     }
-    if (!this.minimumInputReady() || (this.brightnessDragging && this.brightnessDragCurrent?.() === false)) this.cancelBrightnessDrag();
-    this.syncProgressInput();
+    this.quickHome.retireUnavailableBrightness(this.minimumInputReady());
+    this.quickHome.syncProgressInput();
     this.publishSelectedPlaybackProfile();
   }
 
@@ -1059,7 +1084,7 @@ export struct ReaderControlPanel {
       chapterRowHeight: chapterHeight, progressHeight: progressHeight, percentWidth: percentWidth,
       actionLabelHeight: actionLabelHeight, actionHeight: actionHeight,
       minimumHeight: Math.max(READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT,
-        Math.max(36, titleHeight) + Math.max(44, this.bookmarkPillHeight() + 4, actionLabelHeight + 16) +
+        Math.max(36, titleHeight) + Math.max(44, this.quickHome.bookmarkPillHeight() + 4, actionLabelHeight + 16) +
         Math.max(36, progressHeight - 14) + TOK_BORDER_W * 2) +
         actionHeight + READER_CONTROL_HOME_SECTION_GAP,
       minWidth: minWidth, fits: width >= minWidth };
@@ -1130,31 +1155,12 @@ export struct ReaderControlPanel {
       key, this.currentFacts().geometry.minimum.metricsRevision)) this.onIntent({ kind: 'playbackProfileSelected', receipt });
   }
 
-  private homeMetric(name: 'chapterTitleHeight' | 'chapterRowHeight' | 'progressHeight' | 'percentWidth' |
-    'actionLabelHeight' | 'actionHeight' | 'minimumHeight', fallback: number): number {
-    const profile = this.selectedMinimumProfile();
-    if (profile?.quick === undefined || profile.full === undefined) return fallback;
-    const p = this.frame().progress;
-    const quick = this.homeProfileMetric(profile.quick, name);
-    return quick + (this.homeProfileMetric(profile.full, name) - quick) * p;
-  }
-
-  private homeProfileMetric(profile: ReaderControlHomeFormProfile, name: string): number {
-    if (name === 'chapterTitleHeight') return profile.chapterTitleHeight;
-    if (name === 'chapterRowHeight') return profile.chapterRowHeight;
-    if (name === 'progressHeight') return profile.progressHeight;
-    if (name === 'percentWidth') return profile.percentWidth;
-    if (name === 'actionLabelHeight') return profile.actionLabelHeight;
-    if (name === 'actionHeight') return profile.actionHeight;
-    return profile.minimumHeight;
-  }
-
   private onRuntimeEnabledChanged(): void {
-    if (this.moreMenuVisible && (!this.currentFacts().geometry.inputEnabled || this.currentFacts().geometry.obscured)) this.dismissMoreMenu();
+    if (this.topBarOwner.menuVisible() && (!this.currentFacts().geometry.inputEnabled || this.currentFacts().geometry.obscured)) this.topBarOwner.dismissMoreMenu();
     if (this.runtime !== undefined) {
       this.acceptRuntime(this.runtime.setEnabled((this.currentFacts().geometry.inputEnabled || this.currentFacts().launch.recovering) && !this.currentFacts().geometry.obscured));
     }
-    this.syncProgressInput();
+    this.quickHome.syncProgressInput();
     if (!this.currentFacts().geometry.inputEnabled || this.currentFacts().geometry.obscured) this.placementPointers.clear();
     this.refreshDockPlacement();
   }
@@ -1169,8 +1175,8 @@ export struct ReaderControlPanel {
         String((this.currentFacts().geometry.temporary.layer !== '')), String(this.minimumInputReady()),
         String(this.currentFacts().geometry.inputEnabled), String(this.currentFacts().geometry.obscured));
     }
-    if ((this.currentFacts().geometry.temporary.layer !== '')) this.cancelBrightnessDrag();
-    this.syncProgressInput();
+    if ((this.currentFacts().geometry.temporary.layer !== '')) this.quickHome.cancelBrightnessDrag();
+    this.quickHome.syncProgressInput();
     this.refreshDockPlacement();
   }
 
@@ -1509,25 +1515,25 @@ export struct ReaderControlPanel {
 
   private reportBackdropRegions(): void {
     const frame = this.frame();
-    const ready = this.dockMeasured && this.topBarRect.width > 0 && !this.currentFacts().geometry.obscured;
+    const ready = this.dockMeasured && this.topBarOwner.topBarRect().width > 0 && !this.currentFacts().geometry.obscured;
     const topBar = this.backdropRegions[1];
-    topBar.x = this.topBarRect.x;
-    topBar.y = this.topBarRect.y + frame.topBar.translateY;
-    topBar.width = this.topBarRect.width;
-    topBar.height = this.topBarRect.height;
+    topBar.x = this.topBarOwner.topBarRect().x;
+    topBar.y = this.topBarOwner.topBarRect().y + frame.topBar.translateY;
+    topBar.width = this.topBarOwner.topBarRect().width;
+    topBar.height = this.topBarOwner.topBarRect().height;
     topBar.borderRadius = 24;
     this.onIntent({ kind: 'backdropRegionsChange', regions: this.backdropRegions, ready });
   }
 
   private requestPage(page: ReaderControlPage, origin: ReaderControlVerificationOrigin = 'module-button'): void {
-    this.invalidateProgressInput();
+    this.quickHome.invalidateProgressInput();
     this.onIntent({ kind: 'inputActivity' });
     this.onIntent({ kind: 'pageChange', page, origin });
   }
 
   private controlActionInputEnabled(allowInlineEditor: boolean = false, forAppearance: boolean = false): boolean {
     const blockedByTemporaryInput = allowInlineEditor ? this.hasCurrentModalInput() : this.hasCurrentTemporaryInput();
-    const moreOwnsInput = this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu';
+    const moreOwnsInput = this.topBarOwner.menuVisible() || this.currentFacts().geometry.temporary.layer === 'moreMenu';
     return this.runtimeMounted && this.currentFacts().geometry.inputEnabled && ((this.onIntent({ kind: 'inputCurrent' }) as boolean | undefined) ?? true) && !this.currentFacts().geometry.obscured &&
       (!this.currentFacts().geometry.minimum.preparedRequired || this.minimumPresentationAvailable()) &&
       (!blockedByTemporaryInput || (forAppearance && this.temporaryInputKind === 'moreMenu')) &&
@@ -1582,10 +1588,6 @@ export struct ReaderControlPanel {
     this.onIntent({ kind: 'appearanceFontReorderActivityChange', active });
   }
 
-  private contentTitle(): string {
-    return readerControlHeaderTitle(this.contentLocation().module, this.contentLocation().directoryTab);
-  }
-
   private listSessionKey(): string {
     return `${this.currentFacts().document.source.id}:${this.currentFacts().document.bookTitle}:${this.currentFacts().geometry.openRevision}`;
   }
@@ -1596,8 +1598,8 @@ export struct ReaderControlPanel {
     if (this.placementTimer >= 0) clearTimeout(this.placementTimer);
     this.placementTimer = -1;
     const locked = this.visualHeldPointerId >= 0 || this.visualTransitionKind.length > 0 ||
-      this.placementPointers.size > 0 || this.progressPreviewPercent >= 0 || this.brightnessDragging ||
-      this.moreMenuVisible || this.currentFacts().geometry.temporary.layer !== '' || this.currentFacts().geometry.allowsTextSelection || this.currentFacts().geometry.obscured ||
+      this.placementPointers.size > 0 || this.quickHome.holdingPlacement() ||
+      this.topBarOwner.menuVisible() || this.currentFacts().geometry.temporary.layer !== '' || this.currentFacts().geometry.allowsTextSelection || this.currentFacts().geometry.obscured ||
       this.currentFacts().launch.sample !== undefined || !this.currentFacts().geometry.inputEnabled || !this.gripForeground;
     const result = this.placement.update(readerControlAlignment(this.manualControlAlignment),
       this.holdingHand, locked, readerMotionNowMs());
@@ -1697,21 +1699,7 @@ export struct ReaderControlPanel {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.controlActorsRetained || this.frame().visibility > 0 || this.currentFacts().launch.sample !== undefined) {
-      Stack({ alignContent: Alignment.Top }) { this.topBar(); }
-        .id('reader-control-motion-topbar')
-        .width(this.currentLayout().topBarWidth).height(this.currentLayout().topBarHeight)
-        .position({ x: (this.currentLayout().viewportWidth - this.currentLayout().topBarWidth) / 2,
-          y: this.currentLayout().topBarTop })
-        .translate({ y: this.frame().topBar.translateY }).opacity(this.currentLayout().topBarVisible ? this.frame().topBar.opacity : 0)
-        .enabled(!this.directSheetVisible() && this.topBarInputEnabled() && this.frame().topBar.opacity > 0)
-        .hitTestBehavior(!this.directSheetVisible() && this.currentLayout().topBarVisible && this.frame().topBar.opacity > 0 ? HitTestMode.Transparent : HitTestMode.None)
-        .accessibilityLevel(this.currentLayout().topBarVisible && this.frame().topBar.opacity > 0 && (this.currentFacts().geometry.temporary.layer === '' || this.moreMenuVisible) ?
-          'auto' : 'no-hide-descendants')
-        .onAreaChange((_previous: Area, current: Area): void => {
-          this.measureTopBar({ x: Number(current.globalPosition.x),
-            y: Number(current.globalPosition.y), width: Number(current.width),
-            height: Number(current.height) });
-        });
+      ReaderControlTopBar({ owner: this.topBarOwner });
       if (this.directSheetVisible()) {
         Stack().width('100%').height('100%').id('reader-control-direct-sheet-scrim')
           .attributeModifier(new ReaderModalScrimModifier(this.navigationPreferences, this.appScheme,
@@ -1785,7 +1773,7 @@ export struct ReaderControlPanel {
           .opacity(readerControlHasFullContentSurface(this.contentLocation().module) ?
             this.frame().contentSurface.opacity : 0)
           .hitTestBehavior(HitTestMode.None);
-        Stack({ alignContent: Alignment.TopStart }) { this.controlHeader(); }
+        Stack({ alignContent: Alignment.TopStart }) { ReaderControlHeaderChrome({ scene: this.headerScene }); }
           .width(this.frame().header.width).height(this.frame().header.height)
           .position({ x: this.frame().header.x, y: this.frame().header.y })
           .opacity((this.contentLocation().module === 'replace') ? 1 : this.frame().header.opacity)
@@ -1798,8 +1786,8 @@ export struct ReaderControlPanel {
             (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu') &&
             (this.frame().header.opacity > 0 || this.contentLocation().module === 'replace'))
           .accessibilityLevel((this.currentFacts().geometry.temporary.layer !== '') ? 'no-hide-descendants' : 'auto');
-        this.headerAction();
-        Stack({ alignContent: Alignment.TopStart }) { this.brightnessRail(); }
+        ReaderControlHeaderAction({ scene: this.headerScene });
+        Stack({ alignContent: Alignment.TopStart }) { ReaderControlBrightnessRail({ quick: this.quickHome }); }
           .width(this.frame().brightness.width).height(this.frame().brightness.height)
           .position({ x: this.frame().brightness.x, y: this.frame().brightness.y })
           .opacity(this.frame().brightness.opacity)
@@ -1817,12 +1805,12 @@ export struct ReaderControlPanel {
           // The modal Popup owns background input. Keep the native Button
           // paint stable while dispatch and accessibility are suspended.
           .enabled(this.navigationInputEnabled(true))
-          .accessibilityLevel(!this.moreMenuVisible && !this.hasCurrentModalInput() &&
+          .accessibilityLevel(!this.topBarOwner.menuVisible() && !this.hasCurrentModalInput() &&
             this.frame().navigation.opacity > 0 ? 'auto' : 'no-hide-descendants')
           .hitTestBehavior(this.frame().navigation.opacity > 0 ? HitTestMode.Default : HitTestMode.None);
         // The cap and central grabber retain their one gesture owner.
         if (!this.currentFacts().geometry.fixedIsland) {
-        this.headerGrabCap();
+        ReaderControlHeaderGrabCap({ scene: this.headerScene });
 
         Stack({ alignContent: Alignment.TopStart }) {
           // Paint from the same actor used by the spatial axis. Stack margin
@@ -1903,234 +1891,9 @@ export struct ReaderControlPanel {
     });
   }
 
-  private onRecoveryIdentityChanged(): void {
-    if (this.moreMenuVisible) this.setMoreMenuVisible(false);
-    this.moreMenuRecoveryIdentity = '';
-  }
-
-  private setMoreMenuVisible(visible: boolean): void {
-    if (this.moreMenuVisible === visible) return;
-    if (visible && (!this.runtimeMounted || !this.currentFacts().geometry.inputEnabled || this.currentFacts().geometry.obscured || (this.currentFacts().geometry.temporary.layer !== '') || this.frame().visibility <= 0)) return;
-    if (visible) {
-      this.moreMenuGeneration += 1;
-      this.moreMenuRecoveryIdentity = this.currentFacts().document.recovery.identity;
-      this.moreMenuOwnerScope = this.currentMoreMenuOwnerScope();
-      this.moreMenuMeasuredWidth = 0;
-      this.moreMenuWidthKey = '';
-    }
-    this.moreMenuVisible = visible;
-    this.currentFacts().geometry.verification?.layer('more', visible, this.moreMenuGeneration, this.visualSession);
-    this.observeMoreMenuFrames(visible, this.moreMenuGeneration);
-    this.syncProgressInput();
-    this.onIntent({ kind: 'temporaryLayerChange', active: visible, layer: 'moreMenu' });
-    this.refreshDockPlacement();
-  }
-
-  private observeMoreMenuFrames(visible: boolean, generation: number): void {
-    const verification = this.currentFacts().geometry.verification;
-    if (verification?.observing() !== true) return;
-    const ticket = ++this.verificationMenuTicket;
-    if (visible) this.verificationPopupOwnerId = -1;
-    const frames: ReaderControlMenuVerificationFrame[] = [];
-    const context = this.getUIContext();
-    const target = this.currentLayout().topBarVisible ? 'reader-control-more' : 'reader-control-more-short';
-    const trigger = readReaderControlNativeActor(context, target);
-    const menuId = 'reader-control-more-menu';
-    const collect = (frameTimeNs: number): void => {
-      if (!this.runtimeMounted || ticket !== this.verificationMenuTicket || verification.observing() !== true) return;
-      const menu = readReaderControlNativeActor(context, menuId);
-      const actions: string[] = [];
-      if (menu.mounted) {
-        for (const action of ['info','refresh','download','recovery']) {
-          const node = context.getAttachedFrameNodeById(menuId + '-item-' + action);
-          if (node !== null && !node.isDisposed() && node.isAttached() && node.isVisible()) actions.push(action);
-        }
-      }
-      const popupOwner = readReaderControlPopupOwner(context, menu, this.verificationPopupOwnerId);
-      if (visible && popupOwner.status === 'measured' && popupOwner.relation === 'scroll-ancestor' &&
-        popupOwner.uniqueId !== undefined) this.verificationPopupOwnerId = popupOwner.uniqueId;
-      const frame: ReaderControlMenuVerificationFrame = { frameTimeNs: frameTimeNs, menu: menu, popupOwner: popupOwner,
-        trigger: frames.length === 0 ? trigger : undefined, mountedActions: actions };
-      frames.push(frame);
-      // The system owns Popup animation. Read a bounded normal frame window;
-      // a static/unavailable native stream is classified as an evidence gap.
-      if (frames.length < 35) {
-        context.postFrameCallback(new ReaderControlFrameCallback(collect));
-      } else {
-        const trace: ReaderControlMenuNativeTrace = {
-          visible: visible, generation: generation, layout: target, frames: frames,
-        };
-        verification.effect('more-popup', 'trace', trace, 'motion');
-      }
-    };
-    context.postFrameCallback(new ReaderControlFrameCallback(collect));
-  }
-
   private currentMoreMenuOwnerScope(): string {
     return JSON.stringify([this.currentFacts().document.source.id, this.currentFacts().document.source.bookId, this.currentFacts().document.bookmarks.book?.libraryBookId ?? '',
       this.currentFacts().geometry.openRevision, this.runtimeLifecycle]);
-  }
-
-  private dismissMoreMenu(generation: number = this.moreMenuGeneration): void {
-    if (generation === this.moreMenuGeneration) this.setMoreMenuVisible(false);
-  }
-
-  private performMoreAction(action: 'info' | 'refresh' | 'download' | 'recovery', generation: number = this.moreMenuGeneration): void {
-    if (generation !== this.moreMenuGeneration || !this.moreMenuVisible || !this.runtimeMounted ||
-      !this.currentFacts().geometry.inputEnabled || this.currentFacts().geometry.obscured || this.frame().visibility <= 0 ||
-      this.moreMenuOwnerScope !== this.currentMoreMenuOwnerScope()) return;
-    if (action === 'refresh' && !this.currentFacts().document.allowChapterRefresh) return;
-    if (action === 'download' && !this.currentFacts().document.download.bookEnabled) return;
-    if (action === 'recovery' && (!this.currentFacts().document.recovery.available || this.moreMenuRecoveryIdentity.length === 0 ||
-      this.moreMenuRecoveryIdentity !== this.currentFacts().document.recovery.identity)) return;
-    const recoveryIdentity = this.moreMenuRecoveryIdentity;
-    this.dismissMoreMenu(generation);
-    if (action === 'info') this.onIntent({ kind: 'openBookInfo' });
-    else if (action === 'refresh') this.onIntent({ kind: 'refreshChapter' });
-    else if (action === 'recovery') this.onIntent({ kind: 'openRecovery', identity: recoveryIdentity });
-    else this.onIntent({ kind: 'downloadBook' });
-  }
-
-  private readerMoreMenuWidth(): number {
-    const surface = this.readerMoreSurfaceSpec();
-    const labels = this.readerMoreActions().map((action: ReaderMenuActionView): string => action.label);
-    const key = JSON.stringify([labels, this.currentFacts().geometry.minimum.metricsRevision, this.currentFacts().geometry.minimum.key,
-      surface.actionFontFamily, surface.actionFontSize, surface.actionFontWeight]);
-    // Reuse ordinary motion publications. A live label/font publication owns
-    // a new measurement even while the same native popup remains open.
-    if (this.moreMenuVisible && key !== this.moreMenuWidthKey) {
-      this.moreMenuWidthKey = key;
-      this.moreMenuMeasuredWidth = 0;
-      try {
-        const context = this.getUIContext();
-        let width: number = 0;
-        labels.forEach((label: string): void => {
-          const measured = context.getMeasureUtils().measureTextSize({
-            textContent: label, fontFamily: surface.actionFontFamily,
-            fontSize: `${surface.actionFontSize}fp`, fontWeight: `${surface.actionFontWeight}`,
-          });
-          const measuredWidth = context.px2vp(Number(measured.width));
-          if (!Number.isFinite(measuredWidth) || measuredWidth <= 0) throw new Error('Invalid More label width');
-          width = Math.max(width, measuredWidth);
-        });
-        this.moreMenuMeasuredWidth = Math.ceil(width) + surface.actionPaddingLeft + surface.actionPaddingRight;
-      } catch (_) {
-        // Native text measurement can be unavailable during window changes.
-        // Keep the authored bounded menu until the next font/input revision.
-        this.moreMenuMeasuredWidth = surface.width;
-      }
-    }
-    return Math.max(surface.width, this.moreMenuMeasuredWidth);
-  }
-
-  private recordMoreAnchor(area: Area, shortWindow: boolean): void {
-    const left = Number(area.globalPosition.x);
-    const top = Number(area.globalPosition.y);
-    const width = Number(area.width);
-    const height = Number(area.height);
-    if (!Number.isFinite(left) || !Number.isFinite(top) || width <= 0 || height <= 0) return;
-    const current = shortWindow ? this.moreShortAnchor : this.moreTopAnchor;
-    if (current !== undefined && current.left === left && current.top === top &&
-      current.width === width && current.height === height) return;
-    const anchor = new ReaderRectVp(left, top, width, height);
-    if (shortWindow) this.moreShortAnchor = anchor;
-    else this.moreTopAnchor = anchor;
-  }
-
-  private readerMoreAnchor(): ReaderRectVp | undefined {
-    return this.currentLayout().topBarVisible ? this.moreTopAnchor : this.moreShortAnchor;
-  }
-
-  private readerMorePopupRect(): ReaderRectVp {
-    this.editingMetricsRevision;
-    const metrics = readerWindowMetrics();
-    const layout = this.currentLayout();
-    const host = new ReaderRectVp(this.rootScreenX, this.rootScreenY, layout.viewportWidth, layout.viewportHeight);
-    const anchor = this.readerMoreAnchor();
-    const viewport = readerOverlayViewport(metrics, host, new ReaderInsetsVp(12, 8, 12, 8), anchor);
-    const surface = this.readerMoreSurfaceSpec();
-    const actionHeight = readerScaledControlHeight(surface.actionHeight, surface.actionLineHeight, metrics.systemFontScale);
-    const height = readerOverlayListHeight(0, actionHeight, this.readerMoreActions().length, 0,
-      0, 0, surface.borderWidth, surface.pointerHeight);
-    return readerOverlayPanel(viewport, this.readerMoreMenuWidth(), height, 'anchor-end', anchor, 8);
-  }
-
-  private readerMoreSurfaceSpec(): PopupSurfaceSpec {
-    return resolvePopupSpec('reader-more-menu');
-  }
-
-  private readerMorePopupOptions(generation: number): CustomPopupOptions {
-    const surface = this.readerMoreSurfaceSpec();
-    const density = readerWindowMetrics().densityPixels;
-    const material = this.surfaceMaterial('popoverMenu');
-    const anchor = this.readerMoreAnchor();
-    const rect = this.readerMorePopupRect();
-    const options: CustomPopupOptions = {
-      builder: (): void => { this.readerMoreMenu(generation); },
-      placement: anchor !== undefined && rect.top < anchor.top ? Placement.TopRight : Placement.BottomRight,
-      width: rect.width,
-      offset: anchor === undefined ? undefined : { x: rect.left - (anchor.left + anchor.width - rect.width), y: 0 },
-      enableArrow: true, arrowWidth: surface.pointerWidth, arrowHeight: surface.pointerHeight,
-      radius: surface.borderRadius,
-      arrowPointPosition: ArrowPointPosition.CENTER,
-      targetSpace: 8,
-      popupColor: material.native ? Color.Transparent : readerAppColor(surface.surfaceBackgroundRole, this.appScheme),
-      backgroundBlurStyle: BlurStyle.NONE,
-      borderWidth: material.native ? 0 : surface.borderWidth,
-      borderLinearGradient: material.native ? undefined : { colors: [
-        [readerAppColor(surface.surfaceBorderRole, this.appScheme), 0],
-        [readerAppColor(surface.surfaceBorderRole, this.appScheme), 1],
-      ] },
-      shadow: material.native ? undefined : { radius: surface.shadowRadius * density,
-        color: readerAppColor(surface.surfaceShadowRole, this.appScheme),
-        offsetY: surface.shadowOffsetY * density },
-      autoCancel: true, mask: true, focusable: true, followTransformOfTarget: true,
-      transition: this.currentFacts().geometry.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : undefined,
-      onStateChange: (event: PopupStateChangeParam): void => {
-        const verification = generation === this.moreMenuGeneration ? this.currentFacts().geometry.verification : undefined;
-        if (verification?.observing() === true) {
-          const facts: ReaderControlMenuNativeState = { visible: event.isVisible, generation: generation };
-          verification.effect('more-popup', 'native-state', facts);
-        }
-        if (!event.isVisible) this.dismissMoreMenu(generation);
-      },
-    };
-    applyReaderPopupMaterial(options, material);
-    return options;
-  }
-
-  private readerMoreActionEnabled(action: 'info' | 'refresh' | 'download' | 'recovery'): boolean {
-    return this.currentFacts().geometry.inputEnabled && !this.currentFacts().geometry.obscured &&
-      (!this.moreMenuVisible || this.moreMenuOwnerScope === this.currentMoreMenuOwnerScope()) &&
-      (action !== 'refresh' || this.currentFacts().document.allowChapterRefresh) &&
-      (action !== 'download' || this.currentFacts().document.download.bookEnabled) &&
-      (action !== 'recovery' || this.currentFacts().document.recovery.available);
-  }
-
-  private readerMoreActions(): ReaderMenuActionView[] {
-    const actions: ReaderMenuActionView[] = [
-      new ReaderMenuActionView('info', '书籍信息', this.readerMoreActionEnabled('info')),
-      new ReaderMenuActionView('refresh', '刷新本章', this.readerMoreActionEnabled('refresh')),
-      new ReaderMenuActionView('download', this.currentFacts().document.download.bookActive ? '正在下载章节…' : '下载全部章节',
-        this.readerMoreActionEnabled('download')),
-    ];
-    if (this.currentFacts().document.recovery.available) actions.push(new ReaderMenuActionView('recovery', '待处理事项', this.readerMoreActionEnabled('recovery')));
-    return actions;
-  }
-
-  @Builder
-  private readerMoreMenu(generation: number = this.moreMenuGeneration) {
-    ReaderActionMenuSurface({
-      specId: 'reader-more-menu', nativeId: 'reader-control-more-menu',
-      auditAnchoredPopup: true, auditPopupAnchor: this.readerMoreAnchor(),
-      nativePopupMaterial: this.surfaceMaterial('popoverMenu').native,
-      scheme: this.appScheme, actions: this.readerMoreActions(),
-      viewportHeight: Math.max(0, this.readerMorePopupRect().height - this.readerMoreSurfaceSpec().pointerHeight -
-        2 * this.readerMoreSurfaceSpec().borderWidth),
-      onAction: (id: string): void => {
-        if (id === 'info' || id === 'refresh' || id === 'download' || id === 'recovery') this.performMoreAction(id, generation);
-      },
-    });
   }
 
   @Builder
@@ -2150,8 +1913,8 @@ export struct ReaderControlPanel {
         interactionEnabled: false, status: this.currentFacts().launch.sourceAutomatic,
         speedSeconds: this.currentFacts().playback.automatic.speedSeconds, timerSummaryText: this.currentFacts().playback.automatic.timerSummary,
         timerMinutes: this.currentFacts().playback.automatic.timerMinutes, timerSeconds: this.currentFacts().playback.automatic.timerSeconds,
-        followHighlight: this.currentFacts().playback.automatic.followHighlight, canPreviousChapter: this.canStepChapter(-1),
-        canNextChapter: this.canStepChapter(1),
+        followHighlight: this.currentFacts().playback.automatic.followHighlight, canPreviousChapter: this.quickHome.canStepChapter(-1),
+        canNextChapter: this.quickHome.canStepChapter(1),
       });
     } else {
       ReaderControlTtsContent({
@@ -2190,55 +1953,6 @@ export struct ReaderControlPanel {
       readerControlPlaybackProfileMatches(source.receipt, receipt.module, receipt.identity, receipt.key, receipt.metricsRevision);
   }
 
-  private measureTopBar(rect: ReaderControlBackdropRect): void {
-    this.topBarRect = rect;
-    this.reportBackdropRegions();
-  }
-
-  private headerPaintLayout(): ReaderControlHeaderLayout {
-    return readerControlHeaderLayout(this.contentLocation().module, this.currentFacts().geometry.fixedIsland ? 1 : this.frame().progress,
-      this.frame().header.width, this.selectedMinimumProfile()?.headerPaint);
-  }
-
-  private headerFrame(): ReaderControlActorFrame {
-    return this.headerPaintLayout().frame;
-  }
-
-  private headerRole(): ReaderControlHeaderRole {
-    return readerControlHeaderRole(this.contentLocation().module);
-  }
-
-  private headerInter(): boolean {
-    return this.headerRole() === 'plainInter';
-  }
-
-  private headerTitleStyle(): ReaderTextStyle {
-    return this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER : TYPE_READER_CONTROL_HEADER_UI;
-  }
-
-  private headerActionStyle(): ReaderTextStyle {
-    if (this.headerRole() === 'replace') return TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY;
-    if (this.headerRole() === 'ttsMake') return TYPE_READER_CONTROL_COLLAPSE_TTS;
-    return this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER : TYPE_READER_CONTROL_COLLAPSE_UI;
-  }
-
-  private headerActionFrame(): ReaderControlActorFrame {
-    return readerControlHeaderTargetFrame(this.headerPaintLayout().actionTarget, this.frame().header,
-      this.currentLayout().fullPanelWidth, this.controlPanelHeight());
-  }
-
-  private headerActionInputEnabled(): boolean {
-    if (this.directSheetClosing) return false;
-    if (!this.controlActionInputEnabled() || this.contentLocation().level !== 'secondary') return false;
-    const target = this.headerActionFrame();
-    if (target.width <= 0 || target.height <= 0) return false;
-    return this.headerRole() === 'replace' ? this.frame().progress === 1 : this.frame().header.opacity > 0;
-  }
-
-  private activateHeaderAction(): void {
-    if (this.headerActionInputEnabled()) this.collapseControl();
-  }
-
   private controlCallbackGuard(): () => boolean {
     const owner = this.currentFacts().geometry.minimum.ownerKey;
     const identity = this.currentMinimumIdentity();
@@ -2257,11 +1971,6 @@ export struct ReaderControlPanel {
     return (): void => { if (current()) action(); };
   }
 
-  private brightnessGestureHandler(action: (event: GestureEvent) => void): (event: GestureEvent) => void {
-    const current = this.controlCallbackGuard();
-    return (event: GestureEvent): void => { if (current()) action(event); };
-  }
-
   private controlTouchHandler(): (event: TouchEvent) => void {
     const runtime = this.runtime;
     const lifecycle = this.runtimeLifecycle;
@@ -2278,151 +1987,6 @@ export struct ReaderControlPanel {
   }
 
   @Builder
-  private headerGrabCap() {
-    Stack()
-      .id('reader-control-motion-grab-cap')
-      .width(this.headerGrabCapFrame().width).height(this.headerGrabCapFrame().height)
-      .position({ x: this.headerGrabCapFrame().x, y: this.headerGrabCapFrame().y })
-      .responseRegion(this.headerGrabResponseRegions())
-      .zIndex(3).hitTestBehavior(HitTestMode.Block).accessibilityLevel('no')
-      .onTouch(this.controlTouchHandler());
-  }
-
-  private headerGrabCapFrame(): ReaderControlActorFrame {
-    return { x: 0, y: this.frame().shell.y, width: this.currentLayout().fullPanelWidth,
-      height: Math.max(0, Math.min(19, this.frame().shell.height,
-        this.frame().header.y - this.frame().shell.y, this.frame().content.y - this.frame().shell.y)), opacity: 1 };
-  }
-
-  private headerGrabRegions(): ReaderControlActorFrame[] {
-    const cap = this.headerGrabCapFrame();
-    return readerControlHeaderGrabRegions(cap, this.headerActionInputEnabled() ? this.headerActionFrame() : undefined);
-  }
-
-  private headerGrabResponseRegions(): Rectangle[] {
-    const cap = this.headerGrabCapFrame();
-    return this.headerGrabRegions().map((region: ReaderControlActorFrame): Rectangle => ({
-      x: region.x - cap.x, y: region.y - cap.y, width: region.width, height: region.height,
-    }));
-  }
-
-  private headerIcon(): Resource {
-    const location = this.contentLocation();
-    if (location.module === 'directory') return location.directoryTab === 'bookmarks' ?
-      $r(this.appScheme === 'night' ? 'app.media.reader_directory_marker_bookmark_theme_night' : 'app.media.reader_directory_marker_bookmark') : $r(this.appScheme === 'night' ? 'app.media.reader_directory_directory_theme_night' : 'app.media.reader_directory_directory');
-    if (location.module === 'tts') return $r(this.appScheme === 'night' ? 'app.media.reader_tts_header_theme_night' : 'app.media.reader_tts_header');
-    if (location.module === 'appearance') return $r(this.appScheme === 'night' ? 'app.media.reader_appearance_header_theme_night' : 'app.media.reader_appearance_header');
-    if (location.module === 'settings') return $r(this.appScheme === 'night' ? 'app.media.reader_settings_header_theme_night' : 'app.media.reader_settings_header');
-    if (location.module === 'autoPage') return $r(this.appScheme === 'night' ? 'app.media.rc_autopage_theme_night' : 'app.media.rc_autopage');
-    return $r(this.appScheme === 'night' ? 'app.media.rc_search_theme_night' : 'app.media.rc_search');
-  }
-
-  @Builder
-  private controlHeader() {
-    if (this.headerRole() === 'replace') {
-      this.replaceHeader();
-    } else {
-      Stack({ alignContent: Alignment.TopStart }) {
-        Image(this.headerIcon())
-          .width(this.headerPaintLayout().icon.width).height(this.headerPaintLayout().icon.height)
-          .position({ x: this.headerPaintLayout().icon.x, y: this.headerPaintLayout().icon.y })
-          .hitTestBehavior(HitTestMode.None);
-        Text(this.contentTitle()).fontFamily(this.headerTitleStyle().fontFamily)
-          .fontWeight(this.headerTitleStyle().fontWeight, { enableVariableFontWeight: true })
-          .fontSize(this.headerTitleStyle().fontSizeFp).lineHeight(this.headerTitleStyle().lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width(this.headerPaintLayout().title.width).height(this.headerPaintLayout().title.height)
-          .position({ x: this.headerPaintLayout().title.x, y: this.headerPaintLayout().title.y });
-        this.headerActionPaint();
-      }.width(this.frame().header.width).height(this.headerFrame().height);
-    }
-  }
-
-  @Builder
-  private headerActionPaint() {
-    if (this.directSheetVisible()) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image(readerPaperActionIcon('close', this.appScheme)).width(16).height(16);
-      }.width(32).height(32).borderRadius(16).backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appScheme))
-        .position({ x: this.headerPaintLayout().actionPaint.x + Math.max(0, (this.headerPaintLayout().actionPaint.width - 32) / 2),
-          y: this.headerPaintLayout().actionPaint.y }).hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
-    } else if (this.currentFacts().geometry.fixedIsland) {
-      Stack({ alignContent: Alignment.Center }) {
-        Text('返回').fontFamily(this.headerActionStyle().fontFamily).fontWeight(this.headerActionStyle().fontWeight)
-          .fontSize(this.headerActionStyle().fontSizeFp).maxLines(1)
-          .fontColor(readerAppColor('app.readerIsland.controlInk', this.appScheme));
-      }.width(this.headerPaintLayout().actionPaint.width).height(this.headerPaintLayout().actionPaint.height)
-        .position({ x: this.headerPaintLayout().actionPaint.x, y: this.headerPaintLayout().actionPaint.y })
-        .backgroundColor(readerAppColor('app.readerIsland.controlSurface', this.appScheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('app.readerIsland.controlBorder', this.appScheme) }).borderRadius(8)
-        .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
-    } else {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Text(readerControlHeaderActionLabel(this.contentLocation().module))
-        .width(this.headerPaintLayout().actionLabel.width).height(this.headerPaintLayout().actionLabel.height)
-        .position({ x: this.headerPaintLayout().actionLabel.x - this.headerPaintLayout().actionPaint.x,
-          y: this.headerPaintLayout().actionLabel.y - this.headerPaintLayout().actionPaint.y })
-        .fontFamily(this.headerActionStyle().fontFamily)
-        .fontWeight(this.headerActionStyle().fontWeight, { enableVariableFontWeight: this.headerRole() !== 'replace' })
-        .fontSize(this.headerActionStyle().fontSizeFp)
-        .attributeModifier(new ReaderControlHeaderLineHeight(this.headerActionStyle().lineHeightFp))
-        .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center);
-      if (this.headerRole() === 'ttsMake') {
-        Image($r(this.appScheme === 'night' ? 'app.media.reader_control_header_chevron_theme_night' : 'app.media.reader_control_header_chevron'))
-          .width(this.headerPaintLayout().chevron.width).height(this.headerPaintLayout().chevron.height)
-          .position({ x: this.headerPaintLayout().chevron.x - this.headerPaintLayout().actionPaint.x,
-            y: this.headerPaintLayout().chevron.y - this.headerPaintLayout().actionPaint.y });
-      }
-    }.width(this.headerPaintLayout().actionPaint.width).height(this.headerPaintLayout().actionPaint.height)
-      .position({ x: this.headerPaintLayout().actionPaint.x, y: this.headerPaintLayout().actionPaint.y })
-      .opacity(this.headerPaintLayout().actionPaint.opacity)
-      .backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme)).borderRadius(8)
-      .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
-    }
-  }
-
-  @Builder
-  private headerAction() {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Stack().width('100%').height('100%').hitTestBehavior(HitTestMode.None);
-    }.width(this.headerActionFrame().width).height(this.headerActionFrame().height).padding(0)
-      .position({ x: this.headerActionFrame().x, y: this.headerActionFrame().y })
-      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appScheme, 8, 8, this.headerActionInputEnabled())).zIndex(2)
-      .id('reader-control-collapse')
-      .enabled(this.headerActionInputEnabled())
-      .hitTestBehavior(this.headerActionInputEnabled() ? HitTestMode.Block : HitTestMode.None)
-      .accessibilityText(this.directSheetVisible() ? `关闭${this.contentTitle()}` :
-        this.currentFacts().geometry.fixedIsland ? '返回阅读主控' :
-          this.headerRole() === 'replace' ? '完成替换规则管理，收起到快捷态' : `收起${this.contentTitle()}`)
-      .accessibilityLevel(this.headerActionInputEnabled() ? 'auto' : 'no-hide-descendants')
-      .onClick(this.controlActionHandler((): void => this.activateHeaderAction()));
-  }
-
-  private replaceHeaderFrame(): ReaderControlReplaceHeaderFrame {
-    const layout = this.headerPaintLayout();
-    return { title: layout.title, icon: layout.icon, action: layout.actionPaint };
-  }
-
-  @Builder
-  private replaceHeader() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Text('替换规则管理').fontFamily(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL.fontFamily)
-        .fontWeight(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL.fontWeight)
-        .fontSize(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL.fontSizeFp)
-        .lineHeight(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width(this.replaceHeaderFrame().title.width).height(this.replaceHeaderFrame().title.height)
-        .position({ x: this.replaceHeaderFrame().title.x, y: this.replaceHeaderFrame().title.y })
-        .opacity(this.replaceHeaderFrame().title.opacity).hitTestBehavior(HitTestMode.None);
-      Image($r(this.appScheme === 'night' ? 'app.media.reader_control_replace_header_theme_night' : 'app.media.reader_control_replace_header'))
-        .width(this.replaceHeaderFrame().icon.width).height(this.replaceHeaderFrame().icon.height)
-        .position({ x: this.replaceHeaderFrame().icon.x, y: this.replaceHeaderFrame().icon.y })
-        .opacity(this.replaceHeaderFrame().icon.opacity).hitTestBehavior(HitTestMode.None);
-      this.headerActionPaint();
-    }.width(this.frame().header.width).height(this.headerFrame().height).hitTestBehavior(HitTestMode.Transparent);
-  }
-
-  @Builder
   private controlContent() {
     // Only a business route change replaces a module. Quick/Full uses one tree.
     Stack({ alignContent: Alignment.TopStart }) {
@@ -2431,7 +1995,7 @@ export struct ReaderControlPanel {
         Scroll() { this.homeContent(); }
           .id('reader-control-module-home')
           .width(this.frame().content.width).height(this.frame().content.height).edgeEffect(EdgeEffect.None)
-          .enableScrollInteraction(!readerControlExtentFits(this.homeContentMinimumHeight(), this.frame().content.height));
+          .enableScrollInteraction(!readerControlExtentFits(this.quickHome.homeContentMinimumHeight(), this.frame().content.height));
       } else if (this.contentLocation().module === 'directory') {
         ReaderControlDirectoryContent({
           verificationSession: this.currentFacts().geometry.verification,
@@ -2545,7 +2109,7 @@ export struct ReaderControlPanel {
   }
 
   private secondaryModuleInputEnabled(module: string): boolean {
-    return this.runtimeMounted && !this.moreMenuVisible && this.contentLocation().level === 'secondary' &&
+    return this.runtimeMounted && !this.topBarOwner.menuVisible() && this.contentLocation().level === 'secondary' &&
       this.contentLocation().module === module && this.contentInputEnabled() &&
       (!this.currentFacts().geometry.minimum.preparedRequired || this.minimumInputReady());
   }
@@ -2716,8 +2280,8 @@ export struct ReaderControlPanel {
           availableHeight: this.contentEditingHeight(),
           interactionEnabled: this.secondaryModuleInputEnabled('autoPage'),
           inputCurrent: (): boolean => this.secondaryModuleInputEnabled('autoPage'),
-          canPreviousChapter: this.canStepChapter(-1),
-          canNextChapter: this.canStepChapter(1),
+          canPreviousChapter: this.quickHome.canStepChapter(-1),
+          canNextChapter: this.quickHome.canStepChapter(1),
           status: this.currentFacts().playback.automatic.status, speedSeconds: this.currentFacts().playback.automatic.speedSeconds,
           timerMinutes: this.currentFacts().playback.automatic.timerMinutes, timerSeconds: this.currentFacts().playback.automatic.timerSeconds,
           timerSummaryText: this.currentFacts().playback.automatic.timerSummary, followHighlight: this.currentFacts().playback.automatic.followHighlight,
@@ -2773,141 +2337,6 @@ export struct ReaderControlPanel {
     this.appearanceContent();
   }
 
-  @Builder
-  private topBar() {
-    ReaderReadingTopBar({ variant: 'reading', barWidth: this.currentLayout().topBarWidth, barHeight: this.currentLayout().topBarHeight,
-      bookTitle: this.currentFacts().document.bookTitle, subtitle: this.topBarSubtitle(), scheme: this.appScheme,
-      inputEnabled: this.currentFacts().geometry.inputEnabled, leading: (): void => { this.topBarBack(); }, trailing: (): void => { this.topBarActions(); },
-    });
-  }
-
-  @Builder
-  private topBarBack() {
-    // The 24vp Back glyph retains its alignment inside a 44vp action target.
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Image($r(this.appScheme === 'night' ? 'app.media.book_detail_back_theme_night' : 'app.media.book_detail_back'))
-        .width(24)
-        .height(24).accessibilityLevel('no');
-    }
-    .width(44)
-    .height(44)
-    .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
-    .responseRegion(readerActionTouchRegion(44, 44))
-    .attributeModifier(new ReaderActionAccessibility('退出阅读，返回上一页',
-      this.topBarInputEnabled() && (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu'),
-      false, true, new ReaderPressFeedback(Color.Transparent, this.appScheme, 999), 'nativeButton'))
-    .accessibilityLevel(this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu' ? 'no-hide-descendants' : 'auto')
-    .onClick(this.controlActionHandler((): void => {
-      if (this.topBarInputEnabled() && !this.currentFacts().geometry.obscured && this.currentFacts().geometry.temporary.layer === '' && !this.moreMenuVisible) this.onIntent({ kind: 'exitReading' });
-    }));
-  }
-
-  private topBarInputEnabled(): boolean {
-    return this.runtimeMounted && this.currentFacts().geometry.inputEnabled && ((this.onIntent({ kind: 'inputCurrent' }) as boolean | undefined) ?? true) && !this.currentFacts().geometry.obscured &&
-      this.currentLayout().topBarVisible && this.frame().topBar.opacity > 0;
-  }
-
-  private sourceActionHeight(): number {
-    return Math.max(44, this.currentLayout().topBarHeight - 10);
-  }
-
-  @Builder
-  private sourceActionLabel() {
-    Row({ space: 4 }) {
-      Image($r(this.appScheme === 'night' ? 'app.media.rc_switch_horizontal_theme_night' : 'app.media.rc_switch_horizontal'))
-        .width(14).height(14).accessibilityLevel('no');
-      Text('换源').fontFamily(TYPE_READER_CONTROL_SOURCE_ACTION.fontFamily)
-        .fontWeight(TYPE_READER_CONTROL_SOURCE_ACTION.fontWeight, { enableVariableFontWeight: true })
-        .fontSize(TYPE_READER_CONTROL_SOURCE_ACTION.fontSizeFp).lineHeight(TYPE_READER_CONTROL_SOURCE_ACTION.lineHeightFp)
-        .halfLeading(true).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
-    }.justifyContent(FlexAlign.Center).opacity(this.isLocalBook() ? 0.45 : 1).accessibilityLevel('no-hide-descendants');
-  }
-
-  @Builder
-  private topBarActions() {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
-      this.sourceActionLabel();
-    }.width(62).height(this.sourceActionHeight()).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
-    .id(sourceSwitchTriggerFocusId(this.currentFacts().document.source.id, this.currentFacts().document.source.bookId, 'reader-control'))
-    .responseRegion(readerActionTouchRegion(62, this.sourceActionHeight()))
-    .attributeModifier(new ReaderActionAccessibility('换源',
-      this.topBarInputEnabled() && (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu') && !this.isLocalBook(),
-      false, true, new ReaderPressFeedback(Color.Transparent, this.appScheme, 999), 'nativeButton'))
-    .accessibilityLevel(this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu' ? 'no-hide-descendants' : 'auto')
-    .onClick(this.controlActionHandler((): void => {
-      // 本地书籍换源置灰不可点; 仅在线书籍可换源。
-      if (this.topBarInputEnabled() && !this.currentFacts().geometry.obscured && this.currentFacts().geometry.temporary.layer === '' && !this.moreMenuVisible && !this.isLocalBook()) {
-        this.onIntent({ kind: 'sourceSwitch', focusId: sourceSwitchTriggerFocusId(this.currentFacts().document.source.id, this.currentFacts().document.source.bookId, 'reader-control') });
-      }
-    }));
-
-    // 20vp 图标在独立的 44vp 响应区内居中。
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Image($r(this.appScheme === 'night' ? 'app.media.rc_dots_theme_night' : 'app.media.rc_dots'))
-        .width(20)
-        .height(20).accessibilityLevel('no');
-    }
-    .width(44)
-    .height(44)
-    .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
-    .responseRegion(readerActionTouchRegion(44, 44))
-    .id('reader-control-more')
-    .attributeModifier(new ReaderActionAccessibility('更多',
-      this.topBarInputEnabled() && !this.currentFacts().geometry.obscured && (this.currentFacts().geometry.temporary.layer === '' || this.moreMenuVisible), false, true,
-      new ReaderPressFeedback(Color.Transparent, this.appScheme, 999), 'nativeButton'))
-    .onClick(this.controlActionHandler((): void => { if (this.topBarInputEnabled()) this.setMoreMenuVisible(!this.moreMenuVisible); }))
-    .onAreaChange((_previous: Area, area: Area): void => this.recordMoreAnchor(area, false))
-    .bindPopup(this.moreMenuVisible && this.currentLayout().topBarVisible, this.readerMorePopupOptions(this.moreMenuGeneration));
-  }
-
-  private shortWindowActionInput(): boolean {
-    return this.runtimeMounted && !this.currentLayout().topBarVisible && this.contentLocation().level === 'home' && this.contentInputEnabled();
-  }
-
-  @Builder
-  private shortWindowActions() {
-    Scroll() {
-    Row({ space: 8 }) {
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Image($r(this.appScheme === 'night' ? 'app.media.book_detail_back_theme_night' : 'app.media.book_detail_back'))
-          .width(24).height(24).accessibilityLevel('no');
-      }.width(44).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0)
-        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appScheme, 999))
-        .enabled(this.shortWindowActionInput() && (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu'))
-        .accessibilityLevel(this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu' ? 'no-hide-descendants' : 'auto')
-        .accessibilityText('退出阅读，返回上一页')
-        .onClick(this.controlActionHandler((): void => {
-          if (this.shortWindowActionInput() && this.currentFacts().geometry.temporary.layer === '' && !this.moreMenuVisible) this.onIntent({ kind: 'exitReading' });
-        }));
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        this.sourceActionLabel();
-      }.width(76).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0)
-        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appScheme, 999))
-        .id(sourceSwitchTriggerFocusId(this.currentFacts().document.source.id, this.currentFacts().document.source.bookId, 'reader-control-short'))
-        .enabled(this.shortWindowActionInput() && (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu') && !this.isLocalBook())
-        .accessibilityLevel(this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu' ? 'no-hide-descendants' : 'auto')
-        .accessibilityText('换源')
-        .onClick(this.controlActionHandler((): void => {
-          if (this.shortWindowActionInput() && this.currentFacts().geometry.temporary.layer === '' && !this.moreMenuVisible && !this.isLocalBook())
-            this.onIntent({ kind: 'sourceSwitch', focusId: sourceSwitchTriggerFocusId(this.currentFacts().document.source.id, this.currentFacts().document.source.bookId, 'reader-control-short') });
-        }));
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Image($r(this.appScheme === 'night' ? 'app.media.rc_dots_theme_night' : 'app.media.rc_dots')).width(20).height(20).accessibilityLevel('no');
-      }.width(44).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).padding(0)
-        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appScheme, 999))
-        .enabled(this.shortWindowActionInput() && (this.currentFacts().geometry.temporary.layer === '' || this.moreMenuVisible))
-        .id('reader-control-more-short')
-        .accessibilityText('更多')
-        .onClick(this.controlActionHandler((): void => {
-          if (this.shortWindowActionInput() && (this.currentFacts().geometry.temporary.layer === '' || this.moreMenuVisible)) this.setMoreMenuVisible(!this.moreMenuVisible);
-        }))
-        .onAreaChange((_previous: Area, area: Area): void => this.recordMoreAnchor(area, true))
-        .bindPopup(this.moreMenuVisible && !this.currentLayout().topBarVisible, this.readerMorePopupOptions(this.moreMenuGeneration));
-    }.width(Math.max(180, this.frame().content.width)).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).justifyContent(FlexAlign.End);
-    }.width(this.frame().content.width).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None).enableScrollInteraction(this.frame().content.width < 180).clip(true);
-  }
-
   @State private quickOrModulePress: string = '';
   private quickOrModulePointer: number = -1;
 
@@ -2920,98 +2349,13 @@ export struct ReaderControlPanel {
   }
 
   @Builder
-  private quickActionPanel() {
-    Row({ space: 8 }) {
-      this.quickAction('rc_list', '目录', 'directory');
-      this.quickAction('rc_search', '搜索', 'search');
-      this.quickAction('rc_replace', '替换', 'replace');
-    }
-    .width('100%')
-    .height(this.homeMetric('actionHeight', READER_CONTROL_HOME_QUICK_ACTION_HEIGHT))
-    .padding({ left: 9, right: 9 })
-    .attributeModifier(new ReaderPanelFrame('reader-card', this.appScheme));
-  }
-
-  @Builder
-  private quickAction(icon: string, label: string, action: ReaderQuickAction) {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Column() {
-        Image($r(`app.media.${this.quickActionIcon(icon)}`))
-          .width(24)
-          .height(24)
-          .margin({ top: 4.72 });
-        Text(label)
-          .width('100%')
-          .height(this.homeMetric('actionLabelHeight', 13))
-          .fontFamily(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.fontFamily)
-          .fontWeight(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.fontWeight)
-          .fontSize(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.fontSizeFp)
-          .lineHeight(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
-          .textAlign(TextAlign.Center)
-          .maxLines(this.selectedMinimumProfile() === undefined ? 1 : undefined)
-          .margin({ top: 5.78 });
-      }.width('100%').height('100%').alignItems(HorizontalAlign.Center).accessibilityLevel('no-hide-descendants')
-        .backgroundColor(readerPressSurface(readerAppColor('TOK_READ_ELEVATED', this.appScheme), this.appScheme,
-          this.quickOrModulePress === action, this.currentFacts().geometry.reduceMotion))
-        .borderRadius(8).scale(readerPressScale(this.quickOrModulePress === action, this.currentFacts().geometry.reduceMotion))
-        .opacity(readerPressOpacity(this.quickOrModulePress === action, this.currentFacts().geometry.reduceMotion));
-    }
-    .layoutWeight(1)
-    .id('reader-control-entry-' + action)
-    .height(55.438 + this.homeMetric('actionLabelHeight', 13) - 13)
-    .padding(0)
-    .backgroundColor(Color.Transparent)
-    .borderRadius(8)
-    .enabled(this.progressInputEnabled(true))
-    .accessibilityLevel(this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu' ? 'no-hide-descendants' : 'auto')
-    .accessibilityText(label)
-    .onTouch((event: TouchEvent): void => this.observeQuickOrModulePress(event, action, this.progressInputEnabled(true)))
-    .onClick(this.controlActionHandler((): void => {
-      if (!this.progressInputEnabled()) return;
-      if (action === 'directory') {
-        this.requestPage('moduleDirectory');
-      } else if (action === 'search') {
-        this.promoteSearch();
-      } else if (action === 'replace') {
-        this.onIntent({ kind: 'inputActivity' });
-        this.onIntent({ kind: 'openReplace' });
-      }
-    }));
-  }
-
-  @Builder
   private homeContent() {
     Column({ space: READER_CONTROL_HOME_SECTION_GAP }) {
-      this.quickActionPanel(); this.chapterProgress();
-      if (!this.currentLayout().topBarVisible) this.shortWindowActions();
+      ReaderControlQuickHomeActions({ quick: this.quickHome }); this.chapterProgress();
+      if (!this.currentLayout().topBarVisible) ReaderControlShortWindowActions({ owner: this.topBarOwner });
     }
       .width(this.frame().content.width).alignItems(HorizontalAlign.Start);
   }
-
-  private homeContentMinimumHeight(): number {
-    return this.homeChapterCardHeight() + this.homeMetric('actionHeight', READER_CONTROL_HOME_QUICK_ACTION_HEIGHT) +
-      READER_CONTROL_HOME_SECTION_GAP +
-      (this.currentLayout().topBarVisible ? 0 : READER_CONTROL_HOME_SHORT_ACTION_HEIGHT + READER_CONTROL_HOME_SECTION_GAP);
-  }
-
-  private homeChapterCardHeight(): number {
-    return Math.max(READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT, this.chapterTitleLaneHeight() +
-      this.bookmarkLaneHeight() + this.progressLaneHeight() + TOK_BORDER_W * 2);
-  }
-
-  private chapterTitleLaneHeight(): number { return Math.max(36, this.homeMetric('chapterTitleHeight', 34)); }
-  private bookmarkLaneHeight(): number {
-    return Math.max(44, this.bookmarkPillHeight() + 4, this.homeMetric('actionLabelHeight', 13) + 16);
-  }
-  private bookmarkPillWidth(): number {
-    // Four full-width glyphs at 11fp, plus the icon, gap, and side space.
-    return 42 + Math.ceil(44 * Math.max(1, this.currentFacts().geometry.fontScale));
-  }
-  private bookmarkPillHeight(): number {
-    return Math.max(28, Math.ceil(15 * Math.max(1, this.currentFacts().geometry.fontScale)) + 10);
-  }
-  private progressLaneHeight(): number { return Math.max(36, this.homeMetric('progressHeight', 50) - 14); }
 
   private onPageBookmarkStatusChanged(): void {
     const fill = this.currentFacts().document.bookmarks.pageStatus === 'bookmarked' ? 1 : 0;
@@ -3036,332 +2380,31 @@ export struct ReaderControlPanel {
   private chapterProgress() {
     ReaderControlChapterProgressCard({
       appScheme: this.appScheme, chapterTitle: this.presentedHomeChapterTitle(),
-      titleHeight: this.homeMetric('chapterTitleHeight', 34), titleLaneHeight: this.chapterTitleLaneHeight(),
-      cardHeight: this.homeChapterCardHeight(), totalChapters: this.presentedHomeTotalChapters(),
-      readableChapterPosition: this.currentFacts().document.readableChapterPosition, menuOccludesActions: this.moreMenuVisible || this.currentFacts().geometry.temporary.layer === 'moreMenu',
-      previousEnabled: this.progressInputEnabled(true) && this.canStepChapter(-1),
-      nextEnabled: this.progressInputEnabled(true) && this.canStepChapter(1),
+      titleHeight: this.quickHome.homeMetric('chapterTitleHeight', 34), titleLaneHeight: this.quickHome.chapterTitleLaneHeight(),
+      cardHeight: this.quickHome.homeChapterCardHeight(), totalChapters: this.presentedHomeTotalChapters(),
+      readableChapterPosition: this.currentFacts().document.readableChapterPosition, menuOccludesActions: this.topBarOwner.menuVisible() || this.currentFacts().geometry.temporary.layer === 'moreMenu',
+      previousEnabled: this.quickHome.progressInputEnabled(true) && this.quickHome.canStepChapter(-1),
+      nextEnabled: this.quickHome.progressInputEnabled(true) && this.quickHome.canStepChapter(1),
       actionScope: this.controlActionScope(),
       chapterActionsCurrent: (scope: string): boolean => this.controlActionScope() === scope &&
-        this.progressInputEnabled(true) && !this.moreMenuVisible && this.currentFacts().geometry.temporary.layer === '',
-      bookmarkLaneHeight: this.bookmarkLaneHeight(), bookmarkWidth: this.bookmarkPillWidth(), bookmarkHeight: this.bookmarkPillHeight(),
+        this.quickHome.progressInputEnabled(true) && !this.topBarOwner.menuVisible() && this.currentFacts().geometry.temporary.layer === '',
+      bookmarkLaneHeight: this.quickHome.bookmarkLaneHeight(), bookmarkWidth: this.quickHome.bookmarkPillWidth(), bookmarkHeight: this.quickHome.bookmarkPillHeight(),
       pageBookmarkStatus: this.currentFacts().document.bookmarks.pageStatus, pageBookmarkEnabled: this.currentFacts().document.bookmarks.pageEnabled,
-      bookmarkInputEnabled: this.currentFacts().document.bookmarks.pageEnabled && this.progressInputEnabled(true),
+      bookmarkInputEnabled: this.currentFacts().document.bookmarks.pageEnabled && this.quickHome.progressInputEnabled(true),
       quickOrModulePress: $quickOrModulePress, pageBookmarkFill: $pageBookmarkFill, pageBookmarkTuck: $pageBookmarkTuck,
       sessionFontScale: this.currentFacts().geometry.fontScale, reduceMotion: this.currentFacts().geometry.reduceMotion,
-      progressPercent: this.effectiveProgressPercent(), progressLabelWidth: this.homeMetric('percentWidth', 26.23),
-      progressLaneHeight: this.progressLaneHeight(), progressInputRevision: this.progressInputRevision,
-      onPreviousChapter: (): void => { if (this.progressInputEnabled() && this.canStepChapter(-1)) this.onIntent({ kind: 'previousChapter' }); },
-      onNextChapter: (): void => { if (this.progressInputEnabled() && this.canStepChapter(1)) this.onIntent({ kind: 'nextChapter' }); },
+      progressPercent: this.quickHome.effectiveProgressPercent(), progressLabelWidth: this.quickHome.homeMetric('percentWidth', 26.23),
+      progressLaneHeight: this.quickHome.progressLaneHeight(), progressInputRevision: this.quickHomePaint.progressInputRevision,
+      onPreviousChapter: (): void => { if (this.quickHome.progressInputEnabled() && this.quickHome.canStepChapter(-1)) this.onIntent({ kind: 'previousChapter' }); },
+      onNextChapter: (): void => { if (this.quickHome.progressInputEnabled() && this.quickHome.canStepChapter(1)) this.onIntent({ kind: 'nextChapter' }); },
       onBookmarkPress: (event: TouchEvent): void => this.observeQuickOrModulePress(event, 'bookmark',
-        this.currentFacts().document.bookmarks.pageEnabled && this.progressInputEnabled(true)),
+        this.currentFacts().document.bookmarks.pageEnabled && this.quickHome.progressInputEnabled(true)),
       bookmarkClickHandler: (_scope: string): (() => void) => this.controlActionHandler((): void => {
-        if (this.currentFacts().document.bookmarks.pageEnabled && this.progressInputEnabled()) this.onIntent({ kind: 'togglePageBookmark' });
+        if (this.currentFacts().document.bookmarks.pageEnabled && this.quickHome.progressInputEnabled()) this.onIntent({ kind: 'togglePageBookmark' });
       }),
       progressChangeHandler: (revision: number): ((value: number, mode: SliderChangeMode) => void) =>
-        this.progressChangeHandler(revision),
+        this.quickHome.progressChangeHandler(revision),
     });
-  }
-
-  private clampPercent(value: number): number {
-    return Math.max(READER_CONTROL_PROGRESS_MIN, Math.min(READER_CONTROL_PROGRESS_MAX, value));
-  }
-
-  private effectiveProgressPercent(): number {
-    return this.progressPreviewPercent >= 0 ? this.progressPreviewPercent : this.clampPercent(this.currentFacts().document.progressPercent);
-  }
-
-  private progressInputEnabled(forAppearance: boolean = false): boolean {
-    return this.runtimeMounted && this.contentLocation().level === 'home' && this.contentInputEnabled() &&
-      (this.currentFacts().geometry.temporary.layer === '' || (forAppearance && this.currentFacts().geometry.temporary.layer === 'moreMenu')) &&
-      (forAppearance || !this.moreMenuVisible);
-  }
-
-  private invalidateProgressInput(): void {
-    this.progressInputRevision += 1;
-    if (this.progressPreviewPercent >= 0) {
-      this.progressPreviewPercent = -1;
-      this.refreshDockPlacement();
-    }
-  }
-
-  private syncProgressInput(): void {
-    const scope = JSON.stringify([this.runtimeLifecycle, this.currentFacts().geometry.openRevision,
-      this.runtime?.ticket() ?? -1, this.progressInputEnabled()]);
-    if (scope === this.progressInputScope) return;
-    this.progressInputScope = scope;
-    this.invalidateProgressInput();
-  }
-
-  private progressChangeHandler(presentedRevision: number): (value: number, mode: SliderChangeMode) => void {
-    return (value: number, mode: SliderChangeMode): void => {
-      if (presentedRevision !== this.progressInputRevision || !this.progressInputEnabled() || !Number.isFinite(value)) return;
-      this.progressPreviewPercent = this.clampPercent(value);
-      if (mode === SliderChangeMode.End) {
-        const committed = this.progressPreviewPercent;
-        this.progressPreviewPercent = -1;
-        this.onIntent({ kind: 'progressChange', percent: committed });
-      }
-      this.refreshDockPlacement();
-    };
-  }
-
-  @Builder
-  private brightnessRail() {
-    Scroll() { this.brightnessRailContent(); }
-      .width(READER_CONTROL_BRIGHTNESS_RAIL_WIDTH).height(this.frame().brightness.height)
-      .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
-      .enableScrollInteraction(this.brightnessContentHeight() > this.frame().brightness.height)
-      .clip(true);
-  }
-
-  private brightnessContentHeight(): number {
-    const automatic = Math.max(44, this.currentLayout().contentBudget?.brightnessAutoHeightVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE);
-    const minimum = READER_CONTROL_BRIGHTNESS_RAIL_WIDTH + READER_CONTROL_BRIGHTNESS_ICON_SIZE / 2 +
-      READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE / 2 + 2 * READER_CONTROL_BRIGHTNESS_CONTROL_GAP + 44 +
-      (automatic - READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE) / 2;
-    return Math.max(this.frame().brightness.height, minimum);
-  }
-
-  private brightnessRequiresChildClip(): boolean {
-    const budget = this.currentLayout().contentBudget;
-    if (this.currentFacts().geometry.minimum.identity.length === 0 || !this.minimumInputReady() ||
-      budget?.brightnessAutoWidthVp === undefined || budget.brightnessAutoHeightVp === undefined) return true;
-    const width = budget.brightnessAutoWidthVp;
-    const height = budget.brightnessAutoHeightVp;
-    const frame = this.frame().brightness;
-    const contentHeight = this.brightnessContentHeight();
-    const trackHeight = this.brightnessTrackHeight();
-    const innerWidth = READER_CONTROL_BRIGHTNESS_RAIL_WIDTH - TOK_BORDER_W * 2;
-    // The measured A box, including its glyph, fits the bottom cap. The sun
-    // shares the top cap center and the fill track stays in the straight span.
-    return !Number.isFinite(width) || !Number.isFinite(height) ||
-      width < READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE || height < READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE ||
-      width > innerWidth || height > innerWidth ||
-      width * width + height * height > READER_CONTROL_BRIGHTNESS_RAIL_WIDTH * READER_CONTROL_BRIGHTNESS_RAIL_WIDTH ||
-      !Number.isFinite(frame.width) || frame.width < READER_CONTROL_BRIGHTNESS_RAIL_WIDTH ||
-      !Number.isFinite(frame.height) || frame.height < 44 ||
-      !Number.isFinite(contentHeight) || contentHeight < READER_CONTROL_BRIGHTNESS_RAIL_WIDTH ||
-      !Number.isFinite(trackHeight) || trackHeight < 44;
-  }
-
-  @Builder
-  private brightnessRailContent() {
-    Column() {
-      // Icon/Sun 20×20 (rail 内水平居中, 中心对齐 19)。
-      Image($r(this.appScheme === 'night' ? 'app.media.rc_sun_theme_night' : 'app.media.rc_sun'))
-        .width(READER_CONTROL_BRIGHTNESS_ICON_SIZE)
-        .height(READER_CONTROL_BRIGHTNESS_ICON_SIZE)
-        // Column content starts inside its 1vp border; endpoint geometry is
-        // measured from the outside of the rounded rail.
-        .margin({ top: READER_CONTROL_BRIGHTNESS_ICON_TOP - TOK_BORDER_W });
-
-      // The 8vp track fills the gap between the cap-centred endpoint icons;
-      // its 44vp pointer target uses that same height. Gesture coordinates
-      // are mapped to the whole authored track; an invisible OutSet slider
-      // would retain an implicit thumb inset and shorten the usable range.
-      Stack({ alignContent: Alignment.Center }) {
-        Stack({ alignContent: Alignment.Bottom }) {
-          Row()
-            .width('100%').height(`${this.effectiveBrightnessPercent()}%`)
-            .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
-        }
-        .width(READER_CONTROL_BRIGHTNESS_TRACK_WIDTH).height('100%')
-        .backgroundColor(readerAppColor('TOK_BORDER', this.appScheme))
-        .borderRadius(READER_CONTROL_BRIGHTNESS_TRACK_WIDTH / 2).clip(true)
-        .hitTestBehavior(HitTestMode.None);
-      }
-      .width(READER_CONTROL_BRIGHTNESS_TRACK_HIT_WIDTH)
-      .height(this.brightnessTrackHeight())
-      .margin({ top: READER_CONTROL_BRIGHTNESS_CONTROL_GAP })
-      .hitTestBehavior(HitTestMode.Block)
-      .accessibilityText('阅读亮度').accessibilityLevel('no')
-      .accessibilityVirtualNode(this.accessibleBrightnessActions)
-      .gesture(
-        GestureGroup(
-          GestureMode.Exclusive,
-          PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 1 })
-            .onActionStart(this.controlActionHandler((): void => this.beginBrightnessDrag()))
-            .onActionUpdate(this.brightnessGestureHandler((event: GestureEvent): void => {
-              if (this.brightnessDragging) this.updateBrightnessDrag(event.offsetY);
-            }))
-            .onActionEnd(this.brightnessGestureHandler((event: GestureEvent): void => this.finishBrightnessDrag(event.offsetY)))
-            .onActionCancel(this.controlActionHandler((): void => this.cancelBrightnessDrag())),
-          TapGesture({ fingers: 1, count: 1 })
-            .onAction(this.brightnessGestureHandler((event: GestureEvent): void => this.commitBrightnessTap(event))),
-        ),
-      );
-
-      // Keep the measured circular A marker centred in its paid 44vp carrier.
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Stack({ alignContent: Alignment.Center }) {
-          Text('A')
-            .fontFamily(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontFamily)
-            .fontWeight(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontWeight)
-            .fontSize(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontSizeFp)
-            .lineHeight(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.lineHeightFp as number)
-            .fontColor(this.currentFacts().preferences.brightness.automatic ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_READ_INK', this.appScheme))
-            .textAlign(TextAlign.Center);
-        }
-        .width(this.currentLayout().contentBudget?.brightnessAutoWidthVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
-        .height(this.currentLayout().contentBudget?.brightnessAutoHeightVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
-        .backgroundColor(this.currentFacts().preferences.brightness.automatic ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme) : readerAppColor('TOK_READ_ELEVATED', this.appScheme))
-        .border({ width: TOK_BORDER_W, color: this.currentFacts().preferences.brightness.automatic ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_LINE_STRONG', this.appScheme) })
-        .borderRadius(Math.min(
-          this.currentLayout().contentBudget?.brightnessAutoWidthVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE,
-          this.currentLayout().contentBudget?.brightnessAutoHeightVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE) / 2).accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-      }
-      .width(Math.max(READER_CONTROL_BRIGHTNESS_AUTO_HIT_WIDTH,
-        this.currentLayout().contentBudget?.brightnessAutoWidthVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE))
-      .height(Math.max(44, this.currentLayout().contentBudget?.brightnessAutoHeightVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE))
-      .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appScheme, 999, 999, this.brightnessInputEnabled()))
-      .margin({ top: READER_CONTROL_BRIGHTNESS_CONTROL_GAP })
-      // Preserve the authored palette while exposing the automatic/manual
-      // state through the existing control opacity; no unapproved color is
-      // introduced for the selected endpoint.
-      .opacity(this.currentFacts().preferences.brightness.automatic ? 1 : 0.72)
-      .accessibilityText(this.currentFacts().preferences.brightness.automatic ? '跟随系统亮度，已开启，点击改为手动' : '手动亮度，点击跟随系统')
-      .onClick(this.controlActionHandler((): void => {
-        if (!this.brightnessInputEnabled()) return;
-        this.brightnessDragging = false;
-        this.brightnessDragCurrent = undefined;
-        this.brightnessPreviewPercent = -1;
-        this.onIntent({ kind: 'brightnessAuto' });
-      }));
-    }
-    .width(READER_CONTROL_BRIGHTNESS_RAIL_WIDTH)
-    .height(this.brightnessContentHeight())
-    .alignItems(HorizontalAlign.Center)
-    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appScheme) })
-    .borderRadius(Math.min(READER_CONTROL_BRIGHTNESS_RAIL_WIDTH, this.brightnessContentHeight()) / 2)
-    .clip(this.brightnessRequiresChildClip());
-  }
-
-  private brightnessTrackHeight(): number {
-    return readerControlBrightnessTrackHeight(this.brightnessContentHeight(),
-      Math.max(44, this.currentLayout().contentBudget?.brightnessAutoHeightVp ?? READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE));
-  }
-
-  private clampBrightness(value: number): number {
-    return Math.max(READER_CONTROL_BRIGHTNESS_MIN, Math.min(READER_CONTROL_BRIGHTNESS_MAX, value));
-  }
-
-  private effectiveBrightnessPercent(): number {
-    return this.brightnessPreviewPercent >= 0 ? this.brightnessPreviewPercent :
-      this.clampBrightness(this.currentFacts().preferences.brightness.percent);
-  }
-
-  @Builder
-  private accessibleBrightnessActions() {
-    Text(`降低阅读亮度，当前${Math.round(this.effectiveBrightnessPercent())}%，${this.currentFacts().preferences.brightness.automatic ? '跟随系统' : '手动模式'}`).width(1).height(1)
-      .accessibilityRole(AccessibilityRoleType.BUTTON)
-      .enabled(this.brightnessInputEnabled() && this.effectiveBrightnessPercent() > READER_CONTROL_BRIGHTNESS_MIN)
-      .onClick(this.controlActionHandler((): void => this.stepBrightness(-1)));
-    Text(`提高阅读亮度，当前${Math.round(this.effectiveBrightnessPercent())}%，${this.currentFacts().preferences.brightness.automatic ? '跟随系统' : '手动模式'}`).width(1).height(1)
-      .accessibilityRole(AccessibilityRoleType.BUTTON)
-      .enabled(this.brightnessInputEnabled() && this.effectiveBrightnessPercent() < READER_CONTROL_BRIGHTNESS_MAX)
-      .onClick(this.controlActionHandler((): void => this.stepBrightness(1)));
-  }
-
-  private stepBrightness(direction: number): void {
-    if (!this.brightnessInputEnabled()) return;
-    const current = this.effectiveBrightnessPercent();
-    const value = this.roundBrightness(current + direction);
-    if (value !== current) this.onIntent({ kind: 'brightnessChange', percent: value });
-  }
-
-  private brightnessInputEnabled(): boolean {
-    return this.runtimeMounted && this.contentInputEnabled() && this.currentFacts().geometry.temporary.layer === '' &&
-      !this.moreMenuVisible && this.frame().brightness.opacity > 0;
-  }
-
-  private beginBrightnessDrag(): void {
-    if (!this.brightnessInputEnabled()) return;
-    this.onIntent({ kind: 'inputActivity' });
-    this.brightnessDragCurrent = this.controlCallbackGuard();
-    this.brightnessDragStartPercent = this.effectiveBrightnessPercent();
-    this.brightnessPreviewPercent = this.brightnessDragStartPercent;
-    this.brightnessDragging = true;
-    this.brightnessLastEmittedPercent = this.brightnessDragStartPercent;
-    this.refreshDockPlacement();
-  }
-
-  private updateBrightnessDrag(offsetY: number): void {
-    if (!this.brightnessDragging) return;
-    if (this.brightnessDragCurrent?.() === false) { this.cancelBrightnessDrag(); return; }
-    if (!this.brightnessInputEnabled()) {
-      this.cancelBrightnessDrag();
-      return;
-    }
-    const trackHeight = this.brightnessTrackHeight();
-    if (!Number.isFinite(offsetY) || trackHeight <= 0) {
-      return;
-    }
-    const range = READER_CONTROL_BRIGHTNESS_MAX - READER_CONTROL_BRIGHTNESS_MIN;
-    this.brightnessPreviewPercent = this.roundBrightness(
-      this.brightnessDragStartPercent - offsetY / trackHeight * range,
-    );
-    // The window writer owns coalescing. Emit every changed sample, including
-    // the final MOVE before a held pause; no UP-dependent trailing throttle.
-    if (this.brightnessPreviewPercent !== this.brightnessLastEmittedPercent) {
-      this.brightnessLastEmittedPercent = this.brightnessPreviewPercent;
-      this.onIntent({ kind: 'brightnessChange', percent: this.brightnessPreviewPercent });
-    }
-  }
-
-  private finishBrightnessDrag(offsetY: number): void {
-    if (!this.brightnessDragging) return;
-    if (this.brightnessDragCurrent?.() === false) { this.cancelBrightnessDrag(); return; }
-    if (!this.brightnessInputEnabled()) {
-      this.cancelBrightnessDrag();
-      return;
-    }
-    this.updateBrightnessDrag(offsetY);
-    this.brightnessDragging = false;
-    this.brightnessDragCurrent = undefined;
-    // Keep the optimistic rail until the latest native write is acknowledged.
-    this.onIntent({ kind: 'brightnessChange', percent: this.effectiveBrightnessPercent() });
-    this.brightnessLastEmittedPercent = -1;
-    this.refreshDockPlacement();
-  }
-
-  private onBrightnessConfirmed(): void {
-    if (!this.brightnessDragging) this.brightnessPreviewPercent = -1;
-  }
-
-  private cancelBrightnessDrag(): void {
-    if (!this.brightnessDragging) return;
-    const current = this.brightnessDragCurrent?.() ?? true;
-    this.brightnessDragging = false;
-    this.brightnessDragCurrent = undefined;
-    if (current) this.onIntent({ kind: 'brightnessCancel' });
-    else this.brightnessPreviewPercent = -1;
-    // Keep the current preview until the writer settles any already-issued
-    // native call. onBrightnessConfirmed then projects that successful ACK.
-    this.brightnessLastEmittedPercent = -1;
-    this.refreshDockPlacement();
-  }
-
-  private commitBrightnessTap(event: GestureEvent): void {
-    if (!this.brightnessInputEnabled() || event.fingerList.length === 0) {
-      return;
-    }
-    const localY = event.fingerList[0].localY;
-    const trackHeight = this.brightnessTrackHeight();
-    if (!Number.isFinite(localY) || trackHeight <= 0) {
-      return;
-    }
-    const clampedY = Math.max(0, Math.min(trackHeight, localY));
-    const range = READER_CONTROL_BRIGHTNESS_MAX - READER_CONTROL_BRIGHTNESS_MIN;
-    const value = READER_CONTROL_BRIGHTNESS_MIN +
-      (1 - clampedY / trackHeight) * range;
-    this.onIntent({ kind: 'brightnessChange', percent: this.roundBrightness(value) });
-  }
-
-  private roundBrightness(value: number): number {
-    const stepped = Math.round(value / READER_CONTROL_BRIGHTNESS_STEP) * READER_CONTROL_BRIGHTNESS_STEP;
-    return this.clampBrightness(stepped);
   }
   private navigationInputEnabled(forAppearance: boolean = false): boolean {
     return this.controlActionInputEnabled(true, forAppearance) && (!this.currentFacts().geometry.minimum.preparedRequired || this.minimumPresentationAvailable()) &&
@@ -3395,29 +2438,5 @@ export struct ReaderControlPanel {
   private isActiveModule(module: string): boolean {
     const location = this.contentLocation();
     return location.level === 'secondary' && location.module === module;
-  }
-
-  private canStepChapter(delta: number): boolean {
-    if (this.currentFacts().document.readableChapterPosition >= 0) {
-      const target = this.currentFacts().document.readableChapterPosition + delta;
-      return target >= 0 && target < this.currentFacts().document.totalChapters;
-    }
-    for (let position = 0; position < this.currentDirectoryEntries().length; position += 1) {
-      if (this.currentDirectoryEntries()[position].index !== this.currentFacts().document.chapterIndex) continue;
-      for (let target = position + delta; target >= 0 && target < this.currentDirectoryEntries().length; target += delta) {
-        if (this.currentDirectoryEntries()[target].navigable !== false) return true;
-      }
-      return false;
-    }
-    return false;
-  }
-
-  private quickActionIcon(icon: string): string {
-    if (this.appScheme === 'night') {
-      if (icon === 'rc_search') return 'rc_search_theme_night';
-      if (icon === 'rc_list') return 'rc_list_theme_night';
-      if (icon === 'rc_replace') return 'rc_replace_theme_night';
-    }
-    return icon;
   }
 }
