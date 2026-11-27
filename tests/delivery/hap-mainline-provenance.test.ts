@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  assertCleanMainline, assertInstallReceipt, assertMainlineHap, latestSignedRun,
+  assertCleanMainline, assertInstallReceipt, assertMainlineHap, latestSignedRun, mainlineSourceMatch,
 } from '../../scripts/lib/hap-mainline-provenance.mjs';
 
 const harmony = { commit: 'a'.repeat(40), mainCommit: 'a'.repeat(40), dirty: false };
@@ -51,6 +51,34 @@ test('acceptance blocks dirty working trees, detached feature commits, stale mai
   assert.throws(() => assertMainlineHap(verified, { harmony, core }, 'arm64-v8a'), /ABI mismatch/);
   assert.throws(() => assertMainlineHap({ ...verified, artifacts: [{ ...artifact, signature: { status: 'signed', verified: false } }] },
     { harmony, core }, 'x86_64'), /verified signature/);
+});
+
+test('a clean Core Pin remains equivalent across a documentation commit with identical verified Native inputs', () => {
+  const inputFingerprint = '1'.repeat(64);
+  const pin = 'e'.repeat(40);
+  const pinnedCore = { commit: pin, mainCommit: pin, dirty: false };
+  const pinnedManifest = { ...manifest, source: { harmony, core: pinnedCore } };
+  const boundArtifact = { ...artifact, storageCapability: { coreInputFingerprint: inputFingerprint } };
+  const candidate = { manifest: pinnedManifest, artifacts: [boundArtifact] };
+  const current = { harmony, core: { ...core, inputFingerprint, equivalentPin: pin } };
+  assert.deepEqual(mainlineSourceMatch(pinnedManifest.source, current, inputFingerprint),
+    { harmony: true, core: 'pinned-input-fingerprint' });
+  assert.deepEqual(mainlineSourceMatch(manifest.source, current, inputFingerprint), { harmony: true, core: 'exact-commit' });
+  assert.equal(assertMainlineHap(candidate, current, 'x86_64'), boundArtifact);
+  assert.equal(assertMainlineHap(verified, current, 'x86_64'), artifact);
+  assert.throws(() => assertMainlineHap({ ...verified, artifacts: [boundArtifact] },
+    { ...current, core: { ...current.core, inputFingerprint: '2'.repeat(64) } },
+    'x86_64'), /clean Core main/);
+  assert.throws(() => assertMainlineHap({ ...candidate, artifacts: [artifact] }, current, 'x86_64'), /clean Core main/);
+  assert.throws(() => assertMainlineHap(candidate, { ...current, core: { ...current.core, inputFingerprint: '2'.repeat(64) } },
+    'x86_64'), /clean Core main/);
+  assert.throws(() => assertMainlineHap({ ...candidate, manifest: { ...pinnedManifest,
+    source: { harmony, core: { ...pinnedCore, dirty: true } } } }, current, 'x86_64'), /clean Core main/);
+  assert.throws(() => assertMainlineHap(candidate, { ...current, core: { ...current.core, equivalentPin: '3'.repeat(40) } },
+    'x86_64'), /clean Core main/);
+  assert.throws(() => assertMainlineHap({ ...candidate, manifest: { ...pinnedManifest,
+    source: { harmony: { ...harmony, commit: '4'.repeat(40) }, core: pinnedCore } } },
+  current, 'x86_64'), /clean Harmony main/);
 });
 
 test('install proof rejects wrong server, target, HAP bytes, stale replacement and wrong embedded identity', () => {

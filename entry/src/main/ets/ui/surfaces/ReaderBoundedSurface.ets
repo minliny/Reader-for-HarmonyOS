@@ -9,7 +9,7 @@ import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_SURFACE_HINT, newReaderLayoutM
 import { readerBeginTransition, readerTransitionsEnabled } from '../foundation/ReaderTransitionSignals';
 import type { LayoutInvariantSurfaceHint } from '../layout/LayoutInvariantNativeAudit';
 import type { ReaderTransitionAxis } from '../layout/TransitionInvariantEvaluator';
-import { applyReaderImmersiveMaterial, defaultNavigationPreferences, readerSurfaceMaterialDecision,
+import { applyReaderImmersiveMaterial, defaultNavigationPreferences, readerNativeSurfaceOutline, readerSurfaceMaterialDecision,
   READER_NO_SHADOW } from './ReaderSurfaceMaterial';
 
 export type ReaderBoundedSurfaceId = 'source-switch-window' | 'source-switch-drawer' | 'reader-action-sheet' | 'tts-config-manager' | 'tts-config-picker' | SheetSpecId | 'local-import-selection' | 'local-import-progress' | 'local-import-result-content' | 'reader-replace-editor';
@@ -40,12 +40,15 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
     const height = this.height > 0 ? this.height : undefined;
     if (this.id === 'source-switch-drawer') {
       const spec = resolveDrawerSpec(this.id);
+      const side = this.placement === 'side';
+      const corners: OutlineRadiuses = side ? { topLeft: 22, bottomLeft: 22, topRight: 0, bottomRight: 0 } :
+        { topLeft: spec.cornerRadius, topRight: spec.cornerRadius };
       instance.width(this.width).height(height).constraintSize({ maxWidth: '100%', maxHeight });
       this.applyMaterialFrame(instance, { radius: READER_HEAVY_GLASS_BLUR_VP, color: readerAppColor(spec.surfaceRole, this.scheme) },
-        { width: this.placement === 'side' ? { left: 1 } : { top: 1 }, color: readerAppColor(spec.lineRole, this.scheme) },
+        { width: side ? { left: 1 } : { top: 1 }, color: readerAppColor(spec.lineRole, this.scheme) },
+        readerNativeSurfaceOutline(this.scheme, corners, side ? 'left' : 'top'),
         readerSurfaceElevation('sheet', this.scheme));
-      instance.borderRadius(this.placement === 'side' ? { topLeft: 22, bottomLeft: 22, topRight: 0, bottomRight: 0 } :
-        { topLeft: spec.cornerRadius, topRight: spec.cornerRadius }).clip(true);
+      instance.borderRadius(corners).clip(true);
       return;
     }
     if (this.id === 'reader-action-sheet') {
@@ -54,12 +57,15 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       const paddingBottom = this.maxHeight > 0 ? Math.min(this.insets.bottom, this.maxHeight - paddingTop) : this.insets.bottom;
       const insetHeight = paddingTop + paddingBottom;
       const minimumHeight = this.maxHeight > 0 ? Math.min(this.maxHeight, spec.minimumContentHeight + insetHeight) : insetHeight;
+      const corners: OutlineRadiuses = { topLeft: side ? 0 : spec.cornerRadius, topRight: side ? 0 : spec.cornerRadius,
+        bottomLeft: 0, bottomRight: 0 };
       instance.width(this.width).height(side ? height : undefined)
         .constraintSize({ maxWidth: '100%', minHeight: side ? 0 : minimumHeight, maxHeight })
         .padding({ left: this.insets.left, right: this.insets.right, top: paddingTop, bottom: paddingBottom });
       this.applyMaterialFrame(instance, { radius: READER_HEAVY_GLASS_BLUR_VP, color: readerAppColor(spec.surfaceRole, this.scheme) },
-        side ? { width: { left: 1 }, color: readerAppColor(spec.lineRole, this.scheme) } : undefined, READER_NO_SHADOW);
-      instance.borderRadius({ topLeft: side ? 0 : spec.cornerRadius, topRight: side ? 0 : spec.cornerRadius, bottomLeft: 0, bottomRight: 0 })
+        side ? { width: { left: 1 }, color: readerAppColor(spec.lineRole, this.scheme) } : undefined,
+        readerNativeSurfaceOutline(this.scheme, corners, side ? 'left' : 'top'), READER_NO_SHADOW);
+      instance.borderRadius(corners)
         .hitTestBehavior(HitTestMode.Default).clip(true);
       return;
     }
@@ -67,7 +73,8 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       const spec = resolvePopupSpec(this.id);
       instance.width(this.width).height(height).constraintSize({ maxWidth: '100%', maxHeight });
       this.applyMaterialFrame(instance, { radius: READER_GLASS_BLUR_VP, color: readerAppColor(spec.surfaceBackgroundRole, this.scheme) },
-        { width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) });
+        { width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) },
+        readerNativeSurfaceOutline(this.scheme, spec.borderRadius));
       instance.borderRadius(spec.borderRadius);
       return;
     }
@@ -104,7 +111,7 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
   }
 
   private applyMaterialFrame(instance: CommonAttribute, background: BackgroundEffectOptions,
-    border: BorderOptions | undefined, shadow?: ShadowOptions): void {
+    border: BorderOptions | undefined, outline: OutlineOptions, shadow?: ShadowOptions): void {
     const native = this.material?.native === true;
     const solidFallback = !native && this.material?.performanceMode === true;
     instance.backgroundEffect(native || solidFallback ? undefined : background)
@@ -112,6 +119,7 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       .border(native ? { width: 0, color: Color.Transparent } : border)
       .shadow(native ? undefined : shadow);
     applyReaderImmersiveMaterial(instance, this.material);
+    instance.outline(native ? outline : undefined);
   }
 }
 

@@ -16,7 +16,8 @@ import { TYPE_READER_TTS_CONFIG_BUILD_LABEL, TYPE_READER_TTS_CONFIG_BUILD_STATUS
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerBeginTransition, readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
-import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_SURFACE_HINT } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_SURFACE_HINT, ReaderLayoutOverlayRoot }
+  from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantSurfaceHint } from '../../../ui/layout/LayoutInvariantNativeAudit';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
@@ -95,6 +96,7 @@ export struct ReaderTtsConfigOverlay {
   @State private busy: boolean = false;
   @State private errorText: string = '';
   private mounted: boolean = false;
+  private readonly layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('tts-configuration');
   private generation: number = 0;
 
   aboutToAppear(): void {
@@ -300,8 +302,10 @@ export struct ReaderTtsConfigOverlay {
           this.manager ? readerAppColor('app.scrim.modal', this.appThemeScheme) : Color.Transparent, false, this.manager))
         .onClick((): void => this.close());
       this.configurationPanel();
-    }.width(this.windowModal ? '100%' : this.availableWidth)
-      .height(this.windowModal ? '100%' : this.availableHeight).zIndex(20);
+    }.id(this.layoutOverlay?.id()).width(this.windowModal ? '100%' : this.availableWidth)
+      .height(this.windowModal ? '100%' : this.availableHeight).zIndex(20)
+      .onAppear((): void => this.layoutOverlay?.mount(this.getUIContext()))
+      .onDisAppear((): void => this.layoutOverlay?.unmount());
   }
 
   @Builder

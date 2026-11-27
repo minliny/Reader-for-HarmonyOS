@@ -7,11 +7,21 @@ export interface ReaderReadingPanelPaint {
   readonly nativeShadow: boolean;
 }
 
+export interface ReaderSurfaceOutlinePaint {
+  readonly color: string;
+  readonly width: number;
+}
+
+export function readerSurfaceOutlinePaint(scheme: string): ReaderSurfaceOutlinePaint {
+  return { color: readerAppColor('TOK_LINE_STRONG', scheme), width: 1.5 };
+}
+
 export function readerReadingPanelPaint(scheme: string, nativeMaterial: boolean): ReaderReadingPanelPaint {
+  const edge = readerSurfaceOutlinePaint(scheme);
   return {
     surface: nativeMaterial ? undefined : readerAppColor('TOK_READ_SURFACE', scheme),
-    outline: readerAppColor('TOK_LINE_STRONG', scheme),
-    outlineWidth: 1.5,
+    outline: edge.color,
+    outlineWidth: edge.width,
     nativeShadow: nativeMaterial,
   };
 }

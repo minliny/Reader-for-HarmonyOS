@@ -12,7 +12,7 @@ import { ExpandMode, FrameNode } from '@ohos.arkui.node';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerMotionNowMs } from '../../ui/foundation/ReaderMotionClock';
 import { ReaderPostLayoutFrame } from '../../ui/layout/ReaderPostLayoutFrame';
-import { READER_LAYOUT_INVARIANT_PROPERTY, readerOwnedLayoutModals } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_LAYOUT_INVARIANT_PROPERTY, readerLayoutOverlayRoots, readerOwnedLayoutModals } from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import { evaluateLayoutInvariants, READER_PAGED_INPUT_SCOPE } from '../../ui/layout/LayoutInvariantEvaluator';
 import type { LayoutInvariantNode, LayoutInvariantTag, LayoutInvariantRect, LayoutInvariantResult } from '../../ui/layout/LayoutInvariantEvaluator';
 
@@ -260,7 +260,8 @@ export struct ReaderLayoutDebugOverlay {
       requiresFirstContent: this.requiresFirstContent, modalOpen, recoveryPending,
       checkRecovery: recovery || this.modalRecoveryVerified,
       mainInputEnabled: this.mainInputEnabled, requiresNativeMainInput: this.route === 'reading',
-      native: this.nativeLayoutAudit.build(metrics, this.route, this.invariantNodes, scanned && !this.frameScanTruncated) });
+      native: this.nativeLayoutAudit.build(metrics, this.route, this.invariantNodes, scanned && !this.frameScanTruncated,
+        this.appThemeScheme) });
     const receipt: LayoutInvariantReceipt = {
       schemaVersion: 2, sequence: ++layoutInvariantSequence, route: this.route, scheme: this.appThemeScheme,
       status: result.missing.length === 0 && !recoveryPending ? 'measured' : 'incomplete',
@@ -413,12 +414,20 @@ export struct ReaderLayoutDebugOverlay {
     this.childIndexQueries = 0;
     const visited: Set<number> = new Set<number>();
     this.collectFrameBounds(root, next, 0, 1, undefined, undefined, visited);
-    // A platform-native cover/popup can live outside the normal page root.
-    for (const id of this.nativeLayoutAudit.panelIds()) {
-      if (this.nativeLayoutAudit.has(id)) continue;
+    // A cover, a custom dialog or a popup can be attached outside the page.
+    // Each current root is registered by its mounted content in this window.
+    const context = this.getUIContext();
+    const windowId = context.getWindowId();
+    const unscopedOverlay = readerLayoutOverlayRoots(undefined)[0];
+    if (windowId === undefined || unscopedOverlay !== undefined) {
+      this.markFrameScanIncomplete('overlay-window-unresolved', unscopedOverlay ?? '', 0);
+    }
+    for (const id of windowId === undefined ? [] : readerLayoutOverlayRoots(windowId)) {
       try {
-        const panel = this.getUIContext().getAttachedFrameNodeById(id);
-        if (panel !== null) this.collectFrameBounds(panel, next, 0, 1, undefined, undefined, visited);
+        const panel = context.getAttachedFrameNodeById(id);
+        if (panel === null || !panel.isAttached() || panel.isDisposed()) {
+          this.markFrameScanIncomplete('overlay-root-unresolved', id, 0);
+        } else this.collectMountedOverlay(panel, next, visited);
       } catch (_) { this.markFrameScanIncomplete('native-surface-read', id, 0); }
     }
     this.frameBounds = next;
@@ -428,6 +437,26 @@ export struct ReaderLayoutDebugOverlay {
       this.reportWindowSample();
       this.paintFrameBounds();
     }
+  }
+
+  private collectMountedOverlay(panel: FrameNode, output: ReaderDebugBounds[], visited: Set<number>): void {
+    const panelId = panel.getUniqueId();
+    if (visited.has(panelId)) return;
+    // Include the platform container when its attached branch is available.
+    // This preserves its clip and input hierarchy around the registered panel.
+    let root = panel;
+    let parent = panel.getParent();
+    let depth = 0;
+    while (parent !== null && !visited.has(parent.getUniqueId()) && depth < 128) {
+      root = parent;
+      parent = parent.getParent();
+      depth += 1;
+    }
+    if (depth >= 128) this.markFrameScanIncomplete('overlay-parent-depth-limit', this.debugNodeLabel(panel), depth);
+    this.collectFrameBounds(root, output, 0, 1, undefined, undefined, visited);
+    // Some native overlay containers do not enumerate their attached panel
+    // in the normal child range even when its id looks up successfully.
+    if (!visited.has(panelId)) this.collectFrameBounds(panel, output, 0, 1, undefined, undefined, visited);
   }
 
   private collectFrameBounds(root: FrameNode, output: ReaderDebugBounds[], rootDepth: number, rootOpacity: number,

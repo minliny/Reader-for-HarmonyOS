@@ -1,5 +1,6 @@
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
-import { READER_LAYOUT_DEBUG_BUILD, newReaderLayoutModalId, publishReaderLayoutModal } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_LAYOUT_DEBUG_BUILD, ReaderLayoutOverlayRoot, newReaderLayoutModalId, publishReaderLayoutModal }
+  from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
 import { readerBeginTransition, readerTransitionsEnabled } from '../foundation/ReaderTransitionSignals';
 import { READER_REDUCED_FADE_MS, READER_SHEET_CLOSE_MS } from '../foundation/ProductMotionTiming';
@@ -9,7 +10,7 @@ import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { ReaderRectVp } from '../foundation/ReaderWindowMetrics';
 import { readerOverlayViewport } from '../layout/ReaderOverlayGeometry';
 import { readerSurfaceElevation, resolveSheetSpec, type SheetSpecId, type SheetSurfaceSpec } from './ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerNativeSurfaceOutline,
   readerSurfaceMaterialDecision } from './ReaderSurfaceMaterial';
 
 /** The cover owns native modal isolation and system Back. The scrim and
@@ -36,6 +37,7 @@ export struct ReaderBottomSheet {
   @State private coverVisible: boolean = false;
   @State private frameVisible: boolean = false;
   private mounted: boolean = false;
+  private readonly layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('bottom-sheet');
   private coverReady: boolean = false;
   private coverAppearance: number = 0;
   private frameAttached: boolean = false;
@@ -134,7 +136,9 @@ export struct ReaderBottomSheet {
             .hitTestBehavior(HitTestMode.Transparent);
         }
       }
-    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Default)
+    }.id(this.layoutOverlay?.id()).width('100%').height('100%').hitTestBehavior(HitTestMode.Default)
+      .onAppear((): void => this.layoutOverlay?.mount(this.getUIContext()))
+      .onDisAppear((): void => this.layoutOverlay?.unmount())
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.ALL])
       .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
         ? { role: 'modal-overlay', id: 'bottom-sheet', active: this.visible,
@@ -157,7 +161,8 @@ export struct ReaderBottomSheet {
         { width: { top: this.spec().hostBorderWidth }, color: readerAppColor(this.spec().hostBorderRole, this.scheme) })
       .borderRadius({ topLeft: this.spec().borderRadius, topRight: this.spec().borderRadius })
       .shadow(this.frameMaterial().native ? undefined : this.frameShadow())
-      .attributeModifier(new ReaderImmersiveMaterialModifier(this.frameMaterial())).clip(true)
+      .attributeModifier(new ReaderImmersiveMaterialModifier(this.frameMaterial(), readerNativeSurfaceOutline(this.scheme,
+        { topLeft: this.spec().borderRadius, topRight: this.spec().borderRadius }, 'top'))).clip(true)
       .hitTestBehavior(HitTestMode.Default).focusable(true).focusScopeId(this.nativeId, true, false)
       .onAppear((): void => {
         this.frameAttached = true;

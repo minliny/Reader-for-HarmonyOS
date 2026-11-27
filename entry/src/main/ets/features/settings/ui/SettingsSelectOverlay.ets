@@ -11,7 +11,7 @@ import {
   TYPE_SETTINGS_SELECT_TITLE,
 } from '../../../ui/foundation/ReaderTypography';
 import { PopupSurfaceSpec, readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerNativeSurfaceOutline,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 import { readerReadableFontScale, readerScaledBarHeight, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
@@ -24,7 +24,7 @@ const PHONE_BOTTOM_INSET = 20;
 const PHONE_OPTION_HEIGHT = 52;
 const PHONE_CANCEL_GAP = 10;
 const PHONE_RADIUS = 12;
-const PHONE_SHEET_CORNERS: BorderRadiuses = { topLeft: 24, topRight: 24 };
+const PHONE_SHEET_CORNERS: OutlineRadiuses = { topLeft: 24, topRight: 24 };
 
 /**
  * Settings-only responsive selector.
@@ -150,7 +150,8 @@ export struct SettingsSelectOverlay {
           .borderRadius(PHONE_SHEET_CORNERS)
           .clip(true)
           .shadow(this.panelMaterial('modalSheet').native ? undefined : readerSurfaceElevation('sheet', this.appThemeScheme))
-          .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial('modalSheet')))
+          .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial('modalSheet'),
+            readerNativeSurfaceOutline(this.appThemeScheme, PHONE_SHEET_CORNERS, 'top')))
           .transition(this.panelTransition(true), (entering: boolean): void => this.finishMotion(entering, identity));
       }
     }
@@ -278,7 +279,8 @@ export struct SettingsSelectOverlay {
     .borderRadius(this.tabletSpec().borderRadius)
     .clip(true)
     .shadow(this.panelMaterial('popoverMenu').native ? undefined : readerSurfaceElevation('popover', this.appThemeScheme))
-    .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial('popoverMenu')))
+    .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial('popoverMenu'),
+      readerNativeSurfaceOutline(this.appThemeScheme, this.tabletSpec().borderRadius)))
     .position({
       x: this.tabletFrame().left - this.hostGeometry.left,
       y: this.tabletFrame().top - this.hostGeometry.top,

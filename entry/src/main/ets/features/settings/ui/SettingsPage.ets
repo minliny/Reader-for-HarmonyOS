@@ -47,7 +47,7 @@ import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../../bookshelf/
 import { LocalRecoveryPanel } from '../../bookshelf/ui/LocalRecoveryPanel';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { SettingsSelectOverlay, type SettingsSelectField } from './SettingsSelectOverlay';
-import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_LAYOUT_DEBUG_BUILD, ReaderLayoutOverlayRoot } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { NavigationAppearanceSettings, readerRenderModeLabel } from './NavigationAppearanceSettings';
 import { SettingsLicensesPage } from './SettingsLicensesPage';
@@ -119,6 +119,7 @@ export struct SettingsPage {
   private resetFrameAttached: boolean = false;
   private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   private mounted: boolean = false;
+  private readonly resetLayoutOverlay = ReaderLayoutOverlayRoot.diagnostic('settings-reset');
   private themeOwner: ReaderRuntimeOwner | undefined = undefined;
   @State private appearanceSaveRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   @State private appearanceSaveRecoveryBusy: boolean = false;
@@ -1389,7 +1390,9 @@ export struct SettingsPage {
         ForEach([this.resetDialogTicket], (ticket: number): void => { this.resetDialog(ticket, this.temporaryBackIdentity); },
           (ticket: number): string => ticket.toString());
       }
-    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Default)
+    }.id(this.resetLayoutOverlay?.id()).width('100%').height('100%').hitTestBehavior(HitTestMode.Default)
+      .onAppear((): void => this.resetLayoutOverlay?.mount(this.getUIContext()))
+      .onDisAppear((): void => this.resetLayoutOverlay?.unmount())
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.ALL]);
   }
 

@@ -480,12 +480,32 @@ function gitRecord(repo, includeMain = false) {
 }
 
 export function hapMainlineSources() {
-  return Object.fromEntries([['harmony', REPO_ROOT], ['core', CORE_ROOT]].map(([name, repo]) => {
+  const sources = Object.fromEntries([['harmony', REPO_ROOT], ['core', CORE_ROOT]].map(([name, repo]) => {
     const source = gitRecord(repo, true);
     const branches = capture('git', ['-C', repo, 'for-each-ref', '--no-merged', 'refs/heads/main',
       '--format=%(refname:short) %(objectname)', 'refs/heads']);
     return [name, { ...source, unmerged: branches ? branches.split('\n') : [] }];
   }));
+  const { core } = sources;
+  if (!core.dirty && core.commit === core.mainCommit) {
+    const snapshot = coreBuildSnapshot(CORE_ROOT);
+    if (snapshot.gitIdentity.gitCommit !== core.commit || snapshot.gitIdentity.gitDirty) {
+      fail('Core main changed while reading its build inputs');
+    }
+    core.inputFingerprint = snapshot.fingerprint;
+    const pin = JSON.parse(readFileSync(resolve(REPO_ROOT, 'scripts/core-dependency.json'), 'utf8'));
+    if (/^[a-f0-9]{40}$/.test(pin.coreCommit ?? '') && pin.coreInputFingerprint === core.inputFingerprint &&
+        run('git', ['-C', CORE_ROOT, 'merge-base', '--is-ancestor', pin.coreCommit, core.mainCommit],
+          { allowFailure: true }).status === 0) core.equivalentPin = pin.coreCommit;
+  }
+  return sources;
+}
+
+/** Read published metadata only. Live use obtains the fingerprint from the inspected HAP. */
+export function plannedSignedCoreFingerprint(selection) {
+  const artifact = selection.manifest.artifacts.find(item => item.kind === 'signed');
+  return verifyStorageDeliveryContract(dirname(selection.path), artifact, selection.manifest.source?.vendoredCoreNapi)
+    ?.coreInputFingerprint;
 }
 
 export function latestPublishedSignedHap(abi, root = DEFAULT_ARTIFACT_ROOT) {

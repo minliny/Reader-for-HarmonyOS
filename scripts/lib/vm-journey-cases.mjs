@@ -62,6 +62,7 @@ const surface = subject => ({ kind: 'surface', action: 'mount', subject, rules: 
 const routeMotion = (action, subject) => ({ kind: 'route', action, subject, rules: ['T2'] });
 const chapterAdvance = subject => ({ kind: 'chapter', action: 'advance', subject, rules: ['T4'] });
 const launch = action => ({ kind: 'launch', action, subject: 'reader-session-launch', rules: ['T3'] });
+const launchHandoff = action => ({ kind: 'launch', action, subject: 'reader-session-launch-handoff', rules: ['T3'] });
 
 export async function applyVmJourneyProfile(ui) {
   await ui.wait('确认公开夹具已启动并原生扫描书架', { ...bookshelfReady, requiredRules: ['R13'] });
@@ -171,6 +172,13 @@ async function togglePlayback(ui, serviceLabel, mode) {
   const paused = capsule(serviceLabel, false);
   await ui.tap(`暂停${serviceLabel}`, running, { ...steadyReader(mode), all: [stageMode(mode), paused], none: [running] });
   await ui.tap(`继续${serviceLabel}`, paused, { ...steadyReader(mode), all: [stageMode(mode), running], none: [paused] });
+}
+
+async function returnFromPlaybackCapsule(ui, mode, service, serviceLabel, toggle) {
+  await ui.tap(`从正文收回${serviceLabel}胶囊并核对播放区交接`, stageMode(mode), {
+    route: 'reading', all: [moduleId(service), toggle], none: [id('reader-session-launch-toggle')],
+    modalOpen: true, transition: launchHandoff(service), filmstrip: true,
+  });
 }
 
 function searchRow(title) {
@@ -620,7 +628,7 @@ export const journeys = {
       ...steadyReader(mode), all: [capsule('朗读', true)], none: [tts], transition: launch('tts'), filmstrip: true,
     });
     await togglePlayback(ui, '朗读', mode);
-    await controls(ui, 'tts');
+    await returnFromPlaybackCapsule(ui, mode, 'tts', '朗读', toggle);
     await ui.tap('跳到下一句，核对上句恢复可用', next, {
       route: 'reading', all: [tts, previous, stop], requiredRules: ['R14'], features: ['tts-transport'],
     });
@@ -664,7 +672,7 @@ export const journeys = {
       transition: [launch('autoPage'), chapterAdvance('reader-chapter-local')], filmstrip: true,
     });
     await togglePlayback(ui, '自动翻页', mode);
-    await controls(ui, 'autoPage');
+    await returnFromPlaybackCapsule(ui, mode, 'autoPage', '自动翻页', toggle);
     await ui.tap('从自动翻页模块切换下一章并检查保留帧', next, {
       route: 'reading', all: [auto, previous, stop], transition: chapterAdvance('reader-chapter-local'), filmstrip: true,
     });
@@ -905,7 +913,7 @@ export const journeys = {
     await ui.tap('打开本地备份与恢复', backup, { route: 'settings', all: [exportAction, restoreAction] });
     await ui.tap('核对加密导出要求双份口令且空口令不可提交', exportAction, {
       route: 'settings', all: [passphrase, repeated, action('取消')], none: [exportConfirm],
-      requiredRules: ['R9', 'R10'], transition: surface('dialog'), filmstrip: true,
+      requiredRules: ['R9', 'R10', 'R13'], transition: surface('dialog'), filmstrip: true,
     });
     await ui.input('输入固定公开夹具口令', passphrase, credentials, {
       route: 'settings', all: [repeated], none: [exportConfirm],
@@ -915,7 +923,7 @@ export const journeys = {
       ...openBackup, all: [restoreAction, text(/^恢复包已导出。/u)], screenCapture: true,
     });
     await ui.tap('核对导入要求口令后才开放文件选择', restoreAction, {
-      route: 'settings', all: [passphrase, action('取消')], none: [inspectConfirm], requiredRules: ['R9', 'R10'],
+      route: 'settings', all: [passphrase, action('取消')], none: [inspectConfirm], requiredRules: ['R9', 'R10', 'R13'],
     });
     await ui.input('输入不同的公开口令用于校验失败', passphrase, 'ReaderPublicWrong14', { route: 'settings', all: [inspectConfirm] });
     await ui.tap('拒绝错误口令，禁止进入恢复预览', inspectConfirm, {
@@ -941,7 +949,7 @@ export const journeys = {
     });
     const restoreConfirm = action('确认恢复');
     await ui.tap('恢复预览 → 核对替换警告', action('恢复…'), {
-      route: 'settings', all: [text('恢复本地阅读库'), restoreConfirm], requiredRules: ['R9', 'R10'],
+      route: 'settings', all: [text('恢复本地阅读库'), restoreConfirm], requiredRules: ['R9', 'R10', 'R13'],
     });
     await ui.tap('应用隔离备份并核对恢复完成回执', restoreConfirm, {
       ...openBackup, all: [restoreAction, text(/^阅读库已恢复。/u)], screenCapture: true,

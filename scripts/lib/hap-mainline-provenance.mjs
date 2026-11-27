@@ -23,20 +23,34 @@ export function latestSignedRun(candidates, abi) {
   return runs[0];
 }
 
+function sourceRecordedClean(source) {
+  return source?.dirty === false && commitHash.test(source.commit) &&
+    (source.mainCommit === undefined || source.mainCommit === source.commit);
+}
+
+export function mainlineSourceMatch(source, current, coreInputFingerprint) {
+  const harmony = sourceRecordedClean(source?.harmony) && source.harmony.commit === current.harmony.mainCommit;
+  let core = 'unmatched';
+  const inputConflict = coreInputFingerprint !== undefined && current.core.inputFingerprint !== undefined &&
+    coreInputFingerprint !== current.core.inputFingerprint;
+  if (sourceRecordedClean(source?.core) && !inputConflict) {
+    if (source.core.commit === current.core.mainCommit) core = 'exact-commit';
+    else if (source.core.commit === current.core.equivalentPin && sha256.test(coreInputFingerprint ?? '') &&
+        coreInputFingerprint === current.core.inputFingerprint) core = 'pinned-input-fingerprint';
+  }
+  return { harmony, core };
+}
+
 export function assertMainlineHap(verified, current, abi) {
   assertCleanMainline(current.harmony, current.core);
   const { manifest } = verified;
-  for (const [label, source] of records(manifest.source?.harmony, manifest.source?.core)) {
-    const live = label === 'Harmony' ? current.harmony : current.core;
-    if (source?.dirty !== false || source.commit !== live.mainCommit ||
-        (source.mainCommit !== undefined && source.mainCommit !== live.mainCommit)) {
-      throw new Error(`latest HAP source does not match clean ${label} main`);
-    }
-  }
   if ((manifest.abi ?? 'arm64-v8a') !== abi) throw new Error('latest HAP ABI mismatch');
   const artifact = verified.artifacts.find(item => item.kind === 'signed');
   if (!artifact || !sha256.test(artifact.sha256) || artifact.signature?.status !== 'signed' ||
       artifact.signature.verified !== true) throw new Error('latest HAP lacks a verified signature');
+  const sourceMatch = mainlineSourceMatch(manifest.source, current, artifact.storageCapability?.coreInputFingerprint);
+  if (!sourceMatch.harmony) throw new Error('latest HAP source does not match clean Harmony main');
+  if (sourceMatch.core === 'unmatched') throw new Error('latest HAP source does not match clean Core main');
   validateAppBuildIdentity(manifest.expectedVersion);
   return artifact;
 }

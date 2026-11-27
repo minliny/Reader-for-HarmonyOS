@@ -101,7 +101,7 @@ export struct ReaderInlineSelect {
       ReaderSelectPanel({ hosting: 'popup', hostBottomVp: this.popupViewportHeight(),
         value: this.value, options: this.options, selectedIndex: this.selectedIndex,
         variant: this.variant, controlWidth: this.controlWidth, reduceMotion: this.reduceMotion,
-        menuKind: this.menuKind,
+        menuKind: this.menuKind, auditPopupAnchor: this.anchor,
         selectionId: identity, x: 0, y: 0,
         onCommit: (value: string, actorIdentity: string, index: number = -1): void => this.commit(value, actorIdentity, index),
         onDismiss: (actorIdentity: string): void => this.dismiss(actorIdentity) });

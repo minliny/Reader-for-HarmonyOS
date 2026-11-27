@@ -1,4 +1,5 @@
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { ReaderLayoutOverlayRoot } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
@@ -51,6 +52,7 @@ export struct LocalRecoveryPanel {
   private dialogSequence: number = 0;
   private confirmedDialogTicket: number = 0;
   private mounted: boolean = false;
+  private readonly layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('local-recovery');
   private readonly gateway: LocalRecoveryGateway = new LocalRecoveryGateway();
   private readonly feedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   private readonly dialogEditing: ReaderEditingVisibility = new ReaderEditingVisibility();
@@ -333,7 +335,9 @@ export struct LocalRecoveryPanel {
         ForEach([this.dialogTicket], (ticket: number): void => { this.dialogContent(ticket, this.revision); },
           (ticket: number): string => ticket.toString());
       }
-    }.width('100%').height('100%')
+    }.id(this.layoutOverlay?.id()).width('100%').height('100%')
+      .onAppear((): void => this.layoutOverlay?.mount(this.getUIContext()))
+      .onDisAppear((): void => this.layoutOverlay?.unmount())
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.ALL]);
   }
 

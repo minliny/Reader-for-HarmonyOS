@@ -5,13 +5,16 @@ import { READER_THEME_DEFINITIONS, type ReaderThemeDefinition } from '../../ui/f
 import { readerInteractiveSafeBottom, readerStableInteractiveSafeBottom, type ReaderWindowMetricsSnapshot }
   from '../../ui/foundation/ReaderWindowMetrics';
 import type { LayoutInvariantNode, LayoutInvariantRect } from '../../ui/layout/LayoutInvariantEvaluator';
-import { READER_LAYOUT_CLOSE_CONTROL, READER_LAYOUT_FOOTER, READER_LAYOUT_SURFACE_HINT } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_LAYOUT_CLOSE_CONTROL, READER_LAYOUT_FOOTER, READER_LAYOUT_NATIVE_MATERIAL,
+  READER_LAYOUT_READING_PAPER, READER_LAYOUT_SURFACE_HINT } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+import { inspectReaderNativeMaterialPaint, type ReaderNativeMaterialAttributes } from '../../ui/layout/ReaderNativeMaterialPaint';
+import { evaluateReaderIslandContrast, readerIslandContrastPalette } from '../../ui/layout/ReaderIslandContrastEvaluator';
 import type { LayoutAuditClose, LayoutAuditHitTest, LayoutAuditPlacement, LayoutInvariantDensityAudit,
   LayoutInvariantFeatureAssertion, LayoutInvariantNativeNode, LayoutInvariantNativeSample, LayoutInvariantSurfaceAudit }
   from '../../ui/layout/LayoutInvariantNativeAudit';
 import type { LayoutInvariantSurfaceHint } from '../../ui/layout/LayoutInvariantNativeAudit';
 
-interface ReaderNativeInspectorAttributes {
+interface ReaderNativeInspectorAttributes extends ReaderNativeMaterialAttributes {
   enabled?: boolean | string;
   clickable?: boolean | string;
   hitTestBehavior?: number | string;
@@ -54,7 +57,6 @@ const READER_NATIVE_SURFACES: ReaderNativeSurfaceSpec[] = [
   { id: 'reader-control-tts-overlay', close: 'close-action', contentId: 'reader-tts-choice-content' },
   { id: 'reader-control-tts-manager-overlay', close: 'close-action',
     contentId: 'reader-tts-manager-content' },
-  { id: 'reader-control-more-menu', close: 'native-dismiss' },
   { id: 'reader-control-appearance-overlay', close: 'native-dismiss' },
   { id: 'reader-source-v9-more-menu', close: 'native-dismiss' },
   { id: 'reader-source-group-panel', close: 'close-action', placement: 'anchor-overlap', anchorId: 'reader-source-group-trigger' },
@@ -155,6 +157,13 @@ function nativeBooleanProperty(node: FrameNode, name: string): boolean {
   try { return node.getCustomProperty(name) === true; } catch (_) { return false; }
 }
 
+function nativeReadingPaper(node: FrameNode): string | undefined {
+  try {
+    const paper = node.getCustomProperty(READER_LAYOUT_READING_PAPER);
+    return typeof paper === 'string' ? paper : undefined;
+  } catch (_) { return undefined; }
+}
+
 function union(nodes: LayoutInvariantNativeNode[]): LayoutInvariantRect | undefined {
   let bounds: LayoutInvariantRect | undefined;
   for (const item of nodes) {
@@ -200,6 +209,9 @@ export class ReaderNativeLayoutAudit {
       paintedLeaf: leaf && (PAINT_LEAF_TYPES.includes(type) || mayPaint(attrs?.backgroundColor)),
       surfaceHint: id.length > 0 || type === 'Column' ? nativeSurfaceHint(node) : undefined,
       dock: type === 'Column' && nativeBooleanProperty(node, READER_LAYOUT_FOOTER),
+      nativeMaterialPaint: nativeBooleanProperty(node, READER_LAYOUT_NATIVE_MATERIAL) ?
+        inspectReaderNativeMaterialPaint(attrs) : undefined,
+      readingPaperTheme: id === 'reader-reading-stage' ? nativeReadingPaper(node) : undefined,
     };
     if (type === 'Text' && attrs?.content === '' && !hasArea(bounds)) observation.opacity = 0;
     observation.textClipped = measuredTextClips(context, observation, attrs);
@@ -208,9 +220,6 @@ export class ReaderNativeLayoutAudit {
     if (id.length > 0 && (this.byId.get(id)?.opacity ?? -1) < opacity) this.byId.set(id, observation);
     return observation;
   }
-
-  has(id: string): boolean { return this.byId.has(id); }
-  panelIds(): string[] { return READER_NATIVE_SURFACES.map((spec: ReaderNativeSurfaceSpec): string => spec.id); }
 
   private descendants(key: string): LayoutInvariantNativeNode[] {
     return this.nodes.filter((node: LayoutInvariantNativeNode): boolean => this.within(node, key));
@@ -231,7 +240,7 @@ export class ReaderNativeLayoutAudit {
     const result: LayoutInvariantSurfaceAudit[] = [];
     for (const spec of READER_NATIVE_SURFACES) {
       const node = this.byId.get(spec.id);
-      if (node === undefined || node.opacity < .1) continue;
+      if (node === undefined || node.opacity < .1 || node.surfaceHint?.dialog === true) continue;
       const body = spec.contentId === undefined ? undefined : this.byId.get(spec.contentId);
       const close: LayoutAuditClose = spec.close === 'native-dismiss' ? 'native-dismiss' : this.closeAction(node);
       const contentHeight = body?.bounds?.height;
@@ -252,9 +261,11 @@ export class ReaderNativeLayoutAudit {
       const descendants = hint.contentMeasured === true ? this.descendants(node.key) : [];
       const body = descendants.find((item: LayoutInvariantNativeNode): boolean => item.parentType === 'Scroll' &&
         item.type === 'Column' && item.bounds !== undefined);
-      result.push({ id: node.id, bounds: node.bounds, viewport, placement: hint.placement,
-        close: this.closeAction(node), scrollable: node.scrollClip, windowEdge: hint.windowEdge,
-        contentBounds: body?.bounds, contentViewport: body?.clip, naturalHeight: body?.bounds?.height,
+      const contentHeight = body?.bounds?.height;
+      const overhead = node.bounds === undefined || body?.clip === undefined ? 0 : Math.max(0, node.bounds.height - body.clip.height);
+      result.push({ id: node.id, bounds: node.bounds, viewport: hint.viewport ?? viewport, placement: hint.placement, anchor: hint.anchor,
+        close: hint.nativeDismiss === true ? 'native-dismiss' : this.closeAction(node), scrollable: node.scrollClip, windowEdge: hint.windowEdge,
+        contentBounds: body?.bounds, contentViewport: body?.clip, naturalHeight: contentHeight === undefined ? undefined : contentHeight + overhead,
         expectsContentMeasurement: hint.contentMeasured });
     }
     return result;
@@ -312,7 +323,7 @@ export class ReaderNativeLayoutAudit {
     return result;
   }
 
-  build(metrics: ReaderWindowMetricsSnapshot, route: string, tagged: LayoutInvariantNode[], complete: boolean):
+  build(metrics: ReaderWindowMetricsSnapshot, route: string, tagged: LayoutInvariantNode[], complete: boolean, appScheme: string):
     LayoutInvariantNativeSample {
     const viewport: LayoutInvariantRect | undefined = metrics.ready ?
       { x: 0, y: 0, width: metrics.windowRect.width, height: metrics.windowRect.height } : undefined;
@@ -331,7 +342,15 @@ export class ReaderNativeLayoutAudit {
     for (const item of this.nodes) {
       if (item.dock === true && item.bounds !== undefined && item.opacity >= .1 && hasArea(item.bounds)) dockBounds.push(item.bounds);
     }
+    const stage = this.byId.get('reader-reading-stage');
+    const visibleTextReader = route === 'reading' && stage !== undefined && stage.opacity >= .1 && hasArea(stage.bounds);
+    const themeId = visibleTextReader ? stage?.readingPaperTheme : undefined;
+    const paper = READER_THEME_DEFINITIONS.find((theme: ReaderThemeDefinition): boolean => theme.id === themeId);
+    const readingPaletteChecks = evaluateReaderIslandContrast(readerIslandContrastPalette(appScheme),
+      paper === undefined ? [] : [paper]);
     return { viewport, safeViewport, nodes: this.nodes, complete, dockBounds, expectDock: route === 'detail',
+      readingPaletteChecks, readingPaletteSource: paper === undefined ? appScheme : `${appScheme}/${paper.id}`,
+      readingPaperEvidenceMissing: visibleTextReader && paper === undefined,
       surfaces: this.surfaces(safeViewport, viewport), density: this.density(), features: this.features() };
   }
 }

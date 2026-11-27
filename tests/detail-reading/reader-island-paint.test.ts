@@ -1,8 +1,24 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { READER_THEME_DEFINITIONS, readerAppColor } from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import { READER_THEME_DEFINITIONS, readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { evaluateReaderIslandContrast, readerIslandContrastPalette, readerIslandContrastRatio }
   from '../../entry/src/main/ets/ui/layout/ReaderIslandContrastEvaluator.ts';
+import { readerSurfaceOutlinePaint } from '../../entry/src/main/ets/ui/surfaces/ReaderReadingPanelPaint.ts';
+
+test('runtime palette evaluates only the selected reading paper under the current application appearance', () => {
+  const paper = readerThemeDefinition('greenNight');
+  const checks = evaluateReaderIslandContrast(readerIslandContrastPalette('day'), [paper]);
+  assert.deepEqual(checks.filter(check => check.id.startsWith('paper-outline:')).map(check => check.id),
+    ['paper-outline:greenNight:start', 'paper-outline:greenNight:end']);
+});
+
+test('shared native surface outlines stay legible against day and night paper surfaces', () => {
+  for (const scheme of ['day', 'night']) {
+    const outline = readerSurfaceOutlinePaint(scheme);
+    assert.equal(outline.width, 1.5);
+    assert.ok(readerIslandContrastRatio(outline.color, readerAppColor('TOK_PAPER', scheme)) >= 3);
+  }
+});
 
 test('day and night control islands pass the outline, card and action contrast checks', () => {
   for (const scheme of ['day', 'night']) {

@@ -2384,6 +2384,8 @@ export struct ReaderControlPanel {
   private readerMoreMenu(generation: number = this.moreMenuGeneration) {
     ReaderActionMenuSurface({
       specId: 'reader-more-menu', nativeId: 'reader-control-more-menu',
+      auditAnchoredPopup: true, auditPopupAnchor: this.readerMoreAnchor(),
+      nativePopupMaterial: this.surfaceMaterial('popoverMenu').native,
       scheme: this.appScheme, actions: this.readerMoreActions(),
       viewportHeight: Math.max(0, this.readerMorePopupRect().height - this.readerMoreSurfaceSpec().pointerHeight -
         2 * this.readerMoreSurfaceSpec().borderWidth),

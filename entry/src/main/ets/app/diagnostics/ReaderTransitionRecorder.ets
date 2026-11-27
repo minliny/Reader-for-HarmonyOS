@@ -3,8 +3,10 @@ import { ExpandMode, FrameNode } from '@ohos.arkui.node';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerMotionNowMs } from '../../ui/foundation/ReaderMotionClock';
 import { readerTransitionsEnabled } from '../../ui/foundation/ReaderTransitionSignals';
-import { evaluateTransitionInvariants, READER_TRANSITION_SAMPLE_MS } from '../../ui/layout/TransitionInvariantEvaluator';
-import type { ReaderTransitionEvaluation, ReaderTransitionFrame, ReaderTransitionKind, ReaderTransitionNode,
+import { evaluateTransitionInvariants, READER_LAUNCH_LEADING, READER_LAUNCH_LEADING_ICON, READER_LAUNCH_LEADING_LABEL,
+  READER_LAUNCH_PROXY, READER_LAUNCH_SHARP, READER_LAUNCH_SHARP_SCALE, READER_LAUNCH_SOURCE_CLIP, READER_TRANSITION_SAMPLE_MS }
+  from '../../ui/layout/TransitionInvariantEvaluator';
+import type { ReaderLaunchSourceClip, ReaderTransitionEvaluation, ReaderTransitionFrame, ReaderTransitionKind, ReaderTransitionNode,
   ReaderTransitionObservation } from '../../ui/layout/TransitionInvariantEvaluator';
 import { readerWindowMetrics } from '../../ui/foundation/ReaderWindowEnvironment';
 
@@ -141,6 +143,7 @@ export class ReaderTransitionRecorder {
         }
         if (owner === null || owner.isDisposed() || !owner.isAttached()) continue;
         const node = this.readNode(context, id, owner, request.layoutBounds === true);
+        if (request.kind === 'launch' && node.visible) this.clipLaunchContent(sample, node, owner);
         if (request.kind === 'chapter' && index < (request.chapterBodyCount ?? 0) && node.visible) {
           // Paged text is measured inside the title/body column. Use that
           // native viewport origin and the first actual visible text leaf.
@@ -165,6 +168,43 @@ export class ReaderTransitionRecorder {
       } catch (_) { sample.unreadableIds.push(id); }
     }
     return sample;
+  }
+
+  private clipLaunchContent(sample: ReaderTransitionFrame, actor: ReaderTransitionNode, owner: FrameNode): void {
+    const leadingInk = actor.id === READER_LAUNCH_LEADING_ICON || actor.id === READER_LAUNCH_LEADING_LABEL;
+    if (!leadingInk && actor.id !== READER_LAUNCH_SHARP) return;
+    const clipId = leadingInk ? READER_LAUNCH_LEADING : READER_LAUNCH_PROXY;
+    const clip = sample.nodes.find((candidate: ReaderTransitionNode): boolean => candidate.id === clipId);
+    if (clip === undefined) throw new Error('launch-content-clip-unavailable');
+    let left = clip.x;
+    let top = clip.y;
+    let right = clip.x + clip.width;
+    let bottom = clip.y + clip.height;
+    if (actor.id === READER_LAUNCH_SHARP) {
+      // FrameNode exposes the transformed origin and the unscaled measured
+      // size. The values read here are the same scale/clip applied to this
+      // attached actor, sampled alongside its native effective opacity.
+      const scale = owner.getCustomProperty(READER_LAUNCH_SHARP_SCALE);
+      const insets = owner.getCustomProperty(READER_LAUNCH_SOURCE_CLIP) as ReaderLaunchSourceClip | undefined;
+      if (typeof scale !== 'number' || !Number.isFinite(scale) || scale <= 0 || insets === undefined ||
+        insets === null || ![insets.left, insets.top, insets.right, insets.bottom].every(Number.isFinite)) {
+        throw new Error('launch-sharp-geometry-unavailable');
+      }
+      actor.width *= scale;
+      actor.height *= scale;
+      left += insets.left;
+      top += insets.top;
+      right -= insets.right;
+      bottom -= insets.bottom;
+    }
+    const viewport = readerWindowMetrics().windowRect;
+    right = Math.min(right, actor.x + actor.width, viewport.width);
+    bottom = Math.min(bottom, actor.y + actor.height, viewport.height);
+    actor.x = Math.max(actor.x, left, 0);
+    actor.y = Math.max(actor.y, top, 0);
+    actor.width = Math.max(0, right - actor.x);
+    actor.height = Math.max(0, bottom - actor.y);
+    actor.visible = clip.visible && actor.width > 0 && actor.height > 0;
   }
 
   private readNode(context: UIContext, id: string, owner: FrameNode, layoutBounds: boolean = false): ReaderTransitionNode {

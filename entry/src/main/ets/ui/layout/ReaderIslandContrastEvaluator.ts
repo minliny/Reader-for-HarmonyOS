@@ -1,6 +1,6 @@
 import { readerIslandControlPaint } from '../foundation/ReaderIslandControlPaint';
 import type { ReaderIslandControlTone } from '../foundation/ReaderIslandControlPaint';
-import { READER_THEME_DEFINITIONS, readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { READER_THEME_DEFINITIONS, readerAppColor, type ReaderThemeDefinition } from '../foundation/ReaderThemeRegistry';
 import { readerIslandCardPaint, readerReadingPanelPaint } from '../surfaces/ReaderReadingPanelPaint';
 
 interface ReaderColorChannels {
@@ -95,7 +95,8 @@ export function readerIslandContrastPalette(scheme: string): ReaderIslandContras
   };
 }
 
-export function evaluateReaderIslandContrast(palette: ReaderIslandContrastPalette): ReaderIslandContrastCheck[] {
+export function evaluateReaderIslandContrast(palette: ReaderIslandContrastPalette,
+  papers: ReaderThemeDefinition[] = READER_THEME_DEFINITIONS): ReaderIslandContrastCheck[] {
   const checks: ReaderIslandContrastCheck[] = [];
   const ratio = (id: string, foreground: string, background: string, minimum: number): void => {
     checks.push({ id, actual: readerIslandContrastRatio(foreground, background), minimum });
@@ -130,7 +131,7 @@ export function evaluateReaderIslandContrast(palette: ReaderIslandContrastPalett
   ratio('shell-outline', palette.outline, palette.shell, 3);
   ratio('card-border', palette.cardBorder, palette.card, 1.7);
   ratio('emphasis-card-border', palette.emphasisBorder, palette.emphasisCard, 2.2);
-  for (const paper of READER_THEME_DEFINITIONS) {
+  for (const paper of papers) {
     ratio(`paper-outline:${paper.id}:start`, palette.outline, paper.paperStart, 3);
     ratio(`paper-outline:${paper.id}:end`, palette.outline, paper.paperEnd, 3);
   }

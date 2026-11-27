@@ -1,6 +1,7 @@
 import { evaluateReaderIslandContrast, readerIslandContrastPalette, type ReaderIslandContrastCheck }
   from './ReaderIslandContrastEvaluator';
 import type { LayoutInvariantRect, LayoutInvariantRule, LayoutInvariantViolation } from './LayoutInvariantEvaluator';
+import type { ReaderNativeMaterialPaint } from './ReaderNativeMaterialPaint';
 
 export type LayoutAuditHitTest = 'none' | 'block' | 'default' | 'transparent';
 export type LayoutAuditPlacement = 'center' | 'bottom-center' | 'side-end' | 'anchor' | 'anchor-overlap';
@@ -12,6 +13,7 @@ export interface LayoutInvariantSurfaceHint {
   dialog?: boolean;
   windowEdge?: boolean;
   contentMeasured?: boolean;
+  nativeDismiss?: boolean;
 }
 
 export interface LayoutInvariantNativeNode {
@@ -35,6 +37,8 @@ export interface LayoutInvariantNativeNode {
   surfaceHint?: LayoutInvariantSurfaceHint;
   inputAdmissionSuppressed?: boolean;
   dock?: boolean;
+  nativeMaterialPaint?: ReaderNativeMaterialPaint;
+  readingPaperTheme?: string;
 }
 
 export interface LayoutInvariantSurfaceAudit {
@@ -71,6 +75,8 @@ export interface LayoutInvariantNativeSample {
   nodes: LayoutInvariantNativeNode[];
   complete: boolean;
   readingPaletteChecks?: ReaderIslandContrastCheck[];
+  readingPaletteSource?: string;
+  readingPaperEvidenceMissing?: boolean;
   dockBounds: LayoutInvariantRect[];
   expectDock: boolean;
   surfaces: LayoutInvariantSurfaceAudit[];
@@ -211,17 +217,38 @@ function checkSurfaces(sample: LayoutInvariantNativeSample, result: LayoutInvari
 }
 
 function checkContrast(sample: LayoutInvariantNativeSample, result: LayoutInvariantNativeResult): void {
-  const suppliedChecks = sample.readingPaletteChecks;
-  for (const scheme of ['day', 'night']) {
-    const checks = suppliedChecks ?? evaluateReaderIslandContrast(readerIslandContrastPalette(scheme));
-    if (checks.length === 0) { result.missing.push(`R11:palette:${scheme}`); continue; }
-    for (const check of checks) {
-      if (!Number.isFinite(check.actual) || check.actual < check.minimum) {
-        add(result.violations, 'R11', check.id, `${scheme} actual=${check.actual} minimum=${check.minimum}`);
-      }
+  if (sample.readingPaperEvidenceMissing === true) result.missing.push('R11:reading-paper');
+  if (sample.readingPaletteChecks === undefined) {
+    for (const scheme of ['day', 'night']) {
+      checkPaletteContrast(evaluateReaderIslandContrast(readerIslandContrastPalette(scheme)), scheme, result);
+    }
+  } else {
+    checkPaletteContrast(sample.readingPaletteChecks, sample.readingPaletteSource ?? 'runtime', result);
+  }
+  for (const node of sample.nodes) {
+    const paint = node.nativeMaterialPaint;
+    const bounds = node.bounds;
+    if (paint === undefined || node.opacity < .1) continue;
+    if (bounds === undefined || !validRect(bounds)) { result.missing.push(`R11:native-edge-bounds:${node.id}`); continue; }
+    if ((sample.viewport !== undefined && !overlaps(sample.viewport, bounds, 0)) ||
+      (node.clip !== undefined && !overlaps(node.clip, bounds, 0))) continue;
+    if (paint.outline === true || paint.border === true || paint.shadow === true) continue;
+    if (paint.outline === false && paint.border === false && paint.shadow === false) {
+      add(result.violations, 'R11', node.id, 'native material has no visible outline, border or shadow');
+    } else {
+      result.missing.push(`R11:native-edge:${node.id}`);
     }
   }
-  if (suppliedChecks === undefined || suppliedChecks.length > 0) result.observedRules.push('R11');
+}
+
+function checkPaletteContrast(checks: ReaderIslandContrastCheck[], source: string, result: LayoutInvariantNativeResult): void {
+  if (checks.length === 0) { result.missing.push(`R11:palette:${source}`); return; }
+  if (!result.observedRules.includes('R11')) result.observedRules.push('R11');
+  for (const check of checks) {
+    if (!Number.isFinite(check.actual) || check.actual < check.minimum) {
+      add(result.violations, 'R11', check.id, `${source} actual=${check.actual} minimum=${check.minimum}`);
+    }
+  }
 }
 
 function checkDensity(sample: LayoutInvariantNativeSample, fontScale: number | undefined, result: LayoutInvariantNativeResult): void {

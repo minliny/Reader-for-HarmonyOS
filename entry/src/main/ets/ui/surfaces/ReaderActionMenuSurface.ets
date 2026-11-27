@@ -4,6 +4,11 @@ import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerOverlayListHeight, readerOverlayViewport } from '../layout/ReaderOverlayGeometry';
+import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_NATIVE_MATERIAL, READER_LAYOUT_SURFACE_HINT, ReaderLayoutOverlayRoot }
+  from '../foundation/ReaderLayoutInvariantSignals';
+import { readerNativeSurfaceOutline } from './ReaderSurfaceMaterial';
+import type { ReaderRectVp } from '../foundation/ReaderWindowMetrics';
+import type { LayoutInvariantSurfaceHint } from '../layout/LayoutInvariantNativeAudit';
 
 export type ReaderActionMenuVariant = 'menu' | ActionSheetSpecId;
 export type ReaderActionTone = 'default' | 'danger';
@@ -48,6 +53,9 @@ export struct ReaderActionMenuSurface {
   @Prop variant: ReaderActionMenuVariant = 'menu';
   @Prop specId: ReaderActionMenuSpecId = 'reader-more-menu';
   @Prop nativeId: string = '';
+  @Prop auditAnchoredPopup: boolean = false;
+  @Prop auditPopupAnchor: ReaderRectVp | undefined = undefined;
+  @Prop nativePopupMaterial: boolean = false;
   @Prop actionIdPrefix: string = '';
   @Prop scheme: string = 'day';
   @Prop actions: ReaderMenuActionView[] = [];
@@ -57,6 +65,7 @@ export struct ReaderActionMenuSurface {
   onAction: (id: string) => void = (): void => {};
 
   private mounted: boolean = false;
+  private readonly layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('action-menu');
 
   aboutToAppear(): void { this.mounted = true; }
   aboutToDisappear(): void { this.mounted = false; }
@@ -69,6 +78,13 @@ export struct ReaderActionMenuSurface {
     }
   }
 
+  private popupLayoutHint(): LayoutInvariantSurfaceHint | undefined {
+    const anchor = this.auditPopupAnchor;
+    if (this.layoutOverlay === undefined || !this.auditAnchoredPopup) return undefined;
+    return { placement: 'anchor', dialog: true, nativeDismiss: true, contentMeasured: true,
+      anchor: anchor === undefined ? undefined : { x: anchor.left, y: anchor.top, width: anchor.width, height: anchor.height } };
+  }
+
   @Builder
   private menuActions() {
     Scroll() {
@@ -78,9 +94,14 @@ export struct ReaderActionMenuSurface {
         }, (action: ReaderMenuActionView): string => action.id);
       }.width('100%').height(this.menuListHeight());
     }.width(this.menuWidth())
-      .id(this.nativeId)
+      .id(this.layoutOverlay?.id(this.nativeId) ?? this.nativeId)
+      .customProperty(READER_LAYOUT_SURFACE_HINT, this.popupLayoutHint())
+      .customProperty(READER_LAYOUT_NATIVE_MATERIAL, READER_LAYOUT_DEBUG_BUILD ? this.nativePopupMaterial : undefined)
+      .outline(this.nativePopupMaterial ? readerNativeSurfaceOutline(this.effectiveScheme(), this.spec().borderRadius) : undefined)
       .height(this.menuHeight())
-      .clip(true).scrollBar(BarState.Auto).align(Alignment.TopStart);
+      .clip(true).scrollBar(BarState.Auto).align(Alignment.TopStart)
+      .onAppear((): void => this.layoutOverlay?.mount(this.getUIContext(), this.nativeId))
+      .onDisAppear((): void => this.layoutOverlay?.unmount());
   }
 
   @Builder

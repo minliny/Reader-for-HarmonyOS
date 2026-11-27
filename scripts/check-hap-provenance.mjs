@@ -2,9 +2,9 @@
 
 import {
   assertInstalledDeploymentIdentity, hapMainlineSources, latestHapInstallReceipt, latestPublishedSignedHap,
-  observeInstalledHapIdentity, resolveHarmonyAbi, verifyManifest,
+  observeInstalledHapIdentity, plannedSignedCoreFingerprint, resolveHarmonyAbi, verifyManifest,
 } from './hap-pipeline.mjs';
-import { assertCleanMainline, assertInstallReceipt, assertMainlineHap } from './lib/hap-mainline-provenance.mjs';
+import { assertCleanMainline, assertInstallReceipt, assertMainlineHap, mainlineSourceMatch } from './lib/hap-mainline-provenance.mjs';
 
 const usage = `Usage:
   node scripts/check-hap-provenance.mjs --plan [--artifact-root <directory>] [--vm-abi x86_64|arm64-v8a]
@@ -13,6 +13,8 @@ const usage = `Usage:
     [--artifact-root <directory>]
 
 The command verifies the newest published signed HAP for each required ABI.
+Core can match the current main commit or its configured ancestor Pin with
+the same verified build-input fingerprint. Both Git commits are reported.
 Live mode reads Bundle Manager through an exact-target HDC lease and binds each
 observation to the corresponding preserve-data install receipt.
 Plan mode only reports the planned candidates and unmerged local branches.`;
@@ -45,7 +47,15 @@ function parse(args) {
 
 function sourceSummary(source) {
   return { head: source.commit, main: source.mainCommit, dirty: source.dirty,
-    unmerged: source.unmerged, unmergedStatus: source.unmerged.length > 0 ? 'FOUND' : 'CLEAR' };
+    unmerged: source.unmerged, unmergedStatus: source.unmerged.length > 0 ? 'FOUND' : 'CLEAR',
+    inputFingerprint: source.inputFingerprint, equivalentPin: source.equivalentPin };
+}
+
+function candidateSourceSummary(manifest, sources, coreInputFingerprint) {
+  const match = mainlineSourceMatch(manifest.source, sources, coreInputFingerprint);
+  return { harmonyCommit: manifest.source?.harmony?.commit, coreCommit: manifest.source?.core?.commit,
+    coreMainCommit: sources.core.mainCommit, coreInputFingerprint, coreSourceMatch: match.core,
+    sourceMatchesMain: match.harmony && match.core !== 'unmatched' };
 }
 
 async function verifyTarget(kind, abi, options, sources, verifiedByAbi) {
@@ -59,9 +69,7 @@ async function verifyTarget(kind, abi, options, sources, verifiedByAbi) {
     if (options['--plan']) {
       const { manifest } = selection ?? {};
       const candidate = manifest ? { runId: manifest.runId, appBuildId: manifest.expectedVersion?.appBuildId,
-        harmonyCommit: manifest.source?.harmony?.commit, coreCommit: manifest.source?.core?.commit,
-        sourceMatchesMain: ['harmony', 'core'].every(key => manifest.source?.[key]?.dirty === false &&
-          manifest.source[key].commit === sources[key].mainCommit) } : undefined;
+        ...candidateSourceSummary(manifest, sources, plannedSignedCoreFingerprint(selection)) } : undefined;
       return { status: 'NOT_RUN', abi, manifest: path ?? null, candidate };
     }
     if (!path) throw new Error(`no published signed HAP for ${abi}`);
@@ -70,7 +78,8 @@ async function verifyTarget(kind, abi, options, sources, verifiedByAbi) {
     verifiedByAbi.set(abi, verified);
     const artifact = assertMainlineHap(verified, sources, abi);
     const { manifest } = verified;
-    candidate = { runId: manifest.runId, path, sha256: artifact.sha256, appBuildId: manifest.expectedVersion.appBuildId };
+    candidate = { runId: manifest.runId, path, sha256: artifact.sha256, appBuildId: manifest.expectedVersion.appBuildId,
+      ...candidateSourceSummary(manifest, sources, artifact.storageCapability?.coreInputFingerprint) };
     const hdc = new Map([['--target-kind', kind], ['--target', target]]);
     if (kind === 'vm') {
       hdc.set('--vm-location', options.location);
@@ -117,6 +126,9 @@ async function main(args) {
       assertCleanMainline(current.harmony, current.core);
       if (current.harmony.commit !== sources.harmony.commit || current.core.commit !== sources.core.commit) {
         throw new Error('mainline changed during verification');
+      }
+      if (current.core.inputFingerprint !== sources.core.inputFingerprint || current.core.equivalentPin !== sources.core.equivalentPin) {
+        throw new Error('Core build input identity changed during verification');
       }
       for (const result of [report.vm, report.physical]) {
         if (latestPublishedSignedHap(result.abi, options['--artifact-root'])?.path !== result.candidate.path) {

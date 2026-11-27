@@ -87,6 +87,8 @@ import { ReaderPageChrome } from './ReaderPageChrome';
 import { ReaderStatusBarPaper } from './ReaderStatusBarPaper';
 import { ReaderChapterLoadingState } from './ReaderChapterLoadingState';
 import { readerBeginTransition, readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
+import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_READING_PAPER } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { readerTransitionLaunchNodes } from '../../../ui/layout/TransitionInvariantEvaluator';
 import { ReaderPageGeometryHost } from './ReaderPageGeometryHost';
 import { readerAppColor, readerThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerVisualSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft,
@@ -2525,6 +2527,7 @@ export struct ReadingExperience {
     .width('100%')
     .height('100%')
     .id('reader-reading-stage')
+    .customProperty(READER_LAYOUT_READING_PAPER, READER_LAYOUT_DEBUG_BUILD ? this.visibleReadingAppearance().activeTheme : undefined)
     .focusable(true)
     .defaultFocus(true)
     .onKeyEvent((event: KeyEvent): boolean => this.onReaderKeyEvent(event))
@@ -9258,7 +9261,7 @@ export struct ReadingExperience {
     if (this.sessionLaunch === undefined) return false;
     if (readerTransitionsEnabled()) readerBeginTransition({ kind: 'launch', action: type,
       subject: 'reader-session-launch', scope: 'reader-session-launch',
-      nodes: [identity.sourceActorId, 'reader-session-launch-proxy'] });
+      nodes: readerTransitionLaunchNodes(identity.sourceActorId), staticMotion: this.reduceMotion });
     this.capsuleVerification.begin(this.sessionLaunch, readerControlContentLocation(this.sessionLaunchSourceControl), this.reduceMotion);
     this.sessionLaunchSourceMinimum = { generation: this.sessionLaunch.generation, kind: kind,
       requiresNaturalProfile: nativeMinimumContract, receipt: sourceMinimum };
@@ -9466,7 +9469,7 @@ export struct ReadingExperience {
     if (launch.ownership === 'handoffPending') {
       if (readerTransitionsEnabled()) readerBeginTransition({ kind: 'launch', action: launch.geometry.type,
         subject: 'reader-session-launch-handoff', scope: 'reader-session-launch-handoff',
-        nodes: [launch.identity.sourceActorId, 'reader-session-launch-proxy'] });
+        nodes: readerTransitionLaunchNodes(launch.identity.sourceActorId), launchHandoff: true });
       if (this.sessionLaunchSourceLayoutKey !== this.sessionLaunchLayoutKey()) {
         this.finishSessionLaunchHandoff(launch.generation);
         return;

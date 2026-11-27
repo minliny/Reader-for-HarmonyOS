@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { evaluateTransitionInvariants, type ReaderTransitionFrame, type ReaderTransitionNode,
-  type ReaderTransitionObservation } from '../../entry/src/main/ets/ui/layout/TransitionInvariantEvaluator.ts';
+import { evaluateTransitionInvariants, readerTransitionLaunchNodes, READER_LAUNCH_PROXY, READER_LAUNCH_SOURCE,
+  READER_LAUNCH_SHARP, READER_LAUNCH_LEADING_ICON, READER_LAUNCH_LEADING_LABEL, READER_LAUNCH_PAUSE,
+  type ReaderTransitionFrame, type ReaderTransitionNode, type ReaderTransitionObservation
+} from '../../entry/src/main/ets/ui/layout/TransitionInvariantEvaluator.ts';
 
 function actor(id: string, changes: Partial<ReaderTransitionNode> = {}): ReaderTransitionNode {
   return { id, nativeId: 1, x: 20, y: 24, width: 355, height: 44, opacity: 1, visible: true, ...changes };
@@ -80,18 +82,61 @@ test('T2 rejects reversed pushes, pop reversal smaller than 2vp per frame, and d
 });
 
 test('T3 detects same-frame source/proxy ink and requires actual proxy samples', () => {
-  const input = request('launch', 'tts', ['source', 'proxy']);
+  const input = request('launch', 'tts', readerTransitionLaunchNodes('source'));
   const source = actor('source');
-  const proxy = actor('proxy', { nativeId: 2 });
-  const accepted = evaluateTransitionInvariants(input, samples([source], [proxy], [proxy], [source]));
+  const proxy = actor(READER_LAUNCH_PROXY, { nativeId: 2 });
+  const sharp = actor(READER_LAUNCH_SHARP);
+  const contents = [actor(READER_LAUNCH_LEADING_ICON), actor(READER_LAUNCH_LEADING_LABEL), actor(READER_LAUNCH_PAUSE)];
+  const accepted = evaluateTransitionInvariants(input, samples([source], [proxy, sharp], [proxy, ...contents]));
   assert.deepEqual(accepted.observedRules, ['T3']);
   assert.deepEqual(accepted.violations, []);
   assert.deepEqual(evaluateTransitionInvariants({ ...input, action: 'autoPage' }, samples([source], [source, proxy], [proxy]))
     .violations, [{ rule: 'T3', frame: 1, code: 'source-and-proxy-visible' }]);
   assert.deepEqual(evaluateTransitionInvariants(input, samples([source], [source])).missing, ['T3:required-actor-unobserved']);
-  const unreadable = samples([proxy], [proxy]);
+  const unreadable = samples([proxy, sharp], [proxy, ...contents]);
   unreadable[0].unreadableIds.push('source');
   assert.deepEqual(evaluateTransitionInvariants(input, unreadable).missing, ['T3:native-frame-unreadable']);
+  assert.deepEqual(evaluateTransitionInvariants(input, samples([proxy], [proxy, ...contents])).missing,
+    ['T3:required-actor-unobserved']);
+  assert.deepEqual(evaluateTransitionInvariants({ ...input, staticMotion: true },
+    samples([proxy, ...contents], [proxy, ...contents])).missing, []);
+});
+
+test('T3 rejects highly visible sharp source content intersecting the leading ink or pause circle', () => {
+  const sharp = actor(READER_LAUNCH_SHARP, { x: 32, y: 18, width: 26, height: 24, opacity: .82 });
+  const icon = actor(READER_LAUNCH_LEADING_ICON, { x: 45, y: 21, width: 11, height: 11, opacity: .75 });
+  const label = actor(READER_LAUNCH_LEADING_LABEL, { x: 52, y: 21, width: 36, height: 15, opacity: .75 });
+  const pause = actor(READER_LAUNCH_PAUSE, { x: 40, y: 20, width: 16, height: 16, opacity: .84 });
+  const proxy = actor(READER_LAUNCH_PROXY);
+  for (const contender of [icon, label, pause]) {
+    const input = request('launch', contender === pause ? 'autoPage' : 'tts', readerTransitionLaunchNodes('source'));
+    assert.deepEqual(evaluateTransitionInvariants(input,
+      samples([proxy, sharp], [proxy, sharp, contender], [proxy, contender])).violations,
+      [{ rule: 'T3', frame: 1, code: 'sharp-and-capsule-content-overlap' }]);
+  }
+  const input = request('launch', 'tts', readerTransitionLaunchNodes('source'));
+  const accepted = evaluateTransitionInvariants(input, samples(
+    [proxy, sharp, { ...icon, opacity: .1 }, { ...label, x: 58 }, { ...pause, visible: false }],
+    [proxy, icon, label, pause]));
+  assert.deepEqual(accepted.violations, []);
+  assert.deepEqual(accepted.observedRules, ['T3']);
+});
+
+test('T3 handoff witnesses the returning live card and permits the separate canonical capsule fade', () => {
+  const input = { ...request('launch', 'autoPage', readerTransitionLaunchNodes('source')), launchHandoff: true };
+  const live = actor('source', { y: 120 });
+  const proxy = actor(READER_LAUNCH_PROXY, { y: 540 });
+  const sourceShell = actor(READER_LAUNCH_SOURCE);
+  const sharp = actor(READER_LAUNCH_SHARP);
+  const pause = actor(READER_LAUNCH_PAUSE, { x: 40, y: 20, width: 16, height: 16 });
+  const accepted = evaluateTransitionInvariants(input, samples([proxy], [proxy, live], [live]));
+  assert.deepEqual(accepted.observedRules, ['T3']);
+  assert.deepEqual(accepted.violations, []);
+  assert.deepEqual(evaluateTransitionInvariants(input, samples([proxy], [proxy])).missing, ['T3:required-actor-unobserved']);
+  assert.deepEqual(evaluateTransitionInvariants(input, samples([proxy], [proxy, live, sourceShell])).violations,
+    [{ rule: 'T3', frame: 1, code: 'source-and-proxy-visible' }]);
+  assert.deepEqual(evaluateTransitionInvariants(input, samples([proxy, sharp], [proxy, sharp, pause], [proxy, live])).violations,
+    [{ rule: 'T3', frame: 1, code: 'sharp-and-capsule-content-overlap' }]);
 });
 
 test('T4 requires old-or-new live body and witnesses the requested chapter, with distinct chapter first lines', () => {

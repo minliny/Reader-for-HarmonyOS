@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { layoutReceiptProblem } from '../../scripts/lib/vm-journey-evidence.mjs';
 import { evaluateLayoutInvariants, type LayoutInvariantRect } from '../../entry/src/main/ets/ui/layout/LayoutInvariantEvaluator.ts';
 import type { LayoutInvariantNativeNode, LayoutInvariantNativeSample, LayoutInvariantSurfaceAudit }
   from '../../entry/src/main/ets/ui/layout/LayoutInvariantNativeAudit.ts';
+import { inspectReaderNativeMaterialPaint } from '../../entry/src/main/ets/ui/layout/ReaderNativeMaterialPaint.ts';
 
 const rect = (x: number, y: number, width: number, height: number): LayoutInvariantRect => ({ x, y, width, height });
 const viewport = rect(0, 0, 320, 600);
@@ -69,9 +71,78 @@ test('a long scroll-backed dialog can reach its close action while a bounded dra
     .map(issue => issue.rule), ['R9', 'R10']);
 });
 
-test('R11 rejects a collapsed island outline reported by the same pure palette gate', () => {
+test('R9, R10 and R13 require actual evidence for the off-tree backup, restore, and confirmation dialogs', () => {
+  const requiredRules = ['R9', 'R10', 'R13'] as const;
+  for (const id of ['local-recovery-export', 'local-recovery-inspect', 'local-recovery-confirm', 'book-removal']) {
+    const surface: LayoutInvariantSurfaceAudit = { id, bounds: rect(40, 211, 236, 180),
+      viewport: safeViewport, placement: 'center', close: 'visible' };
+    const input = leaf('Button', `${id}-cancel`, rect(65, 315, 88, 44), { parentBounds: surface.bounds, closeAction: true });
+    const good = gate({ surfaces: [surface], nodes: [input], requiredRules: [...requiredRules] });
+    assert.deepEqual(good.missing, [], id);
+    assert.deepEqual(good.violations, [], id);
+    assert.deepEqual(good.observedRules.filter(rule => rule === 'R9' || rule === 'R10' || rule === 'R13'),
+      requiredRules, id);
+    assert.equal(layoutReceiptProblem({ ...good, status: 'measured' }, { requiredRules }), '', id);
+    const omitted = gate({ complete: false, surfaces: [], nodes: [], requiredRules: [...requiredRules] });
+    for (const rule of requiredRules) assert.ok(omitted.missing.includes(`${rule}:no-applicable-evidence`), id);
+    assert.match(layoutReceiptProblem({ ...omitted, status: 'incomplete' }, { requiredRules }), /缺失/, id);
+    const broken = gate({ surfaces: [{ ...surface, bounds: rect(0, 250, 236, 180), close: 'absent' }],
+      nodes: [{ ...input, id: `${id}-hidden-interceptor`, opacity: 0, hitTest: 'block' }],
+      requiredRules: [...requiredRules] });
+    assert.deepEqual([...new Set(broken.violations.map(issue => issue.rule))], requiredRules, id);
+    assert.match(layoutReceiptProblem({ ...broken, status: 'measured' }, { requiredRules }), /违规/, id);
+  }
+});
+
+test('a dynamically keyed native popup reports clipping separately from a missing measured anchor', () => {
+  const selector: LayoutInvariantSurfaceAudit = { ...panel(), id: 'reader-layout-overlay:select-panel:42',
+    close: 'native-dismiss' };
+  assert.deepEqual(gate({ surfaces: [selector] }).violations, []);
+  const clipped = { ...selector, anchor: undefined, contentBounds: rect(45, 180, 160, 124) };
+  const result = gate({ surfaces: [clipped], requiredRules: ['R9', 'R10'] });
+  assert.ok(result.missing.includes(`R10:anchor:${selector.id}`));
+  assert.deepEqual(result.violations.map(issue => [issue.rule, issue.nodeId]), [['R9', selector.id]]);
+});
+
+test('R11 evaluates a supplied runtime palette check once', () => {
   const result = gate({ readingPaletteChecks: [{ id: 'native-edge-paint', actual: 0, minimum: 1 }] });
-  assert.ok(result.violations.some(issue => issue.rule === 'R11' && issue.nodeId === 'native-edge-paint'));
+  assert.deepEqual(result.violations.map(issue => [issue.rule, issue.nodeId]), [['R11', 'native-edge-paint']]);
+});
+
+test('R11 requires a paper witness when a visible text reader was measured', () => {
+  const result = gate({ readingPaletteChecks: [{ id: 'shell-outline', actual: 4, minimum: 3 }],
+    readingPaperEvidenceMissing: true });
+  assert.ok(result.missing.includes('R11:reading-paper'));
+});
+
+test('R11 rejects visible native material whose border, outline and shadow are all absent', () => {
+  const material = leaf('Column', 'native-sheet', rect(24, 120, 260, 200), {
+    nativeMaterialPaint: { border: false, outline: false, shadow: false },
+  });
+  const result = gate({ nodes: [material] });
+  assert.deepEqual(result.violations.map(issue => [issue.rule, issue.nodeId]), [['R11', 'native-sheet']]);
+  for (const paint of [{ outline: true }, { border: true }, { shadow: true }]) {
+    assert.deepEqual(gate({ nodes: [{ ...material, nativeMaterialPaint: paint }] }).violations, []);
+  }
+  const unobserved = gate({ nodes: [{ ...material, nativeMaterialPaint: { border: false } }] });
+  assert.ok(unobserved.missing.includes('R11:native-edge:native-sheet'));
+});
+
+test('R11 native paint receipt reads the actual outline, border and shadow from inspector attributes', () => {
+  const base = {
+    outlineWidth: '0.00vp', outlineColor: '#FF867A6E',
+    borderWidth: '0.00vp', borderColor: '#FF000000',
+    shadow: { radius: '0.000000', color: '#00000000' },
+  };
+  assert.deepEqual(inspectReaderNativeMaterialPaint(base), { outline: false, border: false, shadow: false });
+  assert.deepEqual(inspectReaderNativeMaterialPaint({ ...base,
+    outlineWidth: { top: '1.50vp' }, outlineStyle: 'OutlineStyle.SOLID' }),
+  { outline: true, border: false, shadow: false });
+  assert.equal(inspectReaderNativeMaterialPaint({ ...base, borderWidth: '1vp', borderStyle: 'BorderStyle.None' }).border, false);
+  assert.equal(inspectReaderNativeMaterialPaint({ ...base, borderWidth: '1vp', borderColor: '#00867A6E' }).border, false);
+  assert.equal(inspectReaderNativeMaterialPaint({ ...base, shadow: 'ShadowStyle.OuterDefaultSM' }).shadow, true);
+  assert.equal(inspectReaderNativeMaterialPaint({ ...base, shadow: { radius: '8', color: '#7F332C25' } }).shadow, true);
+  assert.equal(inspectReaderNativeMaterialPaint({ outlineWidth: '1.50vp' }).outline, undefined);
 });
 
 test('R12 rejects inflated empty area without any authored tag height', () => {

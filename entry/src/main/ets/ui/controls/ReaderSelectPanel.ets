@@ -1,13 +1,16 @@
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerNativeSurfaceOutline,
+  readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 import { FrameCallback } from '@kit.ArkUI';
 import type { AnimatorResult } from '@ohos.animator';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { ReaderChoiceRow } from './ReaderChoiceRow';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
+import { READER_LAYOUT_SURFACE_HINT, ReaderLayoutOverlayRoot } from '../foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantSurfaceHint } from '../layout/LayoutInvariantNativeAudit';
 import { ReaderInsetsVp, ReaderRectVp, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { readerOverlayChoiceRowHeight, readerOverlayListHeight, readerOverlayPanel, readerOverlayViewport }
   from '../layout/ReaderOverlayGeometry';
@@ -90,6 +93,7 @@ export struct ReaderSelectPanel {
   /** Optional addresses for the selected row and its wrapping alternatives. */
   @Prop focusIdPrefix: string = '';
   @Prop nativeAnchorId: string = '';
+  @Prop auditPopupAnchor: ReaderRectVp | undefined = undefined;
   // Production callers commit the immutable choice now; finish only unmounts.
   onCommit: ((option: string, identity: string, index?: number) => void) | undefined = undefined;
   inputCurrent: (() => boolean) | undefined = undefined;
@@ -106,6 +110,7 @@ export struct ReaderSelectPanel {
   private optionLayoutIdentity: string = '';
   private optionHeightsLayoutIdentity: string = '';
   private mounted: boolean = false;
+  private readonly layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('select-panel');
   private generation: number = 0;
   private reducedEnterGeneration: number = -1;
   private closingValue: string = '';
@@ -291,6 +296,13 @@ export struct ReaderSelectPanel {
     return readerSurfaceMaterialDecision('popoverMenu', this.appearancePreferences, this.appThemeScheme, this.systemScheme);
   }
 
+  private popupLayoutHint(): LayoutInvariantSurfaceHint | undefined {
+    const anchor = this.auditPopupAnchor;
+    if (this.layoutOverlay === undefined || this.hosting !== 'popup') return undefined;
+    return { placement: 'anchor', dialog: true, nativeDismiss: true, contentMeasured: true,
+      anchor: anchor === undefined ? undefined : { x: anchor.left, y: anchor.top, width: anchor.width, height: anchor.height } };
+  }
+
   @Builder
   private panelBody() {
     Column({ space: 0 }) {
@@ -304,7 +316,8 @@ export struct ReaderSelectPanel {
         .onScrollStop(this.onOptionsScrollStop === undefined ? (): void => {} : this.optionsScrollStopAction());
       if (this.menuFooterHeight > 0) { this.menuFooter(); }
     }
-    .id(this.nativeAnchorId)
+    .id(this.layoutOverlay?.id(this.nativeAnchorId) ?? this.nativeAnchorId)
+    .customProperty(READER_LAYOUT_SURFACE_HINT, this.popupLayoutHint())
     .width(this.resolvedWidth())
     .height(this.panelHeight())
     .padding(this.variant === 'appearanceLibrary' ? 3 : 0)
@@ -313,11 +326,19 @@ export struct ReaderSelectPanel {
     .backgroundColor(this.panelMaterial().native || this.menuHeaderHeight > 0 ? Color.Transparent : this.panelBackgroundColor())
     .border(this.panelMaterial().native ? { width: 0, color: Color.Transparent } :
       { width: this.menuHeaderHeight > 0 ? 0 : TOK_BORDER_W, color: this.panelBorderColor() })
-    .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : 14))
+    .borderRadius(this.panelRadius())
     .opacity(this.panelOpacity)
     .shadow(this.panelMaterial().native ? undefined : this.panelShadow())
-    .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial()))
-    .clip(true).onAppear((): void => this.expandPanel());
+    .attributeModifier(new ReaderImmersiveMaterialModifier(this.panelMaterial(),
+      readerNativeSurfaceOutline(this.appThemeScheme, this.panelRadius())))
+    .clip(true).onAppear((): void => {
+      this.layoutOverlay?.mount(this.getUIContext(), this.nativeAnchorId);
+      this.expandPanel();
+    }).onDisAppear((): void => this.layoutOverlay?.unmount());
+  }
+
+  private panelRadius(): number {
+    return this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : 14);
   }
 
   @Builder

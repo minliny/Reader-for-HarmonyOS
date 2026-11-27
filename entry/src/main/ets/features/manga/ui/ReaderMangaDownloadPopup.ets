@@ -1,5 +1,7 @@
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { READER_LAYOUT_SURFACE_HINT, ReaderLayoutOverlayRoot } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantSurfaceHint } from '../../../ui/layout/LayoutInvariantNativeAudit';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { ReaderInsetsVp, ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerOverlayPanel, readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
@@ -36,6 +38,7 @@ export struct ReaderMangaDownloadPopup {
   onAction: (action: MangaDownloadActionId, generation: number) => void = (_action: MangaDownloadActionId, _generation: number): void => {};
   onRetry: (generation: number) => void = (_generation: number): void => {};
   private mounted: boolean = false;
+  private readonly layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('manga-download');
 
   aboutToAppear(): void { this.mounted = true; }
   aboutToDisappear(): void { this.mounted = false; }
@@ -93,6 +96,13 @@ export struct ReaderMangaDownloadPopup {
         if (!event.isVisible && this.isCurrent(generation)) this.onClosed(generation);
       } };
   }
+
+  private popupLayoutHint(): LayoutInvariantSurfaceHint | undefined {
+    const anchor = this.anchor;
+    if (this.layoutOverlay === undefined) return undefined;
+    return { placement: 'anchor', dialog: true, nativeDismiss: true,
+      anchor: anchor === undefined ? undefined : { x: anchor.left, y: anchor.top, width: anchor.width, height: anchor.height } };
+  }
   @Builder
   private popupContent(generation: number) {
     Scroll() {
@@ -109,8 +119,11 @@ export struct ReaderMangaDownloadPopup {
           if (this.isCurrent(generation) && this.visible) this.onAction(action, generation);
         },
         onRetry: (): void => { if (this.isCurrent(generation) && this.visible) this.onRetry(generation); } });
-    }.width(this.popupRect().width).constraintSize({ maxHeight: this.popupRect().height })
-      .padding(this.spec().padding).scrollBar(BarState.Auto);
+    }.id(this.layoutOverlay?.id()).width(this.popupRect().width).constraintSize({ maxHeight: this.popupRect().height })
+      .customProperty(READER_LAYOUT_SURFACE_HINT, this.popupLayoutHint())
+      .padding(this.spec().padding).scrollBar(BarState.Auto)
+      .onAppear((): void => this.layoutOverlay?.mount(this.getUIContext()))
+      .onDisAppear((): void => this.layoutOverlay?.unmount());
   }
   private spec(): ReaderMangaDownloadPopupRecipe {
     if (this.specId !== 'manga-download') throw new Error('Unsupported manga download popup specification');

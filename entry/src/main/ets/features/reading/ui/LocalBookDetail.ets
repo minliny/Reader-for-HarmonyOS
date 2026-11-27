@@ -17,7 +17,8 @@ import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/f
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
-import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerNativeSurfaceOutline,
+  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { MeasureOptions } from '@ohos.measure';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { bookContentKindLabel, bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
@@ -687,7 +688,8 @@ export struct LocalBookDetail {
           .border({ width: this.surfaceMaterial('popoverMenu').native ? 0 : 1,
             color: this.surfaceMaterial('popoverMenu').native ? Color.Transparent : readerAppColor('TOK_LINE', this.appThemeScheme) })
           .shadow(this.surfaceMaterial('popoverMenu').native ? undefined : readerSurfaceElevation('dialog', this.appThemeScheme))
-          .attributeModifier(new ReaderImmersiveMaterialModifier(this.surfaceMaterial('popoverMenu')));
+          .attributeModifier(new ReaderImmersiveMaterialModifier(this.surfaceMaterial('popoverMenu'),
+            readerNativeSurfaceOutline(this.appThemeScheme, 16)));
         if (!this.surfaceMaterial('popoverMenu').native) {
           Column().width(12).height(12).rotate({ angle: this.detailMoreAboveAnchor() ? 225 : 45 })
             .backgroundColor(readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))

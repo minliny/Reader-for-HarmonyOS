@@ -1197,10 +1197,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay.build::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay.configurationPanel::shared.recovery-notice",
       "file": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
       "owner": "ReaderTtsConfigOverlay",
-      "member": "build",
+      "member": "configurationPanel",
       "family": "shared.recovery-notice",
       "category": "原生覆盖窗口内的朗读配置未决状态",
       "effectiveHost": "当前 TTS 管理器 windowModal 的配置恢复投影，仅在回执可见时显示无动作状态提示。",

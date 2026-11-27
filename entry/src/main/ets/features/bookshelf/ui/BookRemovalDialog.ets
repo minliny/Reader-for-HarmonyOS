@@ -1,4 +1,5 @@
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
+import { ReaderLayoutOverlayRoot } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
@@ -22,6 +23,7 @@ export struct BookRemovalDialog {
   @Prop reducedMotion: boolean = false;
   @State private contentOpacity: number = 1;
   private motionGeneration: number = 0;
+  private readonly layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('book-removal');
   onCancel: () => void = (): void => {};
   onConfirm: () => void = (): void => {};
 
@@ -64,7 +66,9 @@ export struct BookRemovalDialog {
         },
         body: (): void => { this.messageBody(); },
       });
-    }.width(this.cardWidth()).constraintSize({ maxHeight: this.viewport().height })
+    }.id(this.layoutOverlay?.id()).width(this.cardWidth()).constraintSize({ maxHeight: this.viewport().height })
+      .onAppear((): void => this.layoutOverlay?.mount(this.getUIContext()))
+      .onDisAppear((): void => this.layoutOverlay?.unmount())
       .scrollBar(BarState.Auto).opacity(this.contentOpacity);
   }
 
