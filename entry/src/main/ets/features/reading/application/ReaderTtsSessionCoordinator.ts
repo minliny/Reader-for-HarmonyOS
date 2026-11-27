@@ -235,7 +235,6 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     result: Promise<boolean> } | undefined = undefined;
   private pendingMixingChoice: { active: ActiveSession; value: boolean; result: Promise<boolean> } | undefined = undefined;
   private audition: ReaderTtsAuditionSession | undefined = undefined;
-  private auditionSequence: number = 0;
   private timerHandle: number = -1;
   private timerGeneration: number = 0;
   private readonly utterances: Map<string, CorrelatedUtterance> = new Map();
@@ -370,9 +369,12 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     let resolve: () => void = (): void => {};
     let reject: (error: Error) => void = (_error: Error): void => {};
     const completed = new Promise<void>((accept, fail): void => { resolve = accept; reject = fail; });
+    // Core Speech Kit accepts alphanumeric request IDs. One process-wide
+    // sequence identifies the native preview and its diagnostic receipt.
+    const operationId = ++READER_TTS_AUDITION_OPERATION_SEQ;
     const session: ReaderTtsAuditionSession = {
-      requestId: `${this.ownerToken}-audition-${++this.auditionSequence}`,
-      operationId: ++READER_TTS_AUDITION_OPERATION_SEQ,
+      requestId: `ReaderTtsAudition${operationId}`,
+      operationId,
       started: false,
       observe: input.observe,
       restoreEngine: this.active?.config?.engine ?? this.probedConfig?.engine,

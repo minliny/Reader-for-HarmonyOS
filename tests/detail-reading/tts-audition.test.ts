@@ -68,6 +68,7 @@ test('audition records only matching native callbacks and completes on audio pla
     const request = audition.request();
     assert.ok(request);
     const requestId = request.requestId;
+    assert.match(requestId, /^[A-Za-z0-9]+$/u);
     assert.equal(request.exactVoice, true);
     assert.deepEqual(audition.calls, ['select:system', 'probe:zh-CN:13:true', 'activate:false']);
     audition.emit({ type: 'start', requestId: 'a previous preview' });
