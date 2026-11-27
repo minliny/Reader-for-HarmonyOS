@@ -1,3 +1,4 @@
+import { httpUrlHostname, isPrivateNetworkTarget } from './HttpTransportPolicy.ts';
 interface PendingArkWebJob<T> {
   run: () => Promise<T>;
   resolve: (result: T) => void;
@@ -67,4 +68,19 @@ export class ArkWebProxyAdmission {
   retireWithoutRestore(): void {
     if (this.state === 'ready') this.state = 'retired';
   }
+}
+
+export type ArkWebUrlDisposition = 'allow' | 'denyPage' | 'denyResource';
+
+export function arkWebUrlDisposition(value: string, admittedHost: string | undefined,
+  mainFrame: boolean): ArkWebUrlDisposition {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'about:blank' || normalized.startsWith('data:') || normalized.startsWith('blob:')) return 'allow';
+  const host = httpUrlHostname(value);
+  return host === undefined || isPrivateNetworkTarget(host) || admittedHost === undefined || host !== admittedHost ?
+    (mainFrame ? 'denyPage' : 'denyResource') : 'allow';
+}
+
+export function arkWebEvaluationReady(value: unknown): boolean {
+  return value !== null;
 }

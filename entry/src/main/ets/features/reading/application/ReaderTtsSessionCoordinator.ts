@@ -1309,6 +1309,10 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       await activation;
       trace?.markTtsCapsule('tts.host-audio.ready', active.traceOperationId);
     } catch (error) {
+      if (voice !== undefined) {
+        this.utterances.delete(token.requestId);
+        throw new Error(`音频会话启动失败：${errorMessageOf(error)}`);
+      }
       await this.handleSessionUtteranceFailure(active, token,
         `音频会话启动失败：${errorMessageOf(error)}`);
       return false;
@@ -1332,9 +1336,14 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
         pitch: active.input.pitch ?? 1,
         language: voice?.language ?? active.input.language ?? 'zh-CN',
         person: voice?.person ?? active.input.person ?? 0,
+        exactVoice: voice === undefined ? undefined : true,
         engine: active.config?.engine,
       });
     } catch (error) {
+      if (voice !== undefined) {
+        this.utterances.delete(token.requestId);
+        throw error;
+      }
       await this.handleSessionUtteranceFailure(active, token, errorMessageOf(error));
       return false;
     }

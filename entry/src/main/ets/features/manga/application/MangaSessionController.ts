@@ -955,33 +955,37 @@ export class MangaSessionController {
         continue;
       }
       const tile: MangaTile = { ordinal: item.ordinal, tileIndex: item.tileIndex };
-      this.tiles.set(key, tile);
-      const task = this.loadTileOwned(tile, chapter, geometry, fact, generation);
-      this.tileLoads.set(key, task);
-      // Pending publication belongs to this new attempt, after its join owner
-      // exists. Repeated ready/pending windows need no presentation update.
-      this.onChange?.();
-      const finish = (): void => {
-        if (this.tileLoads.get(key) === task) this.tileLoads.delete(key);
-      };
-      void task.then(finish, finish);
-      await task;
+      await this.startTileLoad(key, tile, chapter, geometry, fact, generation);
     }
   }
 
+  private startTileLoad(key: string, tile: MangaTile, chapter: MangaChapterResult, geometry: MangaPageGeometry,
+    fact: MangaManifestPage, generation: number, reusePrepared: boolean = true): Promise<void> {
+    this.tiles.set(key, tile);
+    const task = this.loadTileOwned(tile, chapter, geometry, fact, generation, reusePrepared);
+    this.tileLoads.set(key, task);
+    // Publish pending only after the new exact tile has an owned load.
+    this.onChange?.();
+    const finish = (): void => { if (this.tileLoads.get(key) === task) this.tileLoads.delete(key); };
+    void task.then(finish, finish);
+    return task;
+  }
+
   private async loadTileOwned(tile: MangaTile, chapter: MangaChapterResult, geometry: MangaPageGeometry,
-    fact: MangaManifestPage, generation: number): Promise<void> {
+    fact: MangaManifestPage, generation: number, reusePrepared: boolean): Promise<void> {
     const key = `${tile.ordinal}:${tile.tileIndex}`;
     const current = (): boolean => generation === this.generation && this.chapterData === chapter && this.sessionContentCurrent() &&
-      (!this.candidatePendingPresentation || this.candidateCurrent()) && this.wantedTiles.has(key) && this.tiles.get(key) === tile;
+      (!this.candidatePendingPresentation || this.candidateCurrent()) &&
+      (this.wantedTiles.has(key) || this.nativeViewportTiles.has(key)) && this.tiles.get(key) === tile;
     const request = this.requests.get(fact.resourceRef)?.request;
     this.foregroundImageWork++;
     try {
       const scope = this.resourceScope(chapter);
       const descriptor: MangaResourcePage = { ...(request ?? { url: fact.resourceRef }), resourceRef: fact.resourceRef };
       const position = (tile.tileIndex * geometry.tileHeight) / geometry.height;
-      const image = this.resources.tryAcquirePage(scope, descriptor, current, position, this.previewMode) ??
-        await this.resources.loadPage(scope, descriptor, this.allowNetwork && request !== undefined, current, position, this.previewMode);
+      const prepared = reusePrepared ? this.resources.tryAcquirePage(scope, descriptor, current, position, this.previewMode) : undefined;
+      const image = prepared ?? await this.resources.loadPage(scope, descriptor, this.allowNetwork && request !== undefined,
+        current, position, this.previewMode, reusePrepared);
       if (!current()) { this.resources.release(image); return; }
       tile.image = image;
     } catch (error) { if (current()) tile.error = error instanceof Error ? error.message : 'MANGA_TILE_FAILED'; }
@@ -993,17 +997,23 @@ export class MangaSessionController {
     if (current()) { this.onChange?.(); if (tile.ordinal === this.displayOrdinal) this.acknowledgeVisible(); }
   }
 
-  async retryTile(ordinal: number, tileIndex: number): Promise<void> {
+  async retryTile(ordinal: number, tileIndex: number, force: boolean = false): Promise<void> {
     this.assertSessionContent();
     this.assertCandidateCurrent();
     const key = `${ordinal}:${tileIndex}`;
-    if (!this.wantedTiles.has(key) || this.tiles.get(key)?.error === undefined) return;
+    const chapter = this.chapterData, geometry = this.geometry.get(ordinal), fact = this.facts.get(ordinal);
+    if (chapter === undefined || geometry === undefined || fact === undefined || this.tileLoads.has(key) ||
+      (!this.wantedTiles.has(key) && !this.nativeViewportTiles.has(key))) return;
+    const previous = this.tile(ordinal, tileIndex);
+    if (previous === undefined || (previous.error === undefined && (!force || previous.image === undefined))) return;
+    const owned = this.tiles.get(key) ?? this.retainedTiles.take(key);
     this.tiles.delete(key);
-    this.tileLoads.delete(key);
-    await this.setTileWindow(Array.from(this.wantedTiles).map(value => {
-      const parts = value.split(':');
-      return { ordinal: Number(parts[0]), tileIndex: Number(parts[1]) };
-    }));
+    if (owned === undefined && tileIndex === 0) {
+      const page = this.pages.get(ordinal);
+      if (page !== undefined && page.image === previous.image) page.image = undefined;
+    }
+    if (previous.image !== undefined) this.resources.release(previous.image);
+    await this.startTileLoad(key, { ordinal, tileIndex }, chapter, geometry, fact, this.generation, !force);
   }
 
   private loadPage(ordinal: number, chapter: MangaChapterResult, generation: number): Promise<void> {

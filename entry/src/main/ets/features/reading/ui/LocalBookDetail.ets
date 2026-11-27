@@ -167,6 +167,8 @@ export struct LocalBookDetail {
   private readonly headerSpec: DetailHeaderSpec = detailHeaderSpec();
   private mounted: boolean = false;
   private shareGeneration: number = 0;
+  private saveGeneration: number = 0;
+  private savePresentationIdentity: string = '';
   @State private shareBusy: boolean = false;
   @State private savingOriginal: boolean = false;
   private pendingDirectoryFocus: string = '';
@@ -187,6 +189,7 @@ export struct LocalBookDetail {
     this.closeMore(false);
     this.clearDetailPress();
     this.retireShareAction();
+    this.retireSaveOriginal();
     this.transientFeedback.reset();
     this.mounted = false;
     this.cancelDirectoryFocusRestore();
@@ -451,8 +454,9 @@ export struct LocalBookDetail {
     if (!this.shareActionAvailable() || !readerCanShareOriginal(book) || retained === undefined || extension === undefined) return;
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext | undefined;
     const identity = this.detailScrollIdentity();
+    const generation = ++this.saveGeneration;
     const routeCurrent = this.captureDocumentSave?.() ?? this.isDetailActionCurrent;
-    const current = (): boolean => this.mounted && routeCurrent() && this.detailBookAvailable() &&
+    const current = (): boolean => generation === this.saveGeneration && this.mounted && routeCurrent() && this.detailBookAvailable() &&
       this.detailScrollIdentity() === identity;
     this.savingOriginal = true;
     let result: ReaderDocumentSaveResult = 'failed';
@@ -462,7 +466,11 @@ export struct LocalBookDetail {
         result = await new ReaderDocumentSaveHost(context).saveOriginal(path, book.title, extension, current);
       }
     } catch (_) { /* The retained bytes were unavailable for this request. */ }
-    finally { this.savingOriginal = false; }
+    finally {
+      if (generation === this.saveGeneration) {
+        this.savingOriginal = false;
+      }
+    }
     const message = readerDocumentSaveMessage(result, '原书');
     if (message !== undefined) this.transientFeedback.show(() => this.getUIContext(), { message }, current);
   }
@@ -497,6 +505,11 @@ export struct LocalBookDetail {
   private retireShareAction(): void {
     this.shareGeneration += 1;
     this.shareBusy = false;
+  }
+
+  private retireSaveOriginal(): void {
+    this.saveGeneration += 1;
+    this.savingOriginal = false;
   }
 
   private onShareForegroundChanged(): void {
@@ -536,6 +549,11 @@ export struct LocalBookDetail {
   }
 
   private onDirectoryFocusIdentityChanged(): void {
+    const identity = this.detailScrollIdentity();
+    if (this.savePresentationIdentity !== identity) {
+      this.savePresentationIdentity = identity;
+      this.retireSaveOriginal();
+    }
     if (this.moreOpen && !this.moreLease.startsWith(`${this.detailScrollIdentity()}:`)) this.closeMore(false);
     this.clearDetailPress();
     this.retireShareAction();
@@ -756,6 +774,7 @@ export struct LocalBookDetail {
   private detailCover(width: number, height: number) {
     if (this.hasCover()) {
       Image(this.displayCoverUrl() as string).width(width).height(height).objectFit(ImageFit.Cover).borderRadius(8)
+        .autoResize(true).sourceSize({ width: width, height: height })
         .onError(this.coverErrorHandler(this.displayCoverUrl()));
     } else {
       NoCoverCover({ coverWidth: width, coverHeight: height, glyph: this.book.title,

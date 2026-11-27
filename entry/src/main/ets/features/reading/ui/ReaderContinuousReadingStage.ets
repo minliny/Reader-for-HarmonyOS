@@ -165,6 +165,7 @@ export struct ReaderContinuousReadingStage {
   private initialParagraph: ReaderNativeParagraphPreparation | undefined;
   private initialParagraphKey: string = '';
   @State private listMountIdentity: string = '';
+  @State private listOwnerTop: number = 0;
   private titleItemCount: number = 0;
   private touchActive: boolean = false;
   private touchPointerId: number = -1;
@@ -269,7 +270,9 @@ export struct ReaderContinuousReadingStage {
                     underline: this.ttsHighlightStart !== undefined,
                     highlightLayoutKey: readerNativeTextGeometryKey(fragment.nativeParagraph.style),
                     localHighlights: true,
-                    localHighlightViewportHeight: this.layout.viewportHeight,
+                    localHighlightViewportTop: this.listOwnerTop + this.layout.contentTop,
+                    localHighlightViewportHeight: Math.max(0,
+                      this.layout.viewportHeight - this.layout.contentTop - this.layout.contentBottom),
                     onPositionResolver: (position: ReaderNativeParagraphPosition | undefined): void => {
                       this.acceptParagraphPosition(fragment.id, fragment.nativeParagraph?.key ?? '', position, mountIdentity);
                     },
@@ -335,7 +338,11 @@ export struct ReaderContinuousReadingStage {
     }
     .width('100%')
     .height('100%')
-    .clip(true);
+    .clip(true)
+    .onAreaChange((_previous: Area, current: Area): void => {
+      const top = Number.parseFloat(`${current.globalPosition.y}`);
+      if (Number.isFinite(top) && top !== this.listOwnerTop) this.listOwnerTop = top;
+    });
   }
 
   @Builder

@@ -1,3 +1,4 @@
+import { readerRebaseSettingsViewport } from './ReaderSettingsPresentationPolicy';
 import type { ReaderRoute, ReaderRouteMotionKind } from './ReaderNavigation';
 import { READER_ROUTE_EDGE_BACK_COMMIT_FRACTION, READER_ROUTE_PARENT_DIM, readerDetailSceneOpacity, readerRouteMotionPose }
   from './ReaderRouteMotionModel';
@@ -55,6 +56,8 @@ export struct ReaderRouteStackSurface {
   // The outer route owns its own insets. Nested settings stacks are already inside that content.
   @Prop extendsToWindowEdges: boolean = false;
   @Prop initialRoot: ReaderRouteSurfaceKey | undefined = undefined;
+  @Prop @Watch('onRouteChanged') wideSettingsLayout: boolean = false;
+  @Prop settingsPresentationRoot: ReaderRouteSurfaceKey | undefined = undefined;
   @Prop @Watch('onRouteChanged') routeMotion: ReaderRouteSurfaceMotion = 'none';
   @Prop @Watch('onEdgeAvailabilityChanged') reduceMotion: boolean = false;
   @Prop @Watch('onEdgeAvailabilityChanged') viewportWidth: number = 0;
@@ -83,10 +86,12 @@ export struct ReaderRouteStackSurface {
   private routeEndTimer: number = -1;
   private pendingPushTimer: number = -1;
   private preview: ReaderRouteBackPreview | undefined = undefined;
+  private appliedWideSettingsLayout: boolean = false;
 
   aboutToAppear(): void {
     this.mounted = true;
-    this.rootRoute = this.initialRoot ?? this.route;
+    this.appliedWideSettingsLayout = this.wideSettingsLayout;
+    this.rootRoute = this.initialRoot ?? this.settingsPresentationRoot ?? this.route;
     if (this.rootRoute !== this.route) {
       this.pathStack.pushPath({ name: this.route }, false);
       this.hasDestination = true;
@@ -128,25 +133,42 @@ export struct ReaderRouteStackSurface {
   }
 
   private reconcile(): void {
+    const settingsRoot = this.settingsPresentationRoot;
+    const rebaseSettings = readerRebaseSettingsViewport(this.appliedWideSettingsLayout, this.wideSettingsLayout,
+      settingsRoot !== undefined);
     if (this.pendingPushLane !== undefined && (this.routeMotion === 'none' || this.route !== this.pendingPushLane)) {
       this.setPendingPushLane(undefined);
     }
     const preview = this.preview;
     if (preview !== undefined) {
-      if (preview.requested && this.route === preview.to) this.resolvePreview('commit');
+      if (rebaseSettings) this.resolvePreview('cancel');
+      else if (preview.requested && this.route === preview.to) this.resolvePreview('commit');
       else if (this.route !== preview.from) this.resolvePreview('cancel');
       return;
     }
     const names = this.pathStack.getAllPathName();
     const top = names.length > 0 ? names[names.length - 1] : this.rootRoute;
     // Reconcile the latest destination after the native end acknowledgement.
-    if (this.activeRouteAnimation !== undefined || top === this.route) return;
+    if (this.activeRouteAnimation !== undefined) return;
     if (this.pendingTabResetFrom !== undefined) {
       // ArkUI has not yet observed the clear. A newer tab can replace the
       // incoming root under the same outgoing destination.
-      if (this.routeMotion === 'tab') this.rootRoute = this.route;
+      if (this.routeMotion === 'tab' && !rebaseSettings) this.rootRoute = this.route;
       return;
     }
+    this.appliedWideSettingsLayout = this.wideSettingsLayout;
+    if (rebaseSettings && settingsRoot !== undefined && (this.rootRoute !== settingsRoot || top !== this.route)) {
+      // Width changes transfer the active pane to the outer stack without a
+      // tab or Back intent. Keep Settings as the native ancestor.
+      this.finishTabTransition();
+      this.setPendingPushLane(undefined);
+      this.rootRoute = settingsRoot;
+      this.pathStack.clear(false);
+      if (this.route !== settingsRoot) this.pathStack.pushPath({ name: this.route }, false);
+      this.hasDestination = this.pathStack.size() > 0;
+      return;
+    }
+    if (top === this.route) return;
     if (this.routeMotion !== 'tab') this.finishTabTransition();
     const animate = this.routeMotion !== 'none';
     if (this.readerDetailActive && this.route === 'detail') {

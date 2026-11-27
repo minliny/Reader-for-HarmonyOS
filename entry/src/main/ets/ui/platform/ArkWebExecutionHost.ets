@@ -302,6 +302,12 @@ export struct ArkWebExecutionHost {
       TransitionEffect.OPACITY.animation(readerMotionAnimateParam('app.navigation.pop', false)));
   }
 
+  private blockArkWebRequest(request: WebResourceRequest, surface: ArkWebSurface): boolean {
+    let mainFrame = true;
+    try { mainFrame = request.isMainFrame(); } catch (_) { /* Unknown frame keeps the conservative denial. */ }
+    return ArkWebExecutor.instance.blockNetworkUrl(request.getRequestUrl(), surface, mainFrame);
+  }
+
   @Builder
   private browserAction(text: string, enabled: boolean, icon: Resource, danger: boolean, action: () => void) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
@@ -365,11 +371,11 @@ export struct ArkWebExecutionHost {
             ArkWebExecutor.instance.detachController(surface);
           })
           .onOverrideUrlLoading((request): boolean =>
-            ArkWebExecutor.instance.blockNetworkUrl(request.getRequestUrl(), surface))
+            this.blockArkWebRequest(request, surface))
           .onInterceptRequest((event): WebResourceResponse => {
             // API 23 documents null as "continue loading", but its callback
             // declaration omits null from the return type.
-            if (!ArkWebExecutor.instance.blockNetworkUrl(event.request.getRequestUrl(), surface)) {
+            if (!this.blockArkWebRequest(event.request, surface)) {
               if (this.diagnosticResourceProvider !== undefined) {
                 return this.diagnosticResourceProvider(event.request.getRequestUrl());
               }

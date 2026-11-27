@@ -1,5 +1,31 @@
 import type { BookSource } from '../application/SourceGateway';
 
+export interface SourceToggleTicket {
+  readonly id: string;
+  readonly enabled: boolean;
+  readonly session: number;
+}
+
+export class SourceToggleAdmission {
+  private readonly issued = new Map<string, SourceToggleTicket>();
+
+  admit(id: string, enabled: boolean, session: number): SourceToggleTicket | undefined {
+    const prior = this.issued.get(id);
+    if (prior?.session === session && prior.enabled === enabled) return undefined;
+    const ticket = { id, enabled, session };
+    this.issued.set(id, ticket);
+    return ticket;
+  }
+
+  current(ticket: SourceToggleTicket, session: number): boolean {
+    return ticket.session === session && this.issued.get(ticket.id) === ticket;
+  }
+
+  release(ticket: SourceToggleTicket): void {
+    if (this.issued.get(ticket.id) === ticket) this.issued.delete(ticket.id);
+  }
+}
+
 export class SourceListIndex {
   private readonly rows = new Map<string, BookSource>();
 

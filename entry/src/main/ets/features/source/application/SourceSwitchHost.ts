@@ -1,3 +1,4 @@
+import { SourceSwitchPublicationFlush } from './SourceSwitchPublicationFlush';
 import { ReaderCoreRequestError, isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 import { BookRequestNotDispatchedError } from '../../../app/BookRequestScheduler';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
@@ -84,6 +85,7 @@ export class SourceSwitchHost {
   private lease: SourceSwitchLease | undefined;
   private generation: number = 0;
   private unsubscribe: (() => void) | undefined;
+  private discoveryFlush: SourceSwitchPublicationFlush | undefined;
   private failedCandidate: SourceSwitchCandidate | undefined;
   private failedIdentity: RemoteReadingIdentity | undefined;
   private reconciliationGeneration: number = 0;
@@ -676,6 +678,8 @@ export class SourceSwitchHost {
     let context: SourceSwitchContext = initialContext;
     const generation = ++this.generation, current = (): boolean => this.admitted(generation) && this.context === context;
     this.stopDiscovery();
+    const flush = new SourceSwitchPublicationFlush();
+    this.discoveryFlush = flush;
     this.gateway.retainPreviousSearchTimings();
     const immediateKnown = (context.readKnownCandidates?.() ?? context.knownCandidates)
       .filter((candidate): boolean => this.gateway.admitsCandidate(candidate, context.query));
@@ -758,7 +762,7 @@ export class SourceSwitchHost {
       const outcome: SourceSwitchDiscoveryOutcome = allowCachedLatency ?
         { kind: 'sources' as const, candidates: cached } :
         await this.gateway.refreshCandidates(context.query, current,
-          publishProgress, force ? previous : (cached.length > 0 ? cached : initialKnown), force);
+          publishProgress, force ? previous : (cached.length > 0 ? cached : initialKnown), force, flush);
       if (!current()) return;
       this.snapshot = { ...this.snapshot, state: outcome.kind === 'noSources' || outcome.candidates.length === 0
         ? (outcome.incompleteSourceCount ? { kind: 'discoveryError', message: '部分书源未能确认后续结果，请重试或调整书源。' } : { kind: 'empty' }) :
@@ -773,7 +777,11 @@ export class SourceSwitchHost {
       this.snapshot = { ...this.snapshot, state: retained.length > 0
         ? { kind: 'candidates', candidates: retained, refreshing: false, refreshError: message }
         : { kind: 'discoveryError', message } }; this.publish();
-    } finally { projecting = false; if (identityReady && again) refreshProjection({ reset: false, identities: [] }); }
+    } finally {
+      if (this.discoveryFlush === flush) this.discoveryFlush = undefined;
+      projecting = false;
+      if (identityReady && again) refreshProjection({ reset: false, identities: [] });
+    }
   }
 
   private recordWrite(generation: number, action: 'commit' | 'rollback', evidence: ReaderWriteEvidence,
@@ -1006,7 +1014,12 @@ export class SourceSwitchHost {
       title: candidate.bookName, author: candidate.author ?? '', sourceVersion: candidate.sourceVersion,
       authorIdentity: candidate.authorIdentity, coverUrl: candidate.coverUrl, searchVariables: candidate.searchVariables };
   }
-  private stopDiscovery(): void { this.unsubscribe?.(); this.unsubscribe = undefined; }
+  private stopDiscovery(): void {
+    this.discoveryFlush?.cancel();
+    this.discoveryFlush = undefined;
+    this.unsubscribe?.();
+    this.unsubscribe = undefined;
+  }
   private publish(): void {
     if (!this.currentLease()) return;
     // An observer failure must not turn a confirmed Core write into failure.

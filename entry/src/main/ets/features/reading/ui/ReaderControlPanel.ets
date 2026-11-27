@@ -857,8 +857,11 @@ export struct ReaderControlPanel {
       this.visualSession = update.session;
     }
     const visual = sampleReaderControlSession(update.session);
+    const retirePlacementPointers = this.placementPointers.size > 0 && update.session.heldPointerId < 0 &&
+      visual.visibilityProgress <= 0 && (update.session.transition?.to.visibilityProgress ?? 0) <= 0;
+    if (retirePlacementPointers) this.placementPointers.clear();
     const placementInputChanged = this.visualHeldPointerId !== update.session.heldPointerId ||
-      this.visualTransitionKind !== (update.session.transition?.kind ?? '');
+      this.visualTransitionKind !== (update.session.transition?.kind ?? '') || retirePlacementPointers;
     // Keep only the lightweight command owner on reading entry. Once opened,
     // retain the actor tree through every close to preserve compositor/input
     // continuity. The first open command itself admits the tree at progress 0.
@@ -1990,6 +1993,7 @@ export struct ReaderControlPanel {
             readerAppColor('app.scrim.warmModal', this.appScheme), this.surfaceMaterial('controlPanel').native))
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
           .opacity(this.visualExpansionProgress)
+          .onTouch((event: TouchEvent): void => event.stopPropagation())
           .accessibilityLevel('no').onClick((): void => this.closeDirectSheet());
       }
       Stack({ alignContent: Alignment.TopStart }) {

@@ -52,6 +52,7 @@ import { PullToRefresh, PullDirection } from '../vendor/pulltorefresh/PullToRefr
 import { MangaBoundaryTurnFeedback } from './MangaBoundaryTurnFeedback';
 import { PhotoViewScaleModel } from '../vendor/photoview/PhotoViewScaleModel';
 import { MangaStripProjection, MangaStripRow } from './MangaStripProjection';
+import { mangaPinchImagePoint, mangaPinchRestoreMatches, mangaPinchRestoreOffset, type MangaViewportPoint } from './MangaViewportPinch';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
@@ -78,9 +79,14 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerPaperPullOffset } from '../../reading/presentation/ReaderPaperPullMotion';
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
+interface MangaPinchSession {
+  controller: MangaSessionController; manifest: MangaManifest; inputRevision: number;
+  anchor: MangaViewportAnchor; origin: MangaViewportAnchor; scale: number; focal: MangaViewportPoint; changed: boolean;
+}
 interface MangaConfirmedPosition { controller: MangaSessionController; manifest: MangaManifest; identity: string; anchor: MangaViewportAnchor; }
 interface MangaRetainedPixel { key: string; uri: string; x: number; y: number; width: number; height: number; }
 interface MangaNativeImageCompletion { loadingStatus: number; }
+interface MangaRowRetryVisit { mount: () => void; retire: () => void; retry: () => void; }
 
 class MangaLayoutFrame extends ReaderPostLayoutFrame {}
 
@@ -184,6 +190,7 @@ export struct MangaReadingSurface {
   @State @Watch('onErrorPresentationChanged') private error: string = '';
   @State private openFailureStage: 'source' | 'chapter' = 'chapter';
   private nativeImageFailures: Set<string> = new Set<string>();
+  private readonly imageRetryRevisions: Map<string, number> = new Map<string, number>();
   private preparationFailureNoticeKey: string = '';
   private openedErrorNoticeKey: string = '';
   @State private offlineProbeStatus: string = '';
@@ -200,8 +207,12 @@ export struct MangaReadingSurface {
   @State private horizontal: boolean = false;
   @State private horizontalPage: number = 0;
   @State private horizontalPageCount: number = 0;
-  private pinchStartScale: number = 1;
-  private pinchAnchor: MangaViewportAnchor | undefined;
+  @State private pinching: boolean = false;
+  private pinchSession: MangaPinchSession | undefined;
+  private pinchSaveOwner: MangaPinchSession | undefined;
+  private restoringPinchOrigin: boolean = false;
+  private pinchObservationBlocked: boolean = false;
+  private pinchRestoreTimer: number = -1;
   private first: number = 0;
   private last: number = 0;
   private viewportRangeObserved: boolean = false;
@@ -231,6 +242,7 @@ export struct MangaReadingSurface {
   private publishedManifestVersion: string = '';
   @State private restoringAnchor: boolean = false;
   private pendingRestoreAnchor: MangaViewportAnchor | undefined;
+  private pendingRestoreFocal: MangaViewportPoint | undefined;
   private restoreRollbackPaintGeneration: number = -1;
   private pendingTurnOrdinal: number | undefined;
   private mountedTurnRowKey: string = '';
@@ -283,6 +295,8 @@ export struct MangaReadingSurface {
   @State private boundaryDistance: number = 0;
   @State private boundaryArmed: boolean = false;
   @State private boundaryBusy: boolean = false;
+  @State private boundaryViewportFixed: boolean = false;
+  private boundaryTargetTitle: string = '';
   @State private boundaryFailure: string = '';
   @State private boundaryReset: number = 0;
   private boundaryDragging: boolean = false;
@@ -292,6 +306,7 @@ export struct MangaReadingSurface {
   private pendingChapterTransition: MangaChapterTransitionCandidate | undefined;
   private previousChapterController: MangaSessionController | undefined;
   private previousChapterCommitted: boolean = false;
+  private previousChapterZoom: number = 1;
   private nativeTransitionImageReady: boolean = false;
   private nativeTransitionResolve: (() => void) | undefined;
   private nativeTransitionReject: ((error: Error) => void) | undefined;
@@ -338,6 +353,9 @@ export struct MangaReadingSurface {
     this.transientFeedback.reset();
     // Withdraw before resetting watched state: disposal cannot reissue reader policy.
     this.mounted = false;
+    this.endViewportPinch(false);
+    this.clearPinchRestoreTimeout();
+    this.restoringPinchOrigin = false;
     this.clearPageSliderPreview();
     this.withdrawExitRequest?.();
     this.withdrawExitRequest = undefined;
@@ -359,6 +377,7 @@ export struct MangaReadingSurface {
     this.viewportObservationGeneration++; this.viewportObservationPending = false;
     this.confirmedPosition = undefined;
     this.pendingRestoreAnchor = undefined;
+    this.pendingRestoreFocal = undefined;
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     const retainPreparation = this.retainPreparationOnDisappear();
     if (this.controller !== undefined) {
@@ -372,6 +391,7 @@ export struct MangaReadingSurface {
   private async open(controller: MangaSessionController, resumePosition: boolean = false): Promise<void> {
     const current = (): boolean => this.mounted && this.controller === controller && this.isReaderIdentityCurrent?.() !== false;
     if (!current()) return;
+    this.resetChapterZoom();
     try {
       this.openFailureStage = 'chapter';
       this.detachOfflineProbe = this.offline ? this.runtime?.subscribeMangaOfflineProbe?.((state: string): void => {
@@ -558,9 +578,14 @@ export struct MangaReadingSurface {
     const manifestChanged = this.publishedManifestVersion !== chapter.manifest.manifestVersion;
     if (manifestChanged && this.controller !== undefined) {
       this.nativeImageFailures.clear();
+      this.imageRetryRevisions.clear();
       this.publishedManifestVersion = chapter.manifest.manifestVersion;
       this.layoutGeneration++; this.viewportGeneration++;
       this.pendingRestoreAnchor = undefined; this.restoringAnchor = false;
+      this.pendingRestoreFocal = undefined; this.pinchSaveOwner = undefined;
+      this.pinchSession = undefined; this.pinching = false;
+      this.restoringPinchOrigin = false; this.pinchObservationBlocked = false;
+      this.clearPinchRestoreTimeout();
       this.restoreRollbackPaintGeneration = -1;
       this.viewportRangeObserved = false;
       // Manifest layout is separate from newer user presentation intent.
@@ -588,7 +613,7 @@ export struct MangaReadingSurface {
       if (this.mountedTurnRowKey.length > 0 && this.data.totalCount() > 0) this.confirmMountedTurn(this.data.getData(0));
       if (changed && this.opened && anchor !== undefined &&
         (this.restoringAnchor ? this.pendingRestoreAnchor !== undefined : this.data.projection.affectsAnchor(anchor.ordinal)))
-        this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0, this.restoreRollbackPaintGeneration);
+        this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0, this.restoreRollbackPaintGeneration, this.pendingRestoreFocal);
     } catch (error) { this.error = error instanceof Error ? error.message : '漫画布局失败'; }
   }
   private notifyPreparationFailure(): void {
@@ -647,7 +672,7 @@ export struct MangaReadingSurface {
 
   private rememberVisible(allowRestore: boolean = false): boolean {
     // A pulled drawing transform cannot become a durable image coordinate.
-    if (this.boundaryDragging) return false;
+    if (this.boundaryDragging || this.pinching || this.pinchObservationBlocked || this.exiting) return false;
     if (this.restoringAnchor && (!allowRestore || this.appliedLayoutGeneration !== this.layoutGeneration)) return false;
     if (this.data.totalCount() <= this.first) return false;
     const row = this.data.getData(this.first);
@@ -682,6 +707,7 @@ export struct MangaReadingSurface {
   private resizeViewport(width: number, height: number = this.viewportHeight): void {
     if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0 || (width === this.viewportWidth && height === this.viewportHeight)) return;
     if (this.boundaryBusy || this.boundaryDragging) void this.cancelBoundaryChapter().catch((): void => {});
+    this.endViewportPinch(false);
     // The new layout's rectangles cannot reconstruct the old clipped position.
     // Use the logical coordinate captured while the previous width was active.
     const anchor = this.visibleAnchor;
@@ -689,14 +715,23 @@ export struct MangaReadingSurface {
     this.onWindowChromeChanged();
     if (this.opened && anchor !== undefined) this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
   }
-  private restore(ordinal: number, y: number, x: number = 0, rollbackPaintGeneration: number = -1): void {
-    this.visibleAnchor = { ordinal, y, x };
-    this.pendingRestoreAnchor = this.visibleAnchor;
+  private restore(ordinal: number, y: number, x: number = 0, rollbackPaintGeneration: number = -1,
+    focal?: MangaViewportPoint): void {
+    const anchor: MangaViewportAnchor = { ordinal, y, x };
+    if (focal === undefined) {
+      this.visibleAnchor = anchor;
+      this.pinchSaveOwner = undefined;
+      this.restoringPinchOrigin = false;
+      this.pinchObservationBlocked = false;
+      this.clearPinchRestoreTimeout();
+    }
+    this.pendingRestoreAnchor = anchor;
+    this.pendingRestoreFocal = focal;
     this.restoreRollbackPaintGeneration = rollbackPaintGeneration;
     this.restoringAnchor = true;
     this.appliedLayoutGeneration = -1;
     const generation = ++this.layoutGeneration;
-    this.tracePosition('restore-requested', this.visibleAnchor);
+    this.tracePosition('restore-requested', anchor);
     // A data-source reload is applied by native layout, not by the next JS
     // timer. Scroll only after that frame has rendered, then measure a later
     // rendered frame. Otherwise scrollToIndex can target the previous chapter.
@@ -710,13 +745,16 @@ export struct MangaReadingSurface {
       this.first = index;
       this.refreshLoginRequiredForControls();
       const row = this.data.getData(index);
-      const offset = row.known ? Math.max(0, y * row.sourceHeight - row.sourceY) * this.rowDisplayWidth(row) / row.width + (y > 0 ? this.rowDisplayTop(row) : 0) : 0;
+      const contentY = row.known ? Math.max(0, y * row.sourceHeight - row.sourceY) *
+        this.rowDisplayWidth(row) / row.width + (focal !== undefined || y > 0 ? this.rowDisplayTop(row) : 0) : 0;
+      const content: MangaViewportPoint = { x: x * this.rowDisplayWidth(row) + this.rowDisplayLeft(row), y: contentY };
+      const offset = focal === undefined ? content : mangaPinchRestoreOffset(content, focal);
       // Native layout consumes this jump later. Keep the index and intra-row
       // offset in one platform request, rather than apply a delta to old rows.
-      this.scroller.scrollToIndex(index, false, ScrollAlign.START, { extraOffset: LengthMetrics.vp(offset) });
+      this.scroller.scrollToIndex(index, false, ScrollAlign.START, { extraOffset: LengthMetrics.vp(offset.y) });
       this.traceBoundary('jump-requested');
-      this.horizontalScroller.scrollTo({ xOffset: x * this.rowDisplayWidth(row) + this.rowDisplayLeft(row), yOffset: 0, animation: false });
-      this.updateViewport();
+      this.horizontalScroller.scrollTo({ xOffset: offset.x, yOffset: 0, animation: false });
+      if (focal === undefined) this.updateViewport();
       this.finishLayout(generation, rollbackPaintGeneration);
     }, (): void => { if (generation === this.layoutGeneration) this.traceBoundary('restore-frame'); });
   }
@@ -733,8 +771,11 @@ export struct MangaReadingSurface {
     const run = (step: () => void): void => {
       try { step(); }
       catch (error) {
-        if (rollbackPaintGeneration < 0) throw error as Error;
-        if (generation === this.layoutGeneration) this.retireRollbackPaint(rollbackPaintGeneration);
+        if (rollbackPaintGeneration < 0) {
+          if (generation !== this.layoutGeneration) return;
+          if (this.pendingRestoreFocal === undefined) throw error as Error;
+          this.failPinchRestore();
+        } else if (generation === this.layoutGeneration) this.retireRollbackPaint(rollbackPaintGeneration);
       }
     };
     run((): void => {
@@ -742,11 +783,50 @@ export struct MangaReadingSurface {
       context.postFrameCallback(new MangaLayoutFrame(context, (): void => run(action), started));
     });
   }
+  private pinchRestoreMeasured(anchor: MangaViewportAnchor, focal: MangaViewportPoint): boolean {
+    try {
+      const index = this.data.projection.index(anchor.ordinal, anchor.y);
+      if (index < this.first || index > this.last) return false;
+      const row = this.data.getData(index);
+      const rect = this.scroller.getItemRect(index);
+      if (!row.known || row.ordinal !== anchor.ordinal || !Number.isFinite(rect.width) || !Number.isFinite(rect.height) ||
+        Math.abs(rect.width - this.viewportWidth * this.zoom) > 1 ||
+        Math.abs(rect.height - this.rowDisplayHeight(row)) > 1) return false;
+      const width = this.rowDisplayWidth(row);
+      const requested: MangaViewportPoint = { x: (anchor.x ?? 0) * width + this.rowDisplayLeft(row) - focal.x, y: focal.y };
+      const actual: MangaViewportPoint = { x: this.horizontalScroller.currentOffset().xOffset,
+        y: rect.y + this.rowDisplayTop(row) + Math.max(0, anchor.y * row.sourceHeight - row.sourceY) * width / row.width };
+      const verticalOffset = this.scroller.currentOffset().yOffset;
+      return mangaPinchRestoreMatches(requested, actual, this.viewportWidth * (this.zoom - 1),
+        Math.abs(verticalOffset) <= 1, this.horizontal ? this.scroller.isAtEnd() : this.verticalTailVisible());
+    } catch (_) { return false; }
+  }
   private onViewportScroll(): void {
-    if (this.boundaryDragging) return;
+    if (this.boundaryDragging || this.pinchObservationBlocked) return;
     this.refreshLoginRequiredForControls();
     if (!this.restoringAnchor) { this.rememberVisible(); if (this.pendingChapterTransition !== undefined || this.rollbackChapterController !== undefined) this.confirmBoundaryFrame(); return; }
-    if (this.appliedLayoutGeneration !== this.layoutGeneration || !this.measureVisibleWindow()) return;
+    const focal = this.pendingRestoreFocal;
+    if (this.pinching || this.appliedLayoutGeneration !== this.layoutGeneration || !this.measureVisibleWindow(focal === undefined)) return;
+    if (focal !== undefined) {
+      const anchor = this.pendingRestoreAnchor;
+      const owner = this.pinchSaveOwner;
+      if (this.exiting || anchor === undefined || (!this.restoringPinchOrigin &&
+        (owner === undefined || !this.viewportPinchCurrent(owner))) || !this.pinchRestoreMeasured(anchor, focal) ||
+        !this.data.getData(this.first).known || !this.rememberVisible(true)) return;
+      this.restoringAnchor = false;
+      this.pendingRestoreAnchor = undefined;
+      this.pendingRestoreFocal = undefined;
+      this.pinchSaveOwner = undefined;
+      this.restoringPinchOrigin = false;
+      this.clearPinchRestoreTimeout();
+      if (this.visibleAnchor !== undefined) this.tracePosition('restore-confirmed', this.visibleAnchor);
+      const presentation = this.presentationGeneration;
+      void this.updateViewport().then((): void => {
+        if (owner !== undefined && presentation === this.presentationGeneration && !this.exiting && this.viewportPinchCurrent(owner))
+          void this.saveVisible(true);
+      });
+      return;
+    }
     // An unknown following page can temporarily shorten the native list and
     // clamp this request to its tail. Its later height must replay the original
     // logical anchor, rather than commit that temporary clipped coordinate.
@@ -785,7 +865,12 @@ export struct MangaReadingSurface {
   }
   private onViewportTouch(event?: TouchEvent): void {
     if (event !== undefined && event.type !== TouchType.Down) return;
-    if (this.rollbackPainting || !this.phonePanelBackgroundEnabled() || !this.readerPanelForeground()) return;
+    if (this.pinching || this.rollbackPainting || !this.phonePanelBackgroundEnabled() || !this.readerPanelForeground()) return;
+    if (this.pendingRestoreFocal !== undefined) {
+      if (!this.restoringPinchOrigin) this.endViewportPinch(false);
+      return;
+    }
+    this.pinchObservationBlocked = false;
     this.viewportInputRevision = this.pageTurnInputRevision;
     this.seekingPage = undefined;
     this.clampedSeekPage = undefined;
@@ -804,7 +889,8 @@ export struct MangaReadingSurface {
     return Math.min(this.data.totalCount() - 1, this.last + 1, this.first + 7);
   }
   private onRowAppear(index: number): void {
-    if (!this.mounted || index < 0 || index >= this.data.totalCount()) return;
+    if (!this.mounted || index < 0 || index >= this.data.totalCount() || this.pinching ||
+      this.pendingRestoreFocal !== undefined || this.pinchObservationBlocked) return;
     if (!this.horizontal && this.restoringAnchor && this.appliedLayoutGeneration !== this.layoutGeneration) return;
     const row = this.data.getData(index);
     if (this.seekingPage !== undefined && row.ordinal !== this.seekingPage) return;
@@ -839,7 +925,7 @@ export struct MangaReadingSurface {
     this.confirmedPosition = { controller, manifest, identity, anchor };
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
   }
-  private measureVisibleWindow(): boolean {
+  private measureVisibleWindow(publishSelection: boolean = true): boolean {
     if (this.viewportHeight <= 1 || this.data.totalCount() === 0) return false;
     try {
       const first = this.scroller.getItemIndex(0.5, 0.5);
@@ -859,7 +945,8 @@ export struct MangaReadingSurface {
       if (this.first === first && this.last === last) return true;
       this.first = first; this.last = last;
       this.refreshLoginRequiredForControls();
-      this.updateViewport();
+      if (this.controller !== undefined) this.protectNativeViewportTiles(this.controller);
+      if (publishSelection) this.updateViewport();
       return true;
     } catch (_error) { return false; /* Unmounted geometry leaves the last observed range intact. */ }
   }
@@ -868,7 +955,8 @@ export struct MangaReadingSurface {
     // The initial projection can mount rows while openPrepared() is still
     // admitting the saved page. Native callbacks must not supersede that
     // selection before the opening transaction completes.
-    if (!this.mounted || !this.opened || controller === undefined || this.data.totalCount() === 0) return;
+    if (!this.mounted || !this.opened || controller === undefined || this.data.totalCount() === 0 ||
+      this.pinching || this.pendingRestoreFocal !== undefined || this.pinchObservationBlocked) return;
     this.protectNativeViewportTiles(controller);
     // Error-card ownership follows the actual viewport even when no image
     // geometry or tile lease changes can produce a Controller publication.
@@ -925,16 +1013,27 @@ export struct MangaReadingSurface {
       const row = this.data.getData(index);
       if (row.known) visible.push({ ordinal: row.ordinal, tileIndex: row.tileIndex });
     }
+    const confirmed = this.confirmedPosition;
+    if ((this.pinching || this.pendingRestoreFocal !== undefined || this.pinchObservationBlocked) &&
+      confirmed?.controller === controller && confirmed.manifest === controller.chapter?.manifest) {
+      // Keep the last measured position saveable while the focal viewport is provisional.
+      try {
+        const index = this.data.projection.index(confirmed.anchor.ordinal, confirmed.anchor.y);
+        const row = this.data.getData(index);
+        if (row.known) visible.push({ ordinal: row.ordinal, tileIndex: row.tileIndex });
+      } catch (_) { /* The confirmed row can leave a replaced projection. */ }
+    }
     controller.setNativeViewportTiles(visible);
   }
   // A skipped observation retains the previous anchor. Only a rejected
   // eligible write blocks an exit requested by navigation.
-  private async saveVisible(): Promise<boolean> {
-    if (this.pendingChapterTransition !== undefined || this.boundaryDragging) return true;
-    if (!this.opened || this.recovering || this.controller === undefined || this.data.totalCount() <= this.first) return true;
+  private async saveVisible(preserveConfirmed: boolean = false): Promise<boolean> {
+    if (this.pendingChapterTransition !== undefined || this.boundaryDragging || (!preserveConfirmed &&
+      (this.pinching || this.pendingRestoreFocal !== undefined || this.pinchObservationBlocked || this.exiting))) return true;
+    if (!this.opened || this.recovering || this.controller === undefined) return true;
     let saved = true;
     try {
-      if (!this.restoringAnchor && !this.rememberVisible()) return true;
+      if (!preserveConfirmed && !this.restoringAnchor && !this.rememberVisible()) return true;
       const confirmed = this.confirmedPosition;
       if (confirmed === undefined || confirmed.controller !== this.controller ||
         confirmed.manifest !== this.controller.chapter?.manifest ||
@@ -1005,6 +1104,7 @@ export struct MangaReadingSurface {
     return Math.max(0, Math.min(1, (this.horizontalScroller.currentOffset().xOffset - this.rowDisplayLeft(row)) / this.rowDisplayWidth(row)));
   }
   private async changeFit(requestedFit?: 'source' | 'width' | 'contain', persist: boolean = true): Promise<void> {
+    this.endViewportPinch(false);
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     this.rememberVisible();
     const anchor = this.visibleAnchor;
@@ -1187,7 +1287,8 @@ export struct MangaReadingSurface {
     // as ReaderContinuousReadingStage does for decoded inline images.
     return JSON.stringify([row.key, row.known, row.width, row.height, row.sourceY, row.sourceHeight,
       tile?.image?.fileUri ?? '', tile?.image?.revision ?? '', tile?.error ?? pageError ?? '',
-      this.rowHasError(row), this.unavailableMarkerTile(row), this.boundaryPaintGeneration]);
+      this.rowHasError(row), this.unavailableMarkerTile(row), this.boundaryPaintGeneration,
+      this.imageRetryRevisions.get(row.key) ?? 0]);
   }
   private async handleBack(intent?: 'navigation'): Promise<void> {
     if (!this.mounted || this.isReaderIdentityCurrent?.() === false) return;
@@ -1200,6 +1301,7 @@ export struct MangaReadingSurface {
       if (this.chapterEnd) { this.chapterEnd = false; return; }
       if (this.zoom > 1) { this.changeZoom(1); return; }
     }
+    if (!this.pinching && this.pendingRestoreFocal === undefined) this.flushViewportObservation();
     this.exiting = true;
     let delivered = false;
     try {
@@ -1222,18 +1324,128 @@ export struct MangaReadingSurface {
     this.exiting = false;
     if (navigationRequested && this.mounted && this.isReaderIdentityCurrent?.() !== false) this.onExitCancelled();
   }
-  private changeZoom(scale: number): void {
+  private changeZoom(scale: number, focal?: MangaViewportPoint): void {
     if (this.boundaryBusy || this.boundaryDragging) void this.cancelBoundaryChapter().catch((): void => {});
     if (!Number.isFinite(scale) || scale <= 0) return;
     this.presentationGeneration++;
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
-    if (this.pinchAnchor === undefined) this.rememberVisible();
-    const anchor = this.pinchAnchor ?? this.visibleAnchor;
+    if (focal === undefined) {
+      this.endViewportPinch(false);
+      this.rememberVisible();
+    }
+    const anchor = focal === undefined ? this.visibleAnchor : this.pinchSession?.anchor;
     this.scalePolicy.setScale(scale, false);
     this.zoom = this.scalePolicy.scale;
-    if (anchor !== undefined) this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
+    if (anchor !== undefined) this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0, -1, focal);
+  }
+  private resetChapterZoom(): void {
+    this.endViewportPinch(false);
+    this.scalePolicy.setScale(1, false);
+    if (this.zoom !== 1) this.zoom = 1;
+  }
+
+  private viewportPinchCurrent(pinch: MangaPinchSession): boolean {
+    return pinch.inputRevision === this.pageTurnInputRevision && this.viewportGestureCurrent() &&
+      !this.boundaryBusy && !this.rollbackPainting && this.controller === pinch.controller &&
+      this.controller.chapter?.manifest === pinch.manifest;
+  }
+
+  private pinchFocal(event: GestureEvent): MangaViewportPoint | undefined {
+    if (!Number.isFinite(event.pinchCenterX) || !Number.isFinite(event.pinchCenterY) ||
+      this.viewportWidth <= 0 || this.viewportHeight <= 0) return undefined;
+    return { x: Math.max(0, Math.min(this.viewportWidth - 0.001, event.pinchCenterX)),
+      y: Math.max(0, Math.min(this.viewportHeight - 0.001, event.pinchCenterY)) };
+  }
+
+  private beginViewportPinch(event: GestureEvent): void {
+    const controller = this.controller, manifest = controller?.chapter?.manifest;
+    const focal = this.pinchFocal(event);
+    if (controller === undefined || manifest === undefined || focal === undefined || this.restoringAnchor ||
+      !this.viewportGestureCurrent() || this.boundaryBusy || this.boundaryDragging || this.rollbackPainting ||
+      !this.rememberVisible()) return;
+    const confirmed = this.confirmedPosition;
+    if (confirmed === undefined || confirmed.controller !== controller || confirmed.manifest !== manifest) return;
+    try {
+      const index = this.scroller.getItemIndex(0.5, focal.y);
+      if (!Number.isSafeInteger(index) || index < 0 || index >= this.data.totalCount()) return;
+      const row = this.data.getData(index), rect = this.scroller.getItemRect(index);
+      const width = this.rowDisplayWidth(row);
+      if (!row.known || !Number.isFinite(rect.width) || !Number.isFinite(rect.height) ||
+        Math.abs(rect.width - this.viewportWidth * this.zoom) > 1 ||
+        Math.abs(rect.height - this.rowDisplayHeight(row)) > 1) return;
+      const origin: MangaViewportPoint = { x: rect.x + this.rowDisplayLeft(row) - this.horizontalScroller.currentOffset().xOffset,
+        y: rect.y + this.rowDisplayTop(row) };
+      const point = mangaPinchImagePoint(focal, origin, { x: width, y: width * row.height / row.width });
+      if (point === undefined) return;
+      const anchor: MangaViewportAnchor = { ordinal: row.ordinal, x: point.x / width,
+        y: this.data.projection.position(index, point.y, width) };
+      this.pinchSession = { controller, manifest, inputRevision: this.pageTurnInputRevision,
+        anchor, origin: confirmed.anchor, scale: this.zoom, focal, changed: false };
+      this.viewportGeneration++;
+      this.pinching = true;
+    } catch (_) { /* An unmeasured row cannot own a pinch. */ }
+  }
+
+  private updateViewportPinch(event: GestureEvent): void {
+    const pinch = this.pinchSession, focal = this.pinchFocal(event);
+    if (pinch === undefined || focal === undefined) return;
+    if (!this.viewportPinchCurrent(pinch)) { this.endViewportPinch(false); return; }
+    const scale = pinch.scale * event.scale;
+    if (!Number.isFinite(scale) || scale <= 0) return;
+    const clamped = Math.max(this.scalePolicy.scaleMin, Math.min(this.scalePolicy.scaleMax, scale));
+    if (clamped === this.zoom && focal.x === pinch.focal.x && focal.y === pinch.focal.y) return;
+    pinch.focal = focal; pinch.changed = true;
+    this.changeZoom(clamped, focal);
+  }
+
+  private clearPinchRestoreTimeout(): void {
+    if (this.pinchRestoreTimer < 0) return;
+    clearTimeout(this.pinchRestoreTimer);
+    this.pinchRestoreTimer = -1;
+  }
+  private armPinchRestoreTimeout(): void {
+    this.clearPinchRestoreTimeout();
+    this.pinchRestoreTimer = setTimeout((): void => this.failPinchRestore(), 900);
+  }
+  private failPinchRestore(): void {
+    if (!this.restoringPinchOrigin) { this.endViewportPinch(false); return; }
+    this.clearPinchRestoreTimeout();
+    this.layoutGeneration++;
+    this.pendingRestoreAnchor = undefined;
+    this.pendingRestoreFocal = undefined;
+    this.restoringAnchor = false;
+    this.restoringPinchOrigin = false;
+    // A native jump without a matching measurement cannot overwrite the
+    // saved observation. The next explicit viewport input can measure afresh.
+    this.pinchObservationBlocked = true;
+  }
+  private endViewportPinch(save: boolean): void {
+    const pinch = this.pinchSession ?? this.pinchSaveOwner;
+    this.pinchSession = undefined;
+    if (this.pinching) this.pinching = false;
+    if (pinch === undefined || !pinch.changed) return;
+    if (save && this.pendingRestoreFocal !== undefined && this.viewportPinchCurrent(pinch)) {
+      this.pinchSaveOwner = pinch;
+      this.armPinchRestoreTimeout();
+      this.flushViewportObservation();
+      return;
+    }
+    this.pinchSaveOwner = undefined;
+    this.clearPinchRestoreTimeout();
+    this.layoutGeneration++;
+    this.pendingRestoreAnchor = undefined;
+    this.pendingRestoreFocal = undefined;
+    this.restoringAnchor = false;
+    if (!this.mounted || this.controller !== pinch.controller || this.controller.chapter?.manifest !== pinch.manifest) return;
+    this.scalePolicy.setScale(pinch.scale, false);
+    this.zoom = this.scalePolicy.scale;
+    if (this.exiting) { this.pinchObservationBlocked = true; return; }
+    this.restoringPinchOrigin = true;
+    this.armPinchRestoreTimeout();
+    this.restore(pinch.origin.ordinal, pinch.origin.y, pinch.origin.x ?? 0, -1, { x: 0, y: 0 });
   }
   private toggleDirection(persist: boolean = true): void {
+    this.endViewportPinch(false);
     if (this.boundaryBusy || this.boundaryDragging) void this.cancelBoundaryChapter().catch((): void => {});
     this.presentationGeneration++;
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
@@ -1345,6 +1557,23 @@ export struct MangaReadingSurface {
       if (this.readerPanelForeground()) this.onSwitchSource(sourceSwitchTriggerFocusId(this.sourceId, this.bookId, 'manga-source'));
     });
   }
+  private retryRowVisit(row: MangaStripRow, renderKey: string, owner: MangaSessionController | undefined,
+    manifest: MangaManifest | undefined): MangaRowRetryVisit {
+    let mounted = false;
+    let retired = false;
+    const retry = (): void => {
+      if (!mounted || retired || owner === undefined || manifest === undefined || owner !== this.controller || owner.chapter?.manifest !== manifest ||
+        !this.readerPanelForeground() || !this.phonePanelBackgroundEnabled() || this.pinching ||
+        this.boundaryBusy || this.rollbackPainting || this.restoringAnchor) return;
+      try {
+        const index = this.data.projection.index(row.ordinal, row.known ? row.sourceY / row.sourceHeight : 0);
+        if (index < this.first || index > this.last || index >= this.data.totalCount()) return;
+        const visible = this.data.getData(index);
+        if (visible.key === row.key && this.rowHasError(visible) && this.rowRenderKey(visible) === renderKey) this.retry(visible);
+      } catch (_) { /* A replaced projection no longer owns the row action. */ }
+    };
+    return { mount: (): void => { mounted = true; }, retire: (): void => { retired = true; }, retry };
+  }
   private retry(row: MangaStripRow): void {
     if (this.imageError(row) === 'MANGA_SESSION_CONTENT_CHANGED') {
       void this.reopenChangedChapter();
@@ -1355,9 +1584,14 @@ export struct MangaReadingSurface {
     const generation = this.presentationGeneration;
     const previousError = this.error;
     const previousRowError = this.imageError(row);
+    const tile = controller?.tile(row.ordinal, row.tileIndex);
+    const uri = tile?.image?.fileUri;
+    const nativeFailed = uri !== undefined && this.nativeImageFailures.delete(this.nativeFailureKey(row, uri));
+    this.imageRetryRevisions.set(row.key, (this.imageRetryRevisions.get(row.key) ?? 0) + 1);
     const current = (): boolean => this.mounted && this.controller === controller &&
       controller?.chapter === chapter && generation === this.presentationGeneration;
-    const task = row.known ? controller?.retryTile(row.ordinal, row.tileIndex) : controller?.retry(row.ordinal);
+    const task = row.known && (nativeFailed || tile?.error !== undefined) ?
+      controller?.retryTile(row.ordinal, row.tileIndex, nativeFailed) : controller?.retry(row.ordinal);
     task?.then(async (): Promise<void> => {
       if (!current()) return;
       await this.updateViewport();
@@ -1654,7 +1888,8 @@ export struct MangaReadingSurface {
     return this.mounted && this.opened && !this.horizontal && this.zoom === 1 && !this.recovering && !this.exiting &&
       this.panel.length === 0 && this.panelPhase === 'closed' && !this.chapterEnd && this.windowChromeActive &&
       this.readerPanelForeground() && !this.restoringAnchor && !this.loginRequiredForControls &&
-      this.error.length === 0 && !this.boundaryBusy && !this.rollbackPainting && this.pendingChapterTransition === undefined && this.rollbackChapterController === undefined;
+      this.error.length === 0 && !this.pinching && !this.boundaryBusy && !this.rollbackPainting &&
+      this.pendingChapterTransition === undefined && this.rollbackChapterController === undefined;
   }
   private phonePanelBackgroundEnabled(): boolean {
     return this.readerPanelInputEnabled() && !this.chapterEnd && this.panel !== 'directory' &&
@@ -1710,7 +1945,7 @@ export struct MangaReadingSurface {
   }
   private async turnBoundaryChapter(direction: number): Promise<string> {
     if (!this.readerPanelForeground() || (this.boundaryDragging && this.boundaryInputRevision !== this.pageTurnInputRevision) ||
-      this.boundaryBusy || this.rollbackChapterController !== undefined ||
+      this.pinching || this.pendingRestoreFocal !== undefined || this.boundaryBusy || this.rollbackChapterController !== undefined ||
       this.runtime === undefined || this.chapterTransitions?.pending === true) return '';
     const target = this.adjacentChapter(direction), origin = this.controller;
     if (target === undefined || origin?.chapter === undefined || !this.mounted || this.exiting) return '';
@@ -1722,6 +1957,7 @@ export struct MangaReadingSurface {
     const originManifest = origin.chapter.manifest;
     const sourceVersion = this.remoteSession?.sourceVersion;
     const width = this.viewportWidth, height = this.viewportHeight;
+    this.boundaryTargetTitle = target.displayTitle?.trim() || target.title.trim();
     this.boundaryBusy = true; this.boundaryFailure = ''; this.boundaryRetryDirection = direction;
     this.boundaryDirection = direction > 0 ? 'next' : 'previous';
     let candidate: MangaChapterTransitionCandidate | undefined;
@@ -1766,8 +2002,10 @@ export struct MangaReadingSurface {
         this.nativeTransitionTimer = setTimeout((): void => reject(new Error('MANGA_CHAPTER_PRESENTATION_TIMEOUT')), 15000);
       });
       this.boundaryDragging = false;
-      this.boundaryReset++;
+      this.boundaryViewportFixed = true;
       this.boundaryPaintGeneration++;
+      this.previousChapterZoom = this.zoom;
+      this.resetChapterZoom();
       this.controller = candidate.controller;
       candidate.controller.onChange = (): void => { if (current()) this.publish(); };
       this.publishedManifestVersion = ''; this.previousChapterCommitted = this.chapterCommitted; this.chapterCommitted = false;
@@ -1821,7 +2059,8 @@ export struct MangaReadingSurface {
         this.clearBoundaryFrameWait(); this.pendingChapterTransition = undefined;
         this.previousChapterController = undefined;
         if (this.rollbackChapterController === undefined) this.previousChapterPixels = [];
-        this.boundaryBusy = false; this.boundaryDragging = false; this.boundaryOrigin = undefined;
+        this.boundaryBusy = false; this.boundaryViewportFixed = false; this.boundaryDragging = false; this.boundaryOrigin = undefined;
+        this.boundaryTargetTitle = '';
         this.boundaryReset++; this.boundaryDirection = ''; this.boundaryDistance = 0; this.boundaryArmed = false;
       }
     }
@@ -1968,6 +2207,8 @@ export struct MangaReadingSurface {
     const paintGeneration = ++this.boundaryPaintGeneration;
     this.controller = origin; origin.onChange = this.mounted ? (): void => this.publish() : undefined;
     this.chapterCommitted = this.previousChapterCommitted;
+    this.scalePolicy.setScale(this.previousChapterZoom, false);
+    this.zoom = this.scalePolicy.scale;
     this.pendingChapterTransition = undefined; this.publishedManifestVersion = '';
     this.boundaryDragging = false;
     this.visibleAnchor = confirmed?.anchor; this.confirmedPosition = confirmed;
@@ -1987,7 +2228,7 @@ export struct MangaReadingSurface {
   }
 
   private async cancelBoundaryChapter(): Promise<void> {
-    this.boundaryGeneration++; this.boundaryReset++;
+    const generation = ++this.boundaryGeneration;
     this.nativeTransitionReject?.(new Error('MANGA_SESSION_CANCELLED'));
     this.clearBoundaryFrameWait();
     const old = this.previousChapterController, confirmed = this.boundaryOrigin;
@@ -1996,10 +2237,13 @@ export struct MangaReadingSurface {
     this.pendingChapterTransition = undefined; this.previousChapterController = undefined;
     if (!this.mounted) this.clearRollbackPaint();
     if (this.rollbackChapterController === undefined) this.previousChapterPixels = [];
-    this.boundaryBusy = false; this.boundaryDragging = false;
+    this.boundaryBusy = false; this.boundaryViewportFixed = false; this.boundaryDragging = false;
+    this.boundaryTargetTitle = '';
     this.boundaryOrigin = undefined; this.boundaryDirection = ''; this.boundaryDistance = 0; this.boundaryArmed = false;
-    await this.chapterTransitions?.cancel();
-    if (this.mounted) this.boundaryReset++;
+    try { await this.chapterTransitions?.cancel(); }
+    finally {
+      if (this.mounted && generation === this.boundaryGeneration) this.boundaryReset++;
+    }
   }
   private async selectDirectoryTarget(index: number, proof?: ReaderDirectoryTargetProof, fromCatalog: boolean = false): Promise<void> {
     if (fromCatalog) {
@@ -2075,7 +2319,7 @@ export struct MangaReadingSurface {
     this.panelFocusGeneration += 1;
     this.pageTurnInputRevision += 1;
     this.clearPageSliderPreview();
-    this.pinchAnchor = undefined;
+    this.endViewportPinch(false);
     if (this.panelPhase === 'dragging') {
       this.panelOffset = 0;
       this.panelPhase = 'open';
@@ -2221,7 +2465,7 @@ export struct MangaReadingSurface {
     const request = ++this.panelActionGeneration;
     const focusTarget = this.panelReturnFocusTarget;
     const controller = this.controller; const chapter = controller?.chapter;
-    const saving = this.saveVisible();
+    const saving = this.saveVisible(this.exiting);
     const closing = this.closePanel(false); const generation = this.panelGeneration;
     const closed = await closing;
     const saved = await saving;
@@ -2333,8 +2577,8 @@ export struct MangaReadingSurface {
     return entry?.displayTitle?.trim() || entry?.title.trim() || '';
   }
   private boundaryCaption(): string {
+    if (this.boundaryBusy) return this.boundaryTargetTitle.length > 0 ? `正在进入：${this.boundaryTargetTitle}` : '正在进入下一话…';
     const next = this.adjacentLabel();
-    if (this.boundaryBusy) return next.length > 0 ? `正在进入：${next}` : '正在进入下一话…';
     if (next.length > 0) return `${this.boundaryArmed ? '松手进入' : '继续上拉进入'}下一话：${next}`;
     return this.finalBoundaryConfirmed() ? '已读至最新一话 · 返回继续' : '暂无下一话';
   }
@@ -2531,7 +2775,6 @@ export struct MangaReadingSurface {
           Stack({ alignContent: Alignment.Center }) {
             this.boundaryViewport();
             if (!this.opened) { this.chapterLoadState(); }
-            if (this.previousChapterPixels.length > 0) { this.retainedChapterPixels(); }
             if (this.opened && this.showPageNumbers && !this.chapterEnd && !this.boundaryBusy) this.pageBadge();
             if (this.controlsPresentedForWindow() && !this.boundaryBusy) {
               this.readerChrome();
@@ -2610,10 +2853,11 @@ export struct MangaReadingSurface {
   private boundaryViewport() {
     PullToRefresh({
       scroller: this.scroller,
-      customList: (): void => { this.imageViewport(); },
+      customList: (): void => { this.boundaryChapterFrame(); },
       customLoad: (): void => { this.boundaryHint(); },
       pullEnabled: this.boundaryEnabled(), hasPrevious: false,
       hasNext: this.adjacentChapter(1) !== undefined || this.finalBoundaryConfirmed(), resetToken: this.boundaryReset,
+      requestViewportFixed: this.boundaryViewportFixed || this.rollbackPainting,
       animationDuration: readerMotionDurationMs('manga.pullRefresh.reset', this.reduceMotion),
       animationCurve: readerMotionStandardCurve(), visualDamping: readerPaperPullOffset, reduceMotion: this.reduceMotion,
       onPull: (direction: PullDirection, distance: number, armed: boolean): void => this.onBoundaryPull(direction, distance, armed),
@@ -2621,6 +2865,13 @@ export struct MangaReadingSurface {
       onRefresh: (): Promise<string> => this.turnBoundaryChapter(-1),
       onLoadMore: (): Promise<string> => this.releaseNextBoundary(),
     }).width('100%').height('100%');
+  }
+  @Builder
+  private boundaryChapterFrame() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      this.imageViewport();
+      if (this.previousChapterPixels.length > 0) { this.retainedChapterPixels(); }
+    }.width('100%').height('100%');
   }
   @Builder
   private boundaryHint() {
@@ -2652,29 +2903,35 @@ export struct MangaReadingSurface {
       .onError((): void => this.onChapterImageError(row, uri, renderKey, owner, manifest));
   }
   @Builder
+  private failedTile(row: MangaStripRow, visit: MangaRowRetryVisit) {
+    Stack({ alignContent: Alignment.TopStart }) {
+      if (this.unavailableMarkerTile(row) === row.tileIndex) {
+        Image((this.backgroundPreference === 'ink' ? $r('app.media.reader_image_unavailable_theme_night') : $r('app.media.reader_image_unavailable')))
+          .width(32).height(32).accessibilityText('此图片不可用')
+          .position({ x: Math.max(0, (this.unavailableImageWidth(row) - 32) / 2), y: this.unavailableMarkerTop(row) });
+      }
+    }.width(this.unavailableImageWidth(row)).height(this.unavailableImageHeight(row))
+      .backgroundColor(Color.Transparent)
+      .border({ width: { left: 1, right: 1,
+        top: this.wholeImageUnavailable(row) && row.sourceY > 0 ? 0 : 1,
+        bottom: this.wholeImageUnavailable(row) && row.sourceY + row.height < row.sourceHeight ? 0 : 1 },
+        color: this.lineColor() })
+      .borderRadius({ topLeft: this.wholeImageUnavailable(row) && row.sourceY > 0 ? 0 : 4,
+        topRight: this.wholeImageUnavailable(row) && row.sourceY > 0 ? 0 : 4,
+        bottomLeft: this.wholeImageUnavailable(row) && row.sourceY + row.height < row.sourceHeight ? 0 : 4,
+        bottomRight: this.wholeImageUnavailable(row) && row.sourceY + row.height < row.sourceHeight ? 0 : 4 })
+      .margin({ bottom: row.known ? 0 : 12 })
+      .accessibilityDescription(this.retryLabel(row))
+      .onAppear(visit.mount).onDisAppear(visit.retire).onClick(visit.retry);
+  }
+  @Builder
   private imageViewport() {
     Scroll(this.horizontalScroller) {
       List({ scroller: this.scroller, space: 0 }) {
         LazyForEach(this.data, (row: MangaStripRow, index: number) => {
           ListItem() {
             if (this.rowHasError(row)) {
-              Stack({ alignContent: Alignment.TopStart }) {
-                if (this.unavailableMarkerTile(row) === row.tileIndex) {
-                  Image((this.backgroundPreference === 'ink' ? $r('app.media.reader_image_unavailable_theme_night') : $r('app.media.reader_image_unavailable')))
-                    .width(32).height(32).accessibilityText('此图片不可用')
-                    .position({ x: Math.max(0, (this.unavailableImageWidth(row) - 32) / 2), y: this.unavailableMarkerTop(row) });
-                }
-              }.width(this.unavailableImageWidth(row)).height(this.unavailableImageHeight(row))
-                .backgroundColor(Color.Transparent)
-                .border({ width: { left: 1, right: 1,
-                  top: this.wholeImageUnavailable(row) && row.sourceY > 0 ? 0 : 1,
-                  bottom: this.wholeImageUnavailable(row) && row.sourceY + row.height < row.sourceHeight ? 0 : 1 },
-                  color: this.lineColor() })
-                .borderRadius({ topLeft: this.wholeImageUnavailable(row) && row.sourceY > 0 ? 0 : 4,
-                  topRight: this.wholeImageUnavailable(row) && row.sourceY > 0 ? 0 : 4,
-                  bottomLeft: this.wholeImageUnavailable(row) && row.sourceY + row.height < row.sourceHeight ? 0 : 4,
-                  bottomRight: this.wholeImageUnavailable(row) && row.sourceY + row.height < row.sourceHeight ? 0 : 4 })
-                .margin({ bottom: row.known ? 0 : 12 });
+              this.failedTile(row, this.retryRowVisit(row, this.rowRenderKey(row), this.controller, this.controller?.chapter?.manifest));
             } else if (this.controller?.tile(row.ordinal, row.tileIndex)?.image !== undefined) {
               this.tileImage(row, this.controller?.tile(row.ordinal, row.tileIndex)?.image?.fileUri ?? '', this.rowRenderKey(row), this.controller, this.controller?.chapter?.manifest);
             } else {
@@ -2688,7 +2945,7 @@ export struct MangaReadingSurface {
         }, (row: MangaStripRow): string => this.rowRenderKey(row))
       }.height('100%').width(this.viewportWidth * this.zoom).cachedCount(0).scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.None)
-        .enableScrollInteraction(this.phonePanelBackgroundEnabled() && !this.boundaryBusy && !this.rollbackPainting)
+        .enableScrollInteraction(this.phonePanelBackgroundEnabled() && !this.pinching && !this.boundaryBusy && !this.rollbackPainting)
         .onDidScroll((): void => { this.queueViewportObservation(); })
         .onScrollIndex((first: number, last: number): void => {
           // A reload can report the preceding viewport before native consumes
@@ -2713,31 +2970,23 @@ export struct MangaReadingSurface {
         .onTouch((event: TouchEvent): void => this.onViewportTouch(event))
         .onScrollStop((): void => { this.flushViewportObservation(); this.saveVisible(); })
     }.height('100%').width('100%').scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
-      .enableScrollInteraction(this.phonePanelBackgroundEnabled() && !this.boundaryBusy && !this.rollbackPainting)
+      .enableScrollInteraction(this.phonePanelBackgroundEnabled() && !this.pinching && !this.boundaryBusy && !this.rollbackPainting)
       .onAreaChange((_old: Area, area: Area): void => { this.resizeViewport(Number(area.width), Number(area.height)); })
       .onDidScroll((): void => { this.queueViewportObservation(); })
       .onScrollStop((): void => { this.flushViewportObservation(); this.saveVisible(); })
       .parallelGesture(GestureGroup(GestureMode.Exclusive, PinchGesture({ fingers: 2 })
-        .onActionStart((): void => {
-          if (!this.viewportGestureCurrent()) return;
-          this.rememberVisible(); this.pinchAnchor = this.visibleAnchor; this.pinchStartScale = this.zoom;
-        })
-        .onActionUpdate((event: GestureEvent): void => {
-          if (this.viewportGestureCurrent()) this.changeZoom(this.pinchStartScale * event.scale);
-        })
-        .onActionEnd((): void => {
-          this.pinchAnchor = undefined;
-          if (this.viewportGestureCurrent()) this.saveVisible();
-        })
-        .onActionCancel((): void => { this.pinchAnchor = undefined; }),
+        .onActionStart((event: GestureEvent): void => this.beginViewportPinch(event))
+        .onActionUpdate((event: GestureEvent): void => this.updateViewportPinch(event))
+        .onActionEnd((): void => this.endViewportPinch(true))
+        .onActionCancel((): void => this.endViewportPinch(false)),
         SwipeGesture({ direction: SwipeDirection.Horizontal }).onAction((event: GestureEvent): void => {
-          if (this.viewportGestureCurrent() && this.horizontal && this.zoom === 1) {
+          if (!this.pinching && this.viewportGestureCurrent() && this.horizontal && this.zoom === 1) {
             if (this.horizontalPage + 1 === this.horizontalPageCount && Math.abs(event.angle) > 90) void this.openChapterEnd();
             else this.turnPage(Math.abs(event.angle) > 90 ? 1 : -1);
           }
         }),
         TapGesture({ count: 1, distanceThreshold: 6 }).onAction((): void => {
-          if (this.viewportGestureCurrent() && !this.boundaryDragging) this.toggleControls();
+          if (!this.pinching && this.viewportGestureCurrent() && !this.boundaryDragging) this.toggleControls();
         })));
   }
   @Builder

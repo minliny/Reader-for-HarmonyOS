@@ -266,7 +266,7 @@ export struct SourceV9TransferPage {
       this.dialog = 'none';
       return true;
     }
-    if (this.state.reviews.length > 0) {
+    if (this.showsReview()) {
       this.flow?.closeReviews();
       return true;
     }
@@ -357,8 +357,15 @@ export struct SourceV9TransferPage {
 
   private applyCount(): number {
     let count = 0;
-    for (const review of this.state.reviews) count += sourceV9ChangesToApply(review.rows).length;
+    for (const review of this.state.reviews) {
+      if (review.requiresFreshPreview !== true) count += sourceV9ChangesToApply(review.rows).length;
+    }
     return count;
+  }
+
+  private showsReview(): boolean {
+    // Keep the retained review rows while original-write recovery owns input.
+    return this.state.reviews.length > 0 && !this.state.writePending;
   }
 
   private reviewHasSources(): boolean {
@@ -516,10 +523,10 @@ export struct SourceV9TransferPage {
           },
         });
       }.width('100%').height('100%')
-        .accessibilityLevel(this.dialog !== 'none' || this.state.reviews.length > 0 || this.visibleReport !== undefined ?
+        .accessibilityLevel(this.dialog !== 'none' || this.showsReview() || this.visibleReport !== undefined ?
           'no-hide-descendants' : 'auto');
       this.pendingRecovery();
-      if (this.state.reviews.length > 0) this.modalFrame('review');
+      if (this.showsReview()) this.modalFrame('review');
       if (this.dialog !== 'none') this.modalFrame('edit');
       if (this.visibleReport !== undefined) this.modalFrame('report');
     }.id(this.pane === 'import' ? 'reader-source-v9-import' : 'reader-source-v9-subscriptions')
@@ -599,8 +606,7 @@ export struct SourceV9TransferPage {
 
   @Builder
   private pendingRecovery() {
-    if (this.state.writePending && this.dialog === 'none' && this.visibleReport === undefined &&
-      this.state.reviews.length === 0) {
+    if (this.state.writePending && this.dialog === 'none' && this.visibleReport === undefined) {
       Column() {
         ReaderRecoveryNotice({
           view: { message: this.state.error || this.state.status || '原操作需要核对', visible: true,
@@ -1151,7 +1157,7 @@ export struct SourceV9TransferPage {
       containerWidthVp: width,
       onClose: (): void => { if (this.inputCurrent()) this.flow?.closeReviews(); },
       actions: [new DialogActionView('cancel', '取消', 'default', this.inputCurrent() && !this.state.busy, true),
-        new DialogActionView('apply', '应用更新 (' + this.applyCount() + ')', 'primary',
+        new DialogActionView('apply', this.applyCount() > 0 ? '应用更新 (' + this.applyCount() + ')' : '应用更新', 'primary',
           this.editable() && this.applyCount() > 0)],
       onAction: (action: string): void => {
         if (!this.inputCurrent()) return;

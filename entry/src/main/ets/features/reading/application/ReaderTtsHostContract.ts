@@ -11,6 +11,8 @@ export type ReaderTtsHostSpeakRequest = {
   pitch: number;
   language: string;
   person: number;
+  /** An explicit replacement must reject rather than accepting a fallback voice. */
+  exactVoice?: boolean;
   engine?: string;
 };
 

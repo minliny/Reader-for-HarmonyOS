@@ -4,7 +4,8 @@ import type { ShelfBook } from '../../../app/ReaderCoreGateway';
 import { ReaderCoreGateway } from '../../../app/ReaderCoreGateway';
 import type { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { SharedDownloadGateway } from './SharedDownloadGateway';
-import { createDownloadBookView, projectDownloadBookAvailability, type DownloadBookView, type DownloadStorageSummary, type DownloadStoragePolicyView, type SharedDownloadActionTarget } from '../presentation/SharedDownloadProjection';
+import { createDownloadBookView, projectDownloadBookAvailability, sameDownloadBookView,
+  type DownloadBookView, type DownloadStorageSummary, type DownloadStoragePolicyView, type SharedDownloadActionTarget } from '../presentation/SharedDownloadProjection';
 import { SharedDownloadAdmissionError, SharedDownloadProjectionRefreshError, type SharedDownloadCoordinatorSnapshot } from './SharedDownloadCoordinator';
 
 export type SharedDownloadBookAction = 'download' | 'pause' | 'cancel' | 'deleteLocal';
@@ -440,7 +441,7 @@ export class SharedDownloadHost {
   }
 
   private sameRow(left: DownloadBookView, right: DownloadBookView): boolean {
-    return left === right || JSON.stringify(left) === JSON.stringify(right);
+    return sameDownloadBookView(left, right);
   }
 
   private bindProgress(current: () => boolean): void {

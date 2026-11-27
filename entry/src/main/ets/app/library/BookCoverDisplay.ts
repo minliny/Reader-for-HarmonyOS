@@ -10,3 +10,10 @@ export function bookContentKindLabel(sourceId: string, contentKind: string | und
   if (contentKind === 'audio') return '有声';
   return contentKind === 'text' || sourceId === 'local' ? '小说' : '';
 }
+
+export function rememberBookCoverFailure(current: string[], url: string): string[] {
+  if (current.includes(url)) return current;
+  const retained = current.slice(Math.max(0, current.length - 255));
+  retained.push(url);
+  return retained;
+}

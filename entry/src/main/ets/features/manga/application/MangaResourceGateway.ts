@@ -68,10 +68,11 @@ export class MangaResourceGateway {
   }
 
   async loadPage(scope: MangaResourceScope, page: MangaResourcePage,
-    allowNetwork: boolean, isCurrent: () => boolean, mangaPosition?: number, mangaPreview: boolean = false): Promise<ReadingGatewayImage> {
+    allowNetwork: boolean, isCurrent: () => boolean, mangaPosition?: number, mangaPreview: boolean = false,
+    reusePrepared: boolean = true): Promise<ReadingGatewayImage> {
     // Runtime owns the shared manga allocation lane, including explicit offline
     // work and the operation's pending cache write. Do not lock it again here.
-    return this.loadOwnedPage(scope, page, allowNetwork, isCurrent, mangaPosition, mangaPreview);
+    return this.loadOwnedPage(scope, page, allowNetwork, isCurrent, mangaPosition, mangaPreview, reusePrepared);
   }
 
   async readPageForSave(scope: MangaResourceScope, page: MangaResourcePage, allowNetwork: boolean,
@@ -100,7 +101,8 @@ export class MangaResourceGateway {
   }
 
   private async loadOwnedPage(scope: MangaResourceScope, page: MangaResourcePage,
-    allowNetwork: boolean, isCurrent: () => boolean, mangaPosition?: number, mangaPreview: boolean = false): Promise<ReadingGatewayImage> {
+    allowNetwork: boolean, isCurrent: () => boolean, mangaPosition: number | undefined, mangaPreview: boolean,
+    reusePrepared: boolean): Promise<ReadingGatewayImage> {
     this.assertCurrent(isCurrent);
     this.assertPage(scope, page);
     if (this.runtime.loadReadingImage === undefined || this.runtime.releaseReadingImage === undefined) {
@@ -109,7 +111,7 @@ export class MangaResourceGateway {
     const image = await this.runtime.loadReadingImage(scope.sourceId, scope.bookId, scope.chapterIndex,
       scope.contentVersion, page.requestRule ?? page.url, scope.chapterUrl, allowNetwork, isCurrent, page.resourceRef, mangaPosition,
       scope.sourceRuleVersion, mangaPreview, scope.decodeRevision,
-      this.sameDisplayScope(this.displayScope(scope, mangaPreview)) ? this.displaySessionId : undefined);
+      reusePrepared && this.sameDisplayScope(this.displayScope(scope, mangaPreview)) ? this.displaySessionId : undefined);
     if (!isCurrent()) {
       this.release(image);
       throw new Error('MANGA_RESOURCE_CANCELLED');

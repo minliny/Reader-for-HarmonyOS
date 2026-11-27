@@ -110,7 +110,7 @@ export class BookshelfMutationPresentation {
 
   private publishRemovalFeedback(snapshot: BookshelfOperationSnapshot, owner: ReaderRuntimeOwner): void {
     const route = this.scope.route();
-    if ((route !== 'bookshelf' && route !== 'detail') || snapshot.action === 'import' ||
+    if ((route !== 'bookshelf' && route !== 'detail') || this.scope.readingActive() || snapshot.action === 'import' ||
       snapshot.receipt?.receipt.confirmation === 'unknown' || snapshot.removalMutation?.blocked === true || snapshot.busy) return;
     const feedback = readerRecoveryView(snapshot.receipt);
     const message = snapshot.cleanupWarning.length > 0 ? `书籍已移出书架；应用内 EPUB 文件清理未完成：${snapshot.cleanupWarning}` :
@@ -124,7 +124,7 @@ export class BookshelfMutationPresentation {
     this.feedbackKey = key;
     try {
       this.scope.feedback(message, (): boolean => !this.scope.retired() &&
-        this.scope.isCurrentOwner(owner) && this.scope.owner() === owner);
+        !this.scope.readingActive() && this.scope.isCurrentOwner(owner) && this.scope.owner() === owner);
     } catch (_) {}
   }
 

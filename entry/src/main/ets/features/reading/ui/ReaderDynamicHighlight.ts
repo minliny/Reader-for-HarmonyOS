@@ -80,3 +80,27 @@ export function readerNativeHighlightValues(rects: ReaderDynamicHighlightRect[],
   }
   return values;
 }
+
+export interface ReaderLocalHighlightProjection {
+  rects: ReaderDynamicHighlightRect[];
+  top: number;
+  height: number;
+}
+
+export function readerLocalHighlightProjection(rects: ReaderDynamicHighlightRect[], paragraphTop: number,
+  viewportTop: number, viewportHeight: number): ReaderLocalHighlightProjection {
+  const clipTop = Math.max(paragraphTop, viewportTop);
+  const clipBottom = viewportTop + viewportHeight;
+  const visible: ReaderDynamicHighlightRect[] = [];
+  let top = clipBottom, bottom = clipTop;
+  for (const rect of rects) {
+    const y = Math.max(clipTop, rect.top), end = Math.min(clipBottom, rect.bottom);
+    if (!(end > y)) continue;
+    visible.push({ left: rect.left, right: rect.right, top: y, bottom: end,
+      color: rect.color, multiply: rect.multiply });
+    top = Math.min(top, y);
+    bottom = Math.max(bottom, end);
+  }
+  return visible.length === 0 ? { rects: visible, top: 0, height: 0 } :
+    { rects: visible, top: top - paragraphTop, height: bottom - top };
+}

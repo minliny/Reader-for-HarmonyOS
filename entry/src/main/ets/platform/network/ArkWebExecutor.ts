@@ -1,6 +1,6 @@
 import { NetworkEnvironmentError, prepareNetworkTarget, type NetworkTarget } from './NetworkRoutePolicy';
 import { httpUrlHostname, isPrivateNetworkTarget, redactedHttpUrl } from './HttpTransportPolicy';
-import { ArkWebJobQueue, ArkWebProxyAdmission, type ArkWebProxyAttempt } from './ArkWebAdmission';
+import { arkWebEvaluationReady, arkWebUrlDisposition, ArkWebJobQueue, ArkWebProxyAdmission, type ArkWebProxyAttempt } from './ArkWebAdmission';
 import systemDateTime from '@ohos.systemDateTime';
 import webview from '@ohos.web.webview';
 import { WebNetErrorList } from '@ohos.web.netErrorList';
@@ -270,20 +270,15 @@ export class ArkWebExecutor {
    * Navigation and resources are same-host only, so a page cannot introduce
    * an unpinned DNS name or redirect into a different network target.
    */
-  blockNetworkUrl(value: string, surface: ArkWebSurface): boolean {
+  blockNetworkUrl(value: string, surface: ArkWebSurface, mainFrame: boolean): boolean {
     if (!this.isSurfaceCurrent(surface)) return true;
-    const normalized = value.trim().toLowerCase();
-    if (normalized === 'about:blank' || normalized.startsWith('data:') || normalized.startsWith('blob:')) return false;
-    const host = httpUrlHostname(value);
-    const admittedHost = this.active?.pinnedHost;
-    const blocked = host === undefined || isPrivateNetworkTarget(host) ||
-      admittedHost === undefined || host !== admittedHost;
-    if (blocked && this.active !== undefined) {
+    const disposition = arkWebUrlDisposition(value, this.active?.pinnedHost, mainFrame);
+    if (disposition === 'denyPage' && this.active !== undefined) {
       this.active.networkDenied = true;
       this.rejectResourceCapture(this.active, this.hostFailure('NETWORK_POLICY_DENIED', '书源网页请求了不允许的网络地址', false, { phase: 'resource' }));
       try { surface.controller.stop(); } catch (_) {}
     }
-    return blocked;
+    return disposition !== 'allow';
   }
 
   private async pinDocumentTarget(job: ArkWebJob, value: string): Promise<void> {
@@ -558,7 +553,7 @@ export class ArkWebExecutor {
     const capture = job?.resourceCapture;
     if (job === undefined || capture === undefined || capture.settled || capture.overflowQueued) return;
     if (url === 'about:blank' || url.trim().length === 0) return;
-    if (this.blockNetworkUrl(url, surface)) return;
+    if (this.blockNetworkUrl(url, surface, false)) return;
     capture.count += 1;
     capture.totalChars += url.length;
     if (url.length > MAX_RESOURCE_URL_CHARS || capture.count > MAX_RESOURCE_EVENTS ||
@@ -1000,7 +995,7 @@ export class ArkWebExecutor {
       const raw = await this.waitForOperation(job, controller.runJavaScript(job.javaScript), 'script');
       this.assertCurrent(job);
       const parsed = this.parseJavaScriptValue(raw);
-      if (parsed !== null && parsed !== '') {
+      if (arkWebEvaluationReady(parsed)) {
         return parsed;
       }
       await delay(SCRIPT_RETRY_MS);

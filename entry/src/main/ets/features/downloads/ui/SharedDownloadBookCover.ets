@@ -45,6 +45,7 @@ export struct SharedDownloadBookCover {
       } else {
         ForEach([this.requestIdentity()], (identity: string): void => {
           Image(this.coverUrl.trim()).width(this.coverWidth).height(this.coverHeight).objectFit(ImageFit.Contain)
+            .autoResize(true).sourceSize({ width: this.coverWidth, height: this.coverHeight })
             .onError((): void => this.rejectImage(identity));
         }, (identity: string): string => identity);
       }

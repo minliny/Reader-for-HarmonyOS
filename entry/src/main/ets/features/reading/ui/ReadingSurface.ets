@@ -332,6 +332,9 @@ export struct ReadingSurface {
    */
   @Prop @Watch('onHighlightContentChanged') pageFragments: ReadingSurfacePageFragment[] = [];
   @Prop @Watch('onHighlightContentChanged') contentRevision: number = 0;
+  private indexedFragments: ReadingSurfacePageFragment[] | undefined = undefined;
+  private indexedContentRevision: number = -1;
+  private readonly fragmentById: Map<string, ReadingSurfacePageFragment> = new Map();
   @Prop @Watch('onHighlightContentChanged') staticSnapshotId: string = '';
   @Prop @Watch('onHighlightContentChanged') highlightTextureIdentity: string = '';
   onDynamicHighlights: (identity: string, rects: ReaderDynamicHighlightRect[]) => void =
@@ -396,6 +399,7 @@ export struct ReadingSurface {
     this.highlightDrawQueued = false; this.highlightCanvasReady = false;
     this.highlightMeasurements = []; this.highlightRects.clear();
     this.highlightLiveFragments = undefined; this.highlightLiveIds.clear();
+    this.indexedFragments = undefined; this.fragmentById.clear();
     this.highlightPublishedIdentity = ''; this.highlightPaintWidth = -1;
   }
 
@@ -725,7 +729,16 @@ export struct ReadingSurface {
   }
 
   private currentFragment(snapshot: ReadingSurfacePageFragment): ReadingSurfacePageFragment {
-    return this.renderFragments().find((fragment: ReadingSurfacePageFragment): boolean => fragment.id === snapshot.id) ?? snapshot;
+    const fragments = this.renderFragments();
+    if (fragments !== this.indexedFragments || this.contentRevision !== this.indexedContentRevision) {
+      this.indexedFragments = fragments;
+      this.indexedContentRevision = this.contentRevision;
+      this.fragmentById.clear();
+      for (const fragment of fragments) {
+        if (!this.fragmentById.has(fragment.id)) this.fragmentById.set(fragment.id, fragment);
+      }
+    }
+    return this.fragmentById.get(snapshot.id) ?? snapshot;
   }
 
   private contentInsets(): Padding {
