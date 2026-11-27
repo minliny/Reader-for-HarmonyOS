@@ -1,9 +1,12 @@
-import { supplyBundledSources } from './IncrementalBundledSourceSupply';
+import { ReaderRuntimeImageResources, type MangaImagePriority } from './ReaderRuntimeImageResources';
+import { ReaderBundledBookSourceInstaller, type BundledSourceInstallSummary } from './ReaderBundledBookSourceInstaller';
+import { requireStorageProbeIdentity, requireCoreBuildIdentity, requireCoreStorageFormat,
+  requireSourceSwitchRecoveryCount, type CoreBuildIdentity } from './ReaderCoreStartupAdmission';
 import { BookAcquisitionCoordinator } from '../features/reading/application/BookAcquisitionCoordinator';
 import { readerRuleMutationEffects } from './ReaderRuleMutationEffects';
-import { buildReaderPublicFixtureDirectory, readerHostCacheDirectory, readerHostFilesDirectory,
-  type ReaderPublicFixtureScope } from './diagnostics/ReaderPublicFixtureScope';
-import { readerPublicSearchHttpFixtureMode } from './diagnostics/ReaderPublicSearchHttpFixture';
+import { readerHostFilesDirectory, type ReaderPublicFixtureScope } from './diagnostics/ReaderPublicFixtureScope';
+import { ReaderPublicFixtureBridge } from './ReaderPublicFixtureBridge';
+import { ReaderMangaProbeRegistry } from './ReaderMangaProbeRegistry';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError, type BookRequestOptions } from './BookRequestScheduler';
 export { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from './BookRequestScheduler';
 import common from '@ohos.app.ability.common';
@@ -32,28 +35,15 @@ import { HarmonyHttpTtsHost } from '../platform/tts/HarmonyHttpTtsHost';
 import { HarmonyTtsHostRouter } from '../platform/tts/HarmonyTtsHostRouter';
 import { HarmonyTtsMediaSession } from '../platform/tts/HarmonyTtsMediaSession';
 import { HarmonyTtsBackgroundSession } from '../platform/tts/HarmonyTtsBackgroundSession';
-import { LocalEpubResourceHost } from '../platform/reading-resources/LocalEpubResourceHost';
 import { ReadingBodyImageHost, type ReadingBodyImagePayload, type MangaImageMetadataProof } from '../platform/reading-resources/ReadingBodyImageHost';
-import { MangaImageDecodeHost } from '../platform/reading-resources/MangaImageDecodeHost';
 import { MangaImageMetadataHost } from '../platform/reading-resources/MangaImageMetadataHost';
 import {
-  ReadingImageDiskCache,
   type ReadingImageCacheIdentity,
   type ReadingImageChapterIdentity,
 } from '../platform/reading-resources/ReadingImageDiskCache';
-import { canonicalReadingImageBaseUrl } from '../common/ReadingImageIdentity';
 import { ArkWebExecutor, type ArkWebLoginClearOutcome } from '../platform/network/ArkWebExecutor';
 import { sourceLoginPageUrl } from './SourceLoginPageProjection';
 import type { SourceHttpDiagnosticRecord } from '../platform/network/HttpExecuteHost';
-import {
-  BundledSourceLedger,
-  canonicalRulePayloadJson,
-  decideBundledUpgrade,
-  hasBuiltinMarker,
-  isUserModifiedBuiltinCopy,
-  mergeBundledDefaultStateCorrection,
-  sha256Hex,
-} from './BundledBookSourceSupply';
 import { image } from '@kit.ImageKit';
 import { ReaderAppearanceStore } from '../features/reading/application/ReaderAppearanceStore';
 import { ReaderAppearancePreferences } from './ReaderAppearancePreferences';
@@ -61,9 +51,8 @@ import { ReadingEntryPreparation } from '../features/reading/application/Reading
 import { releaseReadingEntryMemory } from '../features/reading/application/ReadingEntryHandoff';
 import { ReaderPreparationNetworkHost } from './ReaderPreparationNetworkHost';
 import { ReaderStartupTrace } from './ReaderStartupTrace';
-import { MangaOfflineNetworkProbe, type MangaOfflineProbeScope, type MangaProbeSelectionMode } from './MangaOfflineNetworkProbe';
+import type { MangaOfflineProbeScope, MangaProbeSelectionMode } from './MangaOfflineNetworkProbe';
 import { MangaChapterPreparationCoordinator } from '../features/manga/application/MangaChapterPreparationCoordinator';
-import type { MangaStorageChapter, MangaStorageGrant } from '../platform/reading-resources/ReadingImageDiskCache';
 import type { MangaDisplaySessionScope } from '../features/reading/application/ReadingGatewayRuntime';
 import { SharedDownloadCoordinator } from '../features/downloads/application/SharedDownloadCoordinator';
 import type { ReaderWriteEvidence } from './ReaderWriteEvidence';
@@ -78,16 +67,6 @@ import { recoverReadingProgress } from '../features/reading/application/ReadingS
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
-/** One manga operation may publish its display before its own byte copies drain. */
-type MangaImageWork = { drain?: Promise<void> };
-type MangaImagePriority = 'foreground' | 'chapter' | 'background' | 'download';
-type MangaImageQueuedWork = { priority: MangaImagePriority; run: () => Promise<void> };
-type MangaPreparedDisplayPage = { intrinsicHeight: number; tileHeight: number; regions: Map<number, ReadingBodyImagePayload>; };
-type MangaDisplaySession = { scope: MangaDisplaySessionScope; current: () => boolean;
-  aliases: Map<string, MangaPreparedDisplayPage>; files: Map<string, ReadingBodyImagePayload>;
-  fileAliasCounts: Map<string, number>; };
-
-// Local import and materialized chapter reads may perform file and parsing I/O.
 // The SDK's generic 2s default is unsuitable; callers may still opt into a
 // narrower explicit limit.
 const DEFAULT_CORE_REQUEST_TIMEOUT_MS = 30000;
@@ -95,58 +74,11 @@ const DEFAULT_CORE_REQUEST_TIMEOUT_MS = 30000;
 // unavailable Core journal must not blank the application for several minutes.
 const PENDING_LOCAL_IMPORT_FINALIZE_TIMEOUT_MS = 5000;
 const LOG_DOMAIN = 0x5244;
-const BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE = 'reader-tested-book-source-collection.json';
 // BEGIN bundled-source-integrity (managed by tools/refresh-source-supply-manifest.mjs)
 const BUNDLED_RAW_FILE_SHA256 = '405661f1a7308c95e922eddea876ec10888563fde36d7e814064f585bb2142b9';
 // END bundled-source-integrity
 
-type CoreBuildIdentity = {
-  schemaVersion: number;
-  buildId: string;
-  gitCommit: string;
-  gitDirty: boolean;
-  cargoLockSha256: string;
-  protocolSha256: string;
-  rustProfile: string;
-  storageCompatibility?: CoreStorageCompatibility;
-  sqliteUserVersion?: number;
-};
-
-type CoreStorageCompatibility = {
-  sqliteMaxUserVersion: number;
-  sqliteStorageSourceSha256: string;
-};
-
-/** Legacy recovery facts that older Core builds could return in core.info. */
-type LegacyCoreStorageCapabilities = {
-  logicalExport: boolean;
-  logicalRestore: boolean;
-  legacyHostImport: boolean;
-  physicalBackup: boolean;
-  physicalRestore: boolean;
-  webdavConfigRestore: boolean;
-  activeLibrarySync: false;
-  logicalExportRequiresDataPreflight: true;
-  logicalRestoreRequiresCompleteCoverage: boolean;
-  resourceEvidenceOnly: true;
-  externalFilesIncluded: false;
-};
-
-type LegacyCoreStorageFormat = {
-  format: 'legacy' | 'library47';
-  portableSnapshotSupported: boolean;
-  capabilities?: LegacyCoreStorageCapabilities;
-};
 export type ReaderLegacySnapshotRecovery = 'none' | 'unsupportedStorageFormat' | 'storageCapabilityUnavailable' | 'automaticImportDeferred';
-
-type BundledSourceInstallSummary = {
-  collectionRecords: number;
-  uniqueSourceIds: number;
-  processed: number;
-  installedOrUpgraded: number;
-  failed: number;
-  interrupted: boolean;
-};
 
 /**
  * Owns the one and only native Core runtime for the full application process.
@@ -157,13 +89,8 @@ export class ReaderRuntimeOwner {
 
   private readonly host: ReaderHostRegistry;
   private readonly ttsHost: HarmonyTtsHostRouter;
-  private readonly localEpubResourceHost: LocalEpubResourceHost;
-  private readonly readingImageDiskCache: ReadingImageDiskCache;
-  private readonly mangaOfflineProbe: MangaOfflineNetworkProbe | undefined;
-  private mangaReadingProbeBodyDetach: (() => void) | undefined;
-  private mangaReadingProbeReleaseDetach: (() => void) | undefined;
-  private mangaReadingProbeImageScope: MangaOfflineProbeScope | undefined;
-  private mangaReadingProbeForeignImages: number = 0;
+  private readonly images: ReaderRuntimeImageResources;
+  private readonly mangaProbes: ReaderMangaProbeRegistry;
   private runtime: ReaderCoreRuntime | undefined = undefined;
   private searchPageEvidenceCount: number = 0;
   private switchPageEvidenceCount: number = 0;
@@ -171,18 +98,6 @@ export class ReaderRuntimeOwner {
   private startup: Promise<void> | undefined = undefined;
   /** Serializes background storage flushes with teardown. */
   private flushTail: Promise<void> = Promise.resolve();
-  /** Shared by foreground regions, adjacent preparation and explicit offline images. */
-  private mangaImageTail: Promise<void> = Promise.resolve();
-  private mangaImagePending: number = 0;
-  private mangaImageQueue: MangaImageQueuedWork[] = [];
-  private mangaImageActive: boolean = false;
-  private mangaImageUrgentStreak: number = 0;
-  private mangaImageIdle: (() => void) | undefined;
-  /** Chapter/session ownership, not an eviction cache. No encoded bytes or
-   * PixelMaps survive here; each physical display has one owner lease. */
-  private readonly mangaDisplaySessions: Map<number, MangaDisplaySession> = new Map<number, MangaDisplaySession>();
-  private nextMangaDisplaySession: number = 0;
-  /** Lets concurrent Ability teardown callers await the same cleanup. */
   private closeTask: Promise<void> | undefined = undefined;
   /** Background source seeding never gates page availability. */
   private sourceSupplyTask: Promise<void> = Promise.resolve();
@@ -240,8 +155,7 @@ export class ReaderRuntimeOwner {
   private readonly predecessorClose: Promise<void>;
   /** Fixed at process-owner construction; never a persisted user setting. */
   private readonly optionalEntryMemoryEnabled: boolean;
-  private readonly publicFixture: ReaderPublicFixtureScope | undefined;
-  private publicSearchHttpReady: boolean = false;
+  private readonly fixtures: ReaderPublicFixtureBridge;
 
   private constructor(context: common.UIAbilityContext, predecessorClose: Promise<void> = Promise.resolve(),
     disableOptionalEntryMemory: boolean = false, mangaOfflineScope?: MangaOfflineProbeScope,
@@ -249,26 +163,13 @@ export class ReaderRuntimeOwner {
     publicFixture?: ReaderPublicFixtureScope) {
     this.predecessorClose = predecessorClose;
     this.optionalEntryMemoryEnabled = !disableOptionalEntryMemory;
-    this.publicFixture = publicFixture;
-    let probe: MangaOfflineNetworkProbe | undefined = undefined;
-    const conflictingScope = mangaOfflineScope !== undefined && mangaReadingScope !== undefined;
-    const conflictingSelection = mangaSelectionMode !== undefined && (mangaOfflineScope !== undefined || mangaReadingScope !== undefined);
-    if (!conflictingScope && !conflictingSelection) {
-      if (mangaSelectionMode !== undefined) {
-        const label = mangaSelectionMode === 'offline' ? 'MANGA_OFFLINE_PROBE %{public}s' : 'MANGA_READING_PROBE %{public}s';
-        probe = new MangaOfflineNetworkProbe(undefined,
-          (state: string): void => hilog.info(LOG_DOMAIN, 'Reader', label, state), mangaSelectionMode, true);
-      } else if (mangaOfflineScope !== undefined) {
-        probe = new MangaOfflineNetworkProbe(mangaOfflineScope,
-          (state: string): void => hilog.info(LOG_DOMAIN, 'Reader', 'MANGA_OFFLINE_PROBE %{public}s', state));
-      } else if (mangaReadingScope !== undefined) {
-        probe = new MangaOfflineNetworkProbe(mangaReadingScope,
-          (state: string): void => hilog.info(LOG_DOMAIN, 'Reader', 'MANGA_READING_PROBE %{public}s', state), 'reading');
-      }
-    }
-    this.mangaOfflineProbe = probe;
-    this.host = new ReaderHostRegistry(context, this.mangaOfflineProbe, publicFixture,
-      (): boolean => publicFixture !== undefined && this.publicSearchHttpReady && this.isCurrentPublicFixture(publicFixture));
+    this.fixtures = new ReaderPublicFixtureBridge(publicFixture,
+      (): boolean => this.state === 'ready' && ReaderRuntimeOwner.isCurrent(this));
+    this.mangaProbes = new ReaderMangaProbeRegistry((): ReadingBodyImageHost => ReadingBodyImageHost.instance,
+      (label: string, state: string): void => hilog.info(LOG_DOMAIN, 'Reader', label, state),
+      mangaOfflineScope, mangaReadingScope, mangaSelectionMode);
+    this.host = new ReaderHostRegistry(context, this.mangaProbes.network, publicFixture,
+      (): boolean => this.fixtures.searchHttpReady());
     this.ttsHost = new HarmonyTtsHostRouter(
       new HarmonySystemTtsHost(),
       new HarmonyHttpTtsHost(this),
@@ -276,80 +177,16 @@ export class ReaderRuntimeOwner {
       new HarmonyTtsBackgroundSession(context),
       (): boolean => AppStorage.get<boolean>('readerAppForeground') !== false,
     );
-    this.localEpubResourceHost = new LocalEpubResourceHost(context);
-    this.readingImageDiskCache = new ReadingImageDiskCache(context);
-    ReadingBodyImageHost.setDisplayCacheDir(readerHostCacheDirectory(context.cacheDir));
-    this.bindMangaStorage();
-    if (this.mangaOfflineProbe?.mode === 'reading') this.bindMangaReadingProbe();
-  }
-
-  private bindMangaStorage(): void {
-    const selector = (chapter: MangaStorageChapter): JsonObject => ({ chapter: { sourceId: chapter.sourceId,
-      bookId: chapter.bookId, chapterId: chapter.chapterId }, manifestVersion: chapter.contentVersion });
-    const projectGrant = (value: JsonObject): MangaStorageGrant => {
-      const chapter = value['chapter'] as JsonObject;
-      return { sourceId: chapter['sourceId'] as string, bookId: chapter['bookId'] as string,
-        chapterId: chapter['chapterId'] as string, contentVersion: value['manifestVersion'] as string, grantToken: value['token'] as string };
-    };
-    this.readingImageDiskCache.setMangaStorageAuthority({
-      classify: async (chapter) => (await this.request('manga.cache.classify', selector(chapter))).data['status'] as
-        'cache' | 'download' | 'protected' | 'unknown' | 'missing',
-      classifyBatch: async (chapters) => {
-        const response = await this.request('manga.cache.classifyBatch', { versions: chapters.map((chapter) => ({
-          ...selector(chapter), manifestVersion: chapter.contentVersion,
-        })) });
-        const results = response.data['results'];
-        if (!Array.isArray(results) || results.length !== chapters.length) throw new Error('MANGA_CACHE_CLASSIFY_BATCH_INVALID');
-        return results.map((result: JsonObject) => result['status'] as 'cache' | 'download' | 'protected' | 'unknown' | 'missing');
-      },
-      policy: async (chapter) => {
-        const data = (await this.request('manga.cache.classify', selector(chapter))).data;
-        const lastReadAt = data['lastReadAt'];
-        if (typeof data['inUse'] !== 'boolean' || (lastReadAt !== null && !Number.isSafeInteger(lastReadAt)))
-          throw new Error('MANGA_CACHE_POLICY_UNAVAILABLE');
-        return { status: data['status'] as 'cache' | 'download' | 'protected' | 'unknown' | 'missing',
-          inUse: data['inUse'] as boolean, lastReadAt: lastReadAt as number | null };
-      },
-      policyBatch: async (chapters) => {
-        const response = await this.request('manga.cache.classifyBatch', { versions: chapters.map((chapter) => ({
-          ...selector(chapter), manifestVersion: chapter.contentVersion,
-        })) });
-        const results = response.data['results'];
-        if (!Array.isArray(results) || results.length !== chapters.length) throw new Error('MANGA_CACHE_POLICY_BATCH_INVALID');
-        return results.map((data: JsonObject) => {
-          const lastReadAt = data['lastReadAt'];
-          if (typeof data['inUse'] !== 'boolean' || (lastReadAt !== null && !Number.isSafeInteger(lastReadAt)))
-            throw new Error('MANGA_CACHE_POLICY_UNAVAILABLE');
-          return { status: data['status'] as 'cache' | 'download' | 'protected' | 'unknown' | 'missing',
-            inUse: data['inUse'] as boolean, lastReadAt: lastReadAt as number | null };
-        });
-      },
-      candidates: async (reason, scope, expiry) => {
-        if (reason === 'expiry' && expiry === undefined) throw new Error('MANGA_CACHE_EXPIRY_POLICY_REQUIRED');
-        const data = (await this.request('manga.cache.evict', { nowSeconds: expiry?.nowSeconds ?? Math.floor(Date.now() / 1000),
-          ttlSeconds: reason === 'expiry' ? expiry!.ttlSeconds : 0 })).data;
-        return (data['candidates'] as JsonObject[]).map(value => {
-          const chapter = value['chapter'] as JsonObject;
-          return { sourceId: chapter['sourceId'] as string, bookId: chapter['bookId'] as string,
-            chapterId: chapter['chapterId'] as string, contentVersion: value['manifestVersion'] as string };
-        }).filter(chapter => scope === undefined || (chapter.sourceId === scope.sourceId && chapter.bookId === scope.bookId));
-      },
-      claim: async (chapter, expiry) => {
-        const grant = (await this.request('manga.cache.eviction.claim', { ...selector(chapter), ...(expiry ?? {}) })).data['grant'];
-        return grant === null ? undefined : projectGrant(grant as JsonObject);
-      },
-      complete: async (grant, removed): Promise<void> => { await this.request('manga.cache.eviction.complete', { token: grant.grantToken, removed }); },
-      pending: async () => ((await this.request('manga.cache.eviction.pending')).data['grants'] as JsonObject[]).map(projectGrant),
-    });
-    const body = ReadingBodyImageHost.instance;
-    body.configureMangaDisplayCache(readerHostFilesDirectory(this.host.getContext().filesDir));
-    this.readingImageDiskCache.setMangaExternalStorage({
-      inventory: () => body.mangaDisplayInventory(),
-      remove: (grant, files) => body.removeMangaDisplay(grant, files),
-      removeDerived: (chapter, files, current) => body.removeMangaDerived(chapter, files, current),
-    });
-    body.setMangaDisplayReserve((chapter, bytes, priority) =>
-      this.readingImageDiskCache.reserveExternalWrite(chapter, bytes, priority === 'foreground' ? 'foreground' : 'background', 'derived'));
+    this.images = new ReaderRuntimeImageResources(context, {
+      request: (method: string, params?: JsonObject, options?: BookRequestOptions): Promise<ReaderCoreResultEvent> =>
+        this.request(method, params, options),
+      requestTimeoutMs: DEFAULT_CORE_REQUEST_TIMEOUT_MS,
+      captureMangaContentValidity: (sourceId: string, bookId: string): (() => boolean) =>
+        this.captureMangaImageContentValidity(sourceId, bookId),
+      downloadStorage: (): SharedDownloadStorageGateway | undefined => this.downloadStorageGateway,
+      retired: (): boolean => this.state === 'closing' || this.state === 'closed',
+    }, this.mangaProbes);
+    this.mangaProbes.bindReadingBody();
   }
 
   static install(context: common.UIAbilityContext, disableOptionalEntryMemory: boolean = false,
@@ -361,7 +198,7 @@ export class ReaderRuntimeOwner {
       ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context, predecessorClose, disableOptionalEntryMemory,
         mangaOfflineScope, mangaReadingScope, mangaSelectionMode, publicFixture);
       if (disableOptionalEntryMemory) ReaderRuntimeOwner.instance.releaseOptionalReadingEntryMemory();
-    } else current.mangaOfflineProbe?.release('ability-reinstalled');
+    } else current.mangaProbes.network?.release('ability-reinstalled');
     ReaderRuntimeOwner.instance.abilityLeases += 1;
     return ReaderRuntimeOwner.instance;
   }
@@ -373,87 +210,25 @@ export class ReaderRuntimeOwner {
   }
 
   isCurrentPublicFixture(fixture: ReaderPublicFixtureScope): boolean {
-    return this.state === 'ready' && ReaderRuntimeOwner.isCurrent(this) && this.publicFixture === fixture;
+    return this.fixtures.isCurrent(fixture);
   }
 
-  /** Admission follows successful verification of both packaged fixture inputs. */
   confirmPublicSearchHttpFixture(fixture: ReaderPublicFixtureScope): void {
-    if (!this.isCurrentPublicFixture(fixture) || readerPublicSearchHttpFixtureMode(fixture.id) === undefined) {
-      throw new Error('PUBLIC_SEARCH_HTTP_FIXTURE_NOT_CURRENT');
-    }
-    this.publicSearchHttpReady = true;
+    this.fixtures.confirmSearchHttp(fixture);
   }
 
   selectMangaOfflineProbe(sourceId: string, bookId: string, manga: boolean): void {
-    this.mangaOfflineProbe?.select(sourceId, bookId, manga);
+    this.mangaProbes.network?.select(sourceId, bookId, manga);
   }
-  mangaOfflineProbeFor(sourceId: string, bookId: string): boolean { return this.mangaOfflineProbe?.matches(sourceId, bookId) === true; }
+  mangaOfflineProbeFor(sourceId: string, bookId: string): boolean { return this.mangaProbes.network?.matches(sourceId, bookId) === true; }
   mangaOfflineProbeProtectsAutomaticCatalog(sourceId: string, bookId: string): boolean {
-    return this.mangaOfflineProbe?.protectsAutomaticCatalog(sourceId, bookId) === true;
+    return this.mangaProbes.network?.protectsAutomaticCatalog(sourceId, bookId) === true;
   }
   subscribeMangaOfflineProbe(listener: (state: string) => void): () => void {
-    return this.mangaOfflineProbe?.subscribe(listener) ?? ((): void => {});
+    return this.mangaProbes.network?.subscribe(listener) ?? ((): void => {});
   }
-  finishMangaOfflineProbe(sourceId: string, bookId: string): void { this.mangaOfflineProbe?.finish(sourceId, bookId); }
-  releaseMangaOfflineProbe(): void { this.mangaOfflineProbe?.release('ability-background'); }
-
-  private bindMangaReadingProbe(): void {
-    const probe = this.mangaOfflineProbe;
-    if (probe?.mode !== 'reading') return;
-    const body = ReadingBodyImageHost.instance;
-    try {
-      this.mangaReadingProbeBodyDetach = body.attachDiagnosticObserver((event): void => {
-        const scope = this.mangaReadingProbeImageScope;
-        if (scope !== undefined && this.mangaReadingProbeForeignImages === 0 && probe.observesReading(scope.sourceId, scope.bookId))
-          probe.observeBody(event);
-      }, true, 'debug');
-      probe.bodyObserverAttached(body.diagnosticState(true, 'debug'));
-      this.mangaReadingProbeReleaseDetach = probe.subscribe((): void => {
-        if (!probe.readingSamplingEnabled()) this.detachMangaReadingProbe();
-      });
-    } catch (_) {
-      this.mangaReadingProbeBodyDetach?.(); this.mangaReadingProbeBodyDetach = undefined;
-      probe.bodyObserverUnavailable();
-    }
-  }
-
-  private detachMangaReadingProbe(): void {
-    const detach = this.mangaReadingProbeBodyDetach, unsubscribe = this.mangaReadingProbeReleaseDetach;
-    this.mangaReadingProbeBodyDetach = undefined; this.mangaReadingProbeReleaseDetach = undefined;
-    detach?.(); unsubscribe?.();
-    if (detach !== undefined) {
-      try { this.mangaOfflineProbe?.observeBodyState(ReadingBodyImageHost.instance.diagnosticState(true, 'debug')); } catch (_) {}
-    }
-  }
-
-  /** Debug-only attribution around the existing operation. It owns no image
-   * work, and cannot change the lane, priority, current fence or returned value. */
-  private async observeMangaReadingImageWork<T>(sourceId: string, bookId: string, manga: boolean,
-    run: () => Promise<T>, work?: MangaImageWork): Promise<T> {
-    const probe = this.mangaOfflineProbe;
-    if (probe?.mode !== 'reading' || !probe.readingSamplingEnabled()) return run();
-    const target = manga && probe?.observesReading(sourceId, bookId) === true;
-    if (!target) {
-      this.mangaReadingProbeForeignImages++;
-      if (this.mangaReadingProbeImageScope !== undefined) probe?.markReadingCoverageIncomplete('body-scope-overlap');
-      try { return await run(); } finally { this.mangaReadingProbeForeignImages--; }
-    }
-    if (this.mangaReadingProbeForeignImages > 0) probe?.markReadingCoverageIncomplete('body-scope-overlap');
-    const scope: MangaOfflineProbeScope = { sourceId, bookId };
-    this.mangaReadingProbeImageScope = scope;
-    const finish = (): void => {
-      if (this.mangaReadingProbeImageScope !== scope) return;
-      this.mangaReadingProbeImageScope = undefined;
-      try { probe?.observeBodyState(ReadingBodyImageHost.instance.diagnosticState(true, 'debug')); } catch (_) {}
-    };
-    try { return await run(); }
-    finally {
-      // The original allocating lane already drains this promise. Observation
-      // follows that lifetime without delaying early display publication.
-      if (work?.drain === undefined) finish();
-      else void work.drain.catch((): void => {}).finally(finish);
-    }
-  }
+  finishMangaOfflineProbe(sourceId: string, bookId: string): void { this.mangaProbes.network?.finish(sourceId, bookId); }
+  releaseMangaOfflineProbe(): void { this.mangaProbes.network?.release('ability-background'); }
 
   static current(): ReaderRuntimeOwner {
     if (ReaderRuntimeOwner.instance === undefined) {
@@ -522,7 +297,7 @@ export class ReaderRuntimeOwner {
 
   getDownloadStorageGateway(): SharedDownloadStorageGateway {
     if (this.downloadStorageGateway === undefined)
-      this.downloadStorageGateway = new SharedDownloadStorageGateway(this, this.readingImageDiskCache);
+      this.downloadStorageGateway = new SharedDownloadStorageGateway(this, this.images.storage);
     return this.downloadStorageGateway;
   }
 
@@ -775,7 +550,7 @@ export class ReaderRuntimeOwner {
     if (foreground && this.state === 'ready') {
       void this.getReadingRecordGateway().recover();
       this.recoverReadingProgressInBackground();
-      void this.readingImageDiskCache.maintainMangaStorage('expiry').catch((error: Error): void => {
+      void this.images.storage.maintainMangaStorage('expiry').catch((error: Error): void => {
         hilog.warn(LOG_DOMAIN, 'Reader', 'Manga cache maintenance: %{private}s', error.message);
       });
     }
@@ -829,7 +604,7 @@ export class ReaderRuntimeOwner {
   clearOfflineChapterImages(sourceId: string, bookId: string, chapterIndex: number, manga: boolean = false): Promise<void> {
     // Manga originals are removed only by their existing exact retention/grant
     // transaction. The text ordinal must never authorize manga file deletion.
-    return manga ? Promise.resolve() : this.readingImageDiskCache.clearChapter(sourceId, bookId, chapterIndex);
+    return manga ? Promise.resolve() : this.images.storage.clearChapter(sourceId, bookId, chapterIndex);
   }
 
   waitForReadingContentIdle(sourceId: string, bookId: string): Promise<void> {
@@ -846,9 +621,7 @@ export class ReaderRuntimeOwner {
     const invalidatesPreparation = preparations.beginRequest(method, params);
     // Content mutation revokes aliases before physical cache maintenance or
     // restore can wait for live display files. Ordinary progress stays valid.
-    for (const [sessionId, session] of this.mangaDisplaySessions ?? []) {
-      if (!session.current()) this.endMangaDisplaySession(sessionId);
-    }
+    this.images.retireInvalidDisplaySessions();
     try {
       await this.start();
       const runtime = this.runtime;
@@ -870,12 +643,11 @@ export class ReaderRuntimeOwner {
         // Finish the old display and eviction owners before Core replaces
         // their tokens, then reconcile Host's pending physical removals.
         await MangaChapterPreparationCoordinator.forRuntime(this).close();
-        await this.mangaImageTail;
-        return await this.readingImageDiskCache.withMangaStorageRestore(() => runtime.request(method, params, {
+        await this.images.waitForIdle();
+        return await this.images.storage.withMangaStorageRestore(() => runtime.request(method, params, {
           ...options, timeoutMs: options.timeoutMs ?? DEFAULT_CORE_REQUEST_TIMEOUT_MS,
         }));
       }
-      const probe = this.mangaOfflineProbe;
       let result: ReaderCoreResultEvent;
       if (method === 'source.check.run' || method === 'source.check.ephemeral.run') {
         const requestId = runtime.send(method, params);
@@ -885,34 +657,21 @@ export class ReaderRuntimeOwner {
             ...options, timeoutMs: options.timeoutMs ?? DEFAULT_CORE_REQUEST_TIMEOUT_MS,
           });
         } finally { release(); }
-      } else if (probe?.ownsCommand(method, params) === true && probe.assertCapacity()) {
-        // SDK request is send + waitForResult. Register before any Host dispatch;
-        // the Registry uses this exact id, never a URL or source-only guess.
-        const requestId = runtime.send(method, params);
-        probe.track(requestId, method);
-        try {
-          let waitOptions: RequestOptions;
-          if (probe.mode === 'reading') {
-            waitOptions = options.timeoutMs !== undefined ? options : {
-              timeoutMs: DEFAULT_CORE_REQUEST_TIMEOUT_MS, pollMs: options.pollMs,
-              hostRequest: options.hostRequest, shouldCancel: options.shouldCancel,
-            };
-          } else {
-            waitOptions = { ...options,
-              timeoutMs: options.timeoutMs ?? DEFAULT_CORE_REQUEST_TIMEOUT_MS,
-              shouldCancel: (): boolean => options.shouldCancel?.() === true ||
-                (method !== 'reading.progress.update' && !probe.current(requestId)),
-            };
-          }
-          result = await runtime.waitForResult(requestId, waitOptions);
-        } finally { probe.settle(requestId); }
       } else {
-        result = await runtime.request(method, params, options.timeoutMs !== undefined ? options : {
-          timeoutMs: DEFAULT_CORE_REQUEST_TIMEOUT_MS,
-          pollMs: options.pollMs,
-          hostRequest: options.hostRequest,
-          shouldCancel: options.shouldCancel,
-        });
+        const probe = this.mangaProbes.beginRequest(method, params, (): number => runtime.send(method, params),
+          options, DEFAULT_CORE_REQUEST_TIMEOUT_MS);
+        if (probe !== undefined) {
+          try {
+            result = await runtime.waitForResult(probe.requestId, probe.waitOptions());
+          } finally { probe.settle(); }
+        } else {
+          result = await runtime.request(method, params, options.timeoutMs !== undefined ? options : {
+            timeoutMs: DEFAULT_CORE_REQUEST_TIMEOUT_MS,
+            pollMs: options.pollMs,
+            hostRequest: options.hostRequest,
+            shouldCancel: options.shouldCancel,
+          });
+        }
       }
       if (method === 'cache.clear') {
         if (result.data['scope'] !== params['scope']) throw new Error('cache.clear did not confirm its requested scope');
@@ -925,7 +684,7 @@ export class ReaderRuntimeOwner {
         // A chapter ordinal is not global manga deletion authority. Exact
         // chapter-image handoff is owned by ReadingOfflineGateway below.
         const cleanup = params['scope'] === 'chapter' ? { deletedBytes: 0, deletedFiles: 0 } :
-          await this.readingImageDiskCache.clearMangaRebuildableCache(scope);
+          await this.images.storage.clearMangaRebuildableCache(scope);
         result.data['deletedBytes'] = cleanup.deletedBytes;
         result.data['deletedFiles'] = cleanup.deletedFiles;
       }
@@ -1009,15 +768,7 @@ export class ReaderRuntimeOwner {
     );
   }
 
-  /**
-   * Resolve one normalized body-image URL through Core's source semantics,
-   * then execute the resulting request with the already-owned Host transport.
-   * `isCurrent` uses keep-going semantics (true = the resolving selection is
-   * still current) and is checked before and after both async boundaries, so a
-   * superseded chapter can never publish image bytes or dimensions. The SDK's
-   * shouldCancel slot is the logical inverse, applied only at that boundary.
-   */
-  async loadReadingImage(
+  loadReadingImage(
     sourceId: string,
     bookId: string,
     chapterIndex: number,
@@ -1033,496 +784,80 @@ export class ReaderRuntimeOwner {
     mangaDecodeRevision?: string,
     mangaDisplaySessionId?: number,
   ): Promise<ReadingBodyImagePayload> {
-    this.assertReadingImageCurrent(isCurrent);
-    if (resourceRef === undefined && imageUrl.trim().toLowerCase().startsWith('data:image/')) {
-      await this.downloadStorageGateway?.waitForActiveMutation();
-      this.assertReadingImageCurrent(isCurrent);
-      const embedded = await (this.mangaOfflineProbe?.readingSamplingEnabled() === true ?
-        this.observeMangaReadingImageWork(sourceId, bookId, false, () => ReadingBodyImageHost.instance.loadDataUri(imageUrl, isCurrent)) :
-        ReadingBodyImageHost.instance.loadDataUri(imageUrl, isCurrent));
-      return this.admitReadingImage(embedded, isCurrent);
-    }
-    if (sourceId === 'local' && (imageUrl.startsWith('reader-local-epub://') || imageUrl.startsWith('reader-local-mobi://'))) {
-      await this.downloadStorageGateway?.waitForActiveMutation();
-      this.assertReadingImageCurrent(isCurrent);
-      const localImage = await (this.mangaOfflineProbe?.readingSamplingEnabled() === true ?
-        this.observeMangaReadingImageWork(sourceId, bookId, false, () => this.localEpubResourceHost.load(imageUrl, isCurrent)) :
-        this.localEpubResourceHost.load(imageUrl, isCurrent));
-      return this.admitReadingImage(localImage, isCurrent);
-    }
-    const identity = this.readingImageCacheIdentity(
-      sourceId,
-      bookId,
-      chapterIndex,
-      contentVersion,
-      imageUrl,
-      baseUrl,
-    );
-    if (resourceRef !== undefined) {
-      if (mangaDecodeRevision !== 'identity-v1' && mangaDecodeRevision !== 'bytes-v1') throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
-      identity.resourceRef = resourceRef;
-      identity.mangaDecodeRevision = mangaDecodeRevision;
-      // Manga chapter identity is a Core business key, including any fragment.
-      identity.baseUrl = baseUrl;
-      identity.chapterId = baseUrl;
-    }
-    const cacheCurrent = this.readingImageDiskCache.captureValidity(identity.sourceId, identity.bookId, isCurrent);
-    // Once displayed, an original belongs to its exact content/storage owner,
-    // rather than the temporary viewport that requested it. Capture before
-    // queueing so rule changes, book clear, restore and teardown still revoke
-    // its pending write; ordinary scrolling must not discard fetched bytes.
-    const persistCurrent = resourceRef === undefined ? cacheCurrent :
-      this.readingImageDiskCache.captureValidity(identity.sourceId, identity.bookId,
-        this.captureMangaImageContentValidity(identity.sourceId, identity.bookId));
-    // Capture both owners before the storage wait so clear/restore cannot
-    // authorize an already queued request under a successor generation.
-    await this.downloadStorageGateway?.waitForActiveMutation();
-    this.assertReadingImageCurrent(cacheCurrent);
-    this.assertReadingImageCurrent(persistCurrent);
-    if (mangaDisplaySessionId !== undefined && resourceRef !== undefined && baseUrl !== undefined &&
-      expectedSourceVersion !== undefined && mangaDecodeRevision !== undefined) {
-      const prepared = this.tryAcquireMangaPreparedImage(mangaDisplaySessionId,
-        { sourceId, bookId, chapterId: baseUrl, contentVersion, sourceRuleVersion: expectedSourceVersion,
-          decodeRevision: mangaDecodeRevision, preview: mangaPreview === true }, resourceRef, mangaPosition ?? 0,
-        isCurrent ?? ((): boolean => true));
-      if (prepared !== undefined) return prepared;
-    }
-    if (resourceRef !== undefined || mangaPosition !== undefined) {
-      if (this.mangaOfflineProbe?.readingSamplingEnabled() === true) return this.runMangaImageWork(cacheCurrent,
-        (work: MangaImageWork): Promise<ReadingBodyImagePayload> => this.observeMangaReadingImageWork(sourceId, bookId, resourceRef !== undefined,
-          (): Promise<ReadingBodyImagePayload> => this.loadReadingImageOwned(identity, allowNetwork, cacheCurrent,
-            mangaPosition, expectedSourceVersion, mangaPreview, work, persistCurrent), work));
-      return this.runMangaImageWork(cacheCurrent, (work: MangaImageWork): Promise<ReadingBodyImagePayload> =>
-        this.loadReadingImageOwned(identity, allowNetwork, cacheCurrent, mangaPosition, expectedSourceVersion, mangaPreview, work, persistCurrent));
-    }
-    if (this.mangaOfflineProbe?.readingSamplingEnabled() === true) return this.observeMangaReadingImageWork(sourceId, bookId, false,
-      (): Promise<ReadingBodyImagePayload> => this.loadReadingImageOwned(identity, allowNetwork, cacheCurrent,
-        mangaPosition, expectedSourceVersion, mangaPreview));
-    return this.loadReadingImageOwned(identity, allowNetwork, cacheCurrent, mangaPosition, expectedSourceVersion, mangaPreview);
+    return this.images.loadReadingImage(sourceId, bookId, chapterIndex, contentVersion, imageUrl, baseUrl, allowNetwork,
+      isCurrent, resourceRef, mangaPosition, expectedSourceVersion, mangaPreview, mangaDecodeRevision, mangaDisplaySessionId);
   }
 
-  /** Called only after the manga lane is acquired, or by the unchanged novel path. */
-  private async loadReadingImageOwned(identity: ReadingImageCacheIdentity, allowNetwork: boolean,
-    cacheCurrent: () => boolean, mangaPosition?: number, expectedSourceVersion?: string, mangaPreview?: boolean,
-    work?: MangaImageWork, persistCurrent: () => boolean = cacheCurrent): Promise<ReadingBodyImagePayload> {
-    let cachedBytes: Uint8Array | undefined;
-    try { cachedBytes = await this.readingImageDiskCache.loadResource(identity, cacheCurrent); }
-    catch (error) {
-      // A previous Host's transformed payload is retained for recovery. Only
-      // online preparation may replace its usability, in a new profile path.
-      if (!allowNetwork || !(error instanceof Error)) throw error;
-      if (error.message === 'MANGA_CACHE_RESOURCE_CORRUPT') {
-        await this.readingImageDiskCache.removeResource(identity, cacheCurrent);
-      } else if (error.message !== 'READING_IMAGE_REPROCESS_REQUIRED') throw error;
-    }
-    if (cachedBytes !== undefined) {
-      try {
-        const cached = identity.resourceRef === undefined ?
-          await ReadingBodyImageHost.instance.loadBytes(cachedBytes, cacheCurrent, mangaPosition, mangaPreview) :
-          await ReadingBodyImageHost.instance.loadMangaBytes(cachedBytes, this.mangaStorageChapter(identity), cacheCurrent, mangaPosition ?? 0, mangaPreview);
-        const admitted = this.admitReadingImage(cached, cacheCurrent);
-        if ((this.mangaDisplaySessions?.size ?? 0) > 0)
-          this.publishMangaPreparedImage(identity, expectedSourceVersion, mangaPosition ?? 0, mangaPreview === true, admitted);
-        return admitted;
-      } catch (error) {
-        // loadResource already verified manga original bytes. Native decoding,
-        // display I/O and allocation failures are not proof of corruption and
-        // must never erase durable originals, including permanent downloads.
-        if (identity.resourceRef !== undefined) throw error;
-        if (mangaPosition !== undefined && error instanceof Error && error.message.startsWith('MANGA_REGION_')) throw error;
-        await this.readingImageDiskCache.removeResource(identity, cacheCurrent);
-        if (!allowNetwork) {
-          throw error;
-        }
-      }
-    }
-    if (!allowNetwork) {
-      throw new Error('REMOTE_READING_IMAGE_NOT_DOWNLOADED');
-    }
-    const bytes = await this.prepareReadingImageBytes(identity, cacheCurrent, expectedSourceVersion);
-    const payload = identity.resourceRef === undefined ?
-      await ReadingBodyImageHost.instance.loadBytes(bytes, cacheCurrent, mangaPosition, mangaPreview) :
-      await ReadingBodyImageHost.instance.loadMangaBytes(bytes, this.mangaStorageChapter(identity), cacheCurrent, mangaPosition ?? 0, mangaPreview);
-    const admitted = this.admitReadingImage(payload, cacheCurrent);
-    if ((this.mangaDisplaySessions?.size ?? 0) > 0)
-      this.publishMangaPreparedImage(identity, expectedSourceVersion, mangaPosition ?? 0, mangaPreview === true, admitted);
-    // The display resource is already decoded and actionable. Persistent
-    // cache maintenance must not keep first paint waiting for a second disk
-    // write; explicit offline prefetch retains its strict awaited path below.
-    const stored = this.readingImageDiskCache.storeResource(identity, bytes, persistCurrent)
-      .catch((error: Error): void => {
-        hilog.error(LOG_DOMAIN, 'Reader', 'Reader body image cache write failed: %{private}s', error.message);
-      });
-    // The first image can paint now; only this operation's retained cache bytes
-    // keep the manga lane occupied. Unrelated disk-cache writes are not joined.
-    if (work !== undefined) work.drain = stored;
-    return admitted;
-  }
-
-  async readMangaImageForSave(identity: ReadingImageCacheIdentity, sourceRuleVersion: string,
+  readMangaImageForSave(identity: ReadingImageCacheIdentity, sourceRuleVersion: string,
     allowNetwork: boolean, current: () => boolean): Promise<Uint8Array | undefined> {
-    if (identity.resourceRef === undefined || identity.chapterId !== identity.baseUrl) return undefined;
-    const contentCurrent = this.captureMangaImageContentValidity(identity.sourceId, identity.bookId);
-    const cacheCurrent = this.readingImageDiskCache.captureValidity(identity.sourceId, identity.bookId,
-      (): boolean => current() && contentCurrent());
-    await this.downloadStorageGateway?.waitForActiveMutation();
-    this.assertReadingImageCurrent(cacheCurrent);
-    // Wait behind the foreground page's pending durable original. Export reads
-    // the verified resource bytes and leaves both caches and progress alone.
-    return this.runMangaImageWork(cacheCurrent, async (): Promise<Uint8Array | undefined> => {
-      const cached = await this.readingImageDiskCache.loadResource(identity, cacheCurrent);
-      this.assertReadingImageCurrent(cacheCurrent);
-      if (cached !== undefined || !allowNetwork) return cached;
-      const bytes = await this.prepareReadingImageBytes(identity, cacheCurrent, sourceRuleVersion);
-      this.assertReadingImageCurrent(cacheCurrent);
-      return bytes;
-    });
+    return this.images.readMangaImageForSave(identity, sourceRuleVersion, allowNetwork, current);
   }
 
-  /** Persist and decode-validate one image before an offline chapter completes. */
-  async prefetchReadingImage(
+  prefetchReadingImage(
     identity: ReadingImageCacheIdentity,
     isCurrent?: () => boolean,
     expectedSourceVersion?: string,
     allowNetwork: boolean = true,
     priority: MangaImagePriority = 'download',
   ): Promise<void> {
-    this.assertReadingImageCurrent(isCurrent);
-    const ownedIdentity: ReadingImageCacheIdentity = identity.resourceRef === undefined ? { ...identity } :
-      { ...identity, chapterId: identity.chapterId ?? identity.baseUrl,
-        priority: priority === 'foreground' ? 'foreground' : 'background' };
-    const contentCurrent = ownedIdentity.resourceRef === undefined ? undefined :
-      this.captureMangaImageContentValidity(ownedIdentity.sourceId, ownedIdentity.bookId);
-    const cacheCurrent = this.readingImageDiskCache.captureValidity(ownedIdentity.sourceId, ownedIdentity.bookId,
-      (): boolean => isCurrent?.() !== false && contentCurrent?.() !== false);
-    await this.downloadStorageGateway?.waitForActiveMutation();
-    this.assertReadingImageCurrent(cacheCurrent);
-    if (ownedIdentity.resourceRef !== undefined) {
-      // Capture the cache generation before waiting: a queued request cannot
-      // become current again after a book clear or owner teardown.
-      if (this.mangaOfflineProbe?.readingSamplingEnabled() === true) return this.runMangaImageWork(cacheCurrent,
-        (): Promise<void> => this.observeMangaReadingImageWork(ownedIdentity.sourceId, ownedIdentity.bookId, true,
-          (): Promise<void> => this.prefetchReadingImageOwned(ownedIdentity, cacheCurrent, expectedSourceVersion, allowNetwork, priority)), priority);
-      return this.runMangaImageWork(cacheCurrent, (): Promise<void> =>
-        this.prefetchReadingImageOwned(ownedIdentity, cacheCurrent, expectedSourceVersion, allowNetwork, priority), priority);
-    }
-    if (this.mangaOfflineProbe?.readingSamplingEnabled() === true) return this.observeMangaReadingImageWork(
-      ownedIdentity.sourceId, ownedIdentity.bookId, false,
-      (): Promise<void> => this.prefetchReadingImageOwned(ownedIdentity, cacheCurrent, expectedSourceVersion, allowNetwork));
-    return this.prefetchReadingImageOwned(ownedIdentity, cacheCurrent, expectedSourceVersion, allowNetwork);
-  }
-
-  private async prefetchReadingImageOwned(identity: ReadingImageCacheIdentity, cacheCurrent: () => boolean,
-    expectedSourceVersion?: string, allowNetwork: boolean = true, priority: MangaImagePriority = 'download'): Promise<void> {
-    const onPrepared = (this.mangaDisplaySessions?.size ?? 0) === 0 ? undefined :
-      (payload: ReadingBodyImagePayload, position: number): void => {
-        if (cacheCurrent()) this.publishMangaPreparedImage(identity, expectedSourceVersion, position, false, payload);
-      };
-    let cachedBytes: Uint8Array | undefined;
-    try { cachedBytes = await this.readingImageDiskCache.loadResource(identity, cacheCurrent); }
-    catch (error) {
-      // A previous Host's transformed payload is retained for recovery. Only
-      // online preparation may replace its usability, in a new profile path.
-      if (!allowNetwork || !(error instanceof Error)) throw error;
-      if (error.message === 'MANGA_CACHE_RESOURCE_CORRUPT') {
-        await this.readingImageDiskCache.removeResource(identity, cacheCurrent);
-      } else if (error.message !== 'READING_IMAGE_REPROCESS_REQUIRED') throw error;
-    }
-    if (cachedBytes !== undefined) {
-      try {
-        if (identity.resourceRef === undefined) await ReadingBodyImageHost.instance.validateBytes(cachedBytes, cacheCurrent);
-        else await ReadingBodyImageHost.instance.prepareMangaDisplay(cachedBytes, this.mangaStorageChapter(identity), cacheCurrent, priority, onPrepared);
-        return;
-      } catch (error) {
-        // Corruption repair belongs to the explicit digest check above. A
-        // display-preparation failure preserves verified downloaded content.
-        if (identity.resourceRef !== undefined) throw error;
-        await this.readingImageDiskCache.removeResource(identity, cacheCurrent);
-      }
-    }
-    if (!allowNetwork) throw new Error('REMOTE_READING_IMAGE_NOT_DOWNLOADED');
-    const bytes = await this.prepareReadingImageBytes(identity, cacheCurrent, expectedSourceVersion);
-    if (identity.resourceRef === undefined) await ReadingBodyImageHost.instance.validateBytes(bytes, cacheCurrent);
-    else await ReadingBodyImageHost.instance.prepareMangaDisplay(bytes, this.mangaStorageChapter(identity), cacheCurrent, priority, onPrepared);
-    this.assertReadingImageCurrent(cacheCurrent);
-    await this.readingImageDiskCache.storeResource(identity, bytes, cacheCurrent);
-  }
-
-  private mangaStorageChapter(identity: ReadingImageCacheIdentity): MangaStorageChapter {
-    const chapterId = identity.chapterId ?? identity.baseUrl;
-    if (chapterId === undefined || chapterId.trim().length === 0) throw new Error('MANGA_RESOURCE_IDENTITY_INVALID');
-    return { sourceId: identity.sourceId, bookId: identity.bookId, chapterId, contentVersion: identity.contentVersion };
+    return this.images.prefetchReadingImage(identity, isCurrent, expectedSourceVersion, allowNetwork, priority);
   }
 
   beginMangaDisplaySession(scope: MangaDisplaySessionScope, isCurrent: () => boolean): number {
-    this.assertReadingImageCurrent(isCurrent);
-    if ([scope.sourceId, scope.bookId, scope.chapterId, scope.contentVersion, scope.sourceRuleVersion]
-      .some(value => typeof value !== 'string' || value.trim().length === 0) ||
-      (scope.decodeRevision !== 'identity-v1' && scope.decodeRevision !== 'bytes-v1') || typeof scope.preview !== 'boolean')
-      throw new Error('MANGA_RESOURCE_IDENTITY_INVALID');
-    const contentCurrent = this.captureMangaImageContentValidity(scope.sourceId, scope.bookId);
-    const storageCurrent = this.readingImageDiskCache.captureValidity(scope.sourceId, scope.bookId, contentCurrent);
-    const current = (): boolean => storageCurrent() && isCurrent();
-    this.assertReadingImageCurrent(current);
-    const sessionId = ++this.nextMangaDisplaySession;
-    this.mangaDisplaySessions.set(sessionId, { scope: { ...scope }, current,
-      aliases: new Map<string, MangaPreparedDisplayPage>(), files: new Map<string, ReadingBodyImagePayload>(),
-      fileAliasCounts: new Map<string, number>() });
-    return sessionId;
+    return this.images.beginMangaDisplaySession(scope, isCurrent);
   }
 
   endMangaDisplaySession(sessionId: number): void {
-    const session = this.mangaDisplaySessions.get(sessionId);
-    if (session === undefined) return;
-    this.mangaDisplaySessions.delete(sessionId);
-    for (const payload of session.files.values()) ReadingBodyImageHost.instance.release(payload.fileUri);
-    session.aliases.clear(); session.files.clear(); session.fileAliasCounts.clear();
+    return this.images.endMangaDisplaySession(sessionId);
   }
 
   tryAcquireMangaPreparedImage(sessionId: number, scope: MangaDisplaySessionScope, resourceRef: string,
     mangaPosition: number, isCurrent: () => boolean): ReadingBodyImagePayload | undefined {
-    this.assertReadingImageCurrent(isCurrent);
-    const session = this.mangaDisplaySessions.get(sessionId);
-    if (session === undefined) return undefined;
-    if (!session.current()) { this.endMangaDisplaySession(sessionId); return undefined; }
-    if (this.mangaDisplaySessionKey(scope) !== this.mangaDisplaySessionKey(session.scope) ||
-      !Number.isFinite(mangaPosition) || mangaPosition < 0 || mangaPosition > 1) return undefined;
-    const page = session.aliases.get(resourceRef);
-    if (page === undefined) return undefined;
-    // Match Body's normalized region coordinates, including its rounding
-    // tolerance at y/height boundaries. Lookup examines metadata only.
-    const targetY = Math.min(page.intrinsicHeight - 1, Math.floor(mangaPosition * page.intrinsicHeight + 0.000001));
-    const regionY = session.scope.preview ? 0 : Math.floor(targetY / page.tileHeight) * page.tileHeight;
-    const payload = page.regions.get(regionY);
-    if (payload === undefined) return undefined;
-    if (!session.scope.preview && (targetY < (payload.regionY ?? 0) || targetY >= (payload.regionY ?? 0) + payload.height)) return undefined;
-    const acquired = ReadingBodyImageHost.instance.retainMangaDisplay(payload);
-    if (acquired === undefined) { this.endMangaDisplaySession(sessionId); return undefined; }
-    try { this.assertReadingImageCurrent(isCurrent); }
-    catch (error) { ReadingBodyImageHost.instance.release(acquired.fileUri); throw error; }
-    return acquired;
+    return this.images.tryAcquireMangaPreparedImage(sessionId, scope, resourceRef, mangaPosition, isCurrent);
   }
 
-  private mangaDisplaySessionKey(scope: MangaDisplaySessionScope): string {
-    return JSON.stringify([scope.sourceId, scope.bookId, scope.chapterId, scope.contentVersion,
-      scope.sourceRuleVersion, scope.decodeRevision, scope.preview]);
-  }
-
-  private publishMangaPreparedImage(identity: ReadingImageCacheIdentity, sourceRuleVersion: string | undefined,
-    position: number, preview: boolean, payload: ReadingBodyImagePayload): void {
-    const chapterId = identity.chapterId ?? identity.baseUrl;
-    if (identity.resourceRef === undefined || chapterId === undefined || sourceRuleVersion === undefined ||
-      identity.mangaDecodeRevision === undefined || !Number.isFinite(position) || position < 0 || position > 1) return;
-    const scope: MangaDisplaySessionScope = { sourceId: identity.sourceId, bookId: identity.bookId, chapterId,
-      contentVersion: identity.contentVersion, sourceRuleVersion, decodeRevision: identity.mangaDecodeRevision, preview };
-    const scopeKey = this.mangaDisplaySessionKey(scope);
-    for (const [sessionId, session] of this.mangaDisplaySessions) {
-      if (!session.current()) { this.endMangaDisplaySession(sessionId); continue; }
-      if (this.mangaDisplaySessionKey(session.scope) !== scopeKey) continue;
-      if (!session.files.has(payload.fileUri)) {
-        const retained = ReadingBodyImageHost.instance.retainMangaDisplay(payload);
-        if (retained === undefined) continue;
-        session.files.set(payload.fileUri, retained);
-      }
-      let page = session.aliases.get(identity.resourceRef);
-      if (page === undefined) {
-        page = { intrinsicHeight: payload.intrinsicHeight,
-          tileHeight: Math.min(payload.intrinsicHeight, 2048, Math.max(1, Math.floor(1024 * 1024 / payload.intrinsicWidth))),
-          regions: new Map<number, ReadingBodyImagePayload>() };
-        session.aliases.set(identity.resourceRef, page);
-      }
-      const regionY = preview ? 0 : payload.regionY ?? 0;
-      const previous = page.regions.get(regionY);
-      page.regions.set(regionY, { ...payload, pixelMap: undefined });
-      if (previous?.fileUri !== payload.fileUri) {
-        session.fileAliasCounts.set(payload.fileUri, (session.fileAliasCounts.get(payload.fileUri) ?? 0) + 1);
-        if (previous !== undefined) {
-          const count = (session.fileAliasCounts.get(previous.fileUri) ?? 1) - 1;
-          if (count > 0) session.fileAliasCounts.set(previous.fileUri, count);
-          else {
-            session.fileAliasCounts.delete(previous.fileUri); session.files.delete(previous.fileUri);
-            ReadingBodyImageHost.instance.release(previous.fileUri);
-          }
-        }
-      }
-    }
-  }
-
-  /** Reuses the former regionTail ownership at the only allocating Runtime
-   * entry. Queued callbacks contain descriptors, never fetched image bytes.
-   * Core transfer/metadata callbacks belong to the running operation and must
-   * not acquire this lane again while their Core request waits for them. */
-  private async runMangaImageWork<T>(current: () => boolean,
-    run: (work: MangaImageWork) => Promise<T>, priority: MangaImagePriority = 'foreground'): Promise<T> {
-    this.assertReadingImageCurrent(current);
-    if (this.mangaImagePending >= (priority === 'foreground' ? 16 : 12)) throw new Error('MANGA_DECODE_CAPACITY');
-    if (this.mangaImagePending === 0) {
-      this.mangaImageTail = new Promise<void>((resolve): void => { this.mangaImageIdle = resolve; });
-    }
-    this.mangaImagePending++;
-    return new Promise<T>((resolve, reject): void => {
-      this.mangaImageQueue.push({ priority, run: async (): Promise<void> => {
-        const work: MangaImageWork = {};
-        try { this.assertReadingImageCurrent(current); resolve(await run(work)); }
-        catch (error) { reject(error); }
-        finally {
-          try { await work.drain; } catch (_) { /* The write owner reports failure. */ }
-        }
-      } });
-      this.drainMangaImageWork();
-    });
-  }
-
-  /** One allocating lane; queued jobs hold descriptors and foreground reserves. */
-  private drainMangaImageWork(): void {
-    if (this.mangaImageActive) return;
-    let index = this.mangaImageQueue.findIndex(job => job.priority === 'foreground');
-    if (index < 0) index = this.mangaImageQueue.findIndex(job => job.priority === 'chapter');
-    const download = this.mangaImageQueue.findIndex(job => job.priority === 'download');
-    // Bound the urgent burst so a permanent download keeps advancing during
-    // a long chapter fill. Visible work keeps its reserved queue capacity.
-    if (download >= 0 && (index < 0 || this.mangaImageUrgentStreak >= 4)) index = download;
-    if (index < 0) index = 0;
-    const job = this.mangaImageQueue.splice(index, 1)[0];
-    if (job === undefined) return;
-    this.mangaImageUrgentStreak = job.priority === 'foreground' || job.priority === 'chapter' ?
-      this.mangaImageUrgentStreak + 1 : 0;
-    this.mangaImageActive = true;
-    void job.run().finally((): void => {
-      this.mangaImageActive = false;
-      this.mangaImagePending--;
-      if (this.mangaImagePending === 0) { this.mangaImageIdle?.(); this.mangaImageIdle = undefined; }
-      this.drainMangaImageWork();
-    });
-  }
-
-  private async prepareReadingImageBytes(identity: ReadingImageCacheIdentity,
-    isCurrent: () => boolean, expectedSourceVersion?: string): Promise<Uint8Array> {
-    if (identity.resourceRef !== undefined) {
-      if (expectedSourceVersion === undefined || identity.baseUrl === undefined) throw new Error('MANGA_DECODE_IDENTITY');
-      return MangaImageDecodeHost.instance.prepare({
-        chapter: { sourceId: identity.sourceId, bookId: identity.bookId, chapterId: identity.baseUrl },
-        manifestVersion: identity.contentVersion,
-        resourceRef: identity.resourceRef,
-        sourceRuleVersion: expectedSourceVersion,
-      }, (params: JsonObject): Promise<ReaderCoreResultEvent> => this.request('manga.resource.prepare', params,
-        { timeoutMs: 30000, shouldCancel: (): boolean => !isCurrent() }), isCurrent);
-    }
-    return ReadingBodyImageHost.instance.fetchRequestBytes(
-      await this.resolveReadingImageRequest(identity.sourceId, identity.imageUrl, identity.baseUrl, isCurrent, expectedSourceVersion), isCurrent);
-  }
-
-  async markOfflineImageChapterComplete(
+  markOfflineImageChapterComplete(
     chapter: ReadingImageChapterIdentity,
     resources: ReadingImageCacheIdentity[],
     isCurrent?: () => boolean,
   ): Promise<void> {
-    const current = this.readingImageDiskCache.captureValidity(chapter.sourceId, chapter.bookId, isCurrent);
-    if (resources.some(resource => resource.resourceRef !== undefined)) {
-      const ownedChapter: ReadingImageChapterIdentity = { ...chapter, priority: 'background' };
-      const ownedResources: ReadingImageCacheIdentity[] = resources.map(resource => ({ ...resource, priority: 'background' }));
-      // Acquire the image lane before the existing per-book mutation lock.
-      // Digest reads own encoded bytes too; DiskCache never reenters this lane.
-      return this.runMangaImageWork(current, (): Promise<void> =>
-        this.readingImageDiskCache.markChapterComplete(ownedChapter, ownedResources, current));
-    }
-    await this.readingImageDiskCache.markChapterComplete(chapter, resources, current);
+    return this.images.markOfflineImageChapterComplete(chapter, resources, isCurrent);
   }
 
-  async isOfflineImageChapterComplete(chapter: ReadingImageChapterIdentity, manga: boolean = false,
+  isOfflineImageChapterComplete(chapter: ReadingImageChapterIdentity, manga: boolean = false,
     isCurrent?: () => boolean): Promise<boolean> {
-    if (manga) {
-      if (chapter.mangaDecodeRevision !== 'identity-v1' && chapter.mangaDecodeRevision !== 'bytes-v1') throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
-      const ownedChapter: ReadingImageChapterIdentity = { ...chapter };
-      const current = this.readingImageDiskCache.captureValidity(chapter.sourceId, chapter.bookId, isCurrent);
-      return this.runMangaImageWork(current, async (): Promise<boolean> => {
-        const complete = await this.readingImageDiskCache.isChapterComplete(ownedChapter);
-        this.assertReadingImageCurrent(current);
-        return complete;
-      });
-    }
-    return this.readingImageDiskCache.isChapterComplete(chapter);
+    return this.images.isOfflineImageChapterComplete(chapter, manga, isCurrent);
   }
 
-  async isOfflineImageChapterMaterialized(
+  isOfflineImageChapterMaterialized(
     sourceId: string,
     bookId: string,
     chapterIndex: number,
   ): Promise<boolean> {
-    return this.readingImageDiskCache.isChapterMaterialized(sourceId, bookId, chapterIndex);
+    return this.images.isOfflineImageChapterMaterialized(sourceId, bookId, chapterIndex);
   }
 
-  async clearOfflineBookImages(sourceId: string, bookId: string, manga: boolean = false): Promise<void> {
-    for (const [sessionId, session] of this.mangaDisplaySessions ?? []) {
-      if (session.scope.sourceId === sourceId && session.scope.bookId === bookId) this.endMangaDisplaySession(sessionId);
-    }
-    await this.readingImageDiskCache.clearBook(sourceId, bookId, manga);
+  clearOfflineBookImages(sourceId: string, bookId: string, manga: boolean = false): Promise<void> {
+    return this.images.clearOfflineBookImages(sourceId, bookId, manga);
   }
 
-  async listMangaDownloadChapters(sourceId: string, bookId: string, isCurrent?: () => boolean):
+  listMangaDownloadChapters(sourceId: string, bookId: string, isCurrent?: () => boolean):
     Promise<Array<{ sourceId: string; bookId: string; chapterId: string; }>> {
-    return this.readingImageDiskCache.listMangaDownloadChapters(sourceId, bookId, isCurrent);
+    return this.images.listMangaDownloadChapters(sourceId, bookId, isCurrent);
   }
 
-  async listMangaDownloadVersions(chapter: { sourceId: string; bookId: string; chapterId: string; },
+  listMangaDownloadVersions(chapter: { sourceId: string; bookId: string; chapterId: string; },
     isCurrent?: () => boolean): Promise<string[]> {
-    return this.readingImageDiskCache.listMangaDownloadVersions(chapter, isCurrent);
+    return this.images.listMangaDownloadVersions(chapter, isCurrent);
   }
 
-  async deleteMangaDownload(chapter: { sourceId: string; bookId: string; chapterId: string; },
+  deleteMangaDownload(chapter: { sourceId: string; bookId: string; chapterId: string; },
     manifestVersion: string, isCurrent?: () => boolean): Promise<boolean> {
-    return this.readingImageDiskCache.deleteMangaVersion({ ...chapter, contentVersion: manifestVersion }, isCurrent);
+    return this.images.deleteMangaDownload(chapter, manifestVersion, isCurrent);
   }
 
-  private async resolveReadingImageRequest(
-    sourceId: string,
-    imageUrl: string,
-    baseUrl: string | undefined,
-    isCurrent?: () => boolean,
-    expectedSourceVersion?: string,
-  ): Promise<JsonObject> {
-    const params: JsonObject = { sourceId, imageUrl };
-    if (expectedSourceVersion !== undefined) params['expectedSourceVersion'] = expectedSourceVersion;
-    const canonicalBaseUrl = canonicalReadingImageBaseUrl(baseUrl);
-    if (canonicalBaseUrl !== undefined) {
-      params['baseUrl'] = canonicalBaseUrl;
-    }
-    // The SDK's shouldCancel is the logical inverse of the isCurrent guard
-    // that the rest of the image chain already agrees on; without the flip a
-    // still-current selection cancels its own request on the first poll.
-    const descriptor = await this.request('source.imageRequest', params, {
-      shouldCancel: isCurrent === undefined ? undefined : (): boolean => !isCurrent(),
-      timeoutMs: DEFAULT_CORE_REQUEST_TIMEOUT_MS,
-    });
-    this.assertReadingImageCurrent(isCurrent);
-    const request = descriptor.data['request'];
-    if (request === null || typeof request !== 'object' || Array.isArray(request)) {
-      throw new Error('source.imageRequest returned an invalid Host request descriptor');
-    }
-    return request as JsonObject;
-  }
-
-  private readingImageCacheIdentity(
-    sourceId: string,
-    bookId: string,
-    chapterIndex: number,
-    contentVersion: string,
-    imageUrl: string,
-    baseUrl: string | undefined,
-  ): ReadingImageCacheIdentity {
-    return {
-      sourceId,
-      bookId,
-      chapterIndex,
-      contentVersion,
-      imageUrl,
-      baseUrl: canonicalReadingImageBaseUrl(baseUrl),
-    };
-  }
-
-  /** Release one Host-created display resource after session eviction/teardown. */
   releaseReadingImage(fileUri: string, pixelMap?: image.PixelMap): void {
-    ReadingBodyImageHost.instance.release(fileUri, pixelMap);
+    return this.images.releaseReadingImage(fileUri, pixelMap);
   }
 
   async flush(): Promise<void> {
@@ -1563,8 +898,7 @@ export class ReaderRuntimeOwner {
 
   async readLibraryBackupIdentity(): Promise<{ libraryId: string; writerInstanceId: string } | undefined> {
     const filesDir = this.host.getContext().filesDir;
-    const directory = this.publicFixture === undefined ? `${filesDir}/reader-core` :
-      buildReaderPublicFixtureDirectory(filesDir, this.publicFixture.id);
+    const directory = this.fixtures.dataDirectory(filesDir);
     if (directory === undefined) throw new Error('Reader library identity directory unavailable');
     return readLibraryBackupIdentityAsync(directory, (): boolean => ReaderRuntimeOwner.isCurrent(this) && this.state === 'ready');
   }
@@ -1681,7 +1015,7 @@ export class ReaderRuntimeOwner {
 
   async close(): Promise<void> {
     this.readingRecordGateway?.stopBackground();
-    this.mangaOfflineProbe?.release('runtime-close');
+    this.mangaProbes.network?.release('runtime-close');
     this.preparationForeground = false;
     this.preparationNetwork?.close();
     this.deepReadingPrefetchObservers?.clear();
@@ -1709,32 +1043,10 @@ export class ReaderRuntimeOwner {
     finally {
       // Already dispatched transactions own their exact file handoff. Close
       // physical admission only after those finite owners have settled.
-      this.readingImageDiskCache.close();
+      this.images.storage.close();
       await this.closeRuntime();
     }
     if (downloadFailure !== undefined) throw downloadFailure;
-  }
-
-  private assertReadingImageCurrent(isCurrent?: () => boolean): void {
-    if (isCurrent !== undefined && !isCurrent()) {
-      throw new Error('reading body image request was cancelled');
-    }
-    if (this.state === 'closing' || this.state === 'closed') {
-      throw new Error('Reader Host is no longer available after teardown');
-    }
-  }
-
-  private admitReadingImage(
-    payload: ReadingBodyImagePayload,
-    isCurrent?: () => boolean,
-  ): ReadingBodyImagePayload {
-    try {
-      this.assertReadingImageCurrent(isCurrent);
-      return payload;
-    } catch (error) {
-      ReadingBodyImageHost.instance.release(payload.fileUri, payload.pixelMap);
-      throw error;
-    }
   }
 
   private async closeRuntime(): Promise<void> {
@@ -1751,7 +1063,7 @@ export class ReaderRuntimeOwner {
       }
       // `close()` sets state=closing first, so the supply loop stops after its
       // current local Core request. Wait for that request before closing Core.
-      const drained = await Promise.allSettled([this.sourceSupplyTask, this.importFinalizeTask, this.mangaImageTail,
+      const drained = await Promise.allSettled([this.sourceSupplyTask, this.importFinalizeTask, this.images.waitForIdle(),
         MangaChapterPreparationCoordinator.forRuntime(this).close(), this.downloadCoordinator?.close(),
         this.downloadStorageGateway?.waitForActiveMutation()]);
       for (const result of drained) if (result.status === 'rejected')
@@ -1782,7 +1094,7 @@ export class ReaderRuntimeOwner {
         }
       }
     } finally {
-      for (const sessionId of this.mangaDisplaySessions?.keys() ?? []) this.endMangaDisplaySession(sessionId);
+      this.images.retireAllDisplaySessions();
       ReadingBodyImageHost.instance.releaseAllDisplayFiles();
       // Runs even when flush throws, so a rebuilt UIAbility in the same
       // process gets a fresh runtime rather than a half-closed one.
@@ -1804,29 +1116,6 @@ export class ReaderRuntimeOwner {
     await this.startRuntime();
   }
 
-  private async requireStorageProbeIdentity(probe: ReaderCoreStorageProbe, current: () => boolean): Promise<void> {
-    const raw = await this.host.readBundledRawFileText('reader-core-storage-identity.v1.json');
-    if (!current() || raw.length > 4096) throw new Error('STORAGE_BOOTSTRAP_IDENTITY_RETIRED');
-    const value: unknown = JSON.parse(raw);
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      throw new Error('STORAGE_BOOTSTRAP_IDENTITY_MISMATCH');
-    }
-    const expected = value as JsonObject;
-    if (Object.keys(expected).length !== 5 || expected['format'] !== 'reader.storage-bootstrap-identity' ||
-      expected['version'] !== 1 || !this.isLowerHex(expected['buildId'], 64, 64) ||
-      !this.isLowerHex(expected['contractSha256'], 64, 64) ||
-      !this.isLowerHex(expected['coreInputFingerprint'], 64, 64) ||
-      expected['buildId'] !== probe.buildIdentity['buildId'] || expected['contractSha256'] !== probe.contractSha256 ||
-      expected['coreInputFingerprint'] !== probe.coreInputFingerprint) {
-      throw new Error('STORAGE_BOOTSTRAP_IDENTITY_MISMATCH');
-    }
-    if (!current()) throw new Error('STORAGE_BOOTSTRAP_IDENTITY_RETIRED');
-    const receipt = JSON.stringify({ schemaVersion: 1, buildId: expected['buildId'], contractSha256: expected['contractSha256'],
-      coreInputFingerprint: expected['coreInputFingerprint'], matched: true });
-    hilog.info(LOG_DOMAIN, 'Reader', 'Storage bootstrap identity: %{public}s', receipt);
-    ReaderStartupTrace.current()?.mark('startup.storage-identity', 'matched');
-  }
-
   private async startRuntime(): Promise<void> {
     // Host file-existence checks are independent of native database open and
     // capability negotiation. Start them together, but consume the result
@@ -1841,14 +1130,14 @@ export class ReaderRuntimeOwner {
     const isCurrent = (): boolean => this.state === 'starting' && ReaderRuntimeOwner.isCurrent(this);
     try {
       const filesDir = this.host.getContext().filesDir;
-      const dataDirectory = this.publicFixture === undefined ? `${filesDir}/reader-core` :
-        buildReaderPublicFixtureDirectory(filesDir, this.publicFixture.id);
+      const dataDirectory = this.fixtures.dataDirectory(filesDir);
       if (dataDirectory === undefined) throw new Error('PUBLIC_FIXTURE_STORAGE_NOT_ISOLATED');
       const storageProbe = await ReaderStartupTrace.measure('startup.storage-admission',
         (): Promise<ReaderCoreStorageProbe> => probeReaderCoreStorageAsync(dataDirectory, isCurrent));
       if (!isCurrent()) throw new Error('Reader Core startup cancelled after storage admission');
-      admittedBuild = this.requireCoreBuildIdentity(storageProbe.buildIdentity);
-      await this.requireStorageProbeIdentity(storageProbe, isCurrent);
+      admittedBuild = requireCoreBuildIdentity(storageProbe.buildIdentity);
+      await requireStorageProbeIdentity(storageProbe, isCurrent,
+        (): Promise<string> => this.host.readBundledRawFileText('reader-core-storage-identity.v1.json'));
       const startupConfig: JsonObject = { dataDirectory: dataDirectory };
       // Core owns the explicit migration plan and revalidates it on open.
       if (storageProbe.observation.requiresMigration && storageProbe.observation.explicitMigration !== null) {
@@ -1898,11 +1187,11 @@ export class ReaderRuntimeOwner {
           if (typeof capability === 'string') this.coreCapabilities.add(capability);
         }
       }
-      const buildIdentity = this.requireCoreBuildIdentity(coreInfo.data['buildIdentity']);
+      const buildIdentity = requireCoreBuildIdentity(coreInfo.data['buildIdentity']);
       if (buildIdentity.buildId !== admittedBuild.buildId) {
         throw new Error('Reader Core build changed after storage admission');
       }
-      const storageFormat = this.requireCoreStorageFormat(coreInfo.data['storageFormat']);
+      const storageFormat = requireCoreStorageFormat(coreInfo.data['storageFormat']);
       const sqliteUserVersion = coreInfo.data['sqliteUserVersion'];
       if (typeof sqliteUserVersion === 'number' && Number.isSafeInteger(sqliteUserVersion) &&
         sqliteUserVersion > 0 && sqliteUserVersion <= 0x7fffffff) {
@@ -1936,7 +1225,7 @@ export class ReaderRuntimeOwner {
       // observe the tentative shelf identity or retain a UI-owned journal.
       const recovery = await ReaderStartupTrace.measure('startup.source-switch-recovery', (): Promise<ReaderCoreResultEvent> =>
         runtime.request('source.switch.recover', {}, { timeoutMs: 30000 }));
-      const recoveredCount = this.requireSourceSwitchRecoveryCount(recovery.data['recovered']);
+      const recoveredCount = requireSourceSwitchRecoveryCount(recovery.data['recovered']);
       hilog.info(LOG_DOMAIN, 'Reader', 'Core source-switch startup recovery count: %{public}d', recoveredCount);
       // `close()` may have begun while Host capability setup/restore awaited.
       // Never publish a ready runtime after teardown has claimed this owner.
@@ -1959,8 +1248,14 @@ export class ReaderRuntimeOwner {
       this.scheduleImportFinalizeCleanup(runtime);
       // A 1,951-record collection must not hold the first frame or turn a
       // single malformed/dead source into an application startup failure.
-      if (this.publicFixture !== undefined && this.publicFixture.id !== 'empty-shelf') return;
-      this.sourceSupplyTask = this.installBundledBookSourceCollection(runtime)
+      if (!this.fixtures.allowsBundledSources()) return;
+      this.sourceSupplyTask = new ReaderBundledBookSourceInstaller(this.host, {
+        request: (method: string, params: JsonObject, options?: BookRequestOptions): Promise<ReaderCoreResultEvent> =>
+          this.request(method, params, options),
+        supportsCapability: (capability: string): boolean => this.supportsCoreCapability(capability),
+        ready: (): boolean => this.state === 'ready',
+        retired: (): boolean => this.state === 'closing' || this.state === 'closed',
+      }, BUNDLED_RAW_FILE_SHA256).install(runtime)
         .then((summary: BundledSourceInstallSummary): void => {
           hilog.info(LOG_DOMAIN, 'Reader',
             'Bundled source collection completed: records=%{public}d unique=%{public}d ' +
@@ -1985,295 +1280,6 @@ export class ReaderRuntimeOwner {
       }
       throw error;
     }
-  }
-
-  /**
-   * Every install ships the complete recorded source collection as a normal
-   * app-importable JSON array. Seeding runs after Core becomes observable so a
-   * large collection or one bad item can never blank the application. Matching
-   * versions are read-only on later launches; upgrades preserve the user's
-   * enabled/explore choices; user-modified copies are never force-overwritten;
-   * identities removed from a later collection are retired, never deleted.
-   */
-  private async installBundledBookSourceCollection(
-    runtime: ReaderCoreRuntime,
-  ): Promise<BundledSourceInstallSummary> {
-    if (this.supportsCoreCapability('source.supply.v1')) {
-      return supplyBundledSources({
-        digest: BUNDLED_RAW_FILE_SHA256,
-        read: (file: string): Promise<string> => this.host.readBundledRawFileText(file),
-        request: (params: JsonObject): Promise<ReaderCoreResultEvent> => this.request('source.supply', params, { timeoutMs: 30000 }),
-        legacyIds: async (): Promise<string[]> => (await BundledSourceLedger.load(this.host.getContext())).persistedSourceIds(),
-        current: (): boolean => this.state === 'ready',
-        failure: (sourceId: string, error: Error): void => {
-          hilog.error(LOG_DOMAIN, 'Reader', 'Incremental bundled source failed: %{private}s %{private}s', sourceId, errorMessageOf(error));
-        },
-      });
-    }
-    const document = await this.host.readBundledRawFileText(BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE);
-    const fileDigest = await sha256Hex(document);
-    if (fileDigest !== BUNDLED_RAW_FILE_SHA256) {
-      throw new Error(`Bundled book-source collection failed integrity verification: ` +
-        `expected ${BUNDLED_RAW_FILE_SHA256}, got ${fileDigest}`);
-    }
-    const bundledSources = this.requireBundledBookSourceCollection(document);
-    // Per-source integrity: the embedded fingerprint must match the rules it
-    // certifies. A mismatched source is rejected loudly, never silently skipped.
-    const admittedBySourceId = new Map<string, JsonObject>();
-    for (const bundled of bundledSources) {
-      const digest = await sha256Hex(canonicalRulePayloadJson(bundled));
-      if (digest !== bundled['ruleFingerprint']) {
-        hilog.error(LOG_DOMAIN, 'Reader',
-          'Bundled book source rejected, rule fingerprint mismatch: %{private}s',
-          bundled['bookSourceName'] as string);
-        continue;
-      }
-      // The portable collection retains every tested rule variant. Core uses
-      // bookSourceUrl as its primary key, so the last (preferred) variant is
-      // the one installed for duplicate identities.
-      admittedBySourceId.set(bundled['bookSourceUrl'] as string, bundled);
-    }
-    const admitted = Array.from(admittedBySourceId.values());
-    if (admitted.length === 0) {
-      throw new Error('Bundled book-source collection admitted no sources');
-    }
-    const existingSources = await this.loadExistingBundledSources(runtime);
-    const ledger = await BundledSourceLedger.load(this.host.getContext());
-    let installedCount = 0;
-    let failedCount = 0;
-    let processedCount = 0;
-    let interrupted = false;
-    const managedCurrent: JsonObject[] = [];
-    for (const bundled of admitted) {
-      if (this.state === 'closing' || this.state === 'closed') {
-        interrupted = true;
-        break;
-      }
-      const sourceId = bundled['bookSourceUrl'] as string;
-      const bundledVersion = bundled['builtinVersion'] as number;
-      const bundledFingerprint = bundled['ruleFingerprint'] as string;
-      try {
-        const existing = existingSources.get(sourceId);
-        if (existing === undefined) {
-          await this.importBundledSource(sourceId, bundled);
-          installedCount += 1;
-          processedCount += 1;
-          managedCurrent.push(bundled);
-          continue;
-        }
-        if (!hasBuiltinMarker(existing)) {
-          // The user imported their own copy over the same identity: preserve
-          // it and ensure the withdrawal ledger never claims that user object.
-          ledger.remove(sourceId);
-          processedCount += 1;
-          continue;
-        }
-        const storedActualFingerprint = await sha256Hex(canonicalRulePayloadJson(existing));
-        const reBundled = existing['readerBuiltinWithdrawn'] === true ||
-          existing['readerTestBuiltinWithdrawn'] === true;
-        if (reBundled && isUserModifiedBuiltinCopy(existing, storedActualFingerprint)) {
-          ledger.remove(sourceId);
-          processedCount += 1;
-          continue;
-        }
-        const decision = decideBundledUpgrade(
-          bundledVersion, bundledFingerprint, existing, storedActualFingerprint, bundled);
-        if (decision === 'userCopy') {
-          ledger.remove(sourceId);
-          processedCount += 1;
-          continue;
-        }
-        if (decision === 'unchanged' && !reBundled) {
-          processedCount += 1;
-          managedCurrent.push(bundled);
-          continue;
-        }
-        const importedSource: JsonObject =
-          mergeBundledDefaultStateCorrection(bundled, existing, storedActualFingerprint) ?? { ...bundled };
-        delete importedSource['readerBuiltinWithdrawn'];
-        delete importedSource['readerTestBuiltinWithdrawn'];
-        const metadataCorrection = (bundled['provenance'] as JsonObject | undefined)?.['metadataCorrection'] as JsonObject | undefined;
-        const contentCorrection = (bundled['provenance'] as JsonObject | undefined)?.['contentCorrection'] as JsonObject | undefined;
-        if (metadataCorrection?.['preserveExploreRules'] === true || contentCorrection?.['preserveExploreRules'] === true) {
-          // These targeted revisions do not own discovery rules. They are
-          // outside the legacy fingerprint, so retain existing edits/deletions;
-          // a future discovery upgrade requires a separate explicit migration.
-          for (const field of ['exploreUrl', 'ruleExplore']) {
-            if (Object.prototype.hasOwnProperty.call(existing, field)) importedSource[field] = existing[field];
-            else delete importedSource[field];
-          }
-        }
-        if (!reBundled) {
-          if (typeof existing['enabled'] === 'boolean') {
-            importedSource['enabled'] = existing['enabled'];
-          }
-          if (typeof existing['enabledExplore'] === 'boolean') {
-            importedSource['enabledExplore'] = existing['enabledExplore'];
-          }
-        }
-        await this.importBundledSource(sourceId, importedSource);
-        installedCount += 1;
-        processedCount += 1;
-        managedCurrent.push(bundled);
-      } catch (error) {
-        failedCount += 1;
-        processedCount += 1;
-        hilog.error(LOG_DOMAIN, 'Reader',
-          'Bundled source item failed and was isolated: %{private}s %{private}s',
-          sourceId, errorMessageOf(error));
-      }
-    }
-    if (interrupted) {
-      return {
-        collectionRecords: bundledSources.length,
-        uniqueSourceIds: admitted.length,
-        processed: processedCount,
-        installedOrUpgraded: installedCount,
-        failed: failedCount,
-        interrupted: true,
-      };
-    }
-    const bundledIds = new Set<string>(admitted.map(source => source['bookSourceUrl'] as string));
-    for (const entry of ledger.all()) {
-      if (bundledIds.has(entry.sourceId)) {
-        continue;
-      }
-      const stored = existingSources.get(entry.sourceId);
-      if (stored === undefined) {
-        ledger.remove(entry.sourceId);
-        continue;
-      }
-      if (stored['readerBuiltinWithdrawn'] === true || stored['readerTestBuiltinWithdrawn'] === true) {
-        continue;
-      }
-      const storedActualFingerprint = await sha256Hex(canonicalRulePayloadJson(stored));
-      const userModified = isUserModifiedBuiltinCopy(stored, storedActualFingerprint);
-      const retired: JsonObject = { ...stored };
-      retired['readerBuiltinWithdrawn'] = true;
-      delete retired['readerTestBuiltinWithdrawn'];
-      if (!userModified) {
-        retired['enabled'] = false;
-      }
-      await this.importBundledSource(entry.sourceId, retired);
-      hilog.warn(LOG_DOMAIN, 'Reader',
-        'Bundled source withdrawn from collection, marked retired (enabled=%{private}s): %{private}s',
-        String(retired['enabled']), entry.sourceId);
-    }
-    ledger.syncCurrentBundle(managedCurrent);
-    await ledger.save(this.host.getContext());
-    return {
-      collectionRecords: bundledSources.length,
-      uniqueSourceIds: admitted.length,
-      processed: processedCount,
-      installedOrUpgraded: installedCount,
-      failed: failedCount,
-      interrupted: false,
-    };
-  }
-
-  private async importBundledSource(
-    sourceId: string,
-    bookSource: JsonObject,
-  ): Promise<void> {
-    // Supply runs after ready and can overlap the shelf. Use the same source
-    // registry/projection and reading-entry fences as a user source import.
-    const imported = await this.request('source.import', {
-      sourceId,
-      bookSource,
-    }, { timeoutMs: 30000 });
-    if (imported.data['imported'] !== true || imported.data['sourceId'] !== sourceId) {
-      throw new Error(`source.import did not confirm bundled source ${sourceId}`);
-    }
-  }
-
-  private async loadExistingBundledSources(
-    runtime: ReaderCoreRuntime,
-  ): Promise<Map<string, JsonObject>> {
-    const exported = await runtime.request('source.export', {
-      format: 'json',
-    }, { timeoutMs: 30000 });
-    const data = exported.data['data'];
-    const count = exported.data['count'];
-    if (typeof data !== 'string' || typeof count !== 'number' || !Number.isSafeInteger(count)) {
-      throw new Error('source.export returned invalid bundled source data');
-    }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(data) as unknown;
-    } catch (error) {
-      throw new Error(`source.export returned invalid JSON: ${(error as Error).message}`);
-    }
-    if (!Array.isArray(parsed) || parsed.length !== count) {
-      throw new Error('source.export returned invalid source collection shape');
-    }
-    const sources = new Map<string, JsonObject>();
-    for (const raw of parsed) {
-      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-        continue;
-      }
-      const source = raw as JsonObject;
-      const sourceId = source['bookSourceUrl'];
-      if (typeof sourceId === 'string' && sourceId.trim().length > 0) {
-        sources.set(sourceId, source);
-      }
-    }
-    return sources;
-  }
-
-  private requireBundledBookSourceCollection(document: string): JsonObject[] {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(document) as unknown;
-    } catch (error) {
-      throw new Error(`Bundled book-source collection JSON is invalid: ${(error as Error).message}`);
-    }
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      throw new Error('Bundled book-source collection must contain at least one source');
-    }
-    const sources: JsonObject[] = [];
-    const builtinIds = new Set<string>();
-    for (let index = 0; index < parsed.length; index += 1) {
-      const raw = parsed[index];
-      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-        throw new Error(`Bundled book source ${index + 1} must be an object`);
-      }
-      const source = raw as JsonObject;
-      const sourceId = source['bookSourceUrl'];
-      const name = source['bookSourceName'];
-      const builtinVersion = source['builtinVersion'];
-      const enabled = source['enabled'];
-      const defaultEnabled = source['defaultEnabled'];
-      const builtinId = source['builtinId'];
-      if (typeof sourceId !== 'string' || !/^https?:\/\//.test(sourceId) ||
-        typeof name !== 'string' || name.trim().length === 0 ||
-        typeof enabled !== 'boolean' || typeof defaultEnabled !== 'boolean' ||
-        enabled !== defaultEnabled ||
-        typeof builtinVersion !== 'number' || !Number.isSafeInteger(builtinVersion) ||
-        builtinVersion < 1 ||
-        typeof builtinId !== 'string' || builtinId.trim().length === 0 ||
-        typeof source['ruleFingerprint'] !== 'string' ||
-        !/^[0-9a-f]{64}$/.test(source['ruleFingerprint'] as string) ||
-        typeof source['verifiedAt'] !== 'string' ||
-        Number.isNaN(Date.parse(source['verifiedAt'] as string)) ||
-        typeof source['verificationSuiteVersion'] !== 'string' ||
-        (source['verificationSuiteVersion'] as string).trim().length === 0 ||
-        !Array.isArray(source['capabilities']) || (source['capabilities'] as unknown[]).length === 0 ||
-        !(source['capabilities'] as unknown[]).includes('import') ||
-        typeof source['provenance'] !== 'object' || source['provenance'] === null ||
-        typeof (source['provenance'] as JsonObject)['origin'] !== 'string' ||
-        typeof source['readerHistoricalTest'] !== 'object' || source['readerHistoricalTest'] === null ||
-        builtinIds.has(builtinId)) {
-        hilog.error(LOG_DOMAIN, 'Reader',
-          'Bundled source record skipped, invalid collection contract at index %{public}d', index + 1);
-        continue;
-      }
-      builtinIds.add(builtinId);
-      sources.push(source);
-    }
-    if (sources.length === 0) {
-      throw new Error('Bundled book-source collection contains no valid source records');
-    }
-    return sources;
   }
 
   private scheduleImportFinalizeCleanup(runtime: ReaderCoreRuntime): void {
@@ -2367,111 +1373,4 @@ export class ReaderRuntimeOwner {
       message.includes('local book journal unavailable');
   }
 
-  private requireCoreBuildIdentity(value: unknown): CoreBuildIdentity {
-    if (typeof value !== 'object' || value === null) {
-      throw new Error('core.info did not return buildIdentity');
-    }
-    const identity = value as Record<string, unknown>;
-    const gitCommit = identity['gitCommit'];
-    if (identity['schemaVersion'] !== 1 ||
-      !this.isLowerHex(identity['buildId'], 64, 64) ||
-      !(gitCommit === 'unknown' || this.isLowerHex(gitCommit, 40, 64)) ||
-      typeof identity['gitDirty'] !== 'boolean' ||
-      !this.isLowerHex(identity['cargoLockSha256'], 64, 64) ||
-      !this.isLowerHex(identity['protocolSha256'], 64, 64) ||
-      typeof identity['rustProfile'] !== 'string' || identity['rustProfile'].trim().length === 0) {
-      throw new Error('core.info returned an invalid buildIdentity');
-    }
-    const result: CoreBuildIdentity = {
-      schemaVersion: 1,
-      buildId: identity['buildId'],
-      gitCommit: gitCommit,
-      gitDirty: identity['gitDirty'],
-      cargoLockSha256: identity['cargoLockSha256'],
-      protocolSha256: identity['protocolSha256'],
-      rustProfile: identity['rustProfile'],
-    };
-    const storage = identity['storageCompatibility'];
-    if (storage !== undefined) {
-      if (typeof storage !== 'object' || storage === null) {
-        throw new Error('core.info returned invalid storage compatibility');
-      }
-      const fields = storage as Record<string, unknown>;
-      const version = fields['sqliteMaxUserVersion'];
-      const source = fields['sqliteStorageSourceSha256'];
-      if (typeof version !== 'number' || !Number.isSafeInteger(version) || version <= 0 || version > 0x7fffffff ||
-        !this.isLowerHex(source, 64, 64)) {
-        throw new Error('core.info returned invalid storage compatibility');
-      }
-      result.storageCompatibility = { sqliteMaxUserVersion: version, sqliteStorageSourceSha256: source };
-    }
-    return result;
-  }
-
-  private requireCoreStorageFormat(value: unknown): LegacyCoreStorageFormat | undefined {
-    if (value === undefined) return undefined;
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      throw new Error('core.info returned invalid storage format capability');
-    }
-    const fields = value as Record<string, unknown>;
-    const format = fields['format'];
-    const portable = fields['portableSnapshotSupported'];
-    if ((format !== 'legacy' && format !== 'library47') || typeof portable !== 'boolean' ||
-      Object.keys(fields).some((key: string): boolean => !['format', 'portableSnapshotSupported', 'capabilities'].includes(key))) {
-      throw new Error('core.info returned invalid storage format capability');
-    }
-    if (fields['capabilities'] === undefined) return { format, portableSnapshotSupported: portable };
-    const capabilities = this.requireCoreStorageCapabilities(fields['capabilities']);
-    if (portable !== (capabilities.logicalExport && capabilities.logicalRestore && capabilities.legacyHostImport) ||
-      (format === 'library47' && !capabilities.logicalRestoreRequiresCompleteCoverage) ||
-      (format !== 'library47' && (capabilities.physicalBackup || capabilities.physicalRestore))) {
-      throw new Error('core.info returned invalid storage format capability');
-    }
-    return { format, portableSnapshotSupported: portable, capabilities };
-  }
-
-  private requireCoreStorageCapabilities(value: unknown): LegacyCoreStorageCapabilities {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      throw new Error('core.info returned invalid storage format capability');
-    }
-    const fields = value as Record<string, unknown>;
-    const keys: string[] = ['logicalExport', 'logicalRestore', 'legacyHostImport', 'physicalBackup', 'physicalRestore',
-      'webdavConfigRestore', 'activeLibrarySync', 'logicalExportRequiresDataPreflight',
-      'logicalRestoreRequiresCompleteCoverage', 'resourceEvidenceOnly', 'externalFilesIncluded'];
-    if (Object.keys(fields).length !== keys.length || keys.some((key: string): boolean => typeof fields[key] !== 'boolean') ||
-      fields['activeLibrarySync'] !== false || fields['logicalExportRequiresDataPreflight'] !== true ||
-      fields['resourceEvidenceOnly'] !== true ||
-      fields['externalFilesIncluded'] !== false) {
-      throw new Error('core.info returned invalid storage format capability');
-    }
-    return { logicalExport: fields['logicalExport'] as boolean, logicalRestore: fields['logicalRestore'] as boolean,
-      legacyHostImport: fields['legacyHostImport'] as boolean, physicalBackup: fields['physicalBackup'] as boolean,
-      physicalRestore: fields['physicalRestore'] as boolean, webdavConfigRestore: fields['webdavConfigRestore'] as boolean,
-      activeLibrarySync: false, logicalExportRequiresDataPreflight: true,
-      logicalRestoreRequiresCompleteCoverage: fields['logicalRestoreRequiresCompleteCoverage'] as boolean,
-      resourceEvidenceOnly: true, externalFilesIncluded: false };
-  }
-
-  private requireSourceSwitchRecoveryCount(value: unknown): number {
-    if (!Array.isArray(value)) {
-      throw new Error('source.switch.recover returned invalid recovered data');
-    }
-    for (const raw of value) {
-      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-        throw new Error('source.switch.recover returned a non-object transaction');
-      }
-      const transaction = raw as Record<string, unknown>;
-      if (typeof transaction['transactionId'] !== 'string' ||
-        transaction['transactionId'].trim().length === 0 ||
-        transaction['phase'] !== 'rolledBack' || typeof transaction['changed'] !== 'boolean') {
-        throw new Error('source.switch.recover returned an invalid transaction result');
-      }
-    }
-    return value.length;
-  }
-
-  private isLowerHex(value: unknown, minLength: number, maxLength: number): value is string {
-    return typeof value === 'string' && value.length >= minLength && value.length <= maxLength &&
-      /^[0-9a-f]+$/.test(value);
-  }
 }
