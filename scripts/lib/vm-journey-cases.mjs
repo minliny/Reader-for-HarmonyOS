@@ -246,13 +246,23 @@ const capsuleState = (service, running) => {
   }];
 };
 
-async function togglePlayback(ui, serviceLabel, mode) {
+async function setCapsulePlayback(ui, serviceLabel, mode, running) {
   const state = steadyReader(mode);
-  await ui.tap(`暂停${serviceLabel}`, capsuleToggle(true), {
-    ...state, all: [...state.all, ...capsuleState(serviceLabel, false)], none: [capsuleToggle(true)],
+  await ui.tap(`${running ? '继续' : '暂停'}${serviceLabel}`, capsuleToggle(!running), {
+    ...state, all: [...state.all, ...capsuleState(serviceLabel, running)], none: [capsuleToggle(!running)],
   });
-  await ui.tap(`继续${serviceLabel}`, capsuleToggle(false), {
-    ...state, all: [...state.all, ...capsuleState(serviceLabel, true)], none: [capsuleToggle(false)],
+}
+
+async function togglePlayback(ui, serviceLabel, mode) {
+  await setCapsulePlayback(ui, serviceLabel, mode, false);
+  await setCapsulePlayback(ui, serviceLabel, mode, true);
+}
+
+function waitAutoPageCountdown(ui, mode, seconds, description) {
+  const state = steadyReader(mode);
+  return ui.wait(description, {
+    ...state, all: [...state.all, ...capsuleState('自动翻页', true),
+      { type: 'Text', text: String(seconds), within: [capsuleToggle(true), id('reader-session-launch-leading-icon')] }],
   });
 }
 
@@ -763,12 +773,13 @@ export const journeys = {
       ...steadyReader(mode), all: [...steadyReader(mode).all, ...capsuleState('自动翻页', true)], none: [auto],
       transition: [launch('autoPage'), chapterAdvance('reader-chapter-local')], filmstrip: true,
     });
-    await ui.wait('等自动翻页倒计时重新开始，避开正在提交的翻页', {
-      ...steadyReader(mode),
-      all: [...steadyReader(mode).all, ...capsuleState('自动翻页', true),
-        { type: 'Text', text: '2', within: [capsuleToggle(true), id('reader-session-launch-leading-icon')] }],
-    });
+    await waitAutoPageCountdown(ui, mode, 2, '等自动翻页倒计时重新开始，避开正在提交的翻页');
     await togglePlayback(ui, '自动翻页', mode);
+    await waitAutoPageCountdown(ui, mode, 1, '核对继续自动翻页后的倒计时');
+    await waitAutoPageCountdown(ui, mode, 2, '核对继续自动翻页后进入下一轮倒计时');
+    // Keep the capsule in the same reader stage, with the timer paused while
+    // the normal center tap and native T3 handoff are sampled.
+    await setCapsulePlayback(ui, '自动翻页', mode, false);
     await returnFromPlaybackCapsule(ui, mode, 'autoPage', '自动翻页', toggle);
     await ui.tap('从自动翻页模块切换下一章并检查保留帧', next, {
       route: 'reading', all: [auto, previous, stop], transition: chapterAdvance('reader-chapter-local'), filmstrip: true,

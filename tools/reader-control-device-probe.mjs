@@ -334,8 +334,10 @@ async function probe(options) {
         const requested = performance.now();
         const args = ['shell', 'uitest', 'screenCap', '-p', path];
         const result = await execute(args);
+        const ok = commandOK(result, args);
         return { path, timestampMs: Math.round(requested - start),
-          acquisitionMs: Math.round(performance.now() - requested), ok: commandOK(result, args) };
+          acquisitionMs: Math.round(performance.now() - requested), ok,
+          ...(ok ? {} : { failure: publicCommandResult(args, result, redact) }) };
       });
       // Await all children before a transport failure can release the lease.
       const [action, ...sampled] = await Promise.allSettled([command, ...captures]);
