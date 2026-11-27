@@ -1,7 +1,7 @@
 import type { AnimatorResult } from '@ohos.animator';
 import { RetainedReaderScene, type RetainedReaderScenePorts } from '../app/composition/RetainedReaderScene';
 import { readerSceneTransition } from '../app/navigation/ReaderRouteMotion';
-import { ReaderDetailSceneTransition, READER_ROUTE_PARENT_DIM, readerConditionalSceneMotion,
+import { ReaderDetailSceneTransition, READER_RETAINED_DETAIL_LANE, READER_ROUTE_PARENT_DIM, readerConditionalSceneMotion,
   readerRouteMotionPose, type ReaderDetailSceneSnapshot } from '../app/navigation/ReaderRouteMotionModel';
 import type { DirectoryReturnTarget, ReaderRoute } from '../app/navigation/ReaderNavigation';
 import { retainedReaderRoute } from '../app/navigation/ReaderNavigation';
@@ -75,13 +75,12 @@ export class AppReadingDetailMotion {
   }
 
   foregroundLost(): void {
-    if (this.ports.current()?.phase === 'pop') this.clear();
-    else this.settleActive();
+    this.settleActive();
   }
 
   private settleActive(): void {
     const scene = this.ports.current();
-    if (scene !== undefined && scene.phase !== 'covered') {
+    if (scene !== undefined && scene.phase !== 'covered' && scene.phase !== 'retired') {
       this.ports.publish(this.transition.settle(scene.generation));
       this.stop();
     }
@@ -99,7 +98,8 @@ export class AppReadingDetailMotion {
   animate(): void {
     this.stop();
     const motion = this.ports.current();
-    if (motion === undefined || motion.phase === 'preview' || motion.phase === 'covered') return;
+    if (motion === undefined || motion.phase === 'preview' || motion.phase === 'covered' ||
+      motion.phase === 'retired') return;
     const target = motion.phase === 'pop' ? 0 : 1;
     const distance = Math.abs(target - motion.coverage);
     if (motion.phase !== 'push') this.observe(motion.phase, distance < .001);
@@ -148,7 +148,7 @@ export class AppReadingDetailMotion {
   private observe(action: string, stationary: boolean = false): void {
     if (!readerTransitionsEnabled()) return;
     readerBeginTransition({ kind: 'route', action, subject: 'reader-detail', scope: 'reader-detail',
-      nodes: [readerRouteTransitionLaneId('reader-app-route-stack', 'detail')],
+      nodes: [readerRouteTransitionLaneId('reader-app-route-stack', READER_RETAINED_DETAIL_LANE)],
       staticMotion: stationary || this.ports.reduceMotion(), routeOriginX: this.backOriginX });
   }
 
@@ -157,7 +157,7 @@ export class AppReadingDetailMotion {
     const preview = this.transition.preview(this.ports.viewportWidth());
     if (preview === undefined) return;
     this.backOriginX = readerTransitionsEnabled() ? readerTransitionActorX(this.ports.ui(),
-      readerRouteTransitionLaneId('reader-app-route-stack', 'detail')) : undefined;
+      readerRouteTransitionLaneId('reader-app-route-stack', READER_RETAINED_DETAIL_LANE)) : undefined;
     this.observe('preview');
     this.ports.publish(this.transition.updatePreview(preview.generation, offset));
   }

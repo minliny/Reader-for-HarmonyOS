@@ -170,9 +170,10 @@ struct Index {
       }
       if (incomingDetail) this.readingMotion.open();
       else if (returningFromDetail) this.readingMotion.back();
-      else if (this.readerDetailScene !== undefined) this.readingMotion.clear();
+      else if (this.presentedReaderDetail() !== undefined) this.readingMotion.clear();
       if (transition.paintMotion !== undefined) this.visibleRouteMotion = transition.paintMotion;
     }
+    if (!toReader && this.readerDetailScene?.phase === 'retired') this.readingMotion.clear();
     // Keep the last right-hand pane mounted while the whole Settings tab leaves.
     const lane = this.routeCoordinator.settingsLane(snapshot.route, this.navigationOwner.settingsPane());
     if (lane !== undefined && lane !== this.wideSettingsLane) {
@@ -237,18 +238,23 @@ struct Index {
     return this.searchAppForeground && !this.appReduceMotion ? this.readerParentProgress : 0;
   }
 
+  private presentedReaderDetail(): ReaderDetailSceneSnapshot | undefined {
+    return this.readerDetailScene?.phase === 'retired' ? undefined : this.readerDetailScene;
+  }
+
   private detailAboveReader(): boolean {
-    return this.readerDetailScene !== undefined || (this.route === 'detail' && this.visibleRouteMotion === 'push');
+    return this.presentedReaderDetail() !== undefined || (this.route === 'detail' && this.visibleRouteMotion === 'push');
   }
 
   private appRouteBackGestureEnabled(): boolean {
-    return this.readerDetailScene === undefined && this.journeys.journeyRecoveryInputAllowed() &&
+    return this.presentedReaderDetail() === undefined && this.journeys.journeyRecoveryInputAllowed() &&
       !(this.route === 'source' && this.sourceBackPreviewBlocked) &&
       retainedReaderRoute(this.route, this.directoryReturnTarget) === undefined;
   }
 
   private readerDetailBackGestureEnabled(): boolean {
-    return this.route === 'detail' && this.readerDetailScene !== undefined && this.readerDetailScene.phase !== 'pop' &&
+    const detail = this.presentedReaderDetail();
+    return this.route === 'detail' && detail !== undefined && detail.phase !== 'pop' &&
       this.readingMotion.matchesBook() && !this.appReduceMotion && this.journeys.journeyRecoveryInputAllowed() && !this.journeys.hasDetailBack() &&
       this.shelfGroupPresentation.identity.length === 0;
   }
@@ -380,9 +386,8 @@ struct Index {
           wideSettingsLayout: this.expandedLayout(), settingsPresentationRoot: this.settingsViewportPlan().settingsRoot,
           extendsToWindowEdges: true,
           viewportWidth: this.routeViewportWidth(), reduceMotion: this.appReduceMotion,
-          readerDetailActive: this.readerDetailScene !== undefined,
-          readerDetailCoverage: this.readerDetailScene?.coverage ?? 1,
-          readerDetailInputEnabled: this.readerDetailScene?.phase === 'covered',
+          readerDetailActive: this.presentedReaderDetail() !== undefined,
+          readerDetailScene: this.readerDetailScene,
           backGestureEnabled: this.appRouteBackGestureEnabled(),
           content: (route: ReaderRouteSurfaceKey): void => { this.appRouteContent(route as ReaderRoute); },
           onBack: (): boolean => this.onBackPress(),
@@ -399,7 +404,7 @@ struct Index {
         reading: this.readingEntry, commits: this.readingCommits,
         source: this.sourceSwitchPresentation, manga: this.mangaSourceSwitch,
         route: this.route, directoryTarget: this.directoryReturnTarget,
-        detail: this.readerDetailScene, detailMatchesBook: (): boolean => this.readingMotion.matchesBook(),
+        detail: this.presentedReaderDetail(), detailMatchesBook: (): boolean => this.readingMotion.matchesBook(),
         detailAboveReader: this.detailAboveReader(),
         foreground: this.searchAppForeground, covered: this.arkWebCapturesInput, expanded: this.expandedLayout(),
         reduceMotion: this.appReduceMotion, viewportWidth: this.routeViewportWidth(),
@@ -684,7 +689,7 @@ struct Index {
 
   private mangaOwnsWindowEdges(): boolean {
     if (this.mangaSourceSwitch.selectionVisible) return true;
-    return (this.readingEntry.sessionActive || this.readerDetailScene !== undefined) && this.readingEntry.contentKind === 'manga' &&
+    return (this.readingEntry.sessionActive || this.presentedReaderDetail() !== undefined) && this.readingEntry.contentKind === 'manga' &&
       this.readerOwnsWindowEdges();
   }
 

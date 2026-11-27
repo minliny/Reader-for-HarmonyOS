@@ -60,7 +60,17 @@ test('back after a steady detail sends detail right and returns the lower reader
   }
   assert.deepEqual(detail, [0, 100, 200, 400]);
   assert.deepEqual(reader.map(value => value + 0), [-64, -48, -32, 0]);
-  assert.equal(scene.settle(pop.generation), undefined);
+  const retired = scene.settle(pop.generation);
+  assert.ok(retired);
+  assert.equal(retired.phase, 'retired');
+  assert.equal(readerRouteMotionPose('push', 'child', width, retired.coverage), 400);
+  assert.equal(readerRouteMotionPose('push', 'parent', width, retired.coverage) + 0, 0);
+  assert.equal(scene.sample(pop.generation, 0.2), retired);
+  assert.equal(scene.settle(pop.generation), retired);
+  assert.equal(scene.back(), retired);
+  const reopened = scene.open(true);
+  assert.equal(scene.settle(retired.generation), reopened);
+  assert.equal(scene.sample(pop.generation, 1), reopened);
 });
 
 test('back during a push reverses detail from its sampled position and discards the old finish', () => {
@@ -78,7 +88,10 @@ test('back during a push reverses detail from its sampled position and discards 
     assert.ok(readerRouteMotionPose('push', 'child', width, outward.coverage) >=
       readerRouteMotionPose('push', 'child', width, partial.coverage));
     assert.equal(scene.sample(pop.generation, 0.1)?.coverage, outward.coverage);
-    assert.equal(scene.settle(pop.generation), undefined);
+    const retired = scene.settle(pop.generation);
+    assert.ok(retired);
+    assert.equal(retired.phase, 'retired');
+    assert.equal(readerRouteMotionPose('push', 'child', width, retired.coverage), 400);
   }
 });
 
@@ -108,6 +121,19 @@ test('side swipe cancel moves back to detail, while a committed swipe continues 
   assert.equal(scene.cancelPreview(), undefined);
   assert.equal(scene.updatePreview(second.generation, 20), pop);
   assert.equal(scene.sample(pop.generation, 0.5)?.coverage, 0.3);
+});
+
+test('reduced-motion detail Back settles invisible at the same horizontal position', () => {
+  const scene = new ReaderDetailSceneTransition();
+  const steady = scene.open(false);
+  const pop = scene.back();
+  assert.ok(pop);
+  const retired = scene.settle(pop.generation);
+  assert.ok(retired);
+  assert.equal(retired.phase, 'retired');
+  assert.equal(readerRouteMotionPose('push', 'child', width, steady.coverage, true), 0);
+  assert.equal(readerRouteMotionPose('push', 'child', width, retired.coverage, true), 0);
+  assert.equal(readerDetailSceneOpacity(retired.coverage, true), 0);
 });
 
 test('conditional children use push and pop; the retained parent and reduced motion suppress translation', () => {
