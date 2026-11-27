@@ -482,12 +482,20 @@ export class ReaderReadingSpeechHost {
   async auditionReaderTtsVoice(language: string, person: number): Promise<void> {
     const coordinator = this.ttsTransport.coordinator;
     const lifecycle = this.session.scope().lifecycleToken;
-    if (!this.session.active(lifecycle) || !this.controls.controlVisible() ||
-      !this.controls.controlInputEnabled() || this.controls.chromeOverlayActive()) {
+    const sceneActive = this.session.active(lifecycle);
+    const controlVisible = this.controls.controlVisible();
+    const controlInput = this.controls.controlInputEnabled();
+    const chromeOverlay = this.controls.chromeOverlayActive();
+    const observing = READER_LAYOUT_DEBUG_BUILD && AppStorage.get<boolean>('readerLayoutInvariantAutomation') === true;
+    if (observing) {
+      hilog.info(0x5244, 'Reader', 'READER_VM_TTS_AUDITION_INPUT speech-owner scene=%{public}d visible=%{public}d input=%{public}d cover=%{public}d coordinator=%{public}d',
+        Number(sceneActive), Number(controlVisible), Number(controlInput), Number(chromeOverlay), Number(coordinator !== undefined));
+    }
+    if (!sceneActive || !controlVisible || !controlInput || chromeOverlay) {
       throw new Error('当前阅读界面无法试听，请返回朗读配置后重试。');
     }
     if (coordinator === undefined) throw new Error('朗读服务尚未就绪，请重试。');
-    const observe = READER_LAYOUT_DEBUG_BUILD && AppStorage.get<boolean>('readerLayoutInvariantAutomation') === true ?
+    const observe = observing ?
       (receipt: ReaderTtsAuditionReceipt): void => {
         hilog.info(0x5244, 'Reader', 'READER_VM_TTS_AUDITION %{public}s', JSON.stringify(receipt));
       } : undefined;

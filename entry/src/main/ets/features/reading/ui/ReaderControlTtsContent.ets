@@ -14,6 +14,7 @@ import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -35,7 +36,7 @@ import { readerTtsConfigChoices, readerTtsVoiceId, readerTtsLanguageLabel,
   type ReaderTtsConfigChoice, type ReaderTtsConfigField } from '../presentation/ReaderTtsConfigOptions';
 import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
 import type { ReaderTtsConfigurationDraft } from '../application/ReaderTtsConfigurationHost';
-import { readerTtsVoicePickerAuditionCurrent } from '../application/ReaderTtsConfigAdmission';
+import { readerTtsVoicePickerAuditionCurrent, type ReaderTtsVoicePickerAudition } from '../application/ReaderTtsConfigAdmission';
 import type { ReaderControlForm } from './ReaderControlSessionState';
 import { readerControlExtentFits, type ReaderControlCandidateWidths, type ReaderControlModuleMinimum, type ReaderControlModuleMeasurer } from './ReaderLayoutGeometry';
 
@@ -594,11 +595,23 @@ export struct ReaderControlTtsContent {
 
   private async previewConfigurationVoice(id: string, identity: string): Promise<void> {
     // The modal keeps its own editor admission during its measurement reflow.
-    if (!readerTtsVoicePickerAuditionCurrent({
+    const admission: ReaderTtsVoicePickerAudition = {
       mounted: this.configMounted, pickerIdentity: this.configIdentity, callbackIdentity: identity,
       voicePicker: this.configField === 'voice', editorInputCurrent: this.editorInputCurrent?.() ?? this.fullInput(),
-    })) return;
+    };
+    const current = readerTtsVoicePickerAuditionCurrent(admission);
+    const observing = READER_LAYOUT_DEBUG_BUILD && AppStorage.get<boolean>('readerLayoutInvariantAutomation') === true;
+    if (observing) {
+      hilog.info(0x5244, 'Reader', 'READER_VM_TTS_AUDITION_INPUT picker-owner mounted=%{public}d voice=%{public}d identity=%{public}d editor=%{public}d current=%{public}d',
+        Number(admission.mounted), Number(admission.voicePicker),
+        Number(admission.pickerIdentity.length > 0 && admission.pickerIdentity === admission.callbackIdentity),
+        Number(admission.editorInputCurrent), Number(current));
+    }
+    if (!current) return;
     const voice = this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => readerTtsVoiceId(item) === id);
+    if (observing) {
+      hilog.info(0x5244, 'Reader', 'READER_VM_TTS_AUDITION_INPUT picker-voice-found=%{public}d', Number(voice !== undefined));
+    }
     if (voice === undefined) throw new Error('当前音色已不可用，请重新选择');
     await this.onVoiceAudition(voice.language, voice.person);
   }

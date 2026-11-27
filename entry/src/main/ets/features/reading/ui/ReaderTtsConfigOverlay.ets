@@ -1,3 +1,4 @@
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
@@ -300,10 +301,16 @@ export struct ReaderTtsConfigOverlay {
       Stack().width('100%').height('100%')
         .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
           this.manager ? readerAppColor('app.scrim.modal', this.appThemeScheme) : Color.Transparent, false, this.manager))
-        .onClick((): void => this.close());
+        .onClick((): void => {
+          this.observePreviewInput('scrim-click');
+          this.close();
+        });
       this.configurationPanel();
     }.id(this.layoutOverlay?.id()).width(this.windowModal ? '100%' : this.availableWidth)
       .height(this.windowModal ? '100%' : this.availableHeight).zIndex(20)
+      .onTouch((event: TouchEvent): void => {
+        if (event.type === TouchType.Up) this.observePreviewInput('cover-touch-up');
+      })
       .onAppear((): void => this.layoutOverlay?.mount(this.getUIContext()))
       .onDisAppear((): void => this.layoutOverlay?.unmount());
   }
@@ -478,7 +485,14 @@ export struct ReaderTtsConfigOverlay {
             .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
         }.width(this.previewActionWidth(this.panelWidth())).height(this.previewActionHeight(this.panelWidth())).padding(0).backgroundColor(Color.Transparent)
           .enabled(!this.busy).accessibilityText(`${this.currentChoice(choice).label}，${this.previewId === choice.id ? '停止试听' : '试听'}`)
-          .onClick((): void => this.preview(choice.id));
+          .onTouch((event: TouchEvent): void => {
+            if (event.type === TouchType.Up) this.observePreviewInput('button-touch-up');
+            if (event.type === TouchType.Cancel) this.observePreviewInput('button-touch-cancel');
+          })
+          .onClick((): void => {
+            this.observePreviewInput('button-click');
+            this.preview(choice.id);
+          });
       }
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_check_theme_night') : $r('app.media.reader_appearance_make_check')))
         .width(this.voicePicker ? 16 : 11).height(this.voicePicker ? 16 : 9)
@@ -497,15 +511,27 @@ export struct ReaderTtsConfigOverlay {
     this.previewSelectionId = undefined;
     if (identity !== undefined) this.onPreviewStop(identity);
   }
+
+  private observePreviewInput(stage: string): void {
+    if (!READER_LAYOUT_DEBUG_BUILD || !this.voicePicker || AppStorage.get<boolean>('readerLayoutInvariantAutomation') !== true) return;
+    hilog.info(0x5244, 'Reader', 'READER_VM_TTS_AUDITION_INPUT %{public}s', stage);
+  }
+
   private preview(id: string): void {
-    if (!this.mounted || this.busy || !this.choices.some((choice: ReaderTtsConfigChoice): boolean => choice.id === id)) return;
-    if (this.previewId === id) { this.stopPreview(); return; }
+    if (!this.mounted) { this.observePreviewInput('overlay-unmounted'); return; }
+    if (this.busy) { this.observePreviewInput('overlay-busy'); return; }
+    if (!this.choices.some((choice: ReaderTtsConfigChoice): boolean => choice.id === id)) {
+      this.observePreviewInput('overlay-choice-retired');
+      return;
+    }
+    if (this.previewId === id) { this.observePreviewInput('overlay-cancelled'); this.stopPreview(); return; }
     this.stopPreview();
     const generation = ++this.previewGeneration;
     const identity = this.selectionId;
     this.previewId = id;
     this.previewSelectionId = identity;
     this.errorText = '';
+    this.observePreviewInput('overlay-dispatch');
     void this.onPreview(id, identity).catch((error: Error): void => {
       if (this.mounted && generation === this.previewGeneration) this.errorText = error.message;
     }).finally((): void => {

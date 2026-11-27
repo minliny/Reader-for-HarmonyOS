@@ -153,6 +153,29 @@ test('complete mounted text evidence supersedes independent reflow while R13 sti
     .violations, []);
 });
 
+test('R13 clipping evidence identifies the native node and the reason without exporting its text', () => {
+  const frame = rect(59, 381, 248, 16.5);
+  const parent = rect(30, 360, 300, 45);
+  const clip = rect(16, 222, 250, 320);
+  const measuredText = leaf('Text', 'Text:1502', frame, { key: '1502', parentBounds: parent,
+    clip, textClipped: true, textReflow: { independentHeightVp: 33, matchedStyleHeightVp: 16.5,
+      style: { fontSize: '11.00fp', lineHeight: '16.50fp' } } });
+  const result = gate({ nodes: [measuredText] });
+  assert.deepEqual(result.violations.map(issue => [issue.rule, issue.nodeId]), [['R13', 'Text:1502']]);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.nativeAudit.clippingOffenders)), [{
+    key: '1502', id: 'Text:1502', type: 'Text', frame, parentBounds: parent, clip, scrollClip: false,
+    reasons: ['independent-text-height', 'ancestor-clips-frame'],
+    reflow: { independentHeightVp: 33, matchedStyleHeightVp: 16.5,
+      style: { fontSize: '11.00fp', lineHeight: '16.50fp' } },
+  }]);
+  const multiple = gate({ nodes: Array.from({ length: 5 }, (_, index) => ({
+    ...measuredText, id: `text:${index}`, key: `text:${index}`, parentKey: `parent:${index}`,
+  })) });
+  assert.equal(multiple.violations.length, 5);
+  assert.equal(multiple.nativeAudit.clippingOffenderCount, 5);
+  assert.equal(multiple.nativeAudit.clippingOffenders?.length, 3);
+});
+
 test('a long scroll-backed dialog can reach its close action while a bounded drawer must meet the correct window edge', () => {
   const longDialog = panel({ placement: 'center', bounds: rect(66, 30, 184, 800), scrollable: true,
     viewport: safeViewport, close: 'scroll-reachable' });

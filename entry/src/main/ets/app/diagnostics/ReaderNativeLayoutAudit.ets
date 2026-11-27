@@ -147,17 +147,28 @@ function reflowTextHeight(context: UIContext, content: string, frame: LayoutInva
   } catch (_) { return undefined; }
 }
 
-function measuredTextClips(context: UIContext, node: LayoutInvariantNativeNode,
-  attrs?: ReaderNativeInspectorAttributes): boolean | undefined {
+function inspectorTextStyle(attrs: ReaderNativeInspectorAttributes): LayoutInvariantMountedTextStyle {
+  return { fontSize: attrs.fontSize, fontFamily: attrs.fontFamily, fontWeight: attrs.fontWeight,
+    letterSpacing: attrs.letterSpacing, lineHeight: attrs.lineHeight, wordBreak: attrs.wordBreak, maxFontScale: attrs.maxFontScale };
+}
+
+function recordTextReflow(context: UIContext, node: LayoutInvariantNativeNode,
+  attrs?: ReaderNativeInspectorAttributes): void {
   const content = attrs?.content;
   const frame = node.bounds;
   if (node.type !== 'Text' || typeof content !== 'string' || content.trim().length === 0 ||
     (typeof attrs?.fontSize !== 'number' && typeof attrs?.fontSize !== 'string') ||
-    frame === undefined || frame.width <= 0) return undefined;
+    frame === undefined || frame.width <= 0) return;
   const overflow = typeof attrs.textOverflow === 'string' ? attrs.textOverflow.toLowerCase() : '';
-  if (overflow.includes('ellipsis') || overflow.includes('marquee')) return false;
+  if (overflow.includes('ellipsis') || overflow.includes('marquee')) return;
   const height = reflowTextHeight(context, content, frame, attrs);
-  return height === undefined ? undefined : height > frame.height + 3;
+  if (height === undefined) return;
+  node.textClipped = height > frame.height + 3;
+  node.textReflow = { independentHeightVp: height };
+  if (node.textClipped) {
+    node.textReflow.style = inspectorTextStyle(attrs);
+    node.textReflow.matchedStyleHeightVp = reflowTextHeight(context, content, frame, attrs, true);
+  }
 }
 
 function measuredInk(context: UIContext, frame: LayoutInvariantRect, layout: LayoutManager,
@@ -175,8 +186,7 @@ function mountedTextEvidence(context: UIContext, node: FrameNode, frame?: Layout
   const diagnostics: LayoutInvariantMountedTextDiagnostics = { expectedUtf16: content?.length };
   const missing: LayoutInvariantMountedTextEvidence = { status: 'missing', diagnostics };
   if (frame === undefined || attrs === undefined || typeof content !== 'string' || content.length === 0) return missing;
-  diagnostics.style = { fontSize: attrs.fontSize, fontFamily: attrs.fontFamily, fontWeight: attrs.fontWeight,
-    letterSpacing: attrs.letterSpacing, lineHeight: attrs.lineHeight, wordBreak: attrs.wordBreak, maxFontScale: attrs.maxFontScale };
+  diagnostics.style = inspectorTextStyle(attrs);
   diagnostics.independentHeightVp = reflowTextHeight(context, content, frame, attrs);
   diagnostics.matchedStyleHeightVp = reflowTextHeight(context, content, frame, attrs, true);
   try {
@@ -289,7 +299,8 @@ export class ReaderNativeLayoutAudit {
     const rotationEnvelope = type === 'Image' && nativeBooleanProperty(node, READER_LAYOUT_ROTATION_ENVELOPE);
     const textSlice = type === 'Text' ? readerNativeTextSliceAudit.project(nativeId, parent?.key ?? '', bounds, parent?.bounds) : undefined;
     const paintBounds = textSlice?.bounds ?? (rotationEnvelope ? parent?.bounds : bounds);
-    const observation: LayoutInvariantNativeNode = { key, id: id.length > 0 ? id : `${type}:${key}`, type,
+    const observation: LayoutInvariantNativeNode = { key, id: id.length > 0 ? id : `${type}:${key}`,
+      stableId: id.length > 0 ? id : undefined, type,
       parentKey: parent?.key ?? '', parentType: parent?.type ?? '', bounds: paintBounds,
       parentBounds: textSlice?.parentBounds ?? parent?.bounds,
       clip, scrollClip, opacity, interactive, enabled, hitTest: behavior,
@@ -311,7 +322,7 @@ export class ReaderNativeLayoutAudit {
     // ancestor clips. Independent whole-Text reflow still applies to titles and controls.
     if (type === 'Text' && id === READER_LAYOUT_IMPORT_HINT_TEXT_ID)
       observation.mountedText = mountedTextEvidence(context, node, bounds, attrs);
-    else if (textSlice === undefined) observation.textClipped = measuredTextClips(context, observation, attrs);
+    else if (textSlice === undefined) recordTextReflow(context, observation, attrs);
     this.nodes.push(observation);
     this.byKey.set(key, observation);
     if (id.length > 0 && (this.byId.get(id)?.opacity ?? -1) < opacity) this.byId.set(id, observation);

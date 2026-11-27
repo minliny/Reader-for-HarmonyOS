@@ -31,15 +31,19 @@ export interface LayoutInvariantMountedTextStyle {
   maxFontScale?: number | string;
 }
 
-export interface LayoutInvariantMountedTextDiagnostics {
+export interface LayoutInvariantTextReflow {
   style?: LayoutInvariantMountedTextStyle;
-  expectedUtf16?: number;
-  lineCount?: number;
   independentHeightVp?: number;
   matchedStyleHeightVp?: number;
 }
 
+export interface LayoutInvariantMountedTextDiagnostics extends LayoutInvariantTextReflow {
+  expectedUtf16?: number;
+  lineCount?: number;
+}
+
 export interface LayoutInvariantMountedTextObservation {
+  key: string;
   id: string;
   evidence: LayoutInvariantMountedTextEvidence;
   frame: LayoutInvariantRect;
@@ -59,6 +63,7 @@ export interface LayoutInvariantSurfaceHint {
 export interface LayoutInvariantNativeNode {
   key: string;
   id: string;
+  stableId?: string;
   type: string;
   parentKey: string;
   parentType: string;
@@ -73,6 +78,7 @@ export interface LayoutInvariantNativeNode {
   hitTest?: LayoutAuditHitTest;
   closeAction?: boolean;
   textClipped?: boolean;
+  textReflow?: LayoutInvariantTextReflow;
   mountedText?: LayoutInvariantMountedTextEvidence;
   paintedLeaf?: boolean;
   surfaceHint?: LayoutInvariantSurfaceHint;
@@ -134,6 +140,25 @@ export interface LayoutInvariantNativeCoverage {
   interactiveCount: number;
   complete: boolean;
   mountedText?: LayoutInvariantMountedTextObservation[];
+  clippingOffenders?: LayoutInvariantNativeClippingObservation[];
+  clippingOffenderCount?: number;
+}
+
+type LayoutInvariantClipReason = 'independent-text-height' | 'missing-glyphs' | 'ink-outside-text' |
+  'ancestor-clips-frame' | 'ancestor-clips-ink' | 'frame-outside-parent';
+
+interface LayoutInvariantNativeClippingObservation {
+  key: string;
+  id: string;
+  stableId?: string;
+  type: string;
+  frame: LayoutInvariantRect;
+  parentBounds?: LayoutInvariantRect;
+  clip?: LayoutInvariantRect;
+  scrollClip: boolean;
+  reasons: LayoutInvariantClipReason[];
+  reflow?: LayoutInvariantTextReflow;
+  ink?: LayoutInvariantRect;
 }
 
 export interface LayoutInvariantNativeResult {
@@ -352,7 +377,7 @@ function checkNativeNodes(sample: LayoutInvariantNativeSample, result: LayoutInv
     const evidence = node.mountedText;
     if (evidence !== undefined) {
       const mountedText = result.nativeAudit.mountedText ?? [];
-      mountedText.push({ id: node.id, frame: rect, evidence });
+      mountedText.push({ key: node.key, id: node.id, frame: rect, evidence });
       result.nativeAudit.mountedText = mountedText;
     }
     const ink = evidence?.ink;
@@ -360,14 +385,35 @@ function checkNativeNodes(sample: LayoutInvariantNativeSample, result: LayoutInv
       mountedTextEvidenceMissing = true;
       result.missing.push(`R13:native-text-layout:${node.id}`);
     }
-    const textClipped = evidence === undefined ? node.textClipped === true :
-      evidence.status === 'clipped' || (ink !== undefined && validRect(ink) && !contains(rect, ink));
-    if (textClipped || (!node.scrollClip && node.clip !== undefined &&
-      (!contains(node.clip, rect) || (ink !== undefined && validRect(ink) && !contains(node.clip, ink))))) {
+    const reasons: LayoutInvariantClipReason[] = [];
+    if (evidence === undefined && node.textClipped === true) reasons.push('independent-text-height');
+    if (evidence?.status === 'clipped') reasons.push('missing-glyphs');
+    const validInk = ink !== undefined && validRect(ink);
+    if (ink !== undefined && validInk && !contains(rect, ink)) reasons.push('ink-outside-text');
+    if (!node.scrollClip && node.clip !== undefined) {
+      if (!contains(node.clip, rect)) reasons.push('ancestor-clips-frame');
+      if (ink !== undefined && validInk && !contains(node.clip, ink)) reasons.push('ancestor-clips-ink');
+    }
+    if (reasons.length > 0) {
       add(result.violations, 'R13', node.id, 'visible text, image or input is clipped');
     }
     if (node.parentBounds !== undefined && validRect(node.parentBounds) && !isScrollContainer(node.parentType) &&
-      !contains(node.parentBounds, rect)) add(result.violations, 'R13', node.id, 'paint bounds escape the parent');
+      !contains(node.parentBounds, rect)) {
+      add(result.violations, 'R13', node.id, 'paint bounds escape the parent');
+      reasons.push('frame-outside-parent');
+    }
+    if (reasons.length > 0) {
+      const coverage = result.nativeAudit;
+      coverage.clippingOffenderCount = (coverage.clippingOffenderCount ?? 0) + 1;
+      const offenders = coverage.clippingOffenders ?? [];
+      // The layout receipt is a single bounded hilog line.
+      if (offenders.length < 3) {
+        offenders.push({ key: node.key, id: node.id, stableId: node.stableId, type: node.type,
+          frame: rect, parentBounds: node.parentBounds, clip: node.clip, scrollClip: node.scrollClip,
+          reasons, reflow: node.textReflow, ink });
+        coverage.clippingOffenders = offenders;
+      }
+    }
     if (node.interactive && node.enabled === true && node.hitTest === 'none' && node.inputAdmissionSuppressed !== true) {
       add(result.violations, 'R13', node.id, 'enabled native input does not receive hit tests');
     }
