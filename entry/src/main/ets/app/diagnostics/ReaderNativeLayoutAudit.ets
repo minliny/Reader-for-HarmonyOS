@@ -6,13 +6,15 @@ import { readerInteractiveSafeBottom, readerStableInteractiveSafeBottom, type Re
   from '../../ui/foundation/ReaderWindowMetrics';
 import type { LayoutInvariantNode, LayoutInvariantRect } from '../../ui/layout/LayoutInvariantEvaluator';
 import { READER_LAYOUT_CLOSE_CONTROL, READER_LAYOUT_FOOTER, READER_LAYOUT_NATIVE_MATERIAL,
-  READER_LAYOUT_READING_PAPER, READER_LAYOUT_SURFACE_HINT } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+  READER_LAYOUT_READING_PAPER, READER_LAYOUT_ROTATION_ENVELOPE, READER_LAYOUT_SURFACE_HINT }
+  from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import { inspectReaderNativeMaterialPaint, type ReaderNativeMaterialAttributes } from '../../ui/layout/ReaderNativeMaterialPaint';
 import { evaluateReaderIslandContrast, readerIslandContrastPalette } from '../../ui/layout/ReaderIslandContrastEvaluator';
 import type { LayoutAuditClose, LayoutAuditHitTest, LayoutAuditPlacement, LayoutInvariantDensityAudit,
   LayoutInvariantFeatureAssertion, LayoutInvariantNativeNode, LayoutInvariantNativeSample, LayoutInvariantSurfaceAudit }
   from '../../ui/layout/LayoutInvariantNativeAudit';
 import type { LayoutInvariantSurfaceHint } from '../../ui/layout/LayoutInvariantNativeAudit';
+import { readerNativeTextSliceAudit } from '../../ui/layout/ReaderNativeTextSliceAudit';
 
 interface ReaderNativeInspectorAttributes extends ReaderNativeMaterialAttributes {
   enabled?: boolean | string;
@@ -59,7 +61,7 @@ const READER_NATIVE_SURFACES: ReaderNativeSurfaceSpec[] = [
     contentId: 'reader-tts-manager-content' },
   { id: 'reader-control-appearance-overlay', close: 'native-dismiss' },
   { id: 'reader-source-v9-more-menu', close: 'native-dismiss' },
-  { id: 'reader-source-group-panel', close: 'close-action', placement: 'anchor-overlap', anchorId: 'reader-source-group-trigger' },
+  { id: 'reader-source-group-panel', close: 'close-action', placement: 'anchor-overlap' },
   { id: 'reader-search-sheet:filter', close: 'native-dismiss', placement: 'bottom-center' },
   { id: 'reader-search-sheet:task', close: 'native-dismiss', placement: 'bottom-center' },
   { id: 'reader-bookshelf-more-sheet', close: 'native-dismiss', placement: 'bottom-center' },
@@ -221,8 +223,14 @@ export class ReaderNativeLayoutAudit {
     const paintLayer = Number(attrs?.zIndex);
     const surfaceHint = id.length > 0 || type === 'Column' ? nativeSurfaceHint(node) : undefined;
     const scrollClip = parent?.scrollClip === true;
+    // The transformed origin is one rotated corner, not the image's minimum X/Y.
+    // This opt-in image paints inside its native parent's centered rotation envelope.
+    const rotationEnvelope = type === 'Image' && nativeBooleanProperty(node, READER_LAYOUT_ROTATION_ENVELOPE);
+    const textSlice = type === 'Text' ? readerNativeTextSliceAudit.project(nativeId, parent?.key ?? '', bounds, parent?.bounds) : undefined;
+    const paintBounds = textSlice?.bounds ?? (rotationEnvelope ? parent?.bounds : bounds);
     const observation: LayoutInvariantNativeNode = { key, id: id.length > 0 ? id : `${type}:${key}`, type,
-      parentKey: parent?.key ?? '', parentType: parent?.type ?? '', bounds, parentBounds: parent?.bounds,
+      parentKey: parent?.key ?? '', parentType: parent?.type ?? '', bounds: paintBounds,
+      parentBounds: textSlice?.parentBounds ?? parent?.bounds,
       clip, scrollClip, opacity, interactive, enabled, hitTest: behavior,
       zIndex: Number.isFinite(paintLayer) ? paintLayer : undefined,
       inputAdmissionSuppressed: parent?.suppressInput === true,
@@ -238,7 +246,9 @@ export class ReaderNativeLayoutAudit {
       readingPaperTheme: id === 'reader-reading-stage' ? nativeReadingPaper(node) : undefined,
     };
     if (type === 'Text' && attrs?.content === '' && !hasArea(bounds)) observation.opacity = 0;
-    observation.textClipped = measuredTextClips(context, observation, attrs);
+    // R13 tests the admitted native ink against the real viewport and all
+    // ancestor clips. Independent whole-Text reflow still applies to titles and controls.
+    if (textSlice === undefined) observation.textClipped = measuredTextClips(context, observation, attrs);
     this.nodes.push(observation);
     this.byKey.set(key, observation);
     if (id.length > 0 && (this.byId.get(id)?.opacity ?? -1) < opacity) this.byId.set(id, observation);

@@ -5,6 +5,7 @@ import { evaluateLayoutInvariants, type LayoutInvariantRect } from '../../entry/
 import type { LayoutInvariantNativeNode, LayoutInvariantNativeSample, LayoutInvariantSurfaceAudit }
   from '../../entry/src/main/ets/ui/layout/LayoutInvariantNativeAudit.ts';
 import { inspectReaderNativeMaterialPaint } from '../../entry/src/main/ets/ui/layout/ReaderNativeMaterialPaint.ts';
+import { ReaderNativeTextSliceAudit } from '../../entry/src/main/ets/ui/layout/ReaderNativeTextSliceAudit.ts';
 
 const rect = (x: number, y: number, width: number, height: number): LayoutInvariantRect => ({ x, y, width, height });
 const viewport = rect(0, 0, 320, 600);
@@ -74,6 +75,41 @@ test('R10 uses the measured arrow bubble while R9 still checks the menu scroll v
     .violations.map(issue => issue.rule), ['R9']);
   assert.ok(gate({ surfaces: [{ ...moreMenu, bounds: undefined }], requiredRules: ['R10'] })
     .missing.includes('R10:no-applicable-evidence'));
+});
+
+test('source group panel measures its positioned surface against the saved trigger, and audits its chevron envelope', () => {
+  const group = panel({ id: 'reader-source-group-panel', placement: 'anchor-overlap',
+    bounds: rect(162, 115, 140, 172), anchor: rect(195, 115, 90, 40), close: 'visible' });
+  const chevron = leaf('Image', 'reader-source-group-collapse-chevron', rect(275, 127, 15, 15),
+    { parentBounds: rect(275, 127, 15, 15), parentType: 'Stack', clip: group.bounds });
+  const measured = gate({ surfaces: [group], nodes: [chevron], requiredRules: ['R9', 'R10', 'R13'] });
+  assert.deepEqual(measured.violations, []);
+  assert.deepEqual(measured.missing, []);
+  assert.ok(gate({ surfaces: [{ ...group, anchor: undefined }] }).missing.includes('R10:anchor:reader-source-group-panel'));
+  const outside = gate({ surfaces: [group], nodes: [{ ...chevron, bounds: rect(291, 127, 15, 15),
+    parentBounds: rect(291, 127, 15, 15) }] });
+  assert.deepEqual(outside.violations.map(issue => issue.rule), ['R13']);
+});
+
+test('paged native text projects admitted glyphs instead of the retained full paragraph and preserves R13 clipping', () => {
+  const audit = new ReaderNativeTextSliceAudit();
+  const textFrame = rect(30, -500, 240, 900);
+  const owner = rect(30, 100, 240, 200);
+  audit.publish(2, 3, rect(1, 601, 241, 195), 4);
+  assert.equal(audit.project(2, '4', textFrame, owner), undefined);
+  const slice = audit.project(2, '3', textFrame, owner);
+  assert.deepEqual(slice, { bounds: rect(31, 101, 241, 195), parentBounds: rect(30, 100, 244, 200) });
+  assert.ok(slice);
+  const leafInSlice = leaf('Text', 'paged-paragraph', slice.bounds,
+    { parentBounds: slice.parentBounds, clip: rect(30, 100, 244, 200) });
+  assert.deepEqual(gate({ nodes: [leafInSlice] }).violations, []);
+  const clipped = gate({ nodes: [{ ...leafInSlice, clip: rect(30, 100, 244, 180) },
+    leaf('Text', 'chapter-title', rect(30, 60, 100, 16), { textClipped: true })] });
+  assert.deepEqual(clipped.violations.map(issue => [issue.rule, issue.nodeId]), [
+    ['R13', 'paged-paragraph'], ['R13', 'chapter-title'],
+  ]);
+  audit.retire(2);
+  assert.equal(audit.project(2, '3', textFrame, owner), undefined);
 });
 
 test('a long scroll-backed dialog can reach its close action while a bounded drawer must meet the correct window edge', () => {

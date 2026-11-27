@@ -7,6 +7,8 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderNativeLineExtents, type ReaderNativeLineBounds } from './ReaderNativeLineExtents';
 import { ReaderNativeTextStyle, readerNativeTextGeometryKey, readerNativeTextNodeGeometry, readerNativeTextNodeContent,
   readerNativeTextPunctuationOverhang } from './ReaderNativeTextMeasurement';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { readerNativeTextSliceAudit } from '../../../ui/layout/ReaderNativeTextSliceAudit';
 
 export interface ReaderNativeGlyphRect { left: number; top: number; right: number; bottom: number; }
 
@@ -54,6 +56,7 @@ export class ReaderNativeTextWindow {
   private startUtf16: number = 0;
   private endUtf16: number = 0;
   private selectionEpoch: number = 0;
+  private auditedTextId: number = 0;
 
   constructor(context: UIContext, node: typeNode.Text, controller: TextController, widthPx: number,
     firstLine: number = 0, lastLine?: number) {
@@ -119,11 +122,20 @@ export class ReaderNativeTextWindow {
     // retaining old descent alone is insufficient after line-spacing changes.
     const boxes = manager.getRectsForRange({ start: first.startIndex, end: last.endIndex },
       graphicsText.RectWidthStyle.TIGHT, graphicsText.RectHeightStyle.TIGHT);
+    const auditSlice = READER_LAYOUT_DEBUG_BUILD && (firstLine !== 0 || lastLine !== this.baseLineCount - 1);
+    let inkLeft = Infinity, inkTop = Infinity, inkRight = -Infinity, inkBottom = -Infinity;
     for (const box of boxes) {
       if (!Number.isFinite(box.rect.top) || !Number.isFinite(box.rect.bottom) || box.rect.bottom < box.rect.top)
         throw new Error('NATIVE_TEXT_WINDOW_GLYPH_GEOMETRY_INVALID');
       this.topPx = Math.min(this.topPx, box.rect.top);
       bottom = Math.max(bottom, box.rect.bottom);
+      if (auditSlice && Number.isFinite(box.rect.left) && Number.isFinite(box.rect.right) &&
+        box.rect.right > box.rect.left && box.rect.bottom > box.rect.top) {
+        inkLeft = Math.min(inkLeft, box.rect.left);
+        inkTop = Math.min(inkTop, box.rect.top);
+        inkRight = Math.max(inkRight, box.rect.right);
+        inkBottom = Math.max(inkBottom, box.rect.bottom);
+      }
     }
     this.heightPx = bottom - this.topPx;
     if (!Number.isFinite(this.topPx) || !Number.isFinite(this.heightPx) || this.heightPx <= 0)
@@ -138,6 +150,24 @@ export class ReaderNativeTextWindow {
         .height(`${this.heightPx}px`));
     }
     this.node.commonAttribute.translate({ y: `${-this.topPx}px` });
+    this.retireSliceAudit();
+    if (auditSlice && inkRight > inkLeft && inkBottom > inkTop) {
+      const ownerId = this.root?.getUniqueId() ?? 0;
+      const textId = this.node.getUniqueId();
+      if (ownerId > 0 && textId > 0) {
+        const context = this.context;
+        readerNativeTextSliceAudit.publish(textId, ownerId, { x: context.px2vp(inkLeft), y: context.px2vp(inkTop),
+          width: context.px2vp(inkRight - inkLeft), height: context.px2vp(inkBottom - inkTop) },
+          context.px2vp(this.punctuationOverhangPx));
+        this.auditedTextId = textId;
+      }
+    }
+  }
+
+  private retireSliceAudit(): void {
+    if (this.auditedTextId === 0) return;
+    readerNativeTextSliceAudit.retire(this.auditedTextId);
+    this.auditedTextId = 0;
   }
 
   frame(): FrameNode | null { return this.closed ? null : this.root ?? null; }
@@ -253,6 +283,7 @@ export class ReaderNativeTextWindow {
   close(): void {
     if (this.closed) return;
     this.closed = true;
+    this.retireSliceAudit();
     const root = this.root;
     const attached = this.attached;
     this.root = undefined;

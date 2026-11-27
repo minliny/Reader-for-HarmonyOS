@@ -272,7 +272,7 @@ export class SourceManagementFiltersOwner {
     if (!this.groupSearchIsCurrent(identity) || this.visibleGroupOptions().indexOf(option) < 0) return;
     this.cancelGroupFocus();
     // Applying a group can scroll the list to its top before the panel finishes closing.
-    this.paint().groupClosingAnchor = new ReaderRectVp(this.paint().groupX, this.paint().groupY, this.paint().groupTriggerWidth, this.paint().groupTriggerHeight);
+    this.paint().groupClosingAnchor = this.groupTriggerAnchor();
     this.paint().groupClosing = true;
     this.host.opening.hideManagementKeyboard(this.host.opening.temporaryBackIdentity());
     this.paint().groupValue = option;
@@ -600,6 +600,12 @@ export class SourceManagementFiltersOwner {
     this.paint().groupTriggerHeight = height;
   }
 
+  groupTriggerAnchor(): ReaderRectVp {
+    const paint = this.paint();
+    return paint.groupClosingAnchor ??
+      new ReaderRectVp(paint.groupX, paint.groupY, paint.groupTriggerWidth, paint.groupTriggerHeight);
+  }
+
   groupOverlayTop(): number {
     const anchor = this.paint().groupClosingAnchor?.top ?? this.paint().groupY;
     return Math.max(this.host.native.overlayTop(), Math.min(anchor - this.host.native.originY(), this.host.native.overlayBottom()));
@@ -649,6 +655,8 @@ export function SourceManagementGroupSheet($$: SourceManagementFiltersOwnerSlot)
       closing: $$.owner.paint().groupClosing,
       selectionId: $$.owner.paint().groupSelectionId,
       focusIdPrefix: $$.owner.groupPanelFocusPrefix($$.owner.paint().groupSelectionId),
+      nativeAnchorId: 'reader-source-group-panel',
+      auditOverlayAnchor: $$.owner.groupTriggerAnchor(),
       x: ($$.owner.paint().groupClosingAnchor?.left ?? $$.owner.paint().groupX) - $$.owner.host.native.originX(),
       y: ($$.owner.paint().groupClosingAnchor?.top ?? $$.owner.paint().groupY) - $$.owner.host.native.originY(),
       hostTopVp: $$.owner.groupOverlayTop(), hostBottomVp: $$.owner.host.native.overlayBottom(),
@@ -659,7 +667,7 @@ export function SourceManagementGroupSheet($$: SourceManagementFiltersOwnerSlot)
         (identity: string): void => $$.owner.scheduleVerificationGroupText(identity, 'settled'),
       onCommit: (opt: string, identity: string): void => $$.owner.commitGroupSelection(opt, identity),
       onDismiss: (identity: string): void => $$.owner.dismissGroupSelection(identity),
-    }).id('reader-source-group-panel').onAreaChange($$.owner.groupPanelLayoutAction($$.owner.paint().groupSelectionId));
+    }).onAreaChange($$.owner.groupPanelLayoutAction($$.owner.paint().groupSelectionId));
   }
 }
 
