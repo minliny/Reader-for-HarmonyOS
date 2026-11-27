@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { layoutReceiptProblem } from '../../scripts/lib/vm-journey-evidence.mjs';
 import { evaluateLayoutInvariants, type LayoutInvariantRect } from '../../entry/src/main/ets/ui/layout/LayoutInvariantEvaluator.ts';
-import type { LayoutInvariantNativeNode, LayoutInvariantNativeSample, LayoutInvariantSurfaceAudit }
+import { measureMountedTextEvidence, type LayoutInvariantNativeNode, type LayoutInvariantNativeSample,
+  type LayoutInvariantSurfaceAudit }
   from '../../entry/src/main/ets/ui/layout/LayoutInvariantNativeAudit.ts';
 import { inspectReaderNativeMaterialPaint } from '../../entry/src/main/ets/ui/layout/ReaderNativeMaterialPaint.ts';
 import { ReaderNativeTextSliceAudit } from '../../entry/src/main/ets/ui/layout/ReaderNativeTextSliceAudit.ts';
@@ -110,6 +111,46 @@ test('paged native text projects admitted glyphs instead of the retained full pa
   ]);
   audit.retire(2);
   assert.equal(audit.project(2, '3', textFrame, owner), undefined);
+});
+
+test('complete mounted text evidence supersedes independent reflow while R13 still rejects clipped ink and missing text', () => {
+  const frame = rect(59, 381, 248, 16.5);
+  const parentBounds = rect(59, 360, 248, 37.5);
+  const clip = rect(16, 222, 299, 320);
+  const ink = rect(91, 384, 183, 11);
+  const tail = rect(269, 384, 5, 11);
+  const length = '支持多选 TXT、EPUB、MOBI、AZW3'.length;
+  const line = { start: 0, end: length };
+  const hint = leaf('Text', 'local-import-hint', frame, { parentBounds, clip, scrollClip: true, textClipped: true });
+  const withLayout = (mountedText: LayoutInvariantNativeNode['mountedText']) =>
+    gate({ nodes: [{ ...hint, mountedText }] });
+
+  assert.deepEqual(gate({ nodes: [hint] }).violations.map(issue => issue.rule), ['R13']);
+  const proven = measureMountedTextEvidence(length, [line], [ink], [tail]);
+  const complete = withLayout(proven);
+  assert.deepEqual(complete.violations, []);
+  assert.deepEqual(complete.missing, []);
+  assert.ok(complete.observedRules.includes('R13'));
+
+  const outside = rect(91, 384, 220, 11);
+  const clippedInk = withLayout(measureMountedTextEvidence(length, [line], [outside], [rect(305, 384, 5, 11)]));
+  assert.deepEqual(clippedInk.violations.map(issue => [issue.rule, issue.nodeId]), [['R13', hint.id]]);
+
+  const clippedText = withLayout(measureMountedTextEvidence(length, [{ start: 0, end: length - 1 }], [ink], []));
+  assert.deepEqual(clippedText.violations.map(issue => [issue.rule, issue.nodeId]), [['R13', hint.id]]);
+
+  const missing = withLayout(measureMountedTextEvidence(length, [line], [ink], []));
+  assert.deepEqual(missing.missing, ['R13:native-text-layout:local-import-hint']);
+  assert.equal(missing.observedRules.includes('R13'), false);
+
+  const ancestorClipped = gate({ nodes: [{ ...hint, mountedText: proven, scrollClip: false, clip: rect(60, 381, 210, 16.5) }] });
+  assert.deepEqual(ancestorClipped.violations.map(issue => [issue.rule, issue.nodeId]), [['R13', hint.id]]);
+
+  const wrapped = measureMountedTextEvidence(length, [{ start: 0, end: 12 }, { start: 12, end: length }],
+    [rect(91, 384, 90, 11), rect(91, 402, 95, 11)], [rect(180, 402, 6, 11)]);
+  const tallFrame = rect(59, 381, 248, 35);
+  assert.deepEqual(gate({ nodes: [{ ...hint, bounds: tallFrame, parentBounds: rect(59, 360, 248, 57), mountedText: wrapped }] })
+    .violations, []);
 });
 
 test('a long scroll-backed dialog can reach its close action while a bounded drawer must meet the correct window edge', () => {

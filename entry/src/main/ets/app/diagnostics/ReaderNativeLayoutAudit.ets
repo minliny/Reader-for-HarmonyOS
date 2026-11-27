@@ -1,5 +1,6 @@
 import type { UIContext } from '@ohos.arkui.UIContext';
 import type { FrameNode } from '@ohos.arkui.node';
+import { text as graphicsText } from '@kit.ArkGraphics2D';
 import { readerOverlayViewport } from '../../ui/layout/ReaderOverlayGeometry';
 import { READER_THEME_DEFINITIONS, type ReaderThemeDefinition } from '../../ui/foundation/ReaderThemeRegistry';
 import { readerInteractiveSafeBottom, readerStableInteractiveSafeBottom, type ReaderWindowMetricsSnapshot }
@@ -10,13 +11,16 @@ import { READER_LAYOUT_CLOSE_CONTROL, READER_LAYOUT_FOOTER, READER_LAYOUT_NATIVE
   from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import { inspectReaderNativeMaterialPaint, type ReaderNativeMaterialAttributes } from '../../ui/layout/ReaderNativeMaterialPaint';
 import { evaluateReaderIslandContrast, readerIslandContrastPalette } from '../../ui/layout/ReaderIslandContrastEvaluator';
-import type { LayoutAuditClose, LayoutAuditHitTest, LayoutAuditPlacement, LayoutInvariantDensityAudit,
-  LayoutInvariantFeatureAssertion, LayoutInvariantNativeNode, LayoutInvariantNativeSample, LayoutInvariantSurfaceAudit }
+import { measureMountedTextEvidence, READER_LAYOUT_IMPORT_HINT_TEXT_ID, READER_LAYOUT_MOUNTED_TEXT_CONTROLLER,
+  type LayoutAuditClose, type LayoutAuditHitTest, type LayoutAuditPlacement, type LayoutInvariantDensityAudit,
+  type LayoutInvariantFeatureAssertion, type LayoutInvariantMountedTextDiagnostics, type LayoutInvariantMountedTextEvidence,
+  type LayoutInvariantMountedTextStyle, type LayoutInvariantNativeNode, type LayoutInvariantNativeSample,
+  type LayoutInvariantSurfaceAudit, type LayoutInvariantTextLineRange }
   from '../../ui/layout/LayoutInvariantNativeAudit';
 import type { LayoutInvariantSurfaceHint } from '../../ui/layout/LayoutInvariantNativeAudit';
 import { readerNativeTextSliceAudit } from '../../ui/layout/ReaderNativeTextSliceAudit';
 
-interface ReaderNativeInspectorAttributes extends ReaderNativeMaterialAttributes {
+interface ReaderNativeInspectorAttributes extends ReaderNativeMaterialAttributes, LayoutInvariantMountedTextStyle {
   enabled?: boolean | string;
   clickable?: boolean | string;
   hitTestBehavior?: number | string;
@@ -24,9 +28,6 @@ interface ReaderNativeInspectorAttributes extends ReaderNativeMaterialAttributes
   accessibilityText?: string;
   content?: string;
   textOverflow?: string;
-  fontSize?: number | string;
-  fontFamily?: string;
-  lineHeight?: number | string;
   zIndex?: number | string;
 }
 
@@ -121,6 +122,31 @@ function nativeInspector(node: FrameNode, nativeId: number): ReaderNativeInspect
   } catch (_) { return undefined; }
 }
 
+function reflowWordBreak(value?: number | string): WordBreak | undefined {
+  if (value === WordBreak.NORMAL || value === 'normal') return WordBreak.NORMAL;
+  if (value === WordBreak.BREAK_ALL || value === 'break-all') return WordBreak.BREAK_ALL;
+  if (value === WordBreak.BREAK_WORD || value === 'break-word') return WordBreak.BREAK_WORD;
+  if (value === WordBreak.HYPHENATION || value === 'hyphenation') return WordBreak.HYPHENATION;
+  return undefined;
+}
+
+function reflowTextHeight(context: UIContext, content: string, frame: LayoutInvariantRect,
+  attrs: ReaderNativeInspectorAttributes, matchInspectorStyle: boolean = false): number | undefined {
+  try {
+    const weight = typeof attrs.fontWeight === 'string' ?
+      attrs.fontWeight.replace(/^FontWeight\./, '').replace(/^W([1-9]00)$/, '$1').toLowerCase() : attrs.fontWeight;
+    const required = context.getMeasureUtils().measureTextSize({ textContent: content,
+      constraintWidth: matchInspectorStyle ? `${context.vp2px(frame.width)}px` : frame.width,
+      fontSize: attrs.fontSize, fontFamily: attrs.fontFamily, lineHeight: attrs.lineHeight,
+      fontWeight: matchInspectorStyle ? weight : undefined,
+      letterSpacing: matchInspectorStyle ? attrs.letterSpacing : undefined,
+      wordBreak: matchInspectorStyle ? reflowWordBreak(attrs.wordBreak) : undefined,
+    });
+    const height = context.px2vp(Number(required.height));
+    return Number.isFinite(height) && height > 0 ? height : undefined;
+  } catch (_) { return undefined; }
+}
+
 function measuredTextClips(context: UIContext, node: LayoutInvariantNativeNode,
   attrs?: ReaderNativeInspectorAttributes): boolean | undefined {
   const content = attrs?.content;
@@ -130,13 +156,48 @@ function measuredTextClips(context: UIContext, node: LayoutInvariantNativeNode,
     frame === undefined || frame.width <= 0) return undefined;
   const overflow = typeof attrs.textOverflow === 'string' ? attrs.textOverflow.toLowerCase() : '';
   if (overflow.includes('ellipsis') || overflow.includes('marquee')) return false;
+  const height = reflowTextHeight(context, content, frame, attrs);
+  return height === undefined ? undefined : height > frame.height + 3;
+}
+
+function measuredInk(context: UIContext, frame: LayoutInvariantRect, layout: LayoutManager,
+  start: number, end: number): LayoutInvariantRect[] {
+  const boxes = layout.getRectsForRange({ start, end }, graphicsText.RectWidthStyle.TIGHT, graphicsText.RectHeightStyle.TIGHT);
+  return boxes.map((box: TextBox): LayoutInvariantRect => ({
+    x: frame.x + context.px2vp(box.rect.left), y: frame.y + context.px2vp(box.rect.top),
+    width: context.px2vp(box.rect.right - box.rect.left), height: context.px2vp(box.rect.bottom - box.rect.top),
+  }));
+}
+
+function mountedTextEvidence(context: UIContext, node: FrameNode, frame?: LayoutInvariantRect,
+  attrs?: ReaderNativeInspectorAttributes): LayoutInvariantMountedTextEvidence {
+  const content = attrs?.content;
+  const diagnostics: LayoutInvariantMountedTextDiagnostics = { expectedUtf16: content?.length };
+  const missing: LayoutInvariantMountedTextEvidence = { status: 'missing', diagnostics };
+  if (frame === undefined || attrs === undefined || typeof content !== 'string' || content.length === 0) return missing;
+  diagnostics.style = { fontSize: attrs.fontSize, fontFamily: attrs.fontFamily, fontWeight: attrs.fontWeight,
+    letterSpacing: attrs.letterSpacing, lineHeight: attrs.lineHeight, wordBreak: attrs.wordBreak, maxFontScale: attrs.maxFontScale };
+  diagnostics.independentHeightVp = reflowTextHeight(context, content, frame, attrs);
+  diagnostics.matchedStyleHeightVp = reflowTextHeight(context, content, frame, attrs, true);
   try {
-    // Independent native text measure. Inspector content never leaves the device receipt.
-    const required = context.getMeasureUtils().measureTextSize({ textContent: content, constraintWidth: frame.width,
-      fontSize: attrs.fontSize, fontFamily: attrs.fontFamily, lineHeight: attrs.lineHeight });
-    const height = context.px2vp(Number(required.height));
-    return Number.isFinite(height) && height > 0 ? height > frame.height + 3 : undefined;
-  } catch (_) { return undefined; }
+    const controller = node.getCustomProperty(READER_LAYOUT_MOUNTED_TEXT_CONTROLLER) as TextController | undefined;
+    if (controller === undefined) return missing;
+    const layout = controller.getLayoutManager();
+    const count = layout.getLineCount();
+    diagnostics.lineCount = count;
+    if (!Number.isSafeInteger(count) || count <= 0 || count > content.length) return missing;
+    const lines: LayoutInvariantTextLineRange[] = [];
+    for (let index = 0; index < count; index++) {
+      const line = layout.getLineMetrics(index);
+      lines.push({ start: line.startIndex, end: line.endIndex });
+    }
+    const length = content.length;
+    const tailStart = (content.codePointAt(length - 2) ?? 0) > 0xFFFF ? length - 2 : length - 1;
+    const evidence = measureMountedTextEvidence(length, lines, measuredInk(context, frame, layout, 0, length),
+      measuredInk(context, frame, layout, tailStart, length));
+    evidence.diagnostics = diagnostics;
+    return evidence;
+  } catch (_) { return missing; }
 }
 
 function hasArea(rect?: LayoutInvariantRect): boolean {
@@ -248,7 +309,9 @@ export class ReaderNativeLayoutAudit {
     if (type === 'Text' && attrs?.content === '' && !hasArea(bounds)) observation.opacity = 0;
     // R13 tests the admitted native ink against the real viewport and all
     // ancestor clips. Independent whole-Text reflow still applies to titles and controls.
-    if (textSlice === undefined) observation.textClipped = measuredTextClips(context, observation, attrs);
+    if (type === 'Text' && id === READER_LAYOUT_IMPORT_HINT_TEXT_ID)
+      observation.mountedText = mountedTextEvidence(context, node, bounds, attrs);
+    else if (textSlice === undefined) observation.textClipped = measuredTextClips(context, observation, attrs);
     this.nodes.push(observation);
     this.byKey.set(key, observation);
     if (id.length > 0 && (this.byId.get(id)?.opacity ?? -1) < opacity) this.byId.set(id, observation);

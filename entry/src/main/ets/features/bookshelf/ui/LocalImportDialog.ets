@@ -16,8 +16,11 @@ import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_HINT, TYPE_FILE_IMPORT_LABEL, TYPE_FILE_IMPORT_NAME, TYPE_FILE_IMPORT_PROGRESS, TYPE_FILE_IMPORT_WAIT } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { READER_LAYOUT_INVARIANT_PROPERTY, ReaderLayoutOverlayRoot } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_INVARIANT_PROPERTY, ReaderLayoutOverlayRoot }
+  from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
+import { READER_LAYOUT_IMPORT_HINT_TEXT_ID, READER_LAYOUT_MOUNTED_TEXT_CONTROLLER }
+  from '../../../ui/layout/LayoutInvariantNativeAudit';
 import { motionAnimateParam, motionAnimateParamDelayed } from '../../../ui/foundation/MotionSpec';
 import { READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS } from './LocalImportMotion';
 import { readerMotionCurve, readerMotionDurationMs, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
@@ -68,6 +71,8 @@ class LocalImportSelectionFocusFrame extends FrameCallback {
 export struct LocalImportDialog {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   private readonly layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('local-import');
+  private readonly selectionHintTextOptions: TextOptions | undefined =
+    READER_LAYOUT_DEBUG_BUILD ? { controller: new TextController() } : undefined;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
@@ -301,7 +306,9 @@ export struct LocalImportDialog {
               .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)
               .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)
               .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-            Text('支持多选 TXT、EPUB、MOBI、AZW3')
+            Text('支持多选 TXT、EPUB、MOBI、AZW3', this.selectionHintTextOptions)
+              .id(READER_LAYOUT_IMPORT_HINT_TEXT_ID)
+              .customProperty(READER_LAYOUT_MOUNTED_TEXT_CONTROLLER, this.selectionHintTextOptions?.controller)
               .width('100%')
               .textAlign(TextAlign.Center)
               .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)

@@ -6,6 +6,45 @@ import type { ReaderNativeMaterialPaint } from './ReaderNativeMaterialPaint';
 export type LayoutAuditHitTest = 'none' | 'block' | 'default' | 'transparent';
 export type LayoutAuditPlacement = 'center' | 'bottom-center' | 'side-end' | 'anchor' | 'anchor-overlap';
 export type LayoutAuditClose = 'visible' | 'scroll-reachable' | 'native-dismiss' | 'absent' | 'unknown';
+export const READER_LAYOUT_IMPORT_HINT_TEXT_ID = 'reader-local-import-selection-hint';
+export const READER_LAYOUT_MOUNTED_TEXT_CONTROLLER = 'readerLayoutMountedTextController';
+
+export interface LayoutInvariantTextLineRange {
+  start: number;
+  end: number;
+}
+
+export interface LayoutInvariantMountedTextEvidence {
+  status: 'measured' | 'clipped' | 'missing';
+  ink?: LayoutInvariantRect;
+  coveredUtf16?: number;
+  diagnostics?: LayoutInvariantMountedTextDiagnostics;
+}
+
+export interface LayoutInvariantMountedTextStyle {
+  fontSize?: number | string;
+  fontFamily?: string;
+  fontWeight?: number | string;
+  letterSpacing?: number | string;
+  lineHeight?: number | string;
+  wordBreak?: number | string;
+  maxFontScale?: number | string;
+}
+
+export interface LayoutInvariantMountedTextDiagnostics {
+  style?: LayoutInvariantMountedTextStyle;
+  expectedUtf16?: number;
+  lineCount?: number;
+  independentHeightVp?: number;
+  matchedStyleHeightVp?: number;
+}
+
+export interface LayoutInvariantMountedTextObservation {
+  id: string;
+  evidence: LayoutInvariantMountedTextEvidence;
+  frame: LayoutInvariantRect;
+}
+
 export interface LayoutInvariantSurfaceHint {
   placement: LayoutAuditPlacement;
   anchor?: LayoutInvariantRect;
@@ -34,6 +73,7 @@ export interface LayoutInvariantNativeNode {
   hitTest?: LayoutAuditHitTest;
   closeAction?: boolean;
   textClipped?: boolean;
+  mountedText?: LayoutInvariantMountedTextEvidence;
   paintedLeaf?: boolean;
   surfaceHint?: LayoutInvariantSurfaceHint;
   nativePopupBounds?: LayoutInvariantRect;
@@ -93,6 +133,7 @@ export interface LayoutInvariantNativeCoverage {
   imageCount: number;
   interactiveCount: number;
   complete: boolean;
+  mountedText?: LayoutInvariantMountedTextObservation[];
 }
 
 export interface LayoutInvariantNativeResult {
@@ -127,6 +168,29 @@ function validRect(rect?: LayoutInvariantRect): boolean {
 
 function bottom(rect: LayoutInvariantRect): number { return rect.y + rect.height; }
 function right(rect: LayoutInvariantRect): number { return rect.x + rect.width; }
+
+export function measureMountedTextEvidence(length: number, lines: LayoutInvariantTextLineRange[],
+  ink: LayoutInvariantRect[], tailInk: LayoutInvariantRect[]): LayoutInvariantMountedTextEvidence {
+  if (!Number.isSafeInteger(length) || length <= 0 || lines.length === 0) return { status: 'missing' };
+  let renderedEnd = 0;
+  for (const line of lines) {
+    if (line.start !== renderedEnd || !Number.isSafeInteger(line.end) || line.end <= line.start || line.end > length)
+      return { status: 'missing' };
+    renderedEnd = line.end;
+  }
+  if (renderedEnd < length) return { status: 'clipped', coveredUtf16: renderedEnd };
+  if (ink.length === 0 || tailInk.length === 0) return { status: 'missing', coveredUtf16: renderedEnd };
+  let left = Infinity, top = Infinity, extentRight = -Infinity, extentBottom = -Infinity;
+  for (const box of ink.concat(tailInk)) {
+    if (!validRect(box)) return { status: 'missing', coveredUtf16: renderedEnd };
+    left = Math.min(left, box.x);
+    top = Math.min(top, box.y);
+    extentRight = Math.max(extentRight, right(box));
+    extentBottom = Math.max(extentBottom, bottom(box));
+  }
+  return { status: 'measured', coveredUtf16: renderedEnd,
+    ink: { x: left, y: top, width: extentRight - left, height: extentBottom - top } };
+}
 
 function contains(outer: LayoutInvariantRect, inner: LayoutInvariantRect, tolerance: number = 2): boolean {
   return inner.x >= outer.x - tolerance && inner.y >= outer.y - tolerance &&
@@ -274,6 +338,7 @@ function checkDensity(sample: LayoutInvariantNativeSample, fontScale: number | u
 
 function checkNativeNodes(sample: LayoutInvariantNativeSample, result: LayoutInvariantNativeResult): void {
   const siblings = new Map<string, LayoutInvariantNativeNode[]>();
+  let mountedTextEvidenceMissing = false;
   for (const node of sample.nodes) {
     if (isGhost(node)) add(result.violations, 'R13', node.id, 'zero-opacity node still accepts hit tests');
     if (node.opacity < .1 || (!isVisualLeaf(node) && !node.interactive)) continue;
@@ -284,7 +349,21 @@ function checkNativeNodes(sample: LayoutInvariantNativeSample, result: LayoutInv
     if (node.type === 'Text') result.nativeAudit.textCount += 1;
     if (isImage(node)) result.nativeAudit.imageCount += 1;
     if (node.interactive) result.nativeAudit.interactiveCount += 1;
-    if (node.textClipped === true || (!node.scrollClip && node.clip !== undefined && !contains(node.clip, rect))) {
+    const evidence = node.mountedText;
+    if (evidence !== undefined) {
+      const mountedText = result.nativeAudit.mountedText ?? [];
+      mountedText.push({ id: node.id, frame: rect, evidence });
+      result.nativeAudit.mountedText = mountedText;
+    }
+    const ink = evidence?.ink;
+    if (evidence?.status === 'missing' || (evidence?.status === 'measured' && !validRect(ink))) {
+      mountedTextEvidenceMissing = true;
+      result.missing.push(`R13:native-text-layout:${node.id}`);
+    }
+    const textClipped = evidence === undefined ? node.textClipped === true :
+      evidence.status === 'clipped' || (ink !== undefined && validRect(ink) && !contains(rect, ink));
+    if (textClipped || (!node.scrollClip && node.clip !== undefined &&
+      (!contains(node.clip, rect) || (ink !== undefined && validRect(ink) && !contains(node.clip, ink))))) {
       add(result.violations, 'R13', node.id, 'visible text, image or input is clipped');
     }
     if (node.parentBounds !== undefined && validRect(node.parentBounds) && !isScrollContainer(node.parentType) &&
@@ -310,7 +389,7 @@ function checkNativeNodes(sample: LayoutInvariantNativeSample, result: LayoutInv
   }
   if (sample.complete && sample.viewport !== undefined && validRect(sample.viewport) &&
     result.nativeAudit.textCount + result.nativeAudit.imageCount + result.nativeAudit.interactiveCount > 0) {
-    result.observedRules.push('R13');
+    if (!mountedTextEvidenceMissing) result.observedRules.push('R13');
   } else result.missing.push('R13:native-tree');
 }
 
