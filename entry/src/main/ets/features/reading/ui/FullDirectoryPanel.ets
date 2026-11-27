@@ -1,4 +1,4 @@
-import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
+import { ReaderDirectoryDataPublication, sameReaderDirectoryData } from '../presentation/ReaderDirectoryDataSnapshot';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { DIRECTORY_TOOL_SIZE, readerFullDirectoryHeights, readerDirectoryToolbarBudget, type ReaderFullDirectoryHeights } from '../presentation/ReaderFullDirectoryBudget';
@@ -14,7 +14,6 @@ import { readerDirectoryScopeKey } from '../application/ReaderDirectoryNavigatio
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
-import { sameReaderDirectoryData, snapshotReaderDirectoryData } from '../presentation/ReaderDirectoryDataSnapshot';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
 import {
   TOK_SPACE_CONTROL_INLINE,
@@ -81,6 +80,11 @@ import {
 @Component
 export struct FullDirectoryPanel {
   private readonly directoryPublication: ReaderDirectoryDataPublication = new ReaderDirectoryDataPublication();
+  private catalogOrdinals: Map<number, number> = new Map();
+  private projectedByIndex: Map<number, LocalReadingTocEntry> = new Map();
+  private mangaContextSource: LocalReadingTocEntry[] | undefined = undefined;
+  private mangaContextEntries: LocalReadingTocEntry[] = [];
+  @State private directoryDataRevision: number = 0;
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   private readonly editingScroller: Scroller = new Scroller();
@@ -270,7 +274,7 @@ export struct FullDirectoryPanel {
     this.deferredSessionKey = undefined;
     this.deferredReadingAnchor = false;
     this.pendingEntries = undefined;
-    this.admittedEntries = snapshotReaderDirectoryData(this.entries);
+    this.admitCatalogEntries(this.entries);
     registerReaderFonts(this.getUIContext().getFont());
     this.positioningMounted = true;
     this.lastListSessionKey = this.listSessionKey;
@@ -725,7 +729,7 @@ export struct FullDirectoryPanel {
             inputCurrent: (): boolean => this.panelInputCurrent(),
             sourceId: this.bookmarkIdentity.sourceId, bookId: this.bookmarkIdentity.bookId, query: this.searchQuery, ascending: this.ascending,
             currentChapterIndex: this.currentChapterIndex, openRevision: this.listSessionKey, prepareLocalTxt: this.prepareLocalTxt,
-            locateCurrentRevision: this.standaloneCatalog ? this.locateCurrentRevision : 0,
+            locateCurrentRevision: this.locateCurrentRevision,
             refreshRevision: this.directoryRulesRevision,
             showLoadStatus: this.projectedEntries.length > 0 || this.navigationActive,
             interacted: this.navigationInteracted, rowHeight: this.directoryListRowHeight(),
@@ -733,7 +737,7 @@ export struct FullDirectoryPanel {
             listPaddingX: this.directoryListPaddingX(), listPaddingY: this.embeddedInControl ? 0 : 5,
             edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
             directoryPublication: this.directoryPublication,
-          directoryEntriesRevision: this.directoryPublication.publish(this.admittedEntries),
+          directoryEntriesRevision: this.directoryDataRevision,
             chapterDownloadEnabled: this.chapterDownloadEnabled,
             chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
             bookmarkActionsEnabled: this.bookmarkActionsEnabled,
@@ -750,9 +754,14 @@ export struct FullDirectoryPanel {
             onUserScrollIntent: (): void => this.onListUserScroll(),
             onClearSearch: (): void => { if (this.navigationActive) this.clearCatalogSearch(); },
             onTreeStateChange: (active: boolean): void => {
+              if (active === this.navigationActive) return;
               this.navigationActive = active;
+              this.projectionScrollGeneration += 1;
               if (active) this.initialListPositionReady = true;
-              else if (this.standaloneCatalog) this.scheduleOpenPositioning();
+              else {
+                this.rebuildProjection(this.activeTab, this.ascending, this.searchQuery, false);
+                if (this.standaloneCatalog) this.scheduleOpenPositioning();
+              }
             },
             onDeleteBookmarks: (times: number[]): void => { if (this.bookmarkActionsEnabled) this.onDeleteBookmarks(times); },
             onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
@@ -823,7 +832,7 @@ export struct FullDirectoryPanel {
       this.navigationActive || entry.navigable === false) {
       return false;
     }
-    const current = this.projectedEntries.find((chapter: LocalReadingTocEntry): boolean => chapter.index === entry.index);
+    const current = this.projectedByIndex.get(entry.index);
     return current !== undefined && sameReaderDirectoryData([entry], [current]);
   }
 
@@ -993,6 +1002,16 @@ export struct FullDirectoryPanel {
     const nextQuery = value.trim();
     if (nextQuery === this.searchQuery) return;
     this.searchQuery = nextQuery;
+    if (this.activeTab === 'directory' && nextQuery.length === 0) {
+      this.navigationInteracted = false;
+      if (this.navigationActive && this.currentChapterIndex >= 0) {
+        this.locateCurrentRevision += 1;
+        return;
+      }
+      this.rebuildProjection(this.activeTab, this.ascending, nextQuery);
+      this.beginListPositioning('directory');
+      return;
+    }
     this.rebuildProjection(this.activeTab, this.ascending, nextQuery);
     this.scheduleProjectionTopScroll();
   }
@@ -1158,7 +1177,7 @@ export struct FullDirectoryPanel {
     let previousOffset: number | undefined = undefined;
     if (hasEntriesUpdate) {
       previousOffset = this.projectionRestoreOffset ?? this.readListOffset();
-      this.admittedEntries = snapshotReaderDirectoryData(queuedEntries as LocalReadingTocEntry[]);
+      this.admitCatalogEntries(queuedEntries as LocalReadingTocEntry[]);
       this.projectionScrollGeneration += 1;
     }
     if (tabChanged || hasEntriesUpdate) {
@@ -1185,11 +1204,17 @@ export struct FullDirectoryPanel {
     this.deferredReadingAnchor = false;
   }
 
+  private admitCatalogEntries(entries: LocalReadingTocEntry[]): void {
+    const revision = this.directoryPublication.publish(entries);
+    const admitted = this.directoryPublication.entriesAt(revision);
+    this.directoryDataRevision = revision;
+    this.admittedEntries = admitted;
+    this.catalogOrdinals.clear();
+    admitted.forEach((entry: LocalReadingTocEntry, index: number): void => { this.catalogOrdinals.set(entry.index, index); });
+  }
+
   private canonicalOrdinal(chapterIndex: number): number {
-    for (let index = 0; index < this.admittedEntries.length; index += 1) {
-      if (this.admittedEntries[index].index === chapterIndex) return index;
-    }
-    return -1;
+    return this.catalogOrdinals.get(chapterIndex) ?? -1;
   }
 
   private beginListPositioning(tab: string, resetViewport: boolean = true): void {
@@ -1272,10 +1297,7 @@ export struct FullDirectoryPanel {
         openRevision !== this.listPositioning.listOpenRevision || this.listViewportHeight <= 0 ||
         this.navigationActive || this.listPositioning.status !== 'pending') return;
       const tab = this.positioningTab;
-      const ordinalByChapter = new Map<number, number>();
-      for (let index = 0; index < this.admittedEntries.length; index += 1) {
-        ordinalByChapter.set(this.admittedEntries[index].index, index);
-      }
+      const ordinalByChapter = this.catalogOrdinals;
       const directoryRows: ReaderControlDirectoryPosition[] = [];
       const bookmarkRows: ReaderControlBookmarkPosition[] = [];
       if (tab === 'bookmarks') {
@@ -1470,32 +1492,41 @@ export struct FullDirectoryPanel {
    * always explicit arguments. Never reads a @State written in the same event
    * — the device runtime can still expose the previous value there.
    */
-  private rebuildProjection(tab: string, ascending: boolean, query: string): void {
+  private rebuildProjection(tab: string, ascending: boolean, query: string,
+    treeActive: boolean = this.navigationActive): void {
+    if (tab === 'directory' && treeActive) return;
     // Use the admitted snapshot, never the transient prop value. The host
     // intentionally sends an empty sentinel while the control is hidden; the
     // snapshot keeps the already-painted directory rows alive until a real
     // data/session commit reaches a stable endpoint.
-    const sourceEntries = this.mangaSearch ? mangaDirectoryContextEntries(this.admittedEntries, mangaDirectoryPresentation(this.admittedEntries)) : this.admittedEntries;
+    if (this.mangaSearch && this.mangaContextSource !== this.admittedEntries) {
+      this.mangaContextSource = this.admittedEntries;
+      this.mangaContextEntries = mangaDirectoryContextEntries(this.admittedEntries, mangaDirectoryPresentation(this.admittedEntries));
+    }
+    const sourceEntries = this.mangaSearch ? this.mangaContextEntries : this.admittedEntries;
     if (tab === 'bookmarks') {
       this.projectedEntries = [];
+      this.projectedByIndex.clear();
       this.bookmarkTabLoading = readerBookmarkLoadState(sourceEntries) === 'loading';
       this.projectedBookmarks = projectReaderBookmarkRows(
         sourceEntries, query, this.bookmarkIdentity);
       return;
     }
-    this.projectedEntries = projectReaderDirectoryEntries(sourceEntries, query, ascending, this.mangaSearch);
+    const projected = projectReaderDirectoryEntries(sourceEntries, query, ascending, this.mangaSearch);
+    this.projectedByIndex.clear();
+    for (const entry of projected) this.projectedByIndex.set(entry.index, entry);
+    this.projectedEntries = projected;
     this.projectedBookmarks = [];
     this.bookmarkTabLoading = false;
   }
 
   private scheduleProjectionTopScroll(): void {
+    if (this.navigationActive) return;
     this.onListUserScroll();
     this.projectionScrollGeneration += 1;
     const generation = this.projectionScrollGeneration;
     setTimeout((): void => {
-      if (generation !== this.projectionScrollGeneration) {
-        return;
-      }
+      if (generation !== this.projectionScrollGeneration || this.navigationActive) return;
       this.listScroller.scrollEdge(Edge.Top);
     }, 0);
   }
@@ -1793,12 +1824,7 @@ export struct FullDirectoryPanel {
   }
 
   private currentEntry(): LocalReadingTocEntry | undefined {
-    for (const entry of this.admittedEntries) {
-      if (this.isCurrent(entry)) {
-        return entry;
-      }
-    }
-    return undefined;
+    return this.directoryPublication.entryAt(this.directoryDataRevision, this.currentChapterIndex);
   }
 
   private currentTitle(): string {
@@ -1813,13 +1839,8 @@ export struct FullDirectoryPanel {
     if (entry === undefined) {
       return '—';
     }
-    let ordinal = 0;
-    let count = 0;
-    for (const chapter of this.admittedEntries) {
-      if (chapter.navigable === false) continue;
-      count += 1;
-      if (chapter.index === entry.index) ordinal = count;
-    }
-    return ordinal === 0 ? '' : `${ordinal} / ${count}`;
+    const ordinal = this.directoryPublication.readableRankAt(this.directoryDataRevision, entry.index);
+    const count = this.directoryPublication.readableCountAt(this.directoryDataRevision);
+    return ordinal === undefined ? '' : `${ordinal + 1} / ${count}`;
   }
 }

@@ -1,4 +1,4 @@
-import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
+import { ReaderDirectoryDataPublication, sameReaderDirectoryData } from '../presentation/ReaderDirectoryDataSnapshot';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import type { ReaderDirectoryNavigationPortFactory } from '../application/ReaderDirectoryNavigation';
@@ -23,7 +23,6 @@ import { ReaderScrollLayout, readerScrollLayout } from '../../../ui/layout/Reade
 import { readerStableInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../../../ui/layout/SurfaceHorizontalGeometry';
 import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
-import { snapshotReaderDirectoryData, sameReaderDirectoryData } from '../presentation/ReaderDirectoryDataSnapshot';
 import { projectReaderDirectoryEntries } from '../presentation/ReaderDirectoryProjection';
 import { ReaderDirectoryToolbar } from './ReaderDirectoryToolbar';
 import { ReaderDirectoryQuickActions, readerDirectoryQuickActionsHeight } from './ReaderDirectoryQuickActions';
@@ -52,6 +51,15 @@ let bookDirectoryBackGeneration = 0;
 @Component
 export struct BookDirectoryPage {
   private readonly directoryPublication: ReaderDirectoryDataPublication = new ReaderDirectoryDataPublication();
+  @State private directoryDataRevision: number = 0;
+  @State private mangaSummaryText: string = '';
+  private mangaContextSource: LocalReadingTocEntry[] | undefined = undefined;
+  private mangaContextEntries: LocalReadingTocEntry[] = [];
+  private projectedByIndex: Map<number, LocalReadingTocEntry> = new Map();
+  private layoutRowsByFirst: Map<number, MangaDirectoryLayoutRow> = new Map();
+  private displayedByIndex: Map<number, LocalReadingTocEntry> = new Map();
+  private displayedRowByIndex: Map<number, number> = new Map();
+  @State private firstLayoutEntries: LocalReadingTocEntry[] = [];
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
@@ -239,7 +247,7 @@ export struct BookDirectoryPage {
           mangaTailBuilder: (): void => { this.mangaFlowSummary(this.treeFooterMeasurement); },
           edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
           directoryPublication: this.directoryPublication,
-          directoryEntriesRevision: this.directoryPublication.publish(this.admittedEntries),
+          directoryEntriesRevision: this.directoryDataRevision,
           bookmarkActionsEnabled: false,
           chapterDownloadEnabled: this.mangaDownloadEnabled,
           chapterDownloadActionsEnabled: this.mangaDownloadEnabled,
@@ -265,6 +273,11 @@ export struct BookDirectoryPage {
             if (!this.mounted || identity !== this.admittedIdentity || identity !== this.identity() ||
               active === this.navigationActive) return;
             this.navigationActive = active; this.listReady = false;
+            if (active) {
+              this.scrollGeneration += 1;
+              this.pendingScrollEdge = undefined;
+              this.pendingLocateChapter = -1;
+            } else this.refreshFlatProjection(this.searchQuery, this.ascending, this.mangaCollapsedGroups, false);
           },
         }).width('100%').height('100%');
         this.mangaToolbar(identity);
@@ -547,7 +560,7 @@ export struct BookDirectoryPage {
     if (!this.mounted || this.searchQuery.trim().length > 0 || identity !== this.identity() || identity !== this.admittedIdentity ||
       !sameReaderDirectoryData(this.admittedEntries, this.entries) || this.mangaPresentation.get(entry.index)?.hasChildren !== true ||
       !this.mangaEntryIsDisplayed(entry)) return;
-    const current = this.projectedEntries.find((row: LocalReadingTocEntry): boolean => row.index === entry.index);
+    const current = this.projectedByIndex.get(entry.index);
     if (current === undefined || !sameReaderDirectoryData([current], [entry])) return;
     this.mangaCollapsedGroups = this.mangaCollapsedGroups.includes(entry.index) ?
       this.mangaCollapsedGroups.filter((index: number): boolean => index !== entry.index) : [...this.mangaCollapsedGroups, entry.index];
@@ -556,33 +569,56 @@ export struct BookDirectoryPage {
   }
 
   private prepareMangaLayout(entries: LocalReadingTocEntry[] = this.projectedEntries, query: string = this.searchQuery,
-    collapsed: number[] = this.mangaCollapsedGroups): void {
-    this.mangaLayoutRows = mangaDirectoryEntryRows(this.mangaVisibleEntries(entries, query, collapsed), this.mangaPresentation,
+    collapsed: number[] = this.mangaCollapsedGroups, treeActive: boolean = this.navigationActive): void {
+    if (treeActive) return;
+    const rows = mangaDirectoryEntryRows(this.mangaVisibleEntries(entries, query, collapsed), this.mangaPresentation,
       this.mangaNarrow(), this.mangaFontScale(), this.contentFrame().width, (entry: LocalReadingTocEntry): number => {
         const glyph = this.mangaDownloadEnabled && entry.navigable !== false && entry.downloadState !== 'unknown';
         return (glyph ? visual.downloadGridWidth : 0) + mangaDirectoryDownloadStatusWidth(entry.downloadState, glyph, this.mangaFontScale());
       }, query);
+    this.layoutRowsByFirst.clear();
+    this.displayedByIndex.clear();
+    this.displayedRowByIndex.clear();
+    const firstEntries: LocalReadingTocEntry[] = [];
+    rows.forEach((row: MangaDirectoryLayoutRow, position: number): void => {
+      const first = row.entries[0];
+      this.layoutRowsByFirst.set(first.index, row);
+      firstEntries.push(first);
+      for (const entry of row.entries) {
+        this.displayedByIndex.set(entry.index, entry);
+        this.displayedRowByIndex.set(entry.index, position);
+      }
+    });
+    this.firstLayoutEntries = firstEntries;
+    this.mangaLayoutRows = rows;
   }
 
   private mangaLayoutEntries(): LocalReadingTocEntry[] {
-    return this.mangaLayoutRows.map((row: MangaDirectoryLayoutRow): LocalReadingTocEntry => row.entries[0]);
+    return this.firstLayoutEntries;
   }
 
   private mangaLayoutRow(entry: LocalReadingTocEntry): MangaDirectoryLayoutRow {
-    return this.mangaLayoutRows.find((row: MangaDirectoryLayoutRow): boolean => row.entries[0]?.index === entry.index) ??
-      { kind: 'row', columns: 1, startIndex: 0, entries: [], labels: [] };
+    return this.layoutRowsByFirst.get(entry.index) ?? { kind: 'row', columns: 1, startIndex: 0, entries: [], labels: [] };
   }
 
   private mangaEntryIsDisplayed(entry: LocalReadingTocEntry): boolean {
-    return this.mangaLayoutRows.some((row: MangaDirectoryLayoutRow): boolean => row.entries.some((candidate: LocalReadingTocEntry): boolean =>
-      candidate.index === entry.index && sameReaderDirectoryData([candidate], [entry])));
+    const current = this.displayedByIndex.get(entry.index);
+    return current !== undefined && sameReaderDirectoryData([current], [entry]);
   }
 
   private mangaSummaryLabel(): string {
-    const readable = this.admittedEntries.filter((entry: LocalReadingTocEntry): boolean => entry.navigable === true).length;
-    const unknown = this.admittedEntries.some((entry: LocalReadingTocEntry): boolean => entry.navigable === undefined);
-    const groups = this.admittedEntries.filter((entry: LocalReadingTocEntry): boolean => this.mangaIsGroup(entry)).length;
-    return `${readable} 个${unknown ? '已确认' : ''}可读条目${groups > 0 ? ` · ${groups} 个卷组` : ''}`;
+    return this.mangaSummaryText;
+  }
+
+  private refreshMangaSummary(entries: LocalReadingTocEntry[]): void {
+    let readable = 0, groups = 0;
+    let unknown = false;
+    for (const entry of entries) {
+      if (entry.navigable === true) readable++;
+      if (entry.navigable === undefined) unknown = true;
+      if (this.mangaIsGroup(entry)) groups++;
+    }
+    this.mangaSummaryText = `${readable} 个${unknown ? '已确认' : ''}可读条目${groups > 0 ? ` · ${groups} 个卷组` : ''}`;
   }
 
   private mangaIsGroup(entry: LocalReadingTocEntry): boolean {
@@ -686,7 +722,7 @@ export struct BookDirectoryPage {
   }
 
   private mangaCurrentTitle(): string {
-    const entry = this.admittedEntries.find((row: LocalReadingTocEntry): boolean => row.index === this.currentChapterIndex);
+    const entry = this.directoryPublication.entryAt(this.directoryDataRevision, this.currentChapterIndex);
     return entry === undefined ? '尚未开始阅读' : mangaDirectoryDisplay(entry).title;
   }
 
@@ -716,12 +752,12 @@ export struct BookDirectoryPage {
     if (!this.directoryInputIsCurrent() || this.selectionBusy || this.currentChapterIndex < 0) return;
     this.searchDraft = '';
     this.searchQuery = '';
-    const currentEntry = this.admittedEntries.find((entry: LocalReadingTocEntry): boolean => entry.index === this.currentChapterIndex);
+    const currentEntry = this.directoryPublication.entryAt(this.directoryDataRevision, this.currentChapterIndex);
     const ancestors = currentEntry === undefined ? [] : this.mangaPresentation.get(currentEntry.index)?.ancestorGroupIndexes ?? [];
     const collapsed = this.mangaCollapsedGroups.filter((index: number): boolean => !ancestors.includes(index));
     this.mangaCollapsedGroups = collapsed;
-    this.publishProjection(projectReaderDirectoryEntries(mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation),
-      '', this.ascending, true), '', collapsed);
+    this.navigationInteracted = false;
+    this.refreshFlatProjection('', this.ascending, collapsed);
     this.pendingScrollEdge = undefined;
     this.pendingLocateChapter = this.currentChapterIndex;
     this.locateCurrentRevision += 1;
@@ -747,7 +783,7 @@ export struct BookDirectoryPage {
       entry.navigable === false || !sameReaderDirectoryData(this.admittedEntries, this.entries)) return false;
     // ArkUI @Prop copies the List's objects. Compare the Core-backed facts,
     // never object references across that component boundary.
-    const current = this.projectedEntries.find((candidate: LocalReadingTocEntry): boolean => candidate.index === entry.index);
+    const current = this.projectedByIndex.get(entry.index);
     return current !== undefined && sameReaderDirectoryData([entry], [current]);
   }
 
@@ -773,7 +809,11 @@ export struct BookDirectoryPage {
 
   private admitEntries(reset: boolean): void {
     const wasEmpty = this.projectedEntries.length === 0;
-    const previous = this.admittedEntries;
+    const previous = new Map<number, LocalReadingTocEntry>();
+    for (const index of this.mangaCollapsedGroups ?? []) {
+      const entry = this.directoryPublication.entryAt(this.directoryDataRevision, index);
+      if (entry !== undefined) previous.set(index, entry);
+    }
     const previousIdentity = this.admittedIdentity;
     if (reset) {
       this.searchDraft = '';
@@ -784,53 +824,72 @@ export struct BookDirectoryPage {
       this.navigationActive = false;
     }
     this.admittedIdentity = this.identity();
-    this.admittedEntries = snapshotReaderDirectoryData(this.entries);
-    this.mangaPresentation = mangaDirectoryPresentation(this.admittedEntries);
-    this.mangaCollapsedGroups = previousIdentity === this.admittedIdentity ? (this.mangaCollapsedGroups ?? []).filter((index: number): boolean => {
-      const before = previous.find((entry: LocalReadingTocEntry): boolean => entry.index === index);
-      const after = this.admittedEntries.find((entry: LocalReadingTocEntry): boolean => entry.index === index);
-      return before !== undefined && after !== undefined && this.mangaPresentation.get(after.index)?.hasChildren === true && sameReaderDirectoryData([before], [after]);
+    const revision = this.directoryPublication.publish(this.entries);
+    const admitted = this.directoryPublication.entriesAt(revision);
+    if (!reset && this.admittedEntries === admitted) return;
+    this.directoryDataRevision = revision;
+    this.admittedEntries = admitted;
+    this.mangaPresentation = mangaDirectoryPresentation(admitted);
+    this.refreshMangaSummary(admitted);
+    const previousGroups = this.mangaCollapsedGroups ?? [];
+    const collapsed = previousIdentity === this.admittedIdentity ? previousGroups.filter((index: number): boolean => {
+      const before = previous.get(index);
+      const after = this.directoryPublication.entryAt(revision, index);
+      return before !== undefined && after !== undefined && this.mangaPresentation.get(after.index)?.hasChildren === true &&
+        sameReaderDirectoryData([before], [after]);
     }) : [];
-    this.publishProjection(projectReaderDirectoryEntries(mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation),
-      reset ? '' : this.searchQuery, reset ? true : this.ascending, true));
+    this.mangaCollapsedGroups = collapsed;
+    this.refreshFlatProjection(reset ? '' : this.searchQuery, reset ? true : this.ascending, collapsed,
+      !reset && this.navigationActive);
     this.invalidateFrame();
-    if (reset || wasEmpty) {
-      this.scheduleTopScroll();
-    }
+    if (reset || wasEmpty && !this.navigationActive) this.scheduleTopScroll();
   }
 
   private applySearch(value: string = this.searchDraft): void {
     const nextQuery = value.trim();
+    if (nextQuery === this.searchQuery) return;
+    if (nextQuery.length === 0 && this.currentChapterIndex >= 0) {
+      this.locateCurrent();
+      return;
+    }
     this.searchQuery = nextQuery;
-    this.publishProjection(projectReaderDirectoryEntries(mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation),
-      nextQuery, this.ascending, true), nextQuery);
-    if (this.mangaFlowFooter()) this.onListUserScroll();
-    else if (!this.navigationActive) this.scheduleTopScroll();
+    if (nextQuery.length === 0) this.navigationInteracted = false;
+    this.refreshFlatProjection(nextQuery, this.ascending, this.mangaCollapsedGroups);
+    if (!this.navigationActive) {
+      if (this.mangaFlowFooter() && nextQuery.length > 0) this.onListUserScroll();
+      else this.scheduleTopScroll();
+    }
   }
 
   private toggleSort(): void {
     const nextAscending = !this.ascending;
     this.ascending = nextAscending;
-    this.publishProjection(projectReaderDirectoryEntries(mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation),
-      this.searchQuery, nextAscending, true));
+    this.refreshFlatProjection(this.searchQuery, nextAscending, this.mangaCollapsedGroups);
     if (!this.navigationActive) this.scheduleTopScroll();
   }
 
   private scheduleTopScroll(): void {
+    if (this.navigationActive) return;
     const generation = ++this.scrollGeneration;
     this.pendingLocateChapter = -1;
     this.pendingScrollEdge = Edge.Top;
     setTimeout((): void => {
-      if (generation === this.scrollGeneration) this.flushPendingScroll();
+      if (generation === this.scrollGeneration && !this.navigationActive) this.flushPendingScroll();
     }, 0);
   }
 
-  private publishProjection(entries: LocalReadingTocEntry[], query: string = this.searchQuery,
-    collapsed: number[] = this.mangaCollapsedGroups): void {
-    // The List remains mounted beneath the empty-state text. Empty and
-    // nonempty updates may coalesce; neither invalidates its native readiness.
+  private refreshFlatProjection(query: string, ascending: boolean, collapsed: number[],
+    treeActive: boolean = this.navigationActive): void {
+    if (treeActive) return;
+    if (this.mangaContextSource !== this.admittedEntries) {
+      this.mangaContextSource = this.admittedEntries;
+      this.mangaContextEntries = mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation);
+    }
+    const entries = projectReaderDirectoryEntries(this.mangaContextEntries, query, ascending, true);
+    this.projectedByIndex.clear();
+    for (const entry of entries) this.projectedByIndex.set(entry.index, entry);
     this.projectedEntries = entries;
-    this.prepareMangaLayout(entries, query, collapsed);
+    this.prepareMangaLayout(entries, query, collapsed, false);
   }
 
   private onListFirstLayout(identity: string): void {
@@ -852,9 +911,8 @@ export struct BookDirectoryPage {
     if (locate >= 0) {
       this.pendingLocateChapter = -1;
       if (this.navigationActive) return;
-      const index = this.mangaLayoutRows.findIndex((row: MangaDirectoryLayoutRow): boolean =>
-        row.entries.some((entry: LocalReadingTocEntry): boolean => entry.index === locate));
-      if (index >= 0) this.listScroller.scrollToIndex(index + (this.mangaFlowFooter() ? 1 : 0), false, ScrollAlign.CENTER);
+      const index = this.displayedRowByIndex.get(locate);
+      if (index !== undefined) this.listScroller.scrollToIndex(index + (this.mangaFlowFooter() ? 1 : 0), false, ScrollAlign.CENTER);
       return;
     }
     const edge = this.pendingScrollEdge;

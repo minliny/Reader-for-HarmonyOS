@@ -44,6 +44,43 @@ import { sourceV9ChangesToApply, sourceV9SelectedImportRows, type SourceV9Change
 
 type TransferButtonTone = 'primary' | 'secondary' | 'neutral' | 'danger' | 'text';
 type TransferDialog = 'none' | 'form' | 'delete';
+
+class ImportReviewRows implements IDataSource {
+  private rows: SourceV9ImportRow[] = [];
+  private listeners: DataChangeListener[] = [];
+
+  totalCount(): number { return this.rows.length; }
+
+  getData(index: number): SourceV9ImportRow { return this.rows[index]; }
+
+  registerDataChangeListener(listener: DataChangeListener): void {
+    if (!this.listeners.includes(listener)) this.listeners.push(listener);
+  }
+
+  unregisterDataChangeListener(listener: DataChangeListener): void {
+    this.listeners = this.listeners.filter((item: DataChangeListener): boolean => item !== listener);
+  }
+
+  replace(rows: SourceV9ImportRow[], oldKnown: Set<string>, known: Set<string>): void {
+    const before = this.rows;
+    if (before === rows && oldKnown === known) return;
+    this.rows = rows;
+    const reordered = rows.length !== before.length || rows.some(
+      (row: SourceV9ImportRow, index: number): boolean => row.index !== before[index].index);
+    for (const listener of this.listeners) {
+      if (reordered) {
+        listener.onDataReloaded();
+        continue;
+      }
+      for (let index = 0; index < rows.length; index += 1) {
+        const id = rows[index].candidate?.sourceId;
+        if (rows[index] !== before[index] || id !== undefined && oldKnown.has(id) !== known.has(id)) {
+          listener.onDataChange(index);
+        }
+      }
+    }
+  }
+}
 type TransferPasteField = 'url' | 'paste' | 'subscriptionUrl';
 
 const TRANSFER_FOOTER_TOP = 8;
@@ -115,6 +152,8 @@ export struct SourceV9TransferPage {
   private headerHeight: number = APP_FLOATING_HEADER_BAR_HEIGHT;
   private flow: SourceV9TransferOwner | undefined = undefined;
   private mounted: boolean = false;
+  private readonly importRows = new ImportReviewRows();
+  private knownSourceIds = new Set<string>();
   private readonly draftPaste: ReaderClipboardDraftPaste = new ReaderClipboardDraftPaste();
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
 
@@ -148,7 +187,10 @@ export struct SourceV9TransferPage {
   private acceptState(next: SourceV9TransferSnapshot): void {
     if (!this.mounted) return;
     const previous = this.state;
+    const oldKnown = this.knownSourceIds;
+    if (next.knownSourceIds !== previous.knownSourceIds) this.knownSourceIds = new Set<string>(next.knownSourceIds);
     this.state = next;
+    this.importRows.replace(next.rows, oldKnown, this.knownSourceIds);
     if (next.busy || next.writePending || previous.importStep !== next.importStep) this.retireClipboardPaste();
     if (next.busy || next.writePending || !this.inputCurrent()) return;
     const finishing = previous.busy;
@@ -579,24 +621,34 @@ export struct SourceV9TransferPage {
   @Builder
   private importPage() {
     this.importStepper();
-    Scroll() {
-      Column({ space: 10 }) {
-        if (!this.state.writePending && this.state.error.length > 0 && this.state.importStep < 3) {
-          ReaderPageState({ variant: 'inline', padded: false, message: this.state.error });
-        }
-        if (this.state.busy) {
-          ReaderPageState({ variant: 'inline', loading: true, padded: false,
-            message: this.state.importStep === 1 ? '正在读取书源' : '正在确认导入' });
-        }
-        ForEach([this.state.importStep], (step: number): void => {
-          Column({ space: 10 }) {
-            if (step === 1) this.importSource();
-            else if (step === 2) this.importReview();
-            else this.importResult();
-          }.width('100%').alignItems(HorizontalAlign.Start).transition(this.stepTransition());
-        }, (step: number): string => String(step));
-      }.width('100%').padding({ bottom: 18 }).alignItems(HorizontalAlign.Start);
-    }.width('100%').layoutWeight(1).align(Alignment.Top).scrollBar(BarState.Off);
+    List({ space: 10 }) {
+      ListItem() {
+        Column({ space: 10 }) {
+          if (!this.state.writePending && this.state.error.length > 0 && this.state.importStep < 3) {
+            ReaderPageState({ variant: 'inline', padded: false, message: this.state.error });
+          }
+          if (this.state.busy) {
+            ReaderPageState({ variant: 'inline', loading: true, padded: false,
+              message: this.state.importStep === 1 ? '正在读取书源' : '正在确认导入' });
+          }
+          ForEach([this.state.importStep], (step: number): void => {
+            Column({ space: 10 }) {
+              if (step === 1) this.importSource();
+              else if (step === 2) this.importReview();
+              else this.importResult();
+            }.width('100%').alignItems(HorizontalAlign.Start).transition(this.stepTransition());
+          }, (step: number): string => String(step));
+        }.width('100%').alignItems(HorizontalAlign.Start);
+      }
+      if (this.state.importStep === 2) {
+        ListItemGroup() {
+          LazyForEach(this.importRows, (row: SourceV9ImportRow, index: number): void => {
+            ListItem() { this.importRow(row, index); }.width('100%');
+          }, (row: SourceV9ImportRow): string => this.importRowKey(row));
+        }.width('100%').backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
+          .border({ width: 1, color: this.color('TOK_LINE') }).clip(true);
+      }
+    }.width('100%').layoutWeight(1).scrollBar(BarState.Off).cachedCount(4).contentEndOffset(18);
   }
 
   @Builder
@@ -826,13 +878,15 @@ export struct SourceV9TransferPage {
       this.action('清空', 'text', this.editable() && this.selectedImportCount() > 0,
         (): void => this.flow?.chooseImportRows(false), 28);
     }.width('100%');
-    Column() {
-      ForEach(this.state.rows, (row: SourceV9ImportRow, index: number): void => {
-        this.importRow(row, index);
-      }, (row: SourceV9ImportRow): string => String(row.index) + ':' + String(row.selected) + ':' +
-        (row.report?.traceId ?? 'history:' + (row.previousReport?.report.traceId ?? '')));
-    }.width('100%').backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
-      .border({ width: 1, color: this.color('TOK_LINE') }).clip(true);
+  }
+
+  private importRowKey(row: SourceV9ImportRow): string {
+    return String(row.index) + ':' + String(row.selected) + ':' + String(this.isKnownImportRow(row)) + ':' +
+      (row.report?.traceId ?? 'history:' + (row.previousReport?.report.traceId ?? ''));
+  }
+
+  private isKnownImportRow(row: SourceV9ImportRow): boolean {
+    return row.candidate?.supported === true && this.knownSourceIds.has(row.candidate.sourceId);
   }
 
   private importCaption(row: SourceV9ImportRow): string {
@@ -854,7 +908,7 @@ export struct SourceV9TransferPage {
           Text(row.candidate?.name || ('第 ' + (row.index + 1) + ' 项')).flexShrink(1).maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis }).fontSize(13)
             .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontColor(this.color('TOK_INK'));
-          if (row.candidate?.supported === true && this.state.knownSourceIds.includes(row.candidate.sourceId)) {
+          if (this.isKnownImportRow(row)) {
             this.badge('更新', 'app.sourceUi.primary', 'app.sourceUi.selected');
           }
         }.width('100%');

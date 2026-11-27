@@ -8,6 +8,8 @@ export type NetworkTarget = {
   /** Selected system proxy for this hop only; never persisted or logged. */
   systemProxy?: connection.HttpProxy;
   bypassSystemProxy?: boolean;
+  /** In-memory comparison only, never logged or sent to Core. */
+  directAdmissionScope?: string;
 };
 
 type NetworkEnvironmentDetails = {
@@ -126,6 +128,7 @@ export async function prepareNetworkTarget(requestUrl: string, webDavOrigin: boo
     throw new Error('url targets a private, loopback, link-local or invalid address and is not allowed');
   }
   let bypassSystemProxy = false;
+  let proxyScope = 'webdav';
   // A saved WebDAV endpoint may resolve to a NAS. Keep its credential-bearing
   // route direct and DNS-pinned, without delegating the private address to a proxy.
   if (!webDavOrigin) {
@@ -153,6 +156,7 @@ export async function prepareNetworkTarget(requestUrl: string, webDavOrigin: boo
         throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试', operation);
       }
       bypassSystemProxy = hasProxy;
+      proxyScope = JSON.stringify([proxy.host, proxy.port, proxy.exclusionList, pacFileUrl]);
       if (hasProxy && !isSystemProxyExcluded(host, proxy.exclusionList)) {
         // Reuse the system PAC engine. For DIRECT, the transport must explicitly
         // bypass the local PAC proxy so the validated application DNS pin applies.
@@ -211,5 +215,7 @@ export async function prepareNetworkTarget(requestUrl: string, webDavOrigin: boo
     if (error instanceof NetworkEnvironmentError) throw error;
     throw new NetworkEnvironmentError('route', '系统网络状态已变化，请稍后重试');
   }
-  return { host, addresses, route: synthetic.length > 0 ? 'systemSynthetic' : 'direct', bypassSystemProxy };
+  return { host, addresses, route: synthetic.length > 0 ? 'systemSynthetic' : 'direct', bypassSystemProxy,
+    directAdmissionScope: synthetic.length > 0 ? undefined :
+      JSON.stringify([webDavOrigin, network.handle.netId, network.appBound, proxyScope]) };
 }

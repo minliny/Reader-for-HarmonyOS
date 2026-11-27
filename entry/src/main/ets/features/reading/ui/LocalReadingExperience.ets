@@ -69,6 +69,7 @@ import type { ReaderQuoteCardAction, ReaderQuoteCardCopy } from '../application/
 import { ReaderNativeTextMeasurement, READER_CHAPTER_TITLE_FONT_SIZE_FP, type ReaderNativeTextStyle } from './ReaderNativeTextMeasurement';
 import { READER_MEASUREMENT_UNICODE_PROBE, ReaderMeasurementRun,
   type ReaderTitleMeasurement, type ReaderUnicodeMeasurement } from './ReaderMeasurementRun';
+import { ReaderMeasurementContinuation } from '../application/ReaderMeasurementContinuation';
 import { readPreparedReadingEntrySnapshot, type ReadingEntryNavigation, type ReadingEntrySnapshot as CoreReadingEntrySnapshot } from '../application/ReadingEntrySnapshot';
 import { ReaderTtsPageFollow, planReaderTtsFollowPage, readerTtsFollowActive, type ReaderTtsFollowScope, type ReaderTtsPreparedPage,
   type ReaderTtsFollowLease, type ReaderTtsFollowTarget, type ReaderPageTurnOrigin } from './ReaderTtsPageFollow';
@@ -230,7 +231,13 @@ import { materializeReaderContinuousImage, materializeReaderContinuousText, mate
   ReaderContinuousTextStyleContext } from './ReaderContinuousFragmentMaterializer';
 import { readerTextSelectionEnabled } from './ReaderTextSelectionPolicy';
 import { readerReadingTopBarHeight, readerReadingTopBarFontsReady } from '../../../ui/chrome/ReaderReadingTopBar';
-import { ReaderControlPanel, type ReaderControlPage } from './ReaderControlPanel';
+import { ReaderControlPanel, type ReaderControlPage, type ReaderControlLaunchSource } from './ReaderControlPanel';
+import { ReaderSessionLaunchStage } from './ReaderSessionLaunchStage';
+import { ReaderControlAutoPageContent } from './ReaderControlAutoPageContent';
+import { ReaderControlTtsContent } from './ReaderControlTtsContent';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
+import { defaultNavigationPreferences, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderControlFontOrder, ReaderControlNavigation, type ReaderControlFontOrderFacts,
   type ReaderControlFontOrderPresentation, type ReaderControlFontOrderReadback,
   type ReaderControlNavigationIntent, type ReaderControlNavigationScope } from './ReaderControlPresentationCoordinator';
@@ -241,7 +248,7 @@ import { adoptReaderControlPresentationFacts, readerControlModuleFactsMatch, rea
   type ReaderControlMeasuredProfile,
   type ReaderControlMeasuredProfileReader, type ReaderControlPresentationReceipt,
   type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
-import { readerControlThemeStyle } from './ReaderControlThemeStyle';
+import { readerControlThemeStyle, type ReaderControlThemeStyle } from './ReaderControlThemeStyle';
 import {
   copyReaderControlSessionState, createReaderControlSessionState, dismissReaderControlSession, openReaderControlSession,
   readerControlContentLocation, readerControlTargetLocation, advanceReaderControlSession, resumeReaderControlSessionTarget,
@@ -599,6 +606,9 @@ export struct ReadingExperience {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   private readonly sourceSwitchFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') @Watch('reconcileSessionLaunchLayout') private readerAppScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private readerSystemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private launchNavigationPreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @StorageLink('readerAppearanceRevision') @Watch('onSharedAppearanceChanged') private sharedAppearanceRevision: number = 0;
   @StorageLink('readerAppForeground') @Watch('onAppForegroundChanged') appForeground: boolean = true;
   @StorageLink('readerSmartGestureSettings') @Watch('syncSmartGestureMonitor')
@@ -918,6 +928,8 @@ export struct ReadingExperience {
   @State private sessionCapsuleMeasuredHeight: number = READER_SESSION_CAPSULE_HEIGHT;
   // One presentation transaction and immutable sample own every launch actor.
   @State private sessionLaunch: ReaderSessionLaunchTransaction | undefined = undefined;
+  @State private sessionLaunchControlSource: ReaderControlLaunchSource | undefined = undefined;
+  private sessionLaunchSourceSample: ReaderSessionLaunchSample | undefined = undefined;
   @State private sessionLaunchStageOpacity: number = 1;
   @State private sessionLaunchFooterExiting: boolean = false;
   @State private sessionLaunchFooterOffset: number = 0;
@@ -1273,6 +1285,9 @@ export struct ReadingExperience {
     set: (delay: number, callback: () => void): number => setTimeout(callback, delay),
     clear: (handle: number): void => clearTimeout(handle),
   });
+  private readonly canonicalMeasurementContinuation: ReaderMeasurementContinuation = new ReaderMeasurementContinuation(
+    (): number => readerMotionNowMs(),
+    (callback: () => void): void => this.getUIContext().postFrameCallback(new ReaderUIFrameCallback(callback)));
   private readonly nativeParagraphResources: ReaderNativeParagraphResources = new ReaderNativeParagraphResources();
   private readonly nativeTextMeasurement: ReaderNativeTextMeasurement = new ReaderNativeTextMeasurement();
   private readonly nativeBodyPunctuationOverflow: boolean = this.resolveNativeBodyPunctuationOverflow();
@@ -1425,6 +1440,18 @@ export struct ReadingExperience {
    */
   private controlDirectoryDataRetained: boolean = false;
   private readonly controlDirectoryPublication: ReaderDirectoryDataPublication = new ReaderDirectoryDataPublication();
+  @State private controlDirectoryEntriesRevision: number = 0;
+  private controlDirectorySourceRevision: number = 0;
+  private tocDownloadFactsCurrent: (() => boolean) | undefined = undefined;
+  private readonly hiddenControlTtsState: ReaderTtsState = createReaderTtsState(false);
+  private controlThemeScheme: string = 'day';
+  private controlThemeSnapshot: ReaderControlThemeStyle = readerControlThemeStyle('day');
+  private controlRequestLocation: ReaderControlLocation | undefined = undefined;
+  private controlEnvironmentMetrics: ReaderWindowMetricsSnapshot | undefined = undefined;
+  private controlEnvironmentWidth: number = 0;
+  private controlEnvironmentHeight: number = 0;
+  private controlEnvironmentExpanded: boolean = false;
+  private controlEnvironmentKey: string = '';
   private lastCommittedProgress: ReadingCommit | undefined = undefined;
   /** A retained receipt supplies the page, but only this actual foreground
    * visit can admit one same-position renewal through the existing writer. */
@@ -1486,6 +1513,8 @@ export struct ReadingExperience {
     this.controlSession = createReaderControlSessionState();
     this.controlVerification.start();
     this.controlDirectoryDataRetained = false;
+    this.tocDownloadFactsCurrent = undefined;
+    this.controlDirectoryEntriesRevision = this.controlDirectoryPublication.publish(EMPTY_CONTROL_DIRECTORY_ENTRIES);
     this.latestControlVisualSession = copyReaderControlSessionState(this.controlSession);
     this.observedControlCloseRevision = 0;
     this.observedControlPage = 'home';
@@ -2105,22 +2134,19 @@ export struct ReadingExperience {
         fixedIsland: true,
         bodySelectionPossible: this.readerTextSelectionEnabled(),
         sessionFontScale: this.readingLayout().systemFontScale,
-        controlThemeStyle: readerControlThemeStyle(this.readerAppScheme),
-        launchSample: this.sessionLaunch?.sample,
+        controlThemeStyle: this.controlPanelTheme(this.readerAppScheme),
+        launchSample: this.sessionLaunch !== undefined ? this.sessionLaunchSourceSample : undefined,
+        launchTopBarOffsetY: this.sessionLaunch?.sample.topBarOffsetY ?? 0,
+        launchDockOffsetY: this.sessionLaunch?.sample.dockOffsetY ?? 0,
+        onLaunchSource: (source: ReaderControlLaunchSource): void => {
+          if (source.generation === this.sessionLaunch?.generation) this.sessionLaunchControlSource = source;
+        },
         launchGeneration: this.sessionLaunch?.generation ?? 0,
         launchSourceMinimum: this.sessionLaunchSourceMinimum,
         launchSourceKind: this.sessionLaunch?.geometry.kind ?? 'quickAutoPage',
-        launchBusinessStatus: this.sessionLaunchBusinessStatus(),
-        launchDesiredPlaying: this.sessionLaunch?.desiredPlaying ?? true,
-        launchStageOpacity: this.sessionLaunchStageOpacity,
         launchOwnsControls: this.sessionLaunch?.ownership === 'stage',
         launchRecovering: this.sessionLaunch?.ownership === 'handoffPending',
         onLaunchSourceReady: (generation: number): void => this.onSessionLaunchSourceReady(generation),
-        launchInteractionEnabled: !this.pageTurnInputOwned && this.sessionLaunch?.ownership === 'stage',
-        launchSourceTtsState: this.sessionLaunchSourceTtsState,
-        launchSourceAutoStatus: this.sessionLaunchSourceAutoStatus,
-        launchCountdown: this.automaticReadingState().remainingSeconds,
-        onLaunchToggle: (): void => this.toggleSessionCapsule(),
         onSessionLaunchShellMeasured: (topExit: number, dockExit: number): void => {
           this.sessionLaunchTopExit = topExit; this.sessionLaunchDockExit = dockExit;
         },
@@ -2134,8 +2160,10 @@ export struct ReadingExperience {
         progressPercent: this.controlProgress(),
         totalChapters: this.entryCatalogNavigation?.readableChapterCount ?? this.readingTocEntries().length,
         readableChapterPosition: this.readableChapterPosition(this.currentChapterIndex()),
-        pageBookmarkStatus: this.controlPageBookmarkStatus(this.bookmarkPresentationRevision + this.pageTurnRenderRevision),
-        pageBookmarkEnabled: this.controlPageBookmarkEnabled(this.bookmarkPresentationRevision + this.pageTurnRenderRevision),
+        pageBookmarkStatus: this.controlVisible() ?
+          this.controlPageBookmarkStatus(this.bookmarkPresentationRevision + this.pageTurnRenderRevision) : 'unknown',
+        pageBookmarkEnabled: this.controlVisible() &&
+          this.controlPageBookmarkEnabled(this.bookmarkPresentationRevision + this.pageTurnRenderRevision),
         onTogglePageBookmark: (): void => {
           if (this.isControlInputEnabled() && this.controlMotionPage() === 'home' &&
             this.controlPageBookmarkEnabled(this.bookmarkPresentationRevision + this.pageTurnRenderRevision)) {
@@ -2193,8 +2221,7 @@ export struct ReadingExperience {
         // through dismiss so Repeat/List never receives an empty replacement
         // during the compositor's closing frames.
         directoryPublication: this.controlDirectoryPublication,
-        directoryEntriesRevision: this.controlDirectoryPublication.publish(readerControlHostVisible(this.controlSession) || this.controlDirectoryDataRetained ?
-          this.controlDirectoryEntries() : EMPTY_CONTROL_DIRECTORY_ENTRIES),
+        directoryEntriesRevision: this.controlDirectoryEntriesRevision,
         catalogComplete: !this.entryCatalogPending,
         catalogLoading: this.entryCatalogLoading,
         catalogLoadFailed: this.entryCatalogLoadFailed,
@@ -2229,7 +2256,8 @@ export struct ReadingExperience {
         settingsSnapshot: this.readerSettingsSnapshot,
         widePageLayout: this.readerSettingsSnapshot.widePageLayout ?? 'spread',
         pageTurnSimulationAvailable: !this.bookTurnRuntimeFailed,
-        ttsState: this.ttsState,
+        ttsState: this.controlVisible() ? this.ttsState :
+          this.sessionLaunch !== undefined ? this.sessionLaunchSourceTtsState : this.hiddenControlTtsState,
         ttsTimerMode: this.ttsTimerMode,
         ttsTimerMinutes: this.ttsTimerMinutes,
         ttsTimerSeconds: this.ttsTimerSeconds,
@@ -2371,6 +2399,27 @@ export struct ReadingExperience {
         // underneath the drawer's translucent scrim.
         .visibility(this.sourceSwitchPresentationVisible ? Visibility.Hidden : Visibility.Visible)
         .hitTestBehavior(HitTestMode.Transparent);
+      if (this.sessionLaunch !== undefined) {
+        ReaderSessionLaunchStage({
+          fontScale: this.readingLayout().systemFontScale,
+          sample: this.sessionLaunch.sample, sessionState: this.sessionLaunchBusinessStatus(),
+          desiredPlaying: this.sessionLaunch.desiredPlaying, countdown: this.automaticReadingState().remainingSeconds,
+          interactionEnabled: !this.pageTurnInputOwned && this.sessionLaunch.ownership === 'stage',
+          ownsSourceRegion: this.sessionLaunch.ownership === 'stage' || this.sessionLaunch.ownership === 'handoffPending',
+          material: readerSurfaceMaterialDecision('sessionCapsule', this.launchNavigationPreferences,
+            this.readerAppScheme, this.readerSystemScheme),
+          sourceSurfaceColor: readerAppColor('TOK_READ_CARD_EMPHASIS', this.readerAppScheme),
+          sourceBorderColor: readerAppColor('TOK_LINE_STRONG', this.readerAppScheme),
+          sourceBorderWidth: TOK_BORDER_W,
+          themeScheme: this.readerAppScheme,
+          sourceSharpContent: (): void => { this.sessionLaunchSourceContent(); },
+          onToggle: (): void => this.toggleSessionCapsule(),
+        }).id('reader-session-launch-fade-owner').opacity(this.sessionLaunchStageOpacity).zIndex(8)
+          .visibility(this.sourceSwitchPresentationVisible || this.controlObscured ? Visibility.Hidden : Visibility.Visible)
+          .transition(this.reduceMotion ? TransitionEffect.asymmetric(
+            TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()), TransitionEffect.IDENTITY) :
+            TransitionEffect.IDENTITY);
+      }
       // Keep the raw page interaction owner mounted while the control session
       // opens/closes. Switching this full-screen node in the same commit as a
       // control dismiss can leave an empty compositor frame. It is inert via
@@ -4273,10 +4322,11 @@ export struct ReadingExperience {
   }
 
   private admitTocEntries(entries: LocalReadingTocEntry[]): void {
-    if (entries.length > 0) this.controlDirectoryDataRetained = true;
     this.tocEntries = entries;
+    this.tocDownloadFactsCurrent = ReaderRuntimeOwner.current().captureReadingContentValidity(this.sourceId, this.bookId);
     this.controlDirectoryTocSource = undefined;
     this.controlDirectoryProjection = [];
+    this.publishControlDirectoryData(true);
   }
 
   /**
@@ -4538,11 +4588,21 @@ export struct ReadingExperience {
 
     let operation: Promise<void>;
     try {
-      if (!isInitial && this.tocEntries.length > 0) {
+      const proof = positionContext?.directoryTargetProof;
+      if (proof !== undefined && !this.matchesDirectoryTargetProof(chapterIndex, proof))
+        throw new RemoteReadingGatewayError('identityMismatch', 'READING_DIRECTORY_TARGET_SCOPE_CHANGED') as Error;
+      if (!isInitial && this.tocEntries.length > 0 && !(this.entryCatalogPending && proof !== undefined)) {
         this.requireKnownChapter(chapterIndex);
       }
       const isCurrent = (): boolean => this.isSelectionActive(lifecycleToken, selectionToken);
       if (!contentCurrent()) throw new Error('READING_CONTENT_EPOCH_CHANGED');
+      const existingNavigation = this.entryCatalogNavigation;
+      const downloadFactsCurrent = this.tocDownloadFactsCurrent;
+      const knownDownloadState = downloadFactsCurrent?.() !== true ? undefined :
+        (this.entryCatalogPending ?
+          (proof === undefined || proof.catalogRevision === existingNavigation?.revision ?
+            readerEntryNavigationItem(existingNavigation, chapterIndex)?.downloadState : undefined) :
+          this.readingTocEntries()[this.readableChapterPosition(chapterIndex)]?.downloadState);
       if (isInitial && this.preparedReadingEntry !== undefined && !this.preparedReadingEntry.isCurrent()) {
         await this.restartPreparedReadingEntry(lifecycleToken, selectionToken, layoutReady ?? Promise.resolve([]));
         return;
@@ -4562,7 +4622,9 @@ export struct ReadingExperience {
           this.restartPreparedReadingEntry(lifecycleToken, selectionToken, layoutReady ?? Promise.resolve([])),
       }, {
         loadChapter: (context: RemoteReadingPositionContext | undefined): Promise<ReadingSessionChapter> =>
-          this.activeGateway().loadChapter(this.bookId, chapterIndex, isCurrent, refreshContent, context),
+          this.activeGateway().loadChapter(this.bookId, chapterIndex, isCurrent, refreshContent, context,
+            downloadFactsCurrent === this.tocDownloadFactsCurrent && downloadFactsCurrent?.() === true ?
+              knownDownloadState : undefined),
         chapterReady: (): void => {
           this.markRetainedChapterBodyReady(lifecycleToken, selectionToken);
           if (isInitial) this.traceInitialReadingPhase?.('chapter-ready', lifecycleToken);
@@ -5624,7 +5686,7 @@ export struct ReadingExperience {
     this.desiredChapterOffset = request.offset;
     this.desiredChapterProgress = this.requireChapterLayoutMap().scalarCount() === 0 ? 0 :
       this.desiredChapterOffset / this.requireChapterLayoutMap().scalarCount();
-    this.beginMeasurement(this.lifecycleToken);
+    this.scheduleCanonicalMeasurement(this.lifecycleToken);
   }
 
   private continueCanonicalModeMeasurement(page: PhysicalReadingPage, lifecycleToken: number): boolean {
@@ -5633,12 +5695,22 @@ export struct ReadingExperience {
       this.desiredChapterOffset = page.endScalar;
       this.desiredChapterProgress = page.endScalar / this.requireChapterLayoutMap().scalarCount();
       this.measurementCompleting = false;
-      this.beginMeasurement(lifecycleToken);
+      this.scheduleCanonicalMeasurement(lifecycleToken);
       return true;
     }
     // Intermediate head-prefix pages never publish or persist progress.
     this.canonicalModeAnchor = -1;
     return false;
+  }
+
+  private scheduleCanonicalMeasurement(lifecycleToken: number): void {
+    const selection = this.chapterSelectionToken;
+    const epoch = this.measurementEpoch;
+    const generation = this.currentMeasurementGeneration();
+    this.canonicalMeasurementContinuation.advance(
+      (): boolean => this.isSelectionActive(lifecycleToken, selection) &&
+        epoch === this.measurementEpoch && generation === this.currentMeasurementGeneration(),
+      (): void => this.beginMeasurement(lifecycleToken));
   }
 
   /** A reverse measurement has already produced the one exact predecessor.
@@ -6925,17 +6997,42 @@ export struct ReadingExperience {
   private activeControlNavigationIntent(): ReaderControlNavigationIntent | undefined { return this.controlNavigation.active(); }
 
   private controlMinimumRequestLocation(): ReaderControlLocation {
-    return this.activeControlNavigationIntent()?.target ?? readerControlContentLocation(this.controlSession);
+    const target = this.activeControlNavigationIntent()?.target;
+    if (target !== undefined) return target;
+    const location = readerControlContentLocation(this.controlSession);
+    const previous = this.controlRequestLocation;
+    if (previous !== undefined && previous.level === location.level && previous.module === location.module &&
+      previous.form === location.form && previous.directoryTab === location.directoryTab) return previous;
+    this.controlRequestLocation = location;
+    return location;
+  }
+
+  private controlPanelTheme(scheme: string): ReaderControlThemeStyle {
+    if (scheme !== this.controlThemeScheme) {
+      this.controlThemeScheme = scheme;
+      this.controlThemeSnapshot = readerControlThemeStyle(scheme);
+    }
+    return this.controlThemeSnapshot;
   }
 
   private controlMinimumOwnerKey(): string { return this.controlNavigation.ownerKey(); }
 
   private controlMinimumEnvironmentKey(): string {
     const metrics = ReaderWindowCoordinator.metrics();
-    return JSON.stringify([this.effectiveViewportWidth(), this.effectiveViewportHeight(), this.expandedLayout,
+    const width = this.effectiveViewportWidth();
+    const height = this.effectiveViewportHeight();
+    if (this.controlEnvironmentMetrics === metrics && this.controlEnvironmentWidth === width &&
+      this.controlEnvironmentHeight === height && this.controlEnvironmentExpanded === this.expandedLayout)
+      return this.controlEnvironmentKey;
+    this.controlEnvironmentMetrics = metrics;
+    this.controlEnvironmentWidth = width;
+    this.controlEnvironmentHeight = height;
+    this.controlEnvironmentExpanded = this.expandedLayout;
+    this.controlEnvironmentKey = JSON.stringify([width, height, this.expandedLayout,
       metrics.densityPixels, metrics.systemFontScale, metrics.windowRect,
       metrics.systemInsets, metrics.cutoutInsets, metrics.gestureInsets, metrics.navigationInsets,
       metrics.keyboardInsets, metrics.keyboardArea, metrics.statusBarRect, metrics.statusBarHeight, metrics.statusBarCutoutRect]);
+    return this.controlEnvironmentKey;
   }
 
   private acceptControlPlaybackProfile(receipt: ReaderControlPlaybackProfileReceipt): void {
@@ -7276,6 +7373,17 @@ export struct ReadingExperience {
       (mark: LocalReadingBookmark): string | undefined => this.controlDirectoryBookmarkExcerpt(chapter, map, mark));
     if (projection !== entries) this.bookmarkExcerptProjection = projection;
     return projection;
+  }
+
+  private publishControlDirectoryData(sourceChanged: boolean = false): void {
+    if (sourceChanged) {
+      this.controlDirectorySourceRevision += 1;
+      this.controlDirectoryParentSource = undefined;
+      this.bookmarkExcerptSource = undefined;
+    }
+    if (!this.controlDirectoryDataRetained) return;
+    this.controlDirectoryEntriesRevision = this.controlDirectoryPublication.publish(
+      this.controlDirectoryEntries(), this.controlDirectorySourceRevision);
   }
 
   private controlDirectoryBookmarkExcerpt(chapter: ReadingSessionChapter, map: ReadingSurfaceLayoutMap,
@@ -8357,17 +8465,13 @@ export struct ReadingExperience {
   }
 
   private onControlDirectoryDataChanged(): void {
+    this.publishControlDirectoryData(true);
     this.reconcilePageBookmarkFeedback();
     this.bookmarkPresentationRevision += 1;
     if (this.usesBookTurnSimulation() && this.pageTurnInputPhase() === 'idle') {
       this.bookTurnTexture.invalidate(true);
       this.scheduleBookTurnTextureRefresh();
     }
-    // Parent detail admission may arrive before the reader's own TOC promise.
-    // Prime the retained presentation as soon as a non-empty validated
-    // projection exists, so a later control close cannot replace it with the
-    // shared empty sentinel during an in-flight morph.
-    if (this.directoryEntries.length > 0) this.controlDirectoryDataRetained = true;
     const location = readerControlContentLocation(this.controlSession);
     if (!this.controlVisible() || location.level !== 'secondary' || location.module !== 'directory') return;
     if (this.bookmarkLoadMessage.length > 0) {
@@ -9210,6 +9314,54 @@ export struct ReadingExperience {
       `${ReaderWindowCoordinator.metrics().revision}`;
   }
 
+  @Builder
+  private sessionLaunchSourceContent() {
+    if (this.sessionLaunchControlSource !== undefined &&
+      this.sessionLaunchControlSource.generation === this.sessionLaunch?.generation &&
+      this.sessionLaunchControlSource.current()) {
+      if (this.sessionLaunchControlSource.kind === 'quickAutoPage' ||
+        this.sessionLaunchControlSource.kind === 'fullAutoPagePlayback') {
+        ReaderControlAutoPageContent({
+          fixedIsland: true,
+          sourceMinimum: this.sessionLaunchControlSource.minimum,
+          sourceMinimumIdentity: this.sessionLaunchControlSource.minimum?.identity ?? '',
+          sourceMinimumKey: this.sessionLaunchControlSource.minimum?.key ?? '',
+          sourceMinimumMetricsRevision: this.sessionLaunchControlSource.minimum?.metricsRevision ?? -1,
+          sourceOnly: this.sessionLaunchControlSource.kind === 'quickAutoPage' ? 'quick' : 'full',
+          form: this.sessionLaunchControlSource.kind === 'quickAutoPage' ? 'quick' : 'full',
+          motionProgress: this.sessionLaunchControlSource.motionProgress,
+          availableWidth: this.sessionLaunchControlSource.width, availableHeight: this.sessionLaunchControlSource.height,
+          fullViewportHeight: this.sessionLaunchControlSource.fullHeight,
+          interactionEnabled: false, status: this.sessionLaunchSourceAutoStatus,
+          speedSeconds: this.automaticReadingState().speedSeconds,
+          timerSummaryText: formatReaderAutoPageFullTimerSummary(this.automaticReadingConfiguration()),
+          timerMinutes: this.automaticReadingConfiguration().timerMinutes,
+          timerSeconds: this.automaticReadingConfiguration().timerSeconds,
+          followHighlight: this.automaticReadingConfiguration().followHighlight,
+          canPreviousChapter: this.sessionLaunchControlSource.canPrevious, canNextChapter: this.sessionLaunchControlSource.canNext,
+        });
+      } else {
+        ReaderControlTtsContent({
+          fixedIsland: true,
+          sourceMinimum: this.sessionLaunchControlSource.minimum,
+          sourceMinimumIdentity: this.sessionLaunchControlSource.minimum?.identity ?? '',
+          sourceMinimumKey: this.sessionLaunchControlSource.minimum?.key ?? '',
+          sourceMinimumMetricsRevision: this.sessionLaunchControlSource.minimum?.metricsRevision ?? -1,
+          sourceOnly: this.sessionLaunchControlSource.kind === 'quickTts' ? 'quick' : 'full',
+          frozenWaveformSample: this.sessionLaunchControlSource.waveform, reduceMotion: this.reduceMotion,
+          form: this.sessionLaunchControlSource.kind === 'quickTts' ? 'quick' : 'full',
+          motionProgress: this.sessionLaunchControlSource.motionProgress,
+          availableWidth: this.sessionLaunchControlSource.width, availableHeight: this.sessionLaunchControlSource.height,
+          fullViewportHeight: this.sessionLaunchControlSource.fullHeight,
+          interactionEnabled: false, state: this.sessionLaunchSourceTtsState,
+          timerMode: this.ttsTimerMode, timerMinutes: this.ttsTimerMinutes, timerSeconds: this.ttsTimerSeconds,
+          engine: this.ttsEngine, language: this.ttsLanguage, person: this.ttsPerson,
+          voiceOptions: this.ttsVoiceOptions, followHighlight: this.ttsFollowHighlight,
+        });
+      }
+    }
+  }
+
   private sessionLaunchMeasurementKey(): string {
     const layout = this.controlLayout(this.readerWindowMetricsRevision);
     return `${this.sessionLaunchLayoutKey()}|${this.controlOpenRevision}|${this.controlModuleVisitRevision}|` +
@@ -9283,7 +9435,9 @@ export struct ReadingExperience {
     this.sessionLaunchSourceLayoutKey = this.sessionLaunchLayoutKey();
     this.sessionLaunchStageOpacity = 1;
     this.sessionLaunchEffects.invalidateExit();
-    this.sessionLaunch = this.sessionLaunchController.begin(identity, geometry, readerMotionNowMs(), this.reduceMotion);
+    const launch = this.sessionLaunchController.begin(identity, geometry, readerMotionNowMs(), this.reduceMotion);
+    this.sessionLaunchSourceSample = launch?.sample;
+    this.sessionLaunch = launch;
     if (this.sessionLaunch === undefined) return false;
     if (readerTransitionsEnabled()) readerBeginTransition({ kind: 'launch', action: type,
       subject: 'reader-session-launch', scope: 'reader-session-launch',
@@ -9535,6 +9689,8 @@ export struct ReadingExperience {
     this.sessionLaunchEffects.invalidateExit();
     this.sessionLaunchController.dispose();
     this.sessionLaunch = undefined;
+    this.sessionLaunchSourceSample = undefined;
+    this.sessionLaunchControlSource = undefined;
     this.sessionLaunchSourceMinimum = undefined;
     this.sessionLaunchEffects.retireFrame();
     this.sessionLaunchStageOpacity = 1;
@@ -9795,6 +9951,7 @@ export struct ReadingExperience {
     // on an animation frame; if it is still loading the flag is harmless and
     // the later admission supplies the stable projection.
     this.controlDirectoryDataRetained = true;
+    this.publishControlDirectoryData();
     this.invalidateControlBackdrop();
     this.controlOpenRevision += 1;
     const duration = this.controlTiming().showDurationMs;
@@ -10353,6 +10510,13 @@ export struct ReadingExperience {
 
   private selectControlNavigationTarget(chapterIndex: number, chapterOffset: number,
     positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof): void {
+    if (directoryTargetProof !== undefined && !this.matchesDirectoryTargetProof(chapterIndex, directoryTargetProof)) return;
+    const origin = chapterOffset === 0 && positionScope === undefined ?
+      this.captureVisibleControlSelectionOrigin() : undefined;
+    if (this.chapterSelection.ticket === undefined && origin?.committedProgress.chapterIndex === chapterIndex) {
+      this.hideControl();
+      return;
+    }
     const fromChapterIndex = chapterOffset === 0 && this.controlVerification.observing() ?
       this.captureControlSelectionOrigin()?.committedProgress.chapterIndex ?? -1 : -1;
     this.observeDirectoryChapterSelection(chapterIndex, fromChapterIndex,
@@ -10433,6 +10597,8 @@ export struct ReadingExperience {
   }
 
   private prepareChapterSelectionRequest(request: ReaderDeferredChapterSelection): boolean {
+    const proof = request.positionContext?.directoryTargetProof;
+    if (proof !== undefined && !this.matchesDirectoryTargetProof(request.chapterIndex, proof)) return false;
     const ttsOwner = request.ttsOwner;
     if (ttsOwner !== undefined && !this.isTtsFollowLeaseCurrent(ttsOwner)) return false;
     if (ttsOwner === undefined) this.invalidateTtsPageFollow?.();
@@ -10586,6 +10752,7 @@ export struct ReadingExperience {
       chapter.chapterIndex === chapterIndex && this.phase === 'ready' &&
       this.isStableVisiblePageOwner(page, chapter, selectionToken, lifecycleToken);
     if (!isCurrent()) return false;
+    this.publishControlDirectoryData();
     try { this.onChapterCommitted(chapterIndex, chapterTitle); }
     catch (error) { hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience chapter observer failed: ${this.errorMessage(error as Error)}`); }
     if (!isCurrent()) return false;
@@ -12993,11 +13160,21 @@ export struct ReadingExperience {
   }
 
   private setCurrentReadingChapter(chapter: ReadingSessionChapter): void {
-    this.chapterWindow.setCurrent(chapter);
+    if (this.entryCatalogPending && this.resumeOnlyChapterIndex !== chapter.chapterIndex &&
+      !this.chapterWindow.contains(chapter.chapterIndex)) {
+      // A resolved Core target may be beyond the reader's narrow TOC window.
+      // Its body is current, but only full catalog admission can supply order.
+      this.chapterWindow.clear();
+      this.scheduleEntryCatalogHydration();
+    } else this.chapterWindow.setCurrent(chapter);
     if (this.resumeOnlyChapterIndex !== undefined && chapter.chapterIndex !== this.resumeOnlyChapterIndex) {
       this.resumeOnlyChapterIndex = undefined;
       this.activeGateway().clearEntryResume();
     }
+  }
+
+  private matchesDirectoryTargetProof(chapterIndex: number, proof: ReaderDirectoryTargetProof): boolean {
+    return proof.sourceId === this.sourceId && proof.bookId === this.bookId && proof.chapterIndex === chapterIndex;
   }
 
   private readingTocEntries(): LocalReadingTocEntry[] {

@@ -15,6 +15,7 @@ export struct ReaderNativeParagraphView {
   private readonly selectionShareAnchor: string = readerSelectionShareAnchor();
   @Prop @Watch('prepare') recipe: ReaderNativeParagraphRecipe;
   resourceProvider: (() => ReaderNativeParagraphResource | undefined) | undefined = undefined;
+  @Prop reuseSharedParagraphResources: boolean = true;
   @Prop @Watch('prepare') gapVp: number = 0;
   @Prop @Watch('updateInk') inkColor: ResourceColor = '#222222';
   @Prop @Watch('updateSelection') selectionEnabled: boolean = false;
@@ -69,7 +70,8 @@ export struct ReaderNativeParagraphView {
     if (key === this.preparedKey) return;
     this.onSelectionActivity?.(this.selectionShareAnchor, false);
     this.epoch += 1;
-    const resource = this.resourceProvider?.() ?? readerNativeParagraphResource(this.recipe.key);
+    const resource = this.reuseSharedParagraphResources ?
+      (this.resourceProvider?.() ?? readerNativeParagraphResource(this.recipe.key)) : undefined;
     this.controller.prepare(context, this.recipe, this.gapVp, resource);
     this.map = resource?.layoutMap ?? new ReadingSurfaceLayoutMap(this.recipe.text);
     this.heightVp = this.controller.heightVp();

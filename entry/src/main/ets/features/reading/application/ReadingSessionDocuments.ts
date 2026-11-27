@@ -1,6 +1,7 @@
 import { ReadingChapterWindow, readingChapterRetainedBytes, type ReadingSessionChapter, type ReadingSessionImage } from './ReadingChapterWindow';
 import { registerReadingEntryMemoryRelease } from './ReadingEntryHandoff';
 import { readingChapterLayoutMap, readingChapterTextIdentity } from './ReadingSurfaceLayoutMap';
+import { readingChapterMatchesDirectoryProof } from './ReadingChapterOpening';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import type { RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 
@@ -50,7 +51,9 @@ export class ReadingSessionDocuments {
     const chapter = this.window.get(chapterIndex);
     if (chapter === undefined) return undefined;
     if (context !== undefined) {
-      if (chapter.bodyVersion !== context.bodyVersion || chapter.processingVersion !== context.processingVersion) return undefined;
+      if (context.directoryTargetProof === undefined ?
+        chapter.bodyVersion !== context.bodyVersion || chapter.processingVersion !== context.processingVersion :
+        !readingChapterMatchesDirectoryProof(chapter, context)) return undefined;
       const count = readingChapterLayoutMap(chapter).scalarCount();
       if (context.anchors.some((anchor): boolean => !Number.isSafeInteger(anchor.offset) || anchor.offset < 0 || anchor.offset > count))
         throw new Error('READING_POSITION_SCOPE_MISMATCH');
@@ -65,7 +68,7 @@ export class ReadingSessionDocuments {
       chapter.documentRange.endScalar !== chapter.documentRange.totalScalars)) return;
     if (!this.matches(chapter.sourceId, chapter.bookId) || !this.window.contains(chapter.chapterIndex)) return;
     if (chapter.bodyVersion === undefined || chapter.processingVersion === undefined || chapter.content.trim().length === 0) return;
-    const body: ReadingSessionChapter = { ...chapter,
+    const body: ReadingSessionChapter = { ...chapter, directoryTargetProof: undefined,
       textLayoutIdentity: readingChapterTextIdentity(chapter),
       // Decoded handles and file leases stay exclusively in the view owner.
       images: chapter.images.map((item: ReadingSessionImage): ReadingSessionImage => ({ ...item, state: 'pending', pixelMap: undefined, fileUri: '' })) };

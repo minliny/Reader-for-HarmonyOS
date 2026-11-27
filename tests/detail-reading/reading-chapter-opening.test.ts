@@ -207,3 +207,18 @@ test('opening anchor preserves request precedence, stale restore progress and th
   assert.deepEqual(resolveReadingChapterOpeningAnchor(body, map, undefined, undefined, NaN), { offset: 0, progress: 0 });
   assert.deepEqual(resolveReadingChapterOpeningAnchor(body, map, undefined), { offset: 0, progress: 0 });
 });
+
+test('a Core-proved target reuses a complete resident body only at the matching catalog revision', async () => {
+  const body = chapter({ catalogRevision: 'current-catalog' });
+  const window = readyWindow(body);
+  const proof = { sourceId: body.sourceId, bookId: body.bookId, chapterIndex: body.chapterIndex,
+    catalogRevision: 'current-catalog', structureRevision: 'tree', nodeId: 'chapter-5', url: 'chapter-5' };
+  assert.equal((await readReadingWindowChapter(window, 5, () => assert.fail('matching proof repeated a chapter read'),
+    false, { anchors: [], directoryTargetProof: proof })).contentVersion, body.contentVersion);
+  assert.equal(findReusableReadingWindowChapter(window, 5, false,
+    { anchors: [], directoryTargetProof: { ...proof, catalogRevision: 'superseded' } }), undefined);
+  assert.equal(findReusableReadingWindowChapter(window, 5, false,
+    { anchors: [], directoryTargetProof: { ...proof, bookId: 'different' } }), undefined);
+  assert.equal(findReusableReadingWindowChapter(window, 5, false,
+    { bodyVersion: 'other', processingVersion: 'rules', anchors: [], directoryTargetProof: proof }), undefined);
+});

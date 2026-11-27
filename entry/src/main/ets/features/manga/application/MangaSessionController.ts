@@ -51,6 +51,7 @@ export class MangaSessionController {
   private readonly retainedTiles: MangaRetainedTileCache;
   private readonly tileLoads: Map<string, Promise<void>> = new Map<string, Promise<void>>();
   private wantedTiles: Set<string> = new Set<string>();
+  private nativeViewportTiles: Set<string> = new Set<string>();
   private sliced: boolean = false;
   private wanted: Set<number> = new Set<number>();
   private requiresRecovery: boolean = false;
@@ -86,7 +87,8 @@ export class MangaSessionController {
       // Protect exact viewport keys and at most three region-zero neighbors.
       // A very tall current page must not protect every completed slice.
       isProtected: (tile: MangaTile, key: string): boolean =>
-        this.wantedTiles.has(key) || (tile.tileIndex === 0 && Math.abs(tile.ordinal - this.displayOrdinal) <= 1),
+        this.nativeViewportTiles.has(key) || this.wantedTiles.has(key) ||
+        (tile.tileIndex === 0 && Math.abs(tile.ordinal - this.displayOrdinal) <= 1),
     });
     // Pure gateway adapters may omit the shared request surface. Production
     // Runtime always owns it, along with the Core retention/session contract.
@@ -113,6 +115,17 @@ export class MangaSessionController {
       { ordinal, tileIndex, image: page.image } : undefined;
   }
   get totalPages(): number { return this.totalPageCount; }
+
+  /** Transfer a retained lease back to the live tile map before async window
+   * preparation can run behind the native LazyForEach viewport. */
+  setNativeViewportTiles(requests: MangaTileRequest[]): void {
+    this.nativeViewportTiles = new Set(requests.map(item => `${item.ordinal}:${item.tileIndex}`));
+    for (const key of this.nativeViewportTiles) {
+      if (this.tiles.has(key)) continue;
+      const retained = this.retainedTiles.take(key);
+      if (retained !== undefined) this.tiles.set(key, retained);
+    }
+  }
   get displayedOrdinal(): number { return this.displayOrdinal; }
   pageAt(ordinal: number): MangaManifestPage | undefined { return this.facts.get(ordinal); }
   get chapter(): MangaChapterResult | undefined { return this.chapterData; }
@@ -186,7 +199,7 @@ export class MangaSessionController {
     }
     const tile: MangaTile = { ordinal: page.ordinal, tileIndex: 0, image };
     this.tileLoads.delete(key);
-    if (this.wantedTiles.has(key)) { this.tiles.set(key, tile); return true; }
+    if (this.nativeViewportTiles.has(key) || this.wantedTiles.has(key)) { this.tiles.set(key, tile); return true; }
     this.tiles.delete(key); this.retainCompletedTile(key, tile);
     return false;
   }
@@ -213,7 +226,7 @@ export class MangaSessionController {
         page.image = undefined; page.status = 'failed'; page.error = 'MANGA_SESSION_CONTENT_CHANGED';
       }
       for (const tile of this.tiles.values()) if (tile.image !== undefined) this.resources.release(tile.image);
-      this.tiles.clear(); this.tileLoads.clear(); this.wantedTiles.clear(); this.pageLoads.clear();
+      this.tiles.clear(); this.tileLoads.clear(); this.wantedTiles.clear(); this.nativeViewportTiles.clear(); this.pageLoads.clear();
       this.retainedTiles.clear();
       if (publish) this.onChange?.();
     }
@@ -341,7 +354,8 @@ export class MangaSessionController {
     for (const page of this.pages.values()) if (page.image !== undefined) this.resources.release(page.image);
     for (const tile of this.tiles.values()) if (tile.image !== undefined) this.resources.release(tile.image);
     this.retainedTiles.clear();
-    this.pages.clear(); this.pageLoads.clear(); this.tiles.clear(); this.tileLoads.clear(); this.wantedTiles.clear(); this.geometry.clear(); this.wanted.clear(); this.sliced = false;
+    this.pages.clear(); this.pageLoads.clear(); this.tiles.clear(); this.tileLoads.clear(); this.wantedTiles.clear();
+    this.nativeViewportTiles.clear(); this.geometry.clear(); this.wanted.clear(); this.sliced = false;
     if (this.chapterData !== undefined) { this.beginDisplaySession(this.chapterData); this.observePreparation(); await this.setVisible(ordinal); }
   }
 
@@ -659,7 +673,7 @@ export class MangaSessionController {
       // callback (for example if the new image fails). Cancel its pending work
       // now, while completed leases remain owned by this chapter.
       for (const [key, tile] of this.tiles) {
-        if (wanted.has(tile.ordinal) || retainedKeys.has(key)) continue;
+        if (wanted.has(tile.ordinal) || retainedKeys.has(key) || this.nativeViewportTiles.has(key)) continue;
         if (!this.retainCompletedTile(key, tile)) continue;
         this.tiles.delete(key);
         this.tileLoads.delete(key);
@@ -862,7 +876,7 @@ export class MangaSessionController {
     for (const page of this.pages.values()) if (page.image !== undefined) this.resources.release(page.image);
     for (const tile of this.tiles.values()) if (tile.image !== undefined) this.resources.release(tile.image);
     this.retainedTiles.clear(); this.imagesInvalidated = false;
-    this.tiles.clear(); this.tileLoads.clear(); this.wantedTiles.clear(); this.sliced = false; this.geometry.clear();
+    this.tiles.clear(); this.tileLoads.clear(); this.wantedTiles.clear(); this.nativeViewportTiles.clear(); this.sliced = false; this.geometry.clear();
     this.pages.clear(); this.pageLoads.clear(); this.wanted.clear(); this.chapterData = undefined; this.progressData = undefined; this.progressCursor = undefined;
     this.entryAtChapterFirst = false;
     this.candidatePendingPresentation = false; this.candidateCurrent = (): boolean => true;
@@ -891,7 +905,7 @@ export class MangaSessionController {
       if (retained !== undefined) { this.tiles.set(key, retained); presentationChanged = true; }
     }
     for (const [key, tile] of this.tiles) {
-      if (!wanted.has(key)) {
+      if (!wanted.has(key) && !this.nativeViewportTiles.has(key)) {
         if (!this.retainCompletedTile(key, tile)) continue;
         this.tiles.delete(key);
         this.tileLoads.delete(key);

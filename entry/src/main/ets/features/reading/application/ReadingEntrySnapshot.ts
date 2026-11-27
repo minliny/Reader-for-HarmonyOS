@@ -3,7 +3,7 @@ import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { completeReadingParagraphWindow, type ReadingParagraphBoundaryMode } from './ReadingParagraphProjection';
 import { readingChapterLayoutMap, sliceReadingChapterText, type ReadingDocumentRange } from './ReadingSurfaceLayoutMap';
 import type { ReadingSessionChapter } from './ReadingChapterWindow';
-import type { LocalReadingProgressState, LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import type { LocalReadingDownloadState, LocalReadingProgressState, LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import { materializeReadingDocument, materializePreparedReadingDocument, type MaterializedReadingDocument } from './ReadingDocumentProjection';
 import { appendReadingSelectionContext, captureRemotePositionContext, encodeRemotePositionContext, decodeRemotePositionMigration, decodeRemotePositionScope, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 
@@ -24,7 +24,8 @@ export type ReadingEntrySnapshot = {
 /** Decode one Core-owned offline entry, without constructing an acquisition session. */
 export async function readReadingEntrySnapshot(runtime: ReadingGatewayRuntime, sourceId: string, bookId: string,
   chapterIndex: number | undefined, isCurrent: () => boolean,
-  positionContext?: RemoteReadingPositionContext, windowScalarLimit?: number): Promise<ReadingEntrySnapshot | undefined> {
+  positionContext?: RemoteReadingPositionContext, windowScalarLimit?: number,
+  knownDownloadState?: LocalReadingDownloadState): Promise<ReadingEntrySnapshot | undefined> {
   if (!isCurrent() || runtime.supportsCoreCapability?.('reading.entry.snapshot.v1') !== true) return undefined;
   const contentCurrent = runtime.captureReadingContentValidity?.(sourceId, bookId);
   const current = (): boolean => isCurrent() && contentCurrent?.() !== false;
@@ -32,6 +33,7 @@ export async function readReadingEntrySnapshot(runtime: ReadingGatewayRuntime, s
   const windowRequested = windowScalarLimit !== undefined && runtime.supportsCoreCapability?.('reading.entry.snapshot.window.v1') === true;
   if (windowScalarLimit !== undefined && (!Number.isSafeInteger(windowScalarLimit) || windowScalarLimit < 1 || windowScalarLimit > 61440))
     throw new Error('invalid entry window limit');
+  if (sourceId !== 'local' && chapterIndex !== undefined && knownDownloadState === 'missing') return undefined;
   if (windowRequested) params['windowScalarLimit'] = windowScalarLimit as number;
   if (chapterIndex !== undefined) params['chapterIndex'] = chapterIndex;
   const context = captureRemotePositionContext(positionContext);
@@ -185,7 +187,8 @@ function decodeEntrySnapshot(data: JsonObject, sourceId: string, bookId: string,
   if (resumeOnly && (chapterIndex !== undefined || context?.directoryTargetProof !== undefined ||
     progress.kind !== 'restored' || progress.progress.chapterIndex !== index ||
     navigation?.current.navigable === true)) throw new Error('invalid entry resume proof');
-  return { chapter, progress, navigation, resumeOnly, requestedScalar: windowAnchor, isCurrent: current };
+  const admittedChapter = navigation === undefined ? chapter : { ...chapter, catalogRevision: navigation.revision };
+  return { chapter: admittedChapter, progress, navigation, resumeOnly, requestedScalar: windowAnchor, isCurrent: current };
 }
 function navigationItem(value: unknown): ReadingEntryNavigationItem {
   const raw = object(value);

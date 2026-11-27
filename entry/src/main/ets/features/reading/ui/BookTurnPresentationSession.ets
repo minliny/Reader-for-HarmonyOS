@@ -89,7 +89,11 @@ export class BookTurnPresentationSession implements BookTurnTextureCache<image.P
     this.eventListener(new BookTurnNativeEvent(event, generation, detail));
   }
 
-  capturedIdentity(slot: BookTurnTextureSlot): string { return this.capturedIdentities[slot]; }
+  capturedIdentity(slot: BookTurnTextureSlot): string {
+    // A queued upload has an identity before EGL has installed its pixels.
+    // Native owns the slot readiness used by both capture reuse and gestures.
+    return (this.readyMask() & (1 << slot)) !== 0 ? this.capturedIdentities[slot] : '';
+  }
 
   /** Revokes in-flight upload publication and the retained CPU bitmap together. */
   clearCapturedTextures(): void {

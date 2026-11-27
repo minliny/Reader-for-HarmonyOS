@@ -315,6 +315,7 @@ export struct ReadingSurface {
   @Prop transitionChapterIndex: number = -1;
   // Only the idle offscreen snapshot lane opts in; ordinary reading remains asynchronous.
   @Prop snapshotSynchronousImages: boolean = false;
+  @Prop reuseSharedParagraphResources: boolean = true;
   /** Core-materialized title for the current pagination-manifest page. */
   @Prop chapterTitle: string;
   /** The semantic chapter heading belongs only to the first physical page. */
@@ -416,7 +417,8 @@ export struct ReadingSurface {
             // the live provider may already point to a page without a title.
             ForEach(this.renderFragments().slice(0, 1).filter((fragment: ReadingSurfacePageFragment): boolean =>
               fragment.nativeTitle !== undefined), (fragment: ReadingSurfacePageFragment) => {
-              ReaderNativeParagraphView({ recipe: fragment.nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
+              ReaderNativeParagraphView({ recipe: fragment.nativeTitle!, inkColor: this.themeStyle().ink,
+                reuseSharedParagraphResources: this.reuseSharedParagraphResources, selectionEnabled: false });
             }, (fragment: ReadingSurfacePageFragment): string => fragment.nativeTitle!.key);
           } else {
           Text(this.chapterTitle)
@@ -465,6 +467,7 @@ export struct ReadingSurface {
               } else if (this.currentFragment(fragment).nativeParagraph !== undefined) {
                 ReaderNativeParagraphView({
                   recipe: this.currentFragment(fragment).nativeParagraph!,
+                  reuseSharedParagraphResources: this.reuseSharedParagraphResources,
                   inkColor: this.themeStyle().ink,
                   gapVp: this.bottomJustifyGap,
                   selectionEnabled: this.longPressSelectText,

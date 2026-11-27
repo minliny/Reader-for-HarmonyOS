@@ -141,19 +141,21 @@ export class MangaDisplayRetention {
     return this.live(path) || this.writes.has(path) || this.reads.has(path) || this.removals.has(path);
   }
 
-  async store(key: string, owner: MangaStorageChapter, payload: ReadingBodyImagePayload, current: () => boolean): Promise<void> {
-    const recordPath = `${this.directory}/manga-display-${key}.json`;
-    const previous = this.recordWrites.get(recordPath) ?? Promise.resolve();
-    const work = previous.catch((): void => {}).then((): Promise<void> => this.storeRecord(key, owner, payload, current));
-    this.recordWrites.set(recordPath, work);
-    try { await work; }
-    finally { if (this.recordWrites.get(recordPath) === work) this.recordWrites.delete(recordPath); }
-  }
-
-  private async storeRecord(key: string, owner: MangaStorageChapter, payload: ReadingBodyImagePayload, current: () => boolean): Promise<void> {
+  async store(key: string, owner: MangaStorageChapter, payload: ReadingBodyImagePayload,
+    current: () => boolean): Promise<MangaDisplayInventoryFile[]> {
     const path = this.payloadPath(payload, key);
     if (path === undefined) throw new Error('MANGA_DISPLAY_IDENTITY');
     const recordPath = `${this.directory}/manga-display-${key}.json`;
+    const previous = this.recordWrites.get(recordPath) ?? Promise.resolve();
+    const work = previous.catch((): void => {}).then((): Promise<void> => this.storeRecord(key, owner, payload, path, recordPath, current));
+    this.recordWrites.set(recordPath, work);
+    try { await work; }
+    finally { if (this.recordWrites.get(recordPath) === work) this.recordWrites.delete(recordPath); }
+    return [{ path, owners: [owner], live: true }, { path: recordPath, owners: [owner], live: false }];
+  }
+
+  private async storeRecord(key: string, owner: MangaStorageChapter, payload: ReadingBodyImagePayload,
+    path: string, recordPath: string, current: () => boolean): Promise<void> {
     const temp = `${this.directory}/.manga-display-${key}.tmp`;
     if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
     if (this.removals.has(path) || this.removals.has(recordPath) || this.removals.has(temp)) throw new Error('MANGA_CACHE_EVICTING');

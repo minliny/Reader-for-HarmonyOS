@@ -869,6 +869,7 @@ export struct MangaReadingSurface {
     // admitting the saved page. Native callbacks must not supersede that
     // selection before the opening transaction completes.
     if (!this.mounted || !this.opened || controller === undefined || this.data.totalCount() === 0) return;
+    this.protectNativeViewportTiles(controller);
     // Error-card ownership follows the actual viewport even when no image
     // geometry or tile lease changes can produce a Controller publication.
     this.notifyPublishedRows(false);
@@ -917,6 +918,14 @@ export struct MangaReadingSurface {
         else this.error = message;
       }
     }
+  }
+  private protectNativeViewportTiles(controller: MangaSessionController): void {
+    const visible: MangaTileRequest[] = [];
+    for (let index = Math.max(0, this.first); index <= Math.min(this.last, this.data.totalCount() - 1); index++) {
+      const row = this.data.getData(index);
+      if (row.known) visible.push({ ordinal: row.ordinal, tileIndex: row.tileIndex });
+    }
+    controller.setNativeViewportTiles(visible);
   }
   // A skipped observation retains the previous anchor. Only a rejected
   // eligible write blocks an exit requested by navigation.
@@ -2634,7 +2643,8 @@ export struct MangaReadingSurface {
   private tileImage(row: MangaStripRow, uri: string, renderKey: string,
     owner: MangaSessionController | undefined, manifest: MangaManifest | undefined) {
     Image(uri).width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width)
-      .objectFit(ImageFit.Fill).syncLoad(true).draggable(false)
+      .objectFit(ImageFit.Fill)
+      .syncLoad(this.pendingChapterTransition !== undefined || this.rollbackPainting).draggable(false)
       .onComplete((event?: MangaNativeImageCompletion): void => {
         if (event?.loadingStatus === 0) this.traceBoundary('image-loaded');
         if (event?.loadingStatus === 1) this.onChapterImageComplete(row, uri, renderKey, owner, manifest);
@@ -2686,6 +2696,7 @@ export struct MangaReadingSurface {
           if (!this.horizontal && this.restoringAnchor && this.appliedLayoutGeneration !== this.layoutGeneration) { this.traceBoundary('range-before-jump'); return; }
           const unchanged = this.first === first && this.last === last;
           this.first = first; this.last = last;
+          if (this.controller !== undefined) this.protectNativeViewportTiles(this.controller);
           this.refreshLoginRequiredForControls();
           if (this.restoringAnchor) {
             if (!unchanged) this.notifyPublishedRows(false);

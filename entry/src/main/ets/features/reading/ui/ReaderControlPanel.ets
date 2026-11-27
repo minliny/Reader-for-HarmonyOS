@@ -31,12 +31,11 @@ import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfa
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerTtsWaveformSnapshot } from './ReaderTtsWaveform';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
-import { ReaderSessionLaunchStage } from './ReaderSessionLaunchStage';
 import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerControlIsDirectSheet } from './ReaderControlHostSession';
 import { readerPaperActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
-import type { ReaderSessionCapsuleState, ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
+import type { ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { PopupSurfaceSpec, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
@@ -213,6 +212,21 @@ class ReaderControlHeaderLineHeight implements AttributeModifier<TextAttribute> 
   }
 }
 
+/** Source pose admitted by the control's measured playback owner. */
+export interface ReaderControlLaunchSource {
+  generation: number;
+  kind: ReaderSessionMorphSourceKind;
+  minimum: ReaderControlPlaybackProfileReceipt | undefined;
+  motionProgress: number;
+  width: number;
+  height: number;
+  fullHeight: number;
+  waveform: ReaderTtsWaveformSample;
+  canPrevious: boolean;
+  canNext: boolean;
+  current: () => boolean;
+}
+
 @Component
 export struct ReaderControlPanel {
   @StorageLink('readerControlAlignment') @Watch('refreshDockPlacement')
@@ -286,30 +300,21 @@ export struct ReaderControlPanel {
   @Prop @Watch('onLaunchSampleChanged') launchGeneration: number = 0;
   @Prop @Watch('onLaunchSampleChanged') launchSourceMinimum: ReaderControlPlaybackLaunchProfile | undefined = undefined;
   @Prop launchSourceKind: ReaderSessionMorphSourceKind = 'quickAutoPage';
-  @Prop launchBusinessStatus: ReaderSessionCapsuleState = 'preparing';
-  @Prop launchDesiredPlaying: boolean = true;
-  @Prop launchCountdown: number = 8;
-  @Prop launchStageOpacity: number = 1;
   @Prop launchOwnsControls: boolean = false;
+  @Prop launchTopBarOffsetY: number = 0;
+  @Prop launchDockOffsetY: number = 0;
+  onLaunchSource: (source: ReaderControlLaunchSource) => void = (_source: ReaderControlLaunchSource): void => {};
   @Prop @Watch('onRuntimeEnabledChanged') launchRecovering: boolean = false;
   onLaunchSourceReady: (generation: number) => void = (_generation: number): void => {};
   private launchSourceVisibleGeneration: number = 0;
   private launchSourceVisibleKind: ReaderSessionMorphSourceKind | undefined = undefined;
   private launchSourceReadyGeneration: number = 0;
-  @Prop launchInteractionEnabled: boolean = true;
-  @Prop launchSourceTtsState: ReaderTtsState = createReaderTtsState(false);
-  @Prop launchSourceAutoStatus: ReaderAutoPageStatus = 'stopped';
-  onLaunchToggle: () => void = (): void => {};
   onSessionLaunchShellMeasured: (topExit: number, dockExit: number) => void =
     (_topExit: number, _dockExit: number): void => {};
   private capturedLaunchGeneration: number = 0;
-  private launchWaveformSample: ReaderTtsWaveformSample | undefined = undefined;
-  private launchContentWidth: number = 286;
-  private launchContentHeight: number = 190;
   private launchMotionProgress: number = 0;
   private launchNaturalMinimum: ReaderControlPlaybackProfileReceipt | undefined = undefined;
   private launchMotionBounds: ReaderControlMotionBounds | undefined = undefined;
-  private launchFullContentHeight: number = 666;
   private capturedLaunchSourceKind: ReaderSessionMorphSourceKind = 'quickAutoPage';
   private launchFrameCache: ReaderControlMotionFrameCache = new ReaderControlMotionFrameCache();
 
@@ -334,7 +339,6 @@ export struct ReaderControlPanel {
       !readerControlPlaybackProfileMatches(receipt, this.launchSample.type,
       receipt.identity, receipt.key, receipt.metricsRevision))) return;
     this.capturedLaunchGeneration = this.launchGeneration;
-    this.launchWaveformSample = readerTtsWaveformSnapshot();
     if (this.launchSourceVisibleGeneration !== this.launchGeneration) {
       this.launchSourceVisibleGeneration = 0;
       this.launchSourceVisibleKind = undefined;
@@ -348,11 +352,16 @@ export struct ReaderControlPanel {
       this.controlPanelHeight(), this.currentLayout().dockBottomGap, this.controlQuickHeight(), this.currentLayout().contentBudget);
     const endpoint = sampleReaderControlMotionComposition({ visibilityProgress: 1,
       expansionProgress: this.launchMotionProgress }, this.launchMotionBounds);
-    this.launchContentWidth = this.fixedIsland ? this.launchSample.sourceWidth :
+    const width = this.fixedIsland ? this.launchSample.sourceWidth :
       this.launchNaturalMinimum === undefined ? this.contentMotionWidth : endpoint.content.width;
-    this.launchContentHeight = this.fixedIsland ? this.launchSample.sourceHeight :
+    const height = this.fixedIsland ? this.launchSample.sourceHeight :
       this.launchNaturalMinimum === undefined ? this.contentMotionHeight : endpoint.content.height;
-    this.launchFullContentHeight = this.launchNaturalMinimum?.fullContentHeightVp ?? this.contentEndpointHeight(true);
+    const generation = this.launchGeneration;
+    this.onLaunchSource({ generation, kind: this.capturedLaunchSourceKind, minimum: this.launchNaturalMinimum,
+      motionProgress: this.launchMotionProgress, width, height,
+      fullHeight: this.launchNaturalMinimum?.fullContentHeightVp ?? this.contentEndpointHeight(true),
+      waveform: readerTtsWaveformSnapshot(), canPrevious: this.canStepChapter(-1), canNext: this.canStepChapter(1),
+      current: (): boolean => this.launchGeneration === generation && this.launchSourceCurrent() });
     this.confirmLaunchSourceReady();
   }
 
@@ -1572,8 +1581,8 @@ export struct ReaderControlPanel {
       // Recovery shares the existing control Runtime clock. Rebase the actual
       // outgoing offsets rather than flashing at its unrelated hidden endpoint.
       const remainder = this.launchRecovering ? 1 - this.visualVisibilityProgress : 1;
-      frame.topBar.translateY = this.reduceMotion ? 0 : launch.topBarOffsetY * remainder;
-      frame.dock.translateY = this.reduceMotion ? 0 : launch.dockOffsetY * remainder;
+      frame.topBar.translateY = this.reduceMotion ? 0 : this.launchTopBarOffsetY * remainder;
+      frame.dock.translateY = this.reduceMotion ? 0 : this.launchDockOffsetY * remainder;
       return frame;
     }
     if (this.directSheetRedesign && this.visualDirectSheet) {
@@ -2125,32 +2134,6 @@ export struct ReaderControlPanel {
         .enabled(this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0))
           .hitTestBehavior(this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0) ?
           HitTestMode.Transparent : HitTestMode.None);
-      if (this.launchSample !== undefined) {
-        ReaderSessionLaunchStage({
-          fontScale: this.sessionFontScale,
-          sample: this.launchSample, sessionState: this.launchBusinessStatus,
-          desiredPlaying: this.launchDesiredPlaying, countdown: this.launchCountdown,
-          interactionEnabled: this.launchInteractionEnabled,
-          ownsSourceRegion: this.launchSourceDetached(this.launchSample.type),
-          material: this.surfaceMaterial('sessionCapsule'),
-          sourceSurfaceColor: readerAppColor(this.fixedIsland ? 'TOK_READ_CARD_EMPHASIS' : this.launchSourceKind === 'fullAutoPagePlayback' ?
-            'TOK_SURFACE_PANEL_SOFT' : this.launchSourceKind === 'fullTtsPlayback' ? 'TOK_TTS_CARD' :
-              this.launchSourceKind === 'quickTts' ? 'TOK_TTS_QUICK_CARD' : 'TOK_SURFACE_PANEL', this.appScheme),
-          sourceBorderColor: readerAppColor(this.fixedIsland ? 'TOK_LINE_STRONG' : this.launchSourceKind === 'quickTts' ?
-            'app.control.paint.66B4A697' : this.launchSourceKind === 'fullTtsPlayback' ? 'TOK_TTS_LINE' : 'TOK_LINE', this.appScheme),
-          sourceBorderWidth: this.fixedIsland || this.launchSample.type === 'autoPage' ? TOK_BORDER_W : 0.5,
-          sourceSurfaceTopInset: !this.fixedIsland && this.launchSourceKind === 'fullTtsPlayback' ? 27 : 0,
-          sourceHighlightColor: !this.fixedIsland && this.launchSourceKind === 'fullTtsPlayback' ? readerAppColor('app.control.paint.99FFFFFF', this.appScheme) : '#00000000',
-          sourceGradientStart: !this.fixedIsland && this.launchSourceKind === 'quickTts' ? readerAppColor('app.control.paint.FFFAF4', this.appScheme) : '',
-          sourceGradientEnd: !this.fixedIsland && this.launchSourceKind === 'quickTts' ? readerAppColor('app.control.paint.F6ECDD', this.appScheme) : '',
-          themeScheme: this.appScheme,
-          sourceSharpContent: (): void => { this.launchSourceContent(); },
-          onToggle: (): void => this.onLaunchToggle(),
-        }).id('reader-session-launch-fade-owner').opacity(this.launchStageOpacity).zIndex(9)
-          .transition(this.reduceMotion ? TransitionEffect.asymmetric(
-            TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()), TransitionEffect.IDENTITY) :
-            TransitionEffect.IDENTITY);
-      }
       }
     }
     .visibility(this.controlObscured ? Visibility.Hidden : Visibility.Visible)
@@ -2398,47 +2381,6 @@ export struct ReaderControlPanel {
         if (id === 'info' || id === 'refresh' || id === 'download' || id === 'recovery') this.performMoreAction(id, generation);
       },
     });
-  }
-
-  @Builder
-  private launchSourceContent() {
-    if (this.launchSourceCurrent()) {
-    if (this.capturedLaunchSourceKind === 'quickAutoPage' || this.capturedLaunchSourceKind === 'fullAutoPagePlayback') {
-      ReaderControlAutoPageContent({
-        fixedIsland: this.fixedIsland,
-        sourceMinimum: this.launchNaturalMinimum,
-        sourceMinimumIdentity: this.launchNaturalMinimum?.identity ?? '',
-        sourceMinimumKey: this.launchNaturalMinimum?.key ?? '',
-        sourceMinimumMetricsRevision: this.launchNaturalMinimum?.metricsRevision ?? -1,
-        sourceOnly: this.capturedLaunchSourceKind === 'quickAutoPage' ? 'quick' : 'full',
-        form: this.capturedLaunchSourceKind === 'quickAutoPage' ? 'quick' : 'full',
-        motionProgress: this.launchMotionProgress, availableWidth: this.launchContentWidth,
-        availableHeight: this.launchContentHeight, fullViewportHeight: this.launchFullContentHeight,
-        interactionEnabled: false, status: this.launchSourceAutoStatus,
-        speedSeconds: this.autoPageSpeedSeconds, timerSummaryText: this.autoPageTimerSummaryText,
-        timerMinutes: this.autoPageTimerMinutes, timerSeconds: this.autoPageTimerSeconds,
-        followHighlight: this.autoPageFollowHighlight, canPreviousChapter: this.canStepChapter(-1),
-        canNextChapter: this.canStepChapter(1),
-      });
-    } else {
-      ReaderControlTtsContent({
-        fixedIsland: this.fixedIsland,
-        sourceMinimum: this.launchNaturalMinimum,
-        sourceMinimumIdentity: this.launchNaturalMinimum?.identity ?? '',
-        sourceMinimumKey: this.launchNaturalMinimum?.key ?? '',
-        sourceMinimumMetricsRevision: this.launchNaturalMinimum?.metricsRevision ?? -1,
-        sourceOnly: this.capturedLaunchSourceKind === 'quickTts' ? 'quick' : 'full',
-        frozenWaveformSample: this.launchWaveformSample, reduceMotion: this.reduceMotion,
-        form: this.capturedLaunchSourceKind === 'quickTts' ? 'quick' : 'full',
-        motionProgress: this.launchMotionProgress, availableWidth: this.launchContentWidth,
-        availableHeight: this.launchContentHeight, fullViewportHeight: this.launchFullContentHeight,
-        interactionEnabled: false, state: this.launchSourceTtsState,
-        timerMode: this.ttsTimerMode, timerMinutes: this.ttsTimerMinutes, timerSeconds: this.ttsTimerSeconds,
-        engine: this.ttsEngine, language: this.ttsLanguage, person: this.ttsPerson,
-        voiceOptions: this.ttsVoiceOptions, followHighlight: this.ttsFollowHighlight,
-      });
-    }
-    }
   }
 
   private launchSourceCurrent(): boolean {

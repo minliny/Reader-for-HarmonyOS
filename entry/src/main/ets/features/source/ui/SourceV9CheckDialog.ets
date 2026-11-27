@@ -367,9 +367,9 @@ export struct SourceV9CheckDialog {
             this.keyword = '';
             this.restoreOptions(this.singleSource());
           });
-      }, (row: SourceV9CheckRow): string => JSON.stringify([row.source.sourceId, row.source.name, row.outcome?.available,
-        row.outcome?.traceId, row.outcome?.report?.traceId, row.outcome?.durationMs, row.outcome?.failureReason,
-        row.outcome?.report?.steps, row.error]));
+      }, (row: SourceV9CheckRow): string => row.source.sourceId + ':' +
+        (row.outcome?.traceId ?? '') + ':' + (row.outcome?.report?.traceId ?? '') + ':' +
+        (row.outcome?.available === true ? 'pass' : row.outcome?.available === false ? 'fail' : 'empty'));
     }.width('100%').borderRadius(14).clip(true);
   }
 }

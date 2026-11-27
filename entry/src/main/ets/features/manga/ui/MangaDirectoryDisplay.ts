@@ -1,5 +1,9 @@
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryScale } from './MangaDirectoryVisual.ts';
 
+const MANGA_LABEL_BASE = '(?:([0-9]+)|第\\s*([0-9]+)\\s*[话回章集]|([0-9]+)\\s*[话回章集])';
+const MANGA_NUMBER_LABEL = new RegExp('^' + MANGA_LABEL_BASE + '$');
+const MANGA_PART_LABEL = new RegExp('^' + MANGA_LABEL_BASE + '\\s*(?:[（(]\\s*([上中下])\\s*[）)]|[·・]\\s*([上中下])|([上中下]))$');
+
 export interface MangaDirectoryLabel {
   kind: 'numeric' | 'parts' | 'named';
   numberText: string;
@@ -30,12 +34,11 @@ export function mangaDirectoryLabel(title: string): MangaDirectoryLabel {
   // no title-wide NFKC, decorative-prefix stripping or inferred chapter count.
   const recognized = title.replace(/[０-９]/g, (digit: string): string =>
     String.fromCharCode(digit.charCodeAt(0) - 0xFEE0)).trim();
-  const base = '(?:([0-9]+)|第\\s*([0-9]+)\\s*[话回章集]|([0-9]+)\\s*[话回章集])';
-  const numeric = recognized.match(new RegExp('^' + base + '$'));
+  const numeric = recognized.match(MANGA_NUMBER_LABEL);
   if (numeric !== null) return { kind: 'numeric', numberText: numeric[1] ?? numeric[2] ?? numeric[3], part: '' };
   // Both ends must exist. Mixed full-/half-width parentheses are accepted;
   // partial parentheses, subtitles and unknown suffixes remain full titles.
-  const parts = recognized.match(new RegExp('^' + base + '\\s*(?:[（(]\\s*([上中下])\\s*[）)]|[·・]\\s*([上中下])|([上中下]))$'));
+  const parts = recognized.match(MANGA_PART_LABEL);
   if (parts !== null) return { kind: 'parts', numberText: parts[1] ?? parts[2] ?? parts[3],
     part: (parts[4] ?? parts[5] ?? parts[6]) as '上' | '中' | '下' };
   return { kind: 'named', numberText: '', part: '' };
