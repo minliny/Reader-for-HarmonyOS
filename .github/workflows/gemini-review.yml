@@ -1,0 +1,116 @@
+name: Gemini PR Review
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: gemini-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  gemini-review:
+    if: >-
+      ${{
+        github.repository == 'minliny/Reader-for-HarmonyOS' &&
+        (
+          (
+            github.event_name == 'pull_request' &&
+            !github.event.pull_request.draft &&
+            github.event.pull_request.head.repo.id == github.event.repository.id &&
+            github.actor != 'dependabot[bot]'
+          ) ||
+          (
+            github.event_name == 'issue_comment' &&
+            github.event.issue.pull_request != null &&
+            contains(github.event.comment.body, '@gemini-cli') &&
+            contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+          )
+        )
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check Gemini API key configuration
+        id: key-check
+        shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [[ -n "$GEMINI_API_KEY" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Gemini PR Review skipped: GEMINI_API_KEY secret is not configured." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Verify same-repository open PR context
+        id: pr-context
+        if: steps.key-check.outputs.configured == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER_RAW: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$PR_NUMBER_RAW" =~ ^[0-9]+$ ]]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "pr_number=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          meta=$(gh pr view "$PR_NUMBER_RAW" --repo "$GITHUB_REPOSITORY" --json isCrossRepository,state,isDraft)
+          eligible=$(printf '%s' "$meta" | jq -r 'if (.isCrossRepository == false and .state == "OPEN" and .isDraft == false) then "true" else "false" end')
+          echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER_RAW" >> "$GITHUB_OUTPUT"
+          if [[ "$eligible" != "true" ]]; then
+            echo "Gemini PR Review skipped: PR #$PR_NUMBER_RAW is cross-repository, draft, or closed." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Checkout trusted main branch
+        if: steps.pr-context.outputs.eligible == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Run Gemini CLI PR Review
+        if: steps.pr-context.outputs.eligible == 'true'
+        uses: google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pr-context.outputs.pr_number }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          github_pr_number: ${{ steps.pr-context.outputs.pr_number }}
+          settings: |-
+            {
+              "coreTools": [
+                "read_file",
+                "list_directory",
+                "glob",
+                "search_file_content",
+                "run_shell_command(gh pr view)",
+                "run_shell_command(gh pr diff)",
+                "run_shell_command(gh pr comment)",
+                "run_shell_command(git diff)",
+                "run_shell_command(rg)"
+              ]
+            }
+          prompt: |-
+            你正在对仓库中打开的 PR #${PR_NUMBER} 进行严格只读代码审查。
+
+            请按以下顺序执行：
+            1. 先读取当前检出主分支的 `.gemini/styleguide.md`，掌握全部架构、API 23/26 兼容、性能、内存、消息框架与测试红线。
+            2. 使用 `gh pr view "${PR_NUMBER}" --json title,body,baseRefName,headRefName,files` 与 `gh pr diff "${PR_NUMBER}"` 获取本次 PR 的真实改动（若 diff 过大，可结合本地主分支对照查看受影响文件的上下文）。
+            3. 仅报告真实问题，按 `P0`（崩溃/死锁/数据错乱/安全漏洞）、`P1`（明显性能退化/显著交互缺陷/兼容性隐患）、`P2`（边缘边界问题）分级，用简洁中文逐条列出：文件路径、行号范围、根因与触发链、最小安全修复建议；如无实质问题，简明说明审查通过及已核对的关键边界。
+            4. 严禁修改、提交或推送任何文件；最后调用 `gh pr comment "${PR_NUMBER}" --body "..."` 在该 PR 下发表唯一一条汇总审查评论。
