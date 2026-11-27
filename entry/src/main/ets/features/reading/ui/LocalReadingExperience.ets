@@ -9,8 +9,6 @@ import { ReaderTextSelectionActivity } from '../application/ReaderKeyboardShortc
 import { readerHardwareKeyboardShortcut } from '../../../platform/interaction/ReaderHardwareKeyboard';
 import { HarmonySmartGestureHost, ReaderSmartGestureShortcut } from '../../../platform/interaction/HarmonySmartGestureHost';
 import { ReaderNativeAlertWindow } from '../../../ui/platform/ReaderNativeAlertWindow';
-import { readerHarmonyCapabilities } from '../../../app/HarmonyCapabilityProbe';
-import { i18n } from '@kit.LocalizationKit';
 import { DEFAULT_READER_SMART_GESTURES, READER_SMART_GESTURE_VIEWPORT_FRACTION, readerSmartGestureAction,
   type ReaderSmartGesture, type ReaderSmartGestureAction, type ReaderSmartGestureSettings } from '../application/ReaderSmartGesturePolicy';
 import { ReaderPagePreparationQueue, type ReaderPagePreparationAttempt } from './ReaderPagePreparationCoordinator';
@@ -18,8 +16,7 @@ import { ReaderControlMinimumState,
   type ReaderControlMinimumWindow } from './ReaderControlMinimumState';
 import { admitReaderControlVisualSnapshot } from './ReaderControlVisualHostPort';
 import { CoreReadingAnchor, InitialReadingToc, ParagraphRange, createCoreReadingLayout,
-  type CoreReadingLayout, type MeasuredReadingLine } from '../application/ReadingMeasurementFacts';
-import { ArkUILineMetric } from './ReaderArkUILineMetric';
+  type CoreReadingLayout } from '../application/ReadingMeasurementFacts';
 import { ReaderMaterializedChapterContext, ReaderRetainedPresentation, ReaderControlSelectionDisplay, ReaderControlSelectionOrigin, ReaderControlSelectionCandidate, PreparedReaderPageTurn, ReaderPageTurnPreparation, ReaderAutomaticPageStart, KnownReadingContentVersion, PreviousChapterMeasurement } from '../presentation/ReaderPagePresentationModels';
 import { readingEntryHandoff, retainConfirmedReadingPage, ReaderRetainedPageInput }
   from '../presentation/ReaderRetainedPresentationHost';
@@ -50,24 +47,23 @@ import { createReaderSourceSwitchWash } from './ReaderSourceSwitchWash';
 import type { SourceSwitchCompletionPresentation } from '../../source/presentation/SourceSwitchCompletionPresentation';
 import type { AnimatorResult } from '@ohos.animator';
 import { SourceSwitchCompletionOverlay } from '../../source/ui/SourceSwitchCompletionOverlay';
-import { ReaderParagraphLayoutOwner } from './ReaderParagraphLayoutOwner';
 import {
-  admitForwardMeasuredLines, admitMeasuredPageEnd, advanceMeasuredReadingBatch, planForwardMeasuredImage, planReverseMeasuredImage,
-  canonicalMeasuredPageRequest, selectReverseMeasuredLines, type ReaderMeasuredParagraphResult,
+  admitMeasuredPageEnd, planForwardMeasuredImage, planReverseMeasuredImage,
+  canonicalMeasuredPageRequest, type ReaderMeasuredParagraphResult,
 } from './ReaderMeasuredPagePipeline';
 import { ReaderPhysicalPaginationOwner, ReaderPageTurnTarget, type ReaderAdjacentPageEvidence } from './ReaderPhysicalPaginationOwner';
 import { ReadingInteractiveChapterPreparation, type ReadingNearEndCatalogRequest, type ReadingNeighbourPublication } from '../application/ReadingInteractiveChapterPreparation';
 import { drawing } from '@kit.ArkGraphics2D';
 import { MeasurementParagraph, PhysicalReadingPage } from './ReadingMeasurementModels';
-import { collectForwardMeasuredLines, collectReverseMeasuredLines } from '../application/ReadingMeasuredLineTraversal';
-import { ReaderNativeTextWindow, readerNativeParagraphHeight } from './ReaderNativeTextWindow';
-import { ReaderNativeParagraphResources, ReaderNativeParagraphRecipe, readerNativeParagraphKey } from './ReaderNativeParagraph';
+import { ReaderNativeParagraphResources, ReaderNativeParagraphRecipe } from './ReaderNativeParagraph';
 import { exportReaderQuoteCard } from './ReaderQuoteCardExporter';
 import { readerSystemShareActions } from './ReaderSharePresentation';
 import type { ReaderQuoteCardAction, ReaderQuoteCardCopy } from '../application/ReaderShareActions';
-import { ReaderNativeTextMeasurement, READER_CHAPTER_TITLE_FONT_SIZE_FP, type ReaderNativeTextStyle } from './ReaderNativeTextMeasurement';
-import { READER_MEASUREMENT_UNICODE_PROBE, ReaderMeasurementRun,
-  type ReaderTitleMeasurement, type ReaderUnicodeMeasurement } from './ReaderMeasurementRun';
+import { ReaderReadingMeasurementNative, ReaderForwardParagraphMeasurement,
+  ReaderReadingMeasurementSurface, ReaderReverseParagraphMeasurement } from './ReaderReadingMeasurementNative';
+import { ReaderMeasurementRun, type ReaderUnicodeMeasurement } from '../application/ReaderMeasurementRun';
+import { ReadingMeasurementCoordinator, readingGestureInset,
+  type ReadingMeasurementContent, type ReadingMeasurementDocument, type ReadingWindowLayoutInput } from '../application/ReadingMeasurementCoordinator';
 import { readPreparedReadingEntrySnapshot, type ReadingEntryNavigation, type ReadingEntrySnapshot as CoreReadingEntrySnapshot } from '../application/ReadingEntrySnapshot';
 import { ReaderTtsPageFollow, planReaderTtsFollowPage, readerTtsFollowActive, type ReaderTtsFollowScope, type ReaderTtsPreparedPage,
   type ReaderTtsFollowLease, type ReaderTtsFollowTarget, type ReaderPageTurnOrigin } from './ReaderTtsPageFollow';
@@ -326,7 +322,6 @@ import type { BookSourceJsonSelection } from '../../../app/ReaderHostRegistry';
 import type { ReaderReplaceRule, ReaderControlReplaceDraft } from '../application/ReaderReplaceQuickState';
 import {
   ReadingSurfaceLayoutMap, readingChapterLayoutMap, type ReadingDocumentRange,
-  type ReadingSurfaceLineMetric,
 } from '../application/ReadingSurfaceLayoutMap';
 import {
   ReadingPaginationPrefix,
@@ -348,13 +343,13 @@ import {
 } from '../application/ReadingParagraphProjection';
 import { ReadingEntryWindowExpansion, type ReadingEntryWindowLane,
   type ReadingEntryWindowRequest } from '../application/ReadingEntryWindowExpansion';
-import { lastMeasurableParagraphScalar, planForwardReadingMeasurement, readMeasuredParagraphWindow,
-  projectRetainedReadingParagraphWindow, type ReadingChapterMeasurementProjection } from '../application/ReadingChapterMeasurementPreparation';
+import { lastMeasurableParagraphScalar, readMeasuredParagraphWindow,
+  projectRetainedReadingParagraphWindow, type ReadingChapterMeasurementProjection, type ReadingMeasurementStart } from '../application/ReadingChapterMeasurementPreparation';
 import {
   findReusableReadingWindowChapter, lastVisibleReadingScalar, normalizeReadingProgressRatio, prepareReadingChapterOpening,
   resolveReadingChapterOpeningAnchor, type ReadingChapterPositionUpdate,
 } from '../application/ReadingChapterOpening';
-import { registerReaderFonts, readerRegisteredFontFamily, prepareReaderFontFamily, readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
+import { registerReaderFonts, prepareReaderFontFamily, readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
 import { motionAnimateParam, readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ComponentContent, window } from '@kit.ArkUI';
@@ -442,9 +437,7 @@ import {
   readerAppearanceLineHeight,
   readerAppearanceParagraphContentScalarOffset,
   readerAppearanceParagraphDisplayText,
-  readerAppearanceParagraphIndent,
   readerAppearanceThemeStyle,
-  readerAppearanceUsesJustify,
   sameReaderAppearanceLayout,
 } from './ReaderAppearanceRenderStyle';
 import {
@@ -455,7 +448,6 @@ import {
   READER_TABLET_REFERENCE_WIDTH,
   ReaderControlLayoutSnapshot,
   ReaderReadingLayoutSnapshot,
-  createReaderWindowMetricsLayoutKey,
   resolveReaderControlLayout,
   type ReaderControlCandidateMinimum, type ReaderControlContentMeasurer,
 } from './ReaderLayoutGeometry';
@@ -553,8 +545,6 @@ const READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID = 'reader-book-turn-current-page
 /** Stable empty input for the mounted-but-hidden Reader Control shell. */
 const EMPTY_CONTROL_DIRECTORY_ENTRIES: LocalReadingTocEntry[] = [];
 /** Engineering ceiling only; it has no visual meaning or design authority. */
-const MAX_MEASUREMENT_BATCH_PARAGRAPHS = 8;
-const MAX_MEASUREMENT_BATCH_UTF16 = 12 * 1024;
 // Keep one lazy row close to one phone viewport. This bounds the error of the
 // scalar-to-height interpolation used to restore an intra-row reading anchor.
 /**
@@ -1013,13 +1003,7 @@ export struct ReadingExperience {
   private ttsConfig: ReaderTtsConfig | undefined = undefined;
   private ttsConfigurationHost: ReaderTtsConfigurationHost | undefined = undefined;
   private ttsConfigurationNotice: string | undefined = undefined;
-  private readonly unicodeProbeController: TextController = new TextController();
-  private chapterTitleMeasurementController: TextController = new TextController();
-  private measuredChapterTitleHeightVp: number = 0;
-  private measuredNativeTitle: ReaderNativeParagraphRecipe | undefined = undefined;
   private readonly progressProducers: ReaderProgressProducerHost = new ReaderProgressProducerHost();
-  private readonly paragraphLayout: ReaderParagraphLayoutOwner<ParagraphRange, MeasurementParagraph> =
-    new ReaderParagraphLayoutOwner<ParagraphRange, MeasurementParagraph>();
   private readonly physicalPagination: ReaderPhysicalPaginationOwner<ReadingSurfacePageFragment> =
     new ReaderPhysicalPaginationOwner<ReadingSurfacePageFragment>();
   private readonly chapterWindow: ReadingChapterWindow = new ReadingChapterWindow();
@@ -1262,10 +1246,6 @@ export struct ReadingExperience {
   /** Ordinary first-page persistence outlives its completed measurement lease. */
   private readonly ordinaryFirstPagePersistence: ReaderOrdinaryFirstPagePersistence =
     new ReaderOrdinaryFirstPagePersistence();
-  /** A real Area change arrived while the preceding Core write was in flight. */
-  private remeasurePending: boolean = false;
-  /** Invalidates an old-style page that completed while a newer appearance reflow was queued. */
-  private appearanceReflowInvalidateCurrentLayout: boolean = false;
   private commitInFlight: boolean = false;
   private progressCommitGeneration: number = 0;
   private readonly measurementRun: ReaderMeasurementRun = new ReaderMeasurementRun({
@@ -1273,8 +1253,11 @@ export struct ReadingExperience {
     clear: (handle: number): void => clearTimeout(handle),
   });
   private readonly nativeParagraphResources: ReaderNativeParagraphResources = new ReaderNativeParagraphResources();
-  private readonly nativeTextMeasurement: ReaderNativeTextMeasurement = new ReaderNativeTextMeasurement();
-  private readonly nativeBodyPunctuationOverflow: boolean = this.resolveNativeBodyPunctuationOverflow();
+  private readonly measurementCoordinator: ReadingMeasurementCoordinator = new ReadingMeasurementCoordinator(this.measurementRun);
+  private readonly nativeMeasurement: ReaderReadingMeasurementNative = new ReaderReadingMeasurementNative(
+    new ReaderReadingMeasurementSurface((): UIContext => this.getUIContext(),
+      (): ReaderAppearanceSnapshot => this.appearanceSnapshot, (): ReaderReadingLayoutSnapshot => this.readingLayout()),
+    this.nativeParagraphResources, this.measurementRun);
   /** Invalidates every continuation captured by a prior mounted instance. */
   private lifecycleToken: number = 0;
   private initialReadingTraceStartedAt: number = -1;
@@ -1466,7 +1449,6 @@ export struct ReadingExperience {
   private chineseConversionLoaded: boolean = false;
   private readerSettingsLoaded: boolean = false;
   /** Layout facts admitted for the last window-metrics revision. */
-  private lastWindowMetricsLayoutKey: string = '';
   private windowPolicyOwner: ReaderWindowPolicyOwner | undefined = undefined;
 
   aboutToAppear(): void {
@@ -1515,7 +1497,7 @@ export struct ReadingExperience {
     }
     this.clearDeferredPageTurnWork();
     this.invalidatePageTurnRuntime(false);
-    this.lastWindowMetricsLayoutKey = this.windowMetricsLayoutKey();
+    this.measurementCoordinator.rememberWindowLayout(this.windowMetricsLayoutInput());
     this.applyWindowChrome();
     // A reader may mount invisibly behind Book Detail while its first page is
     // prepared. Mounting is not visual ownership: only the visible reader is
@@ -1532,7 +1514,7 @@ export struct ReadingExperience {
     this.continuousUserInteractionActive = false;
     this.readingImageResources.resetChapter();
     this.measurementCompleting = false;
-    this.remeasurePending = false;
+    this.measurementCoordinator.clearDeferredRequest();
     this.cancelPendingAutoPageStart();
     this.autoPageCoordinator.reset();
     this.refreshPageChromeClock(lifecycleToken);
@@ -1803,7 +1785,7 @@ export struct ReadingExperience {
       this.readerSettingsSnapshot.navigationMode !== 'paged' || this.appearanceSnapshot.customFont !== undefined ||
       page.measuredAppearance === undefined ||
       JSON.stringify(page.measuredAppearance) !== JSON.stringify(this.appearanceSnapshot) ||
-      this.remeasurePending || this.appearanceReflowInvalidateCurrentLayout ||
+      this.measurementCoordinator.hasDeferredWork() ||
       this.pageTurnPreparation !== undefined || this.preparedSettlement.prepared !== undefined ||
       chapter.images.length > 0 || page.fragments.length === 0 ||
       progress.chapterIndex !== chapter.chapterIndex || progress.chapterOffset !== page.startScalar ||
@@ -1811,7 +1793,7 @@ export struct ReadingExperience {
       this.sourceSwitchTransactionId !== undefined) return;
     retainConfirmedReadingPage(new ReaderRetainedPageInput(
       owner, handoff, page, chapter, progress, this.sessionGateway,
-      this.sourceId, this.bookId, this.tocEntries, this.paragraphLayout.ranges.length,
+      this.sourceId, this.bookId, this.tocEntries, this.nativeMeasurement.chapterRanges.length,
       (): ReaderMaterializedChapterContext => this.captureMaterializedChapterContext(),
       (key: ReadingPaginationKey): boolean => this.physicalPagination.sameKey(key, this.currentPaginationKey()),
       (): string => JSON.stringify(this.appearanceSnapshot),
@@ -1895,7 +1877,7 @@ export struct ReadingExperience {
     this.lifecycleToken += 1;
     this.quickSearchPublication.cancel();
     this.replacePanel.advancePanel();
-    this.appearanceReflowInvalidateCurrentLayout = false;
+    this.measurementCoordinator.clearDeferredLayoutInvalidation();
     this.replacePanel.invalidateMutation();
     this.cancelPendingAutoPageStart();
     this.autoPageCoordinator.dispose();
@@ -1927,7 +1909,7 @@ export struct ReadingExperience {
     this.cancelFirstPageCompletionDeadline();
     this.firstPageCompletionRetryCount = 0;
     this.pageTurnPreparationQueue.cancelRetry();
-    this.nativeTextMeasurement.clear();
+    this.nativeMeasurement.clear();
     this.withdrawExitRequest?.();
     this.withdrawExitRequest = undefined;
   }
@@ -3150,7 +3132,7 @@ export struct ReadingExperience {
     if (this.usesBookTurnSimulation()) {
       this.bookTurnSession.configure(width, height);
     }
-    this.lastWindowMetricsLayoutKey = this.windowMetricsLayoutKey();
+    this.measurementCoordinator.rememberWindowLayout(this.windowMetricsLayoutInput());
     if (previousLayoutSignature !== undefined && previousLayoutSignature !== this.paginationLayoutSignature()) {
       // A reflow invalidates both the continuous draft and every complete
       // manifest measured under the predecessor geometry. The new signature
@@ -3167,7 +3149,7 @@ export struct ReadingExperience {
       // generation. Starting another one here would race two writes against
       // the same Core snapshot revision.
       if (this.measurementCompleting) {
-        this.remeasurePending = true;
+        this.measurementCoordinator.deferMeasurement();
         return;
       }
       this.beginMeasurement(lifecycleToken);
@@ -3916,75 +3898,9 @@ export struct ReadingExperience {
     );
   }
 
-  /** Synchronous native layout removes the hidden-tree frame/readback gate.
-   * Font readiness is established by the application/appearance owner. */
   private measureNativeTextBatch(): void {
-    this.nativeTextMeasurement.clear();
-    const style = this.bodyMeasurementStyle();
-    if (this.measurementRun.requiresUnicodeProbe()) {
-      this.nativeTextMeasurement.measure(this.getUIContext(), READER_MEASUREMENT_UNICODE_PROBE, this.unicodeProbeController, style);
-    }
-    this.measureNativeChapterTitle();
-    // A batch bounds allocation, not first-page work. Shape a paragraph only
-    // when page admission reaches it; an unneeded suffix must not gate paint.
-    for (const paragraph of this.paragraphLayout.batch) paragraph.nativeMeasured = false;
-  }
-
-  private resolveNativeBodyPunctuationOverflow(): boolean {
-    if (!readerHarmonyCapabilities().api26) return false;
-    try {
-      const preferred = i18n.System.getAppPreferredLanguage();
-      const language = preferred.length === 0 || preferred === 'default' ? i18n.System.getSystemLanguage() : preferred;
-      const locale = new Intl.Locale(language).maximize();
-      return locale.language === 'zh' && locale.script === 'Hans';
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /** Title capacity can be queried after a body paragraph is already shaped.
-   * Add only the title node; clearing the batch here would dispose the body
-   * before its ownership can transfer to the visible native window. */
-  private measureNativeChapterTitle(): void {
-    if (!this.measurementIncludesChapterTitle() || this.measuredNativeTitle !== undefined) return;
-    this.nativeTextMeasurement.measure(this.getUIContext(), this.requireMeasurementChapter().chapterTitle,
-      this.chapterTitleMeasurementController, this.titleMeasurementStyle());
-  }
-
-  private titleMeasurementStyle(): ReaderNativeTextStyle {
-    return {
-      widthVp: this.measurementTextWidth(),
-      color: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
-      fontFamily: readerRegisteredFontFamily(this.getUIContext().getFont(),
-        readerAppearanceSnapshotFontFamily(this.appearanceSnapshot)), fontWeight: FontWeight.Bold,
-      fontSize: READER_CHAPTER_TITLE_FONT_SIZE_FP, lineHeight: this.readingLayout().titleLineHeightFp,
-      letterSpacing: 0, alignment: TextAlign.Center, breakAll: true,
-    };
-  }
-
-  private bodyMeasurementStyle(paragraphStart?: boolean): ReaderNativeTextStyle {
-    const style: ReaderNativeTextStyle = {
-      widthVp: this.measurementTextWidth(), fontFamily: readerAppearanceSnapshotFontFamily(this.appearanceSnapshot),
-      fontSize: this.appearanceSnapshot.fontSize, fontWeight: FontWeight.Regular,
-      lineHeight: readerAppearanceLineHeight(this.appearanceSnapshot), letterSpacing: this.appearanceSnapshot.letterSpacing,
-      color: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
-      alignment: readerAppearanceUsesJustify(this.appearanceSnapshot.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-      breakAll: false, bookBody: true, punctuationOverflow: this.nativeBodyPunctuationOverflow,
-    };
-    if (paragraphStart !== undefined) {
-      style.indentVp = paragraphStart ? this.getUIContext().px2vp(this.getUIContext().fp2px(
-        readerAppearanceParagraphIndent(this.appearanceSnapshot.fontSize, this.appearanceSnapshot.indent))) : 0;
-    }
-    return style;
-  }
-
-  private measureNativeParagraph(paragraph: MeasurementParagraph): void {
-    if (paragraph.nativeMeasured) return;
-    this.nativeTextMeasurement.measure(this.getUIContext(),
-      this.measurementNodeText(paragraph), paragraph.controller, this.bodyMeasurementStyle(paragraph.isParagraphStart));
-    // Ownership may subsequently leave the measurement adapter for display.
-    // Adapter membership therefore cannot be used as the measured-state flag.
-    paragraph.nativeMeasured = true;
+    this.nativeMeasurement.beginBatch((): boolean => this.measurementIncludesChapterTitle(),
+      (): string => this.requireMeasurementChapter().chapterTitle);
   }
 
   private loadInitialReading(lifecycleToken: number): Promise<void> {
@@ -4106,7 +4022,7 @@ export struct ReadingExperience {
         this.materializedContentVersion = expanded.contentVersion;
         this.setCurrentReadingChapter(expanded);
         this.readingImageResources.indexChapter(expanded);
-        this.paragraphLayout.ranges = ranges;
+        this.nativeMeasurement.chapterRanges = ranges;
         this.retainCurrentChapterWindow();
         if (this.readerSettingsSnapshot.navigationMode === 'continuous') this.rebuildContinuousFragments(true);
         // Existing visible native nodes and absolute page facts stay unchanged.
@@ -4377,33 +4293,25 @@ export struct ReadingExperience {
   }
 
   private reflowAfterWindowGeometryChange(): void {
-    if (this.pageTurnInputPhase() !== 'idle') {
-      // readingLayout() is intentionally frozen for the transaction, so a
-      // live metrics callback cannot be compared meaningfully until the join.
-      this.pageTurnPendingWindowReflow = true;
-      this.rollbackPageTurnForDeferredMutation();
-      return;
-    }
-    const nextLayoutKey = this.windowMetricsLayoutKey();
-    if (nextLayoutKey === this.lastWindowMetricsLayoutKey) {
-      this.applyWindowChrome();
-      return;
-    }
-    this.invalidatePageTurnRuntime(true);
-    this.lastWindowMetricsLayoutKey = nextLayoutKey;
-    // The callback arrives after the metrics/form changed, so the predecessor
-    // signature is no longer reconstructible. Invalidate this book's local
-    // manifests and remeasure the committed anchor under the new snapshot.
-    this.physicalPagination.index.invalidateBook(this.sourceId, this.bookId);
-    this.resetPaginationDraft();
-    this.applyWindowChrome();
-    if (this.hasCurrentMaterializedChapter() && this.phase !== 'failed') {
-      if (this.measurementCompleting) {
-        this.remeasurePending = true;
-        return;
-      }
-      this.beginMeasurement(this.lifecycleToken);
-    }
+    this.measurementCoordinator.reflowWindow({
+      hasTurnInFlight: (): boolean => this.pageTurnInputPhase() !== 'idle',
+      deferForTurn: (): void => {
+        // The turn's layout is frozen until the transaction joins.
+        this.pageTurnPendingWindowReflow = true;
+        this.rollbackPageTurnForDeferredMutation();
+      },
+      windowLayout: (): ReadingWindowLayoutInput => this.windowMetricsLayoutInput(),
+      invalidateTurn: (): void => this.invalidatePageTurnRuntime(true),
+      invalidatePagination: (): void => {
+        this.physicalPagination.index.invalidateBook(this.sourceId, this.bookId);
+        this.resetPaginationDraft();
+      },
+      applyChrome: (): void => this.applyWindowChrome(),
+      hasMaterializedChapter: (): boolean => this.hasCurrentMaterializedChapter() && this.phase !== 'failed',
+      isCompleting: (): boolean => this.measurementCompleting,
+      deferMeasurement: (): void => { this.measurementCoordinator.deferMeasurement(); },
+      beginMeasurement: (): void => this.beginMeasurement(this.lifecycleToken),
+    });
   }
 
   /**
@@ -4425,11 +4333,11 @@ export struct ReadingExperience {
     this.physicalPagination.index.invalidateMeasurement();
     this.materializedChapterSelectionToken = -1;
     this.measurementCompleting = false;
-    this.remeasurePending = false;
+    this.measurementCoordinator.clearDeferredRequest();
     this.batchProcessing = false;
-    this.nativeTextMeasurement.clear();
-    this.paragraphLayout.batch.length = 0;
-    this.paragraphLayout.ranges.length = 0;
+    this.nativeMeasurement.clear();
+    this.nativeMeasurement.clearBatch();
+    this.nativeMeasurement.chapterRanges.length = 0;
     if (!preserveDisplay && this.retainedChapterFrame() === undefined) {
       this.clearContinuousRenderProjection();
       this.continuousInitialFragmentIndex = 0;
@@ -4441,8 +4349,7 @@ export struct ReadingExperience {
     this.continuousUserInteractionActive = false;
     this.readingImageResources.resetChapter();
     this.resetPendingPage();
-    this.paragraphLayout.nextRangeIndex = 0;
-    this.paragraphLayout.firstRangeStartScalar = 0;
+    this.nativeMeasurement.resetBatchCursor();
     this.chapter = undefined;
     this.chapterLayoutMap = undefined;
     this.materializedContentVersion = '';
@@ -4572,7 +4479,7 @@ export struct ReadingExperience {
           this.readingImageResources.indexChapter(chapter);
           this.materializedChapterSelectionToken = selectionToken;
           this.configureRestoredAnchor(chapter, chapterMap, isInitial, requestedOffset, requestedProgress);
-          this.paragraphLayout.ranges = measurementProjection.ranges;
+          this.nativeMeasurement.chapterRanges = measurementProjection.ranges;
           // Never lay out against the Phone/Tablet fallback constants. If Area
           // has already arrived, start once now; otherwise the first real Area
           // callback below owns the initial measurement generation.
@@ -4812,85 +4719,66 @@ export struct ReadingExperience {
   }
 
   private beginMeasurement(lifecycleToken: number): void {
-    if (!this.isSessionActive(lifecycleToken)) {
-      return;
+    this.measurementCoordinator.begin({
+      isActive: (): boolean => this.isSessionActive(lifecycleToken),
+      hasViewport: (): boolean => this.hasMeasuredViewport(),
+      isCompleting: (): boolean => this.measurementCompleting,
+      defer: (): void => { this.measurementCoordinator.deferMeasurement(); },
+      captureContent: (): ReadingMeasurementContent | undefined => {
+        const chapter = this.measuringChapter();
+        const selectionToken = this.materializedChapterSelectionToken;
+        if (chapter === undefined || !this.isSelectionCurrent(selectionToken)) return undefined;
+        return {
+          prepare: (): void => {
+            this.retainNativeParagraphResources();
+            this.nativeMeasurement.clear();
+            this.nativeMeasurement.clearBatch();
+            if (this.measuringRanges().length === 0) this.collectParagraphRanges(chapter.content);
+          },
+          hasParagraphs: (): boolean => this.measuringRanges().length > 0,
+          hasPreviousPage: (): boolean => this.previousChapterMeasurement !== undefined,
+          document: (): ReadingMeasurementDocument => ({ offset: this.measuringOffset(), content: chapter.content,
+            map: this.requireMeasurementLayoutMap(), ranges: this.measuringRanges() }),
+          measurePrevious: (): void => this.beginReversePageMeasurement(lifecycleToken, selectionToken),
+          expand: (direction: 'before' | 'after'): void => {
+            this.physicalPagination.index.beginMeasurement(selectionToken);
+            this.phase = 'measuring';
+            this.expandMeasurementParagraphWindow(direction, this.currentMeasurementGeneration(), selectionToken, lifecycleToken);
+          },
+          measureForward: (start: ReadingMeasurementStart): void => this.beginForwardMeasurement(start, selectionToken, lifecycleToken),
+        };
+      },
+      retry: (error: Error): boolean => this.retryNativeTextLayout(error, lifecycleToken),
+      fail: (error: Error): void => this.fail(error, lifecycleToken),
+    });
+  }
+
+  private beginForwardMeasurement(start: ReadingMeasurementStart, selectionToken: number, lifecycleToken: number): void {
+    this.setMeasuringOffset(start.offset);
+    this.setMeasuringProgress(start.progress);
+    this.setMeasuringRequestedAnchor(start.offset);
+    this.nativeMeasurement.resetTitle();
+    this.measurementRun.beginForwardGates();
+    this.nativeMeasurement.startForward(this.measuringRanges(), this.measuringOffset());
+    this.resetPendingPage();
+    // Leave the old measured page mounted behind Full Directory until the
+    // admitted replacement can publish its title and body together.
+    if (this.visiblePage === undefined || this.visibleFragments.length === 0) {
+      this.visiblePage = undefined;
+      this.visibleFragments = [];
+      this.showChapterTitle = false;
+      this.ensureFirstPageReadyDeadline(lifecycleToken, selectionToken);
     }
-    if (!this.hasMeasuredViewport()) {
-      return;
-    }
-    if (this.measurementCompleting) {
-      this.remeasurePending = true;
-      return;
-    }
-    const chapter = this.measuringChapter();
-    const selectionToken = this.materializedChapterSelectionToken;
-    if (chapter === undefined || !this.isSelectionCurrent(selectionToken)) {
-      return;
-    }
-    try {
-      this.retainNativeParagraphResources();
-      this.nativeTextMeasurement.clear();
-      this.paragraphLayout.batch.length = 0;
-      if (this.measuringRanges().length === 0) {
-        this.collectParagraphRanges(chapter.content);
-      }
-      if (this.measuringRanges().length === 0) {
-        throw new Error('READING_CONTENT_EMPTY');
-      }
-      if (this.previousChapterMeasurement !== undefined) {
-        this.beginReversePageMeasurement(lifecycleToken, selectionToken);
-        return;
-      }
-      const start = planForwardReadingMeasurement(this.measuringOffset(), chapter.content,
-        this.requireMeasurementLayoutMap(), this.measuringRanges());
-      if (start.expand !== undefined) {
-        this.physicalPagination.index.beginMeasurement(selectionToken);
-        this.phase = 'measuring';
-        this.expandMeasurementParagraphWindow(start.expand, this.currentMeasurementGeneration(), selectionToken, lifecycleToken);
-        return;
-      }
-      this.setMeasuringOffset(start.offset);
-      this.setMeasuringProgress(start.progress);
-      this.setMeasuringRequestedAnchor(start.offset);
-      // A controller is bound to one exact title/layout observation. Recreate
-      // it before mounting the new hidden tree so an adjacent chapter cannot
-      // reuse the previous title's line count.
-      this.measuredNativeTitle = undefined;
-      this.chapterTitleMeasurementController = new TextController();
-      this.measuredChapterTitleHeightVp = 0;
-      this.measurementRun.beginForwardGates();
-      this.paragraphLayout.nextRangeIndex = this.rangeIndexForOffset(this.measuringOffset());
-      this.paragraphLayout.firstRangeStartScalar = this.measuringOffset();
-      this.resetPendingPage();
-      // A chapter selection may be in progress behind the non-opaque Full
-      // Directory panel. Preserve an already committed display snapshot until
-      // its replacement is persisted; do not expose an empty PaperLayer or a
-      // new title with an old body.
-      const hasDisplayPage = this.visiblePage !== undefined && this.visibleFragments.length > 0;
-      if (!hasDisplayPage) {
-        this.visiblePage = undefined;
-        this.visibleFragments = [];
-        this.showChapterTitle = false;
-        this.ensureFirstPageReadyDeadline(lifecycleToken, selectionToken);
-      }
-      this.physicalPagination.index.beginMeasurement(selectionToken);
-      this.measurementRun.beginNativeLayout();
-      this.measurementCompleting = false;
-      this.batchProcessing = false;
-      this.phase = 'measuring';
-      if (!this.prepareNextMeasurementBatch()) {
-        throw new Error('PAGINATION_NO_MEASUREMENT_BATCH');
-      }
-      // Native Text is measured immediately with the admitted font/viewport;
-      // no hidden component tree or unrelated UIObserver callback is needed.
-      this.measurementEpoch += 1;
-      this.armMeasurementDeadline(this.currentMeasurementGeneration(), selectionToken, lifecycleToken);
-      this.measureNativeTextBatch();
-      this.captureMeasurementAfterLayout();
-    } catch (error) {
-      if (this.retryNativeTextLayout(error as Error, lifecycleToken)) return;
-      this.fail(error as Error, lifecycleToken);
-    }
+    this.physicalPagination.index.beginMeasurement(selectionToken);
+    this.measurementRun.beginNativeLayout();
+    this.measurementCompleting = false;
+    this.batchProcessing = false;
+    this.phase = 'measuring';
+    if (!this.prepareNextMeasurementBatch()) throw new Error('PAGINATION_NO_MEASUREMENT_BATCH');
+    this.measurementEpoch += 1;
+    this.armMeasurementDeadline(this.currentMeasurementGeneration(), selectionToken, lifecycleToken);
+    this.measureNativeTextBatch();
+    this.captureMeasurementAfterLayout();
   }
 
   private retryNativeTextLayout(error: Error, lifecycleToken: number): boolean {
@@ -4906,22 +4794,19 @@ export struct ReadingExperience {
     const lifecycleToken = this.lifecycleToken;
     const generation = this.currentMeasurementGeneration();
     const selectionToken = this.currentMeasurementSelection();
-    if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken) ||
-      this.measurementCompleting || this.batchProcessing) {
-      return;
-    }
-    if (!this.hasValidUnicodeProbe(lifecycleToken)) {
-      this.reportMeasurementGatePending(false, true, true);
-      return;
-    }
-    const titleResult = this.captureChapterTitleMeasurementAfterLayout(lifecycleToken);
-    if (!titleResult) {
-      this.reportMeasurementGatePending(true, false, true);
-      return;
-    }
-    if (this.paragraphLayout.batch.length === 0) return;
-    this.batchProcessing = true;
-    this.consumeMeasuredBatch(generation, selectionToken, lifecycleToken);
+    this.measurementCoordinator.captureLayout({
+      isCurrent: (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken) &&
+        !this.measurementCompleting && !this.batchProcessing,
+      readUnicode: (): ReaderUnicodeMeasurement => this.nativeMeasurement.readUnicode(),
+      captureTitle: (): boolean => this.captureChapterTitleMeasurementAfterLayout(lifecycleToken),
+      hasBatch: (): boolean => this.nativeMeasurement.hasBatch,
+      consumeBatch: (): void => {
+        this.batchProcessing = true;
+        this.consumeMeasuredBatch(generation, selectionToken, lifecycleToken);
+      },
+      trace: (message: string): void => console.info(message),
+      fail: (error: Error): void => this.fail(error, lifecycleToken),
+    });
   }
 
   private reportMeasurementGatePending(probeOk: boolean, titleOk: boolean, batchOk: boolean): void {
@@ -4938,17 +4823,13 @@ export struct ReadingExperience {
         this.consumeReversePageParagraph(generation, selectionToken, lifecycleToken);
         return;
       }
-      const result = advanceMeasuredReadingBatch(this.paragraphLayout.batch, this.physicalPagination, {
-        paragraphStart: (paragraph: MeasurementParagraph): number => paragraph.chapterStartScalar,
-        knownEnd: (): number | undefined => this.measuredPageEndLimit(),
-        consumeParagraph: (paragraph: MeasurementParagraph, batchIndex: number, knownEnd: number | undefined): ReaderMeasuredParagraphResult => {
+      const result = this.nativeMeasurement.advanceBatch(this.physicalPagination,
+        (): number | undefined => this.measuredPageEndLimit(),
+        (paragraph: MeasurementParagraph, batchIndex: number, knownEnd: number | undefined): ReaderMeasuredParagraphResult => {
           const image = this.readingImageForParagraph(paragraph);
           return image === undefined ? this.consumeForwardMeasuredText(paragraph, batchIndex, knownEnd) :
             this.consumeForwardMeasuredImage(image, batchIndex, generation, selectionToken, lifecycleToken);
-        },
-        releaseMeasurement: (): void => this.nativeTextMeasurement.clear(),
-        prepareNextBatch: (): boolean => this.prepareNextMeasurementBatch(),
-      });
+        }, (): boolean => this.prepareNextMeasurementBatch());
       if (result === 'waiting') return;
       if (result === 'next-batch') {
         this.batchProcessing = false;
@@ -4977,7 +4858,7 @@ export struct ReadingExperience {
     if (plan.result === 'page-ready') return 'page-ready';
     if (plan.result === 'waiting') {
       // Leave only the image and unconsumed suffix for the decode resume.
-      if (batchIndex > 0) this.paragraphLayout.batch.splice(0, batchIndex);
+      this.nativeMeasurement.retainBatchSuffix(batchIndex);
       this.resolvePendingReadingImage(bodyImage, generation, selectionToken, lifecycleToken);
       return 'waiting';
     }
@@ -4996,73 +4877,23 @@ export struct ReadingExperience {
 
   private consumeForwardMeasuredText(paragraph: MeasurementParagraph, batchIndex: number,
     knownEnd: number | undefined): ReaderMeasuredParagraphResult {
-    this.measureNativeParagraph(paragraph);
-    if (!this.paragraphHasLayout(paragraph, batchIndex)) {
+    const measurement = new ReaderForwardParagraphMeasurement(knownEnd,
+      (): number => this.requireMeasurementChapter().chapterIndex, (): number => this.pendingPageBodyCapacity(),
+      (): boolean => this.previousChapterMeasurement !== undefined,
+      (): boolean => this.readerSettingsSnapshot.navigationMode === 'continuous');
+    const result = this.nativeMeasurement.packForward(paragraph, batchIndex, this.physicalPagination, measurement);
+    if (result === 'waiting') {
       // Preserve admitted fragments while the next controller becomes ready.
-      if (batchIndex > 0) this.paragraphLayout.batch.splice(0, batchIndex);
+      this.nativeMeasurement.retainBatchSuffix(batchIndex);
       this.batchProcessing = false;
       this.reportMeasurementGatePending(true, true, false);
-      return 'waiting';
     }
-    const lines = this.measuredLines(paragraph);
-    let nativeRecipe: ReaderNativeParagraphRecipe | undefined;
-    let transferred: boolean = false;
-    return admitForwardMeasuredLines(lines, this.physicalPagination, {
-      knownEnd,
-      isParagraphStart: paragraph.isParagraphStart,
-      capacity: (): number => this.pendingPageBodyCapacity(),
-      paragraphSpacing: (): number => this.appearanceSnapshot.paragraphSpacing,
-      spanHeight: (firstLine: number, lastLine: number): number => this.getUIContext().px2vp(
-        readerNativeParagraphHeight(paragraph.controller.getLayoutManager(), firstLine, lastLine)),
-      appendLine: (line: MeasuredReadingLine, admittedLineHeight: number, isParagraphStart: boolean, firstNativeLine: boolean): void => {
-        if (nativeRecipe === undefined) {
-          nativeRecipe = { key: readerNativeParagraphKey(), text: paragraph.text,
-            startScalar: paragraph.chapterStartScalar, firstLine: line.lineIndex, lastLine: line.lineIndex,
-            style: this.bodyMeasurementStyle(paragraph.isParagraphStart) };
-          if (!transferred) {
-            const window = new ReaderNativeTextWindow(this.getUIContext(), this.nativeTextMeasurement.take(paragraph.controller),
-              paragraph.controller, this.getUIContext().vp2px(this.measurementTextWidth()),
-              this.readerSettingsSnapshot.navigationMode === 'continuous' ? 0 : line.lineIndex,
-              this.readerSettingsSnapshot.navigationMode === 'continuous' ? undefined : lines[lines.length - 1].lineIndex);
-            this.nativeParagraphResources.set(nativeRecipe.key, window, paragraph.layoutMap);
-            transferred = true;
-          }
-        }
-        nativeRecipe.lastLine = line.lineIndex;
-        // ReadingSurface uses this id as its ArkUI ForEach identity. A
-        // paragraph starts at zero in every chapter, so the local paragraph
-        // id alone would let a new chapter reuse an old visible Text child.
-        // Bind the fragment to the Core-returned chapter identity; this is
-        // presentation identity only and never changes the scalar anchor.
-        const fragment = new ReadingSurfacePageFragment(
-          `chapter-${this.requireMeasurementChapter().chapterIndex}:${paragraph.id}:${line.startScalar}-${line.endScalar}`,
-          this.presentationLineText(paragraph.text.substring(line.startUtf16, line.endUtf16)),
-          isParagraphStart,
-          line.startScalar,
-          line.endScalar,
-          undefined,
-          0,
-          undefined,
-          admittedLineHeight,
-        );
-        fragment.nativeParagraph = nativeRecipe;
-        fragment.nativeParagraphFirst = firstNativeLine;
-        this.physicalPagination.appendFragment(fragment, line.startScalar, line.endScalar,
-          admittedLineHeight, isParagraphStart, this.appearanceSnapshot.paragraphSpacing);
-      },
-    });
+    return result;
   }
 
   private hasValidUnicodeProbe(lifecycleToken: number): boolean {
-    return this.measurementRun.validateUnicode((): ReaderUnicodeMeasurement => {
-      const manager = this.unicodeProbeController.getLayoutManager();
-      return { count: manager.getLineCount(), readLine: (): ArkUILineMetric => this.toLineMetric(manager.getLineMetrics(0)) };
-    }, (error: Error): void => this.fail(error, lifecycleToken), (message: string): void => console.info(message));
-  }
-
-  private paragraphHasLayout(paragraph: MeasurementParagraph, paragraphIndex: number): boolean {
-    return this.measurementRun.paragraphHasLayout(paragraphIndex,
-      (): number => paragraph.controller.getLayoutManager().getLineCount());
+    return this.measurementRun.validateUnicode((): ReaderUnicodeMeasurement => this.nativeMeasurement.readUnicode(),
+      (error: Error): void => this.fail(error, lifecycleToken), (message: string): void => console.info(message));
   }
 
   private measurementIncludesChapterTitle(): boolean {
@@ -5071,35 +4902,10 @@ export struct ReadingExperience {
       this.isMeasurementChapterFirstPageStart(this.measuringRequestedAnchor());
   }
 
-  /** Captures the wrapped title before any body line is admitted to page one. */
   private captureChapterTitleMeasurementAfterLayout(lifecycleToken: number): boolean {
-    if (!this.measurementIncludesChapterTitle()) {
-      this.measuredChapterTitleHeightVp = 0;
-      this.measurementRun.clearTitle();
-      return true;
-    }
-    if (this.measuredNativeTitle !== undefined) return true;
-    return this.measurementRun.captureTitle((): ReaderTitleMeasurement => {
-      const manager = this.chapterTitleMeasurementController.getLayoutManager();
-      const count = manager.getLineCount();
-      return { count, admit: (): void => this.admitMeasuredTitle(manager, count) };
-    }, (error: Error): void => this.fail(error, lifecycleToken));
-  }
-
-  private admitMeasuredTitle(manager: LayoutManager, lineCount: number): void {
-    const context = this.getUIContext();
-    const heightVp = context.px2vp(readerNativeParagraphHeight(manager, 0, lineCount - 1));
-    if (!Number.isFinite(heightVp) || heightVp <= 0) throw new Error('PAGINATION_CHAPTER_TITLE_GEOMETRY_INVALID');
-    const recipe: ReaderNativeParagraphRecipe = {
-      key: readerNativeParagraphKey(), text: this.requireMeasurementChapter().chapterTitle,
-      startScalar: 0, firstLine: 0, lastLine: lineCount - 1, style: this.titleMeasurementStyle(),
-    };
-    const window = new ReaderNativeTextWindow(context,
-      this.nativeTextMeasurement.take(this.chapterTitleMeasurementController),
-      this.chapterTitleMeasurementController, context.vp2px(this.measurementTextWidth()), 0, lineCount - 1);
-    this.nativeParagraphResources.set(recipe.key, window);
-    this.measuredNativeTitle = recipe;
-    this.measuredChapterTitleHeightVp = heightVp;
+    return this.nativeMeasurement.captureTitle(this.measurementIncludesChapterTitle(),
+      (): string => this.requireMeasurementChapter().chapterTitle,
+      (error: Error): void => this.fail(error, lifecycleToken));
   }
 
   /** Assemble only the page immediately before an exact observed boundary.
@@ -5109,20 +4915,13 @@ export struct ReadingExperience {
     const pending = this.previousChapterMeasurement;
     if (pending === undefined) return;
     const map = this.requireMeasurementLayoutMap();
-    if (pending.endScalar < 0) {
-      const draft = this.measuringDraft();
-      const known = draft?.matches(this.measurementPaginationKey()) === true ?
-        draft.observationForPageStart(pending.originalChapterOffset) : undefined;
-      pending.endScalar = pending.targetChapterIndex === pending.originalChapterIndex ?
-        Math.min(pending.originalChapterOffset, known?.requestScalar ?? pending.originalChapterOffset) : map.scalarCount();
-    }
+    if (pending.endScalar < 0) pending.endScalar = this.measurementCoordinator.reverseEnd(pending, map,
+      this.measuringDraft(), (): ReadingPaginationKey => this.measurementPaginationKey());
     this.resetPendingPage();
     this.physicalPagination.endScalar = pending.endScalar;
     this.setMeasuringRequestedAnchor(pending.endScalar);
-    this.measuredNativeTitle = undefined;
-    this.measuredChapterTitleHeightVp = 0;
-    this.chapterTitleMeasurementController = new TextController();
-    pending.nextRangeIndex = this.paragraphLayout.previousRangeIndex(this.measuringRanges(), pending.endScalar);
+    this.nativeMeasurement.resetTitle();
+    pending.nextRangeIndex = this.nativeMeasurement.previousRangeIndex(this.measuringRanges(), pending.endScalar);
     this.physicalPagination.index.beginMeasurement(selectionToken);
     this.measurementCompleting = false;
     this.batchProcessing = false;
@@ -5130,9 +4929,9 @@ export struct ReadingExperience {
     this.measurementEpoch += 1;
     const generation = this.currentMeasurementGeneration();
     this.armMeasurementDeadline(generation, selectionToken, lifecycleToken);
-    if (pending.endScalar > map.residentEnd() || pending.nextRangeIndex < 0 && map.residentStart() > 0) {
-      this.expandMeasurementParagraphWindow(pending.endScalar > map.residentEnd() ? 'after' : 'before',
-        generation, selectionToken, lifecycleToken);
+    const expansion = this.measurementCoordinator.reverseExpansion(map, pending.endScalar, pending.nextRangeIndex);
+    if (expansion !== undefined) {
+      this.expandMeasurementParagraphWindow(expansion, generation, selectionToken, lifecycleToken);
       return;
     }
     if (!this.preparePreviousMeasurementParagraph()) throw new Error('PAGINATION_NO_PREVIOUS_PAGE');
@@ -5143,11 +4942,8 @@ export struct ReadingExperience {
   private preparePreviousMeasurementParagraph(): boolean {
     const pending = this.previousChapterMeasurement;
     if (pending === undefined || pending.nextRangeIndex < 0) return false;
-    const next = this.paragraphLayout.preparePrevious(this.requireMeasurementChapter().content,
-      this.measuringRanges(), pending.nextRangeIndex, (): void => this.nativeTextMeasurement.clear(),
-      (range: ParagraphRange, index: number, text: string, requested: number): MeasurementParagraph =>
-        new MeasurementParagraph(range.id, index, text, range.startScalar,
-          new ReadingSurfaceLayoutMap(text), new TextController(), true, requested));
+    const next = this.nativeMeasurement.preparePrevious(this.requireMeasurementChapter().content,
+      this.measuringRanges(), pending.nextRangeIndex);
     if (next === undefined) return false;
     pending.nextRangeIndex = next;
     return true;
@@ -5158,32 +4954,19 @@ export struct ReadingExperience {
     const requested = this.measuringRequestedAnchor();
     this.setMeasuringRequestedAnchor(startScalar);
     try {
-      this.measureNativeChapterTitle();
+      this.nativeMeasurement.measureTitle((): boolean => this.measurementIncludesChapterTitle(),
+        (): string => this.requireMeasurementChapter().chapterTitle);
       if (!this.captureChapterTitleMeasurementAfterLayout(this.lifecycleToken))
         throw new Error('PAGINATION_CHAPTER_TITLE_METRICS_UNAVAILABLE');
-      return this.readingLayout().bodyHeightAfterTitle(this.measuredChapterTitleHeightVp);
+      return this.readingLayout().bodyHeightAfterTitle(this.nativeMeasurement.titleHeight());
     } finally { this.setMeasuringRequestedAnchor(requested); }
-  }
-
-  private measuredReverseLines(paragraph: MeasurementParagraph, endScalar: number): MeasuredReadingLine[] {
-    const manager = paragraph.controller.getLayoutManager();
-    const map = paragraph.layoutMap;
-    const endUtf16 = map.utf16ForScalar(Math.max(0,
-      Math.min(map.scalarCount(), endScalar - paragraph.chapterStartScalar)));
-    return collectReverseMeasuredLines(map, paragraph.chapterStartScalar, manager.getLineCount(), endUtf16, {
-      lineEndUtf16: (index: number): number => manager.getLineMetrics(index).endIndex,
-      readLine: (index: number): ArkUILineMetric => this.toLineMetric(manager.getLineMetrics(index)),
-      exceedsCapacity: (first: number, last: number): boolean =>
-        this.getUIContext().px2vp(readerNativeParagraphHeight(manager, first, last)) >
-        this.readingLayout().bodyHeightAfterTitle(0),
-    });
   }
 
   private consumeReversePageParagraph(generation: number, selectionToken: number, lifecycleToken: number): void {
     try {
       if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) return;
       const pending = this.previousChapterMeasurement;
-      const paragraph = this.paragraphLayout.batch[0];
+      const paragraph = this.nativeMeasurement.firstParagraph;
       if (pending === undefined || paragraph === undefined) return;
       if (!this.hasValidUnicodeProbe(lifecycleToken)) return;
       const image = this.readingImageForParagraph(paragraph);
@@ -5204,42 +4987,11 @@ export struct ReadingExperience {
             image.startScalar, plan.height, this.appearanceSnapshot.paragraphSpacing);
         }
       } else {
-        this.measureNativeParagraph(paragraph);
-        const lines = this.measuredReverseLines(paragraph, pending.endScalar);
-        const result = selectReverseMeasuredLines(lines, this.physicalPagination,
-          (firstLine: number, lastLine: number): number => this.getUIContext().px2vp(
-            readerNativeParagraphHeight(paragraph.controller.getLayoutManager(), firstLine, lastLine)),
-          (startScalar: number): number => this.reversePageCapacityAt(startScalar),
-          (): number => this.appearanceSnapshot.paragraphSpacing);
-        const selected = result.lines;
-        const height = result.height;
-        full = result.full;
-        if (selected.length > 0) {
-          const recipe: ReaderNativeParagraphRecipe = {
-            key: readerNativeParagraphKey(), text: paragraph.text, startScalar: paragraph.chapterStartScalar,
-            firstLine: selected[0].lineIndex, lastLine: selected[selected.length - 1].lineIndex,
-            style: this.bodyMeasurementStyle(true),
-          };
-          const fragments: ReadingSurfacePageFragment[] = [];
-          let previousHeight = 0;
-          for (const line of selected) {
-            const currentHeight = this.getUIContext().px2vp(readerNativeParagraphHeight(
-              paragraph.controller.getLayoutManager(), recipe.firstLine, line.lineIndex));
-            const fragment = new ReadingSurfacePageFragment(
-              `chapter-${pending.targetChapterIndex}:${paragraph.id}:${line.startScalar}-${line.endScalar}`,
-              this.presentationLineText(paragraph.text.substring(line.startUtf16, line.endUtf16)), line.lineIndex === 0,
-              line.startScalar, line.endScalar, undefined, 0, undefined, currentHeight - previousHeight);
-            fragment.nativeParagraph = recipe; fragment.nativeParagraphFirst = fragments.length === 0;
-            fragments.push(fragment); previousHeight = currentHeight;
-          }
-          const window = new ReaderNativeTextWindow(this.getUIContext(), this.nativeTextMeasurement.take(paragraph.controller),
-            paragraph.controller, this.getUIContext().vp2px(this.measurementTextWidth()), recipe.firstLine, recipe.lastLine);
-          this.nativeParagraphResources.set(recipe.key, window, paragraph.layoutMap);
-          this.physicalPagination.prependFragments(fragments, selected[0].startScalar,
-            height, this.appearanceSnapshot.paragraphSpacing);
-        }
+        const measurement = new ReaderReverseParagraphMeasurement(pending.targetChapterIndex, pending.endScalar,
+          (startScalar: number): number => this.reversePageCapacityAt(startScalar));
+        full = this.nativeMeasurement.packReverse(paragraph, this.physicalPagination, measurement);
       }
-      this.nativeTextMeasurement.clear(); this.paragraphLayout.batch.length = 0;
+      this.nativeMeasurement.clear(); this.nativeMeasurement.clearBatch();
       if (!full && this.preparePreviousMeasurementParagraph()) {
         this.consumeReversePageParagraph(generation, selectionToken, lifecycleToken); return;
       }
@@ -5253,37 +5005,6 @@ export struct ReadingExperience {
     } catch (error) {
       if (this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) this.fail(error as Error, lifecycleToken);
     }
-  }
-
-  private measuredLines(paragraph: MeasurementParagraph): MeasuredReadingLine[] {
-    const manager = paragraph.controller.getLayoutManager();
-    const lineCount = manager.getLineCount();
-    if (lineCount <= 0) {
-      throw new Error('PAGINATION_MEASUREMENT_PENDING');
-    }
-    const measurementText = this.measurementNodeText(paragraph);
-    const measurementMap = measurementText === paragraph.text ? paragraph.layoutMap :
-      new ReadingSurfaceLayoutMap(measurementText);
-    const requestedLocal = Math.max(0, (paragraph.requestedStartScalar ?? paragraph.chapterStartScalar) - paragraph.chapterStartScalar);
-    const requestedUtf16 = measurementMap.utf16ForScalar(requestedLocal);
-    return collectForwardMeasuredLines(measurementMap, paragraph.chapterStartScalar, lineCount, requestedUtf16, {
-      lineEndUtf16: (index: number): number => manager.getLineMetrics(index).endIndex,
-      readLine: (index: number): ArkUILineMetric => this.toLineMetric(manager.getLineMetrics(index)),
-      // The predecessor's background catalog pass deliberately enumerates all pages.
-      exceedsCapacity: (first: number, last: number): boolean => this.previousChapterMeasurement === undefined &&
-        this.getUIContext().px2vp(readerNativeParagraphHeight(manager, first, last)) > this.pendingPageBodyCapacity(),
-      reportOverlap: (index: number, metric: ReadingSurfaceLineMetric, previousEnd: number): void => {
-        hilog.error(0x5244, 'Reader',
-          'Pagination overlap line=%{public}d start=%{public}d end=%{public}d previousEnd=%{public}d',
-          index, metric.startIndex, metric.endIndex, previousEnd);
-      },
-      reportEmpty: (firstLine: number): void => {
-        const last = manager.getLineMetrics(lineCount - 1);
-        hilog.error(0x5244, 'Reader',
-          'Pagination empty lines=%{public}d first=%{public}d request=%{public}d length=%{public}d lastStart=%{public}d lastEnd=%{public}d lastHeight=%{public}f',
-          lineCount, firstLine, requestedUtf16, measurementText.length, last.startIndex, last.endIndex, last.height);
-      },
-    });
   }
 
   private measuredPageEndLimit(): number | undefined {
@@ -5315,7 +5036,7 @@ export struct ReadingExperience {
   private admitMeasurementParagraphWindow(chapter: ReadingSessionChapter, projection: ReadingChapterMeasurementProjection,
     lane: ReaderMaterializedChapterContext | undefined): void {
     if (lane === undefined) {
-      this.chapter = chapter; this.chapterLayoutMap = projection.map; this.paragraphLayout.ranges = projection.ranges;
+      this.chapter = chapter; this.chapterLayoutMap = projection.map; this.nativeMeasurement.chapterRanges = projection.ranges;
       this.setCurrentReadingChapter(chapter); this.readingImageResources.indexChapter(chapter);
     } else {
       lane.chapter = chapter; lane.layoutMap = projection.map; lane.paragraphRanges = projection.ranges;
@@ -5337,7 +5058,7 @@ export struct ReadingExperience {
       this.measuringChapter() === chapter && this.adjacentMeasurementContext === lane &&
       this.previousChapterMeasurement === pending;
     this.measurementRun.cancelDeadline();
-    this.nativeTextMeasurement.clear(); this.paragraphLayout.batch.length = 0;
+    this.nativeMeasurement.clear(); this.nativeMeasurement.clearBatch();
     this.batchProcessing = false;
     const mode = readingParagraphBoundaryMode(this.sourceId, this.bookKind);
     void readMeasuredParagraphWindow(this.activeGateway(), chapter, direction === 'before' ? range.startScalar : range.endScalar,
@@ -5513,13 +5234,6 @@ export struct ReadingExperience {
     this.retainCurrentChapterWindow();
   }
 
-  private measurementNodeText(paragraph: MeasurementParagraph): string {
-    // The image height is owned by its intrinsic Host measurement. Mount one
-    // ordinary glyph only to make the bounded ArkUI controller tree settle;
-    // its line geometry is never used for the image block.
-    return paragraph.text === '\uFFFC' ? 'A' : paragraph.text;
-  }
-
   private scaledReadingImageHeight(image: ReadingSessionImage, pageCapacity: number): number {
     if (image.state !== 'ready' && !hasKnownReadingImageGeometry(image)) {
       throw new Error('READING_IMAGE_NOT_READY');
@@ -5530,21 +5244,6 @@ export struct ReadingExperience {
     const fitted = this.measurementTextWidth() * ((image.imageWidthBasisPoints ?? 10000) / 10000) *
       image.intrinsicHeight / image.intrinsicWidth;
     return Math.max(1, Math.min(pageCapacity, fitted));
-  }
-
-  private toLineMetric(metric: LineMetrics): ArkUILineMetric {
-    const context = this.getUIContext();
-    // TextController LineMetrics geometry is reported in physical px, while
-    // Area, padding, lineHeight and the page capacity in this component are
-    // vp. Keeping px here made a 3x-density phone accept only a small fraction
-    // of the visible body before declaring the page full.
-    return new ArkUILineMetric(
-      metric,
-      context.px2vp(metric.height),
-      context.px2vp(metric.topHeight),
-      context.px2vp(metric.width),
-      context.px2vp(metric.baseline),
-    );
   }
 
   private beginFirstPageCommit(generation: number, selectionToken: number, lifecycleToken: number): void {
@@ -5566,8 +5265,9 @@ export struct ReadingExperience {
       this.expandMeasurementParagraphWindow('after', generation, selectionToken, lifecycleToken);
       return;
     }
-    if (this.measuredNativeTitle !== undefined && this.measurementIncludesChapterTitle() && this.physicalPagination.fragments.length > 0) {
-      this.physicalPagination.fragments[0].nativeTitle = this.measuredNativeTitle;
+    const measuredTitle = this.nativeMeasurement.title();
+    if (measuredTitle !== undefined && this.measurementIncludesChapterTitle() && this.physicalPagination.fragments.length > 0) {
+      this.physicalPagination.fragments[0].nativeTitle = measuredTitle;
     }
     const page = new PhysicalReadingPage(
       [...this.physicalPagination.fragments],
@@ -5579,8 +5279,8 @@ export struct ReadingExperience {
     );
     this.observeMeasuredPhysicalPage(page);
     this.retainMeasuredParagraphWindow(page);
-    this.nativeTextMeasurement.clear();
-    this.paragraphLayout.batch.length = 0;
+    this.nativeMeasurement.clear();
+    this.nativeMeasurement.clearBatch();
     this.batchProcessing = false;
     this.measurementCompleting = true;
     this.measurementRun.cancelDeadline();
@@ -5603,10 +5303,10 @@ export struct ReadingExperience {
 
   private beginCanonicalModeMeasurement(anchor: number): void {
     const key = this.currentPaginationKey();
-    const target = Math.max(this.paragraphLayout.ranges[0].startScalar, Math.min(this.lastMeasurableScalar(), anchor));
+    const target = Math.max(this.nativeMeasurement.chapterRanges[0].startScalar, Math.min(this.lastMeasurableScalar(), anchor));
     const request = canonicalMeasuredPageRequest(this.physicalPagination.index, key,
       (): ReadingPaginationPrefix | undefined => this.physicalPagination.draft,
-      (): number => this.paragraphLayout.ranges[0].startScalar, target);
+      (): number => this.nativeMeasurement.chapterRanges[0].startScalar, target);
     this.canonicalModeAnchor = request.unresolvedAnchor;
     this.desiredChapterOffset = request.offset;
     this.desiredChapterProgress = this.requireChapterLayoutMap().scalarCount() === 0 ? 0 :
@@ -5943,8 +5643,7 @@ export struct ReadingExperience {
         layoutIsCurrent: (): boolean => layoutSignature === this.paginationLayoutSignature(),
         requestRemeasurement: (): void => {
           if (this.phase !== 'ready' || this.exitRequested) return;
-          this.remeasurePending = true;
-          this.appearanceReflowInvalidateCurrentLayout = true;
+          this.measurementCoordinator.deferMeasurement(true);
           this.resumeDeferredMeasurement(lifecycleToken);
         },
         ready: (): void => this.finishFirstPageProgressReady(chapter, page, selectionToken, lifecycleToken),
@@ -6014,20 +5713,19 @@ export struct ReadingExperience {
 
   private resumeSupersededAppearanceMeasurement(generation: number, selectionToken: number,
     lifecycleToken: number, measuredLayoutSignature: string): boolean {
-    if (!this.isSelectionActive(lifecycleToken, selectionToken) ||
-      measuredLayoutSignature === this.paginationLayoutSignature()) return false;
-    // Only this exact owner may restart the shared measurement lane. An older
-    // rejection after a newer generation started is obsolete, not a new failure.
-    if (this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
-      this.cancelFirstPageCompletionDeadline();
-      this.firstPageCompletionRetryCount = 0;
-      this.measurementCompleting = false;
-      this.phase = 'ready';
-      this.remeasurePending = true;
-      this.appearanceReflowInvalidateCurrentLayout = true;
-      this.resumeDeferredMeasurement(lifecycleToken);
-    }
-    return true;
+    return this.measurementCoordinator.restoreAfterAppearanceChange(measuredLayoutSignature, {
+      isSelectionActive: (): boolean => this.isSelectionActive(lifecycleToken, selectionToken),
+      layoutSignature: (): string => this.paginationLayoutSignature(),
+      isMeasurementCurrent: (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken),
+      resume: (): void => {
+        this.cancelFirstPageCompletionDeadline();
+        this.firstPageCompletionRetryCount = 0;
+        this.measurementCompleting = false;
+        this.phase = 'ready';
+        this.measurementCoordinator.deferMeasurement(true);
+        this.resumeDeferredMeasurement(lifecycleToken);
+      },
+    });
   }
 
   /**
@@ -6347,7 +6045,7 @@ export struct ReadingExperience {
 
   private paginationLayoutSignature(): string {
     const layout = this.readingLayout();
-    return createNativeReadingPaginationLayoutSignature(layout, this.appearanceSnapshot, this.nativeBodyPunctuationOverflow);
+    return createNativeReadingPaginationLayoutSignature(layout, this.appearanceSnapshot, this.nativeMeasurement.punctuationOverflow);
   }
 
   private currentPaginationKey(): ReadingPaginationKey {
@@ -6509,14 +6207,14 @@ export struct ReadingExperience {
   private rebuildContinuousFragments(preserveExisting: boolean = false, initialScalar?: number): void {
     const chapter = this.chapter;
     const chapterMap = this.chapterLayoutMap;
-    if (chapter === undefined || chapterMap === undefined || this.paragraphLayout.ranges.length === 0) {
+    if (chapter === undefined || chapterMap === undefined || this.nativeMeasurement.chapterRanges.length === 0) {
       this.clearContinuousRenderProjection();
       return;
     }
     const appearance = this.visibleReadingAppearance();
     const context = new ReaderContinuousTextStyleContext(
-      (): number => this.measurementTextWidth(), (): UIContext => this.getUIContext(), this.nativeBodyPunctuationOverflow);
-    const fragments = this.continuousProjection.project(chapter, this.paragraphLayout.ranges, preserveExisting,
+      (): number => this.measurementTextWidth(), (): UIContext => this.getUIContext(), this.nativeMeasurement.punctuationOverflow);
+    const fragments = this.continuousProjection.project(chapter, this.nativeMeasurement.chapterRanges, preserveExisting,
       (startScalar: number): ReadingSessionImage | undefined => this.readingImageResources.atScalar(startScalar),
       (id: string, image: ReadingSessionImage): ReadingSurfacePageFragment =>
         this.materializeContinuousImage(id, image, appearance),
@@ -6525,7 +6223,7 @@ export struct ReadingExperience {
           (): ReaderNativeParagraphRecipe | undefined => this.visiblePageSelectionToken === this.chapterSelectionToken ?
             this.visibleFragments.find((visible: ReadingSurfacePageFragment): boolean =>
               visible.nativeParagraph?.startScalar === startScalar && visible.nativeParagraph.text === text)?.nativeParagraph : undefined));
-    this.continuousTitleRecipe = materializeReaderContinuousTitle(chapter.chapterTitle, this.measuredNativeTitle,
+    this.continuousTitleRecipe = materializeReaderContinuousTitle(chapter.chapterTitle, this.nativeMeasurement.title(),
       appearance, context, (): number => this.readingLayout().titleLineHeightFp);
     this.continuousProjection.commit(chapter, fragments, initialScalar ?? this.continuousVisibleScalar,
       (): string => this.paginationLayoutSignature());
@@ -6594,24 +6292,10 @@ export struct ReadingExperience {
     ));
   }
 
-  /** Materialize a bounded group, preserving whole semantic paragraphs.
-   * Native shaping owns bidi and grapheme context. A deep anchor selects its
-   * containing native line; it must never become a new paragraph start.
-   * A giant single paragraph may exceed the batch target: without a qualified
-   * platform checkpoint, cutting that text would change its shaping. */
   private prepareNextMeasurementBatch(): boolean {
     const chapter = this.requireMeasurementChapter();
     this.requireMeasurementLayoutMap();
-    return this.paragraphLayout.prepareBatch(chapter.content, this.measuringRanges(),
-      MAX_MEASUREMENT_BATCH_PARAGRAPHS, MAX_MEASUREMENT_BATCH_UTF16,
-      (): void => this.nativeTextMeasurement.clear(),
-      (range: ParagraphRange, index: number, text: string, requestedStart: number): MeasurementParagraph =>
-        new MeasurementParagraph(`${range.id}:${requestedStart}`, index, text, range.startScalar,
-          new ReadingSurfaceLayoutMap(text), new TextController(), true, requestedStart));
-  }
-
-  private rangeIndexForOffset(offset: number): number {
-    return this.paragraphLayout.rangeIndexForOffset(this.measuringRanges(), offset);
+    return this.nativeMeasurement.prepareForward(chapter.content, this.measuringRanges());
   }
 
   /**
@@ -6641,16 +6325,6 @@ export struct ReadingExperience {
    * Text node, so retaining that terminal delimiter would create an extra
    * blank line. The Core string and scalar map remain untouched.
    */
-  private presentationLineText(text: string): string {
-    if (text.endsWith('\r\n')) {
-      return text.substring(0, text.length - 2);
-    }
-    if (text.endsWith('\n') || text.endsWith('\r')) {
-      return text.substring(0, text.length - 1);
-    }
-    return text;
-  }
-
   private requireKnownChapter(requested: number | undefined): number {
     if (this.readingTocEntries().length === 0) {
       throw new Error('LOCAL_TOC_EMPTY');
@@ -6681,7 +6355,7 @@ export struct ReadingExperience {
 
   private isChapterFirstPageStart(startScalar: number): boolean {
     return (this.chapter?.documentRange?.startScalar ?? 0) === 0 &&
-      this.paragraphLayout.ranges.length > 0 && startScalar === this.paragraphLayout.ranges[0].startScalar;
+      this.nativeMeasurement.chapterRanges.length > 0 && startScalar === this.nativeMeasurement.chapterRanges[0].startScalar;
   }
 
   private pendingPageBodyCapacity(): number {
@@ -6690,10 +6364,10 @@ export struct ReadingExperience {
     if (!this.measurementIncludesChapterTitle() || !this.isMeasurementChapterFirstPageStart(pageStartScalar)) {
       return this.readingLayout().bodyHeightAfterTitle(0);
     }
-    if (!Number.isFinite(this.measuredChapterTitleHeightVp) || this.measuredChapterTitleHeightVp <= 0) {
+    if (!Number.isFinite(this.nativeMeasurement.titleHeight()) || this.nativeMeasurement.titleHeight() <= 0) {
       throw new Error('PAGINATION_CHAPTER_TITLE_MEASUREMENT_INVALID');
     }
-    return this.readingLayout().bodyHeightAfterTitle(this.measuredChapterTitleHeightVp);
+    return this.readingLayout().bodyHeightAfterTitle(this.nativeMeasurement.titleHeight());
   }
 
   private measurementTextWidth(): number {
@@ -6710,18 +6384,8 @@ export struct ReadingExperience {
   }
 
   private resumeDeferredMeasurement(lifecycleToken: number): void {
-    if (!this.isSessionActive(lifecycleToken) || !this.remeasurePending) {
-      return;
-    }
-    this.remeasurePending = false;
-    if (this.appearanceReflowInvalidateCurrentLayout) {
-      // The page that just committed was measured before the Appearance
-      // mutation. It may remain visible as a continuity snapshot, but none of
-      // its old geometry may seed the new layout's pagination prefix.
-      this.resetPaginationDraft();
-      this.appearanceReflowInvalidateCurrentLayout = false;
-    }
-    this.beginMeasurement(lifecycleToken);
+    this.measurementCoordinator.resumeDeferred(this.isSessionActive(lifecycleToken),
+      (): void => this.resetPaginationDraft(), (): void => this.beginMeasurement(lifecycleToken));
   }
 
   private armMeasurementDeadline(generation: number, selectionToken: number, lifecycleToken: number): void {
@@ -7050,38 +6714,30 @@ export struct ReadingExperience {
     else if (this.controlPage() === 'quickReplace') this.prepareControlReplacePage();
   }
 
-  private windowMetricsLayoutKey(): string {
-    const layout = this.readingLayout();
-    return createReaderWindowMetricsLayoutKey(
-      layout,
-      this.readerSettingsSnapshot.extendIntoCutout,
-      this.readerSettingsSnapshot.hideNavigationBar,
-    );
+  private windowMetricsLayoutInput(): ReadingWindowLayoutInput {
+    return {
+      layout: this.readingLayout(),
+      extendIntoCutout: this.readerSettingsSnapshot.extendIntoCutout,
+      hideNavigationBar: this.readerSettingsSnapshot.hideNavigationBar,
+    };
   }
 
   private readerSystemGestureLeftInset(): number {
     this.readerWindowMetricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
-    return Math.max(16, this.finiteWindowInset(metrics.gestureInsets.left),
-      this.finiteWindowInset(metrics.navigationInsets.left));
+    return readingGestureInset(16, metrics.gestureInsets.left, metrics.navigationInsets.left);
   }
 
   private readerSystemGestureRightInset(): number {
     this.readerWindowMetricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
-    return Math.max(16, this.finiteWindowInset(metrics.gestureInsets.right),
-      this.finiteWindowInset(metrics.navigationInsets.right));
+    return readingGestureInset(16, metrics.gestureInsets.right, metrics.navigationInsets.right);
   }
 
   private readerSystemGestureBottomInset(): number {
     this.readerWindowMetricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
-    return Math.max(24, this.finiteWindowInset(metrics.gestureInsets.bottom),
-      this.finiteWindowInset(metrics.navigationInsets.bottom));
-  }
-
-  private finiteWindowInset(value: number): number {
-    return Number.isFinite(value) ? Math.max(0, value) : 0;
+    return readingGestureInset(24, metrics.gestureInsets.bottom, metrics.navigationInsets.bottom);
   }
 
   private normalizedProgress(value: number): number {
@@ -9003,8 +8659,7 @@ export struct ReadingExperience {
     this.desiredChapterOffset = Math.max(0, Math.min(scalarCount, currentVisibleAnchor));
     this.desiredChapterProgress = scalarCount === 0 ? 0 : this.desiredChapterOffset / scalarCount;
     if (this.measurementCompleting) {
-      this.remeasurePending = true;
-      this.appearanceReflowInvalidateCurrentLayout = true;
+      this.measurementCoordinator.deferMeasurement(true);
       return;
     }
     this.beginMeasurement(this.lifecycleToken);
@@ -10605,7 +10260,7 @@ export struct ReadingExperience {
     return this.adjacentMeasurementContext === undefined ? this.chapterLayoutMap : this.adjacentMeasurementContext.layoutMap;
   }
   private measuringRanges(): ParagraphRange[] {
-    return this.adjacentMeasurementContext === undefined ? this.paragraphLayout.ranges : this.adjacentMeasurementContext.paragraphRanges;
+    return this.adjacentMeasurementContext === undefined ? this.nativeMeasurement.chapterRanges : this.adjacentMeasurementContext.paragraphRanges;
   }
   private measuringDraft(): ReadingPaginationPrefix | undefined {
     return this.adjacentMeasurementContext === undefined ? this.physicalPagination.draft : this.adjacentMeasurementContext.paginationDraft;
@@ -10669,7 +10324,7 @@ export struct ReadingExperience {
       chapter,
       this.requireChapterLayoutMap(),
       this.materializedContentVersion,
-      this.copyParagraphRanges(this.paragraphLayout.ranges),
+      this.copyParagraphRanges(this.nativeMeasurement.chapterRanges),
       this.physicalPagination.draft,
       this.desiredChapterOffset,
       this.desiredChapterProgress,
@@ -10685,7 +10340,7 @@ export struct ReadingExperience {
     this.readingImageResources.indexChapter(context.chapter);
     this.chapterLayoutMap = context.layoutMap;
     this.materializedContentVersion = context.contentVersion;
-    this.paragraphLayout.ranges.splice(0, this.paragraphLayout.ranges.length, ...this.copyParagraphRanges(context.paragraphRanges));
+    this.nativeMeasurement.chapterRanges.splice(0, this.nativeMeasurement.chapterRanges.length, ...this.copyParagraphRanges(context.paragraphRanges));
     this.physicalPagination.draft = context.paginationDraft;
     this.desiredChapterOffset = context.desiredChapterOffset;
     this.desiredChapterProgress = context.desiredChapterProgress;
@@ -10792,8 +10447,8 @@ export struct ReadingExperience {
     this.physicalPagination.index.invalidateMeasurement();
     this.measurementCompleting = false;
     this.batchProcessing = false;
-    this.nativeTextMeasurement.clear();
-    this.paragraphLayout.batch.length = 0;
+    this.nativeMeasurement.clear();
+    this.nativeMeasurement.clearBatch();
     this.resetPendingPage();
     this.measurementRun.cancelDeadline();
     this.measurementEpoch += 1;
@@ -10815,10 +10470,10 @@ export struct ReadingExperience {
     this.pageTurnPreparation = undefined;
     this.physicalPagination.index.invalidateMeasurement();
     this.measurementCompleting = false;
-    this.remeasurePending = false;
+    this.measurementCoordinator.clearDeferredRequest();
     this.batchProcessing = false;
-    this.nativeTextMeasurement.clear();
-    this.paragraphLayout.batch.length = 0;
+    this.nativeMeasurement.clear();
+    this.nativeMeasurement.clearBatch();
     this.resetPendingPage();
     this.measurementRun.cancelDeadline();
     this.measurementEpoch += 1;
@@ -10874,8 +10529,8 @@ export struct ReadingExperience {
     this.physicalPagination.index.invalidateMeasurement();
     this.measurementCompleting = false;
     this.batchProcessing = false;
-    this.nativeTextMeasurement.clear();
-    this.paragraphLayout.batch.length = 0;
+    this.nativeMeasurement.clear();
+    this.nativeMeasurement.clearBatch();
     this.resetPendingPage();
     this.measurementRun.cancelDeadline();
     this.measurementEpoch += 1;
@@ -10959,10 +10614,10 @@ export struct ReadingExperience {
     const chapter = this.chapter;
     if (!this.mounted || page === undefined || chapter === undefined ||
       this.previousChapterMeasurement !== undefined || this.pageTurnPreparation !== undefined ||
-      this.paragraphLayout.ranges.length === 0 || !this.canTurnPage()) {
+      this.nativeMeasurement.chapterRanges.length === 0 || !this.canTurnPage()) {
       return false;
     }
-    const head = this.paragraphLayout.ranges[0].startScalar;
+    const head = this.nativeMeasurement.chapterRanges[0].startScalar;
     const previousChapter = this.adjacentChapterIndex(chapter.chapterIndex, -1);
     if (this.requireChapterLayoutMap().residentStart() === 0 && page.startScalar <= head) {
       if (previousChapter === undefined) return false;
@@ -12632,7 +12287,7 @@ export struct ReadingExperience {
     if (page === undefined || chapter === undefined || chapter.documentRange !== undefined) return undefined;
     if (this.isUnknownCatalogEdge(chapter.chapterIndex, direction)) return undefined;
     const edge = this.physicalPagination.knownBoundary(direction, this.adjacentPageEvidence(page, chapter),
-      (): number | undefined => this.paragraphLayout.ranges[0]?.startScalar);
+      (): number | undefined => this.nativeMeasurement.chapterRanges[0]?.startScalar);
     return edge === undefined ? undefined : { kind: 'boundary', edge };
   }
 
@@ -12748,13 +12403,13 @@ export struct ReadingExperience {
         return { kind: 'started' };
       }
       if (previousChapterIndex !== undefined &&
-        this.requireChapterLayoutMap().residentStart() === 0 && this.paragraphLayout.ranges.length > 0 &&
-        page.startScalar <= this.paragraphLayout.ranges[0].startScalar) {
+        this.requireChapterLayoutMap().residentStart() === 0 && this.nativeMeasurement.chapterRanges.length > 0 &&
+        page.startScalar <= this.nativeMeasurement.chapterRanges[0].startScalar) {
         return this.turnToPreviousChapter(previousChapterIndex, chapter.chapterIndex, page.startScalar) ?
           { kind: 'started' } : { kind: 'busy' };
       }
-      if (previousChapterIndex === undefined && this.requireChapterLayoutMap().residentStart() === 0 && this.paragraphLayout.ranges.length > 0 &&
-        page.startScalar <= this.paragraphLayout.ranges[0].startScalar) {
+      if (previousChapterIndex === undefined && this.requireChapterLayoutMap().residentStart() === 0 && this.nativeMeasurement.chapterRanges.length > 0 &&
+        page.startScalar <= this.nativeMeasurement.chapterRanges[0].startScalar) {
         if (this.isUnknownCatalogEdge(chapter.chapterIndex, 'previous')) {
           this.requestCatalogForTurn(); return { kind: 'preparing' };
         }
@@ -12854,7 +12509,7 @@ export struct ReadingExperience {
   ): boolean {
     if (!this.mounted || this.previousChapterMeasurement !== undefined ||
       this.chapter === undefined || this.chapter.chapterIndex !== chapterIndex ||
-      this.paragraphLayout.ranges.length === 0) {
+      this.nativeMeasurement.chapterRanges.length === 0) {
       return false;
     }
     this.previousChapterMeasurement = new PreviousChapterMeasurement(
@@ -13021,8 +12676,8 @@ export struct ReadingExperience {
       this.physicalPagination.index.invalidateMeasurement();
       this.measurementCompleting = false;
       this.batchProcessing = false;
-      this.nativeTextMeasurement.clear();
-      this.paragraphLayout.batch.length = 0;
+      this.nativeMeasurement.clear();
+      this.nativeMeasurement.clearBatch();
       this.resetPendingPage();
       this.measurementRun.cancelDeadline();
       this.measurementEpoch += 1;
@@ -13089,7 +12744,7 @@ export struct ReadingExperience {
     this.chapterSelectionToken += 1;
     this.loadingChapterIndex = undefined;
     this.measurementCompleting = false;
-    this.remeasurePending = false;
+    this.measurementCoordinator.clearDeferredRequest();
     this.resetPaginationDraft();
     this.physicalPagination.index.invalidateMeasurement();
     // The stable failure taxonomy lets the host separate book-source failures
