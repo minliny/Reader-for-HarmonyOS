@@ -790,10 +790,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.hydrateEntryCatalog::shared.transient",
+      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.onEntryCatalogFailure::shared.transient",
       "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
       "owner": "ReadingExperience",
-      "member": "hydrateEntryCatalog",
+      "member": "onEntryCatalogFailure",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前小说 reader 的 mounted/lifecycleToken、sourceId/bookId、chapterSelectionToken 与 isReaderIdentityCurrent；短反馈同时要求前台和 windowChromeActive。",
