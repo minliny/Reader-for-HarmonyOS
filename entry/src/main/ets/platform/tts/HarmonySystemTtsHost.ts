@@ -1,6 +1,6 @@
 import { harmonyTtsAudioSessionLease } from './HarmonyTtsAudioSessionLease';
 import { HarmonyTtsAudioListenerRegistry } from './HarmonyTtsAudioListenerRegistry';
-import { textToSpeech } from '@kit.CoreSpeechKit';
+import lazy { textToSpeech } from '@kit.CoreSpeechKit';
 import { audio } from '@kit.AudioKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { errorMessageOf } from '../../app/ErrorMessage.ts';
@@ -122,6 +122,9 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
    */
   async probe(language?: string, person?: number, exactVoice?: boolean): Promise<ReaderTtsHostProbe> {
     if (this.closed) return { available: false, reason: '朗读服务已关闭' };
+    if (!canIUse('SystemCapability.AI.TextToSpeech')) {
+      return { available: false, reason: '当前系统不支持系统朗读，可配置在线 TTS。' };
+    }
     try {
       await this.ensureEngine(language ?? this.engineRequestedLanguage ?? DEFAULT_LANGUAGE,
         person ?? this.engineRequestedPerson ?? DEFAULT_PERSON, undefined, exactVoice);
@@ -178,6 +181,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
 
   async listVoices(): Promise<ReaderTtsVoiceOption[]> {
     this.assertOpen();
+    if (!canIUse('SystemCapability.AI.TextToSpeech')) return [];
     const voices = await textToSpeech.listVoices({
       requestId: `reader-list-voices-${Date.now()}`,
       online: OFFLINE_ENGINE,
@@ -254,6 +258,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   private async ensureEngine(language: string, person: number,
     trace?: (point: ReaderTtsNativeSpeakPoint) => void, exactVoice: boolean = false): Promise<textToSpeech.TextToSpeechEngine> {
     this.assertOpen();
+    if (!canIUse('SystemCapability.AI.TextToSpeech')) throw new Error('System TTS is unsupported');
     for (const retired of HarmonySystemTtsHost.retiringEngines) {
       if (!this.retireEngine(retired)) throw new Error('Reader system TTS could not release its previous engine');
     }

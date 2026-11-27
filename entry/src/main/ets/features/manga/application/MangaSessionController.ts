@@ -229,7 +229,7 @@ export class MangaSessionController {
     this.nextManifestAttempted = false; this.nextImageAttempted = false; this.nextImagePending = false;
   }
   private scheduleAdjacentPreparation(): void {
-    if (this.candidatePendingPresentation) return;
+    if (this.candidatePendingPresentation || this.runtime.allowOptionalMangaPreparation?.() === false) return;
     if (this.preparation !== undefined) { this.scheduleWholeAdjacentPreparation(); return; }
     const chapter = this.chapterData;
     const next = this.nextChapter;
@@ -237,7 +237,10 @@ export class MangaSessionController {
     const generation = this.generation;
     const revision = this.nextPreparationRevision;
     const validContent = this.sessionContentCurrent;
-    const current = (): boolean => generation === this.generation && revision === this.nextPreparationRevision && this.chapterData === chapter && validContent();
+    const optionalWork = this.runtime.captureOptionalMangaPreparation?.() ??
+      ((): boolean => this.runtime.allowOptionalMangaPreparation?.() !== false);
+    const selected = (): boolean => generation === this.generation && revision === this.nextPreparationRevision && this.chapterData === chapter && validContent();
+    const current = (): boolean => selected() && optionalWork();
     if (!this.nextManifestAttempted) {
       this.nextManifestAttempted = true;
       void this.gateway.chapter(chapter.manifest.chapter.sourceId, chapter.manifest.chapter.bookId, next.index, 'cacheFirst', current)
@@ -252,7 +255,8 @@ export class MangaSessionController {
             contentVersion: prepared.manifest.manifestVersion, sourceRuleVersion: prepared.manifest.sourceRuleVersion, decodeRevision: prepared.manifest.decodeRevision },
             page: { ...request, resourceRef: first.resourceRef } };
           this.scheduleAdjacentPreparation();
-        }).catch((): void => { /* Optional neighbor errors never replace visible chapter state. */ });
+        }).catch((): void => { /* Optional neighbor errors never replace visible chapter state. */ })
+        .finally((): void => { if (selected() && !optionalWork()) this.nextManifestAttempted = false; });
       return;
     }
     const image = this.nextImage;
@@ -269,9 +273,9 @@ export class MangaSessionController {
       // A real failure is attempted once. Cancellation may resume after the
       // newer foreground window finishes, using the same persistent cache.
     }).finally((): void => {
-      if (!current()) return;
+      if (!selected()) return;
       this.nextImagePending = false;
-      if (revoked) { this.nextImageAttempted = false; this.scheduleAdjacentPreparation(); }
+      if (revoked || !optionalWork()) { this.nextImageAttempted = false; this.scheduleAdjacentPreparation(); }
     });
   }
 
@@ -283,12 +287,16 @@ export class MangaSessionController {
     this.nextManifestAttempted = true;
     const generation = this.generation, revision = this.nextPreparationRevision;
     const validContent = this.sessionContentCurrent;
-    const current = (): boolean => generation === this.generation && revision === this.nextPreparationRevision && validContent();
+    const optionalWork = this.runtime.captureOptionalMangaPreparation?.() ??
+      ((): boolean => this.runtime.allowOptionalMangaPreparation?.() === true);
+    const selected = (): boolean => generation === this.generation && revision === this.nextPreparationRevision && this.chapterData === chapter && validContent();
+    const current = (): boolean => selected() && optionalWork();
     void this.gateway.chapter(chapter.manifest.chapter.sourceId, chapter.manifest.chapter.bookId, next.index, 'cacheFirst', current,
       undefined, undefined, undefined, undefined, 'background').then(async (prepared): Promise<void> => {
         if (!current() || prepared.manifest.chapter.chapterId !== next.url || prepared.manifest.sourceRuleVersion !== chapter.manifest.sourceRuleVersion) return;
         await this.preparation!.prepareAdjacent(prepared, prepared.manifest.pages.length, validContent);
-      }).catch((): void => { /* Optional neighbors leave the readable chapter unchanged. */ });
+      }).catch((): void => { /* Optional neighbors leave the readable chapter unchanged. */ })
+      .finally((): void => { if (selected() && !optionalWork()) this.nextManifestAttempted = false; });
   }
 
   private async protectChapter(chapter: MangaChapterResult, totalPages: number, current: () => boolean): Promise<MangaChapterResult> {

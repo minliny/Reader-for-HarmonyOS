@@ -13,6 +13,7 @@ export type ReaderTtsPublishedPlaybackState =
 export interface ReaderTtsMediaSessionBridge {
   setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined): void;
   activate(): Promise<void>;
+  deactivate(): Promise<void>;
   publish(state: ReaderTtsPublishedPlaybackState, rate?: number): void;
   setBackgroundPlaybackEnabled?(enabled: boolean): void;
   close(): Promise<void>;
@@ -54,6 +55,18 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
       if (this.closed) throw new Error('Reader TTS AVSession admission retired');
       await session.activate();
       if (!this.closed && this.session === session) this.active = true;
+    });
+    this.observe(task);
+    await task;
+  }
+
+  async deactivate(): Promise<void> {
+    if (this.closed) return;
+    const task = this.operationTail.then(async (): Promise<void> => {
+      const session = this.session;
+      if (this.closed || !this.active || session === undefined) return;
+      await session.deactivate();
+      if (this.session === session) this.active = false;
     });
     this.observe(task);
     await task;

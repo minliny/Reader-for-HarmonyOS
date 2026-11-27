@@ -43,7 +43,7 @@ export interface ReaderTtsHost {
   probe(language?: string, person?: number, exactVoice?: boolean): Promise<ReaderTtsHostProbe>;
   isAvailable(): Promise<boolean>;
   activateAudioSession(allowMixing: boolean): Promise<void>;
-  deactivateAudioSession(): Promise<void>;
+  deactivateAudioSession(intent?: 'pause'): Promise<void>;
   speak(request: ReaderTtsHostSpeakRequest): Promise<void>;
   /** Optional one-slice lookahead; implementations must bound and cancel it. */
   prefetchNext?(request: ReaderTtsHostSpeakRequest): void;

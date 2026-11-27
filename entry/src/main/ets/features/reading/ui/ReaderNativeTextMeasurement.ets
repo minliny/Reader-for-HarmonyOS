@@ -69,8 +69,8 @@ export class ReaderNativeTextMeasurement {
         attribute.enableAutoSpacing?.(true);
         attribute.fallbackLineSpacing?.(true);
         attribute.compressLeadingPunctuation?.(true);
-        if (style.punctuationOverflow === true) {
-          if (deviceInfo.distributionOSApiVersion >= 260000) {
+        if (style.punctuationOverflow === true && deviceInfo.distributionOSApiVersion >= 260000) {
+          try {
             if (deviceInfo.apiAvailable('26.0.0') && attribute.punctuationOverflow !== undefined) {
               const emPx = context.fp2px(style.fontSize);
               if (Number.isFinite(emPx) && emPx > 0) {
@@ -79,7 +79,7 @@ export class ReaderNativeTextMeasurement {
                 nativeTextPunctuationOverhang.set(node, emPx);
               }
             }
-          }
+          } catch (_) { /* The standard Text measurement remains available. */ }
         }
       }
       if (style.breakAll) node.attribute.wordBreak(WordBreak.BREAK_ALL);

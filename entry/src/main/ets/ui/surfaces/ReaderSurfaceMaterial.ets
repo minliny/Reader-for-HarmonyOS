@@ -2,6 +2,7 @@ import deviceInfo from '@ohos.deviceInfo';
 import lazy { uiMaterial } from '@kit.ArkUI';
 import { readerHarmonyCapabilities } from '../../app/HarmonyCapabilityProbe';
 import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_NATIVE_MATERIAL } from '../foundation/ReaderLayoutInvariantSignals';
+import { readerAppColor, type ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 import { readerSurfaceOutlinePaint } from './ReaderReadingPanelPaint';
 import {
   READER_MODAL_BLUR_RADIUS_VP,
@@ -55,6 +56,19 @@ export const READER_NO_SHADOW: ShadowOptions = {
 };
 
 const materialCache: Map<string, uiMaterial.ImmersiveMaterial> = new Map<string, uiMaterial.ImmersiveMaterial>();
+const materialFallbackPaint: WeakMap<ReaderSurfaceMaterialDecision, string> =
+  new WeakMap<ReaderSurfaceMaterialDecision, string>();
+
+function materialFallbackRole(role: ReaderSurfaceMaterialRole): ReaderAppColorRole {
+  switch (role) {
+    case 'chromeBar': return 'TOK_PAPER';
+    case 'floatingDock': return 'app.surface.dock';
+    case 'sessionCapsule': return 'app.sessionCapsule.surface';
+    case 'controlPanel': return 'TOK_READ_SURFACE';
+    case 'popoverMenu': return 'app.surface.menuSolid';
+    case 'modalSheet': return 'app.bookshelf.sheetSurface';
+  }
+}
 
 function mapImmersiveStyle(style: ReaderImmersiveStyleName): uiMaterial.ImmersiveStyle {
   switch (style) {
@@ -77,7 +91,24 @@ export function readerSurfaceMaterialDecision(
   appScheme: string,
   systemScheme: string,
 ): ReaderSurfaceMaterialDecision {
-  return resolveReaderSurfaceMaterial(role, preferences, readerHarmonyCapabilities(), appScheme, systemScheme);
+  const decision = resolveReaderSurfaceMaterial(role, preferences, readerHarmonyCapabilities(), appScheme, systemScheme);
+  if (!decision.native) return decision;
+  // Callers choose opaque fallback paint from this decision. Admit native
+  // material only after its optional SDK constructor has succeeded.
+  try {
+    if (deviceInfo.distributionOSApiVersion >= 260000) {
+      if (deviceInfo.apiAvailable('26.0.0') && readerImmersiveMaterial(decision) !== undefined) {
+        materialFallbackPaint.set(decision, readerAppColor(materialFallbackRole(role), appScheme));
+        return decision;
+      }
+    }
+  } catch (_) { /* Preserve the caller's normal surface paint. */ }
+  return {
+    native: false,
+    style: decision.style,
+    interactive: decision.interactive,
+    performanceMode: decision.performanceMode,
+  };
 }
 
 function readerImmersiveMaterial(
@@ -102,15 +133,28 @@ function readerImmersiveMaterial(
 
 /** A fallback may clear material on API 26. Older SDKs have no dispatch entry. */
 export function applyReaderImmersiveMaterial(instance: CommonAttribute,
-  decision: ReaderSurfaceMaterialDecision | undefined, applyShadow: boolean = true, inspectPanel: boolean = false): void {
+  decision: ReaderSurfaceMaterialDecision | undefined, applyShadow: boolean = true, inspectPanel: boolean = false): boolean {
+  let applied = false;
+  if (deviceInfo.distributionOSApiVersion >= 260000) {
+    try {
+      if (deviceInfo.apiAvailable('26.0.0')) {
+        const material = readerImmersiveMaterial(decision, applyShadow);
+        instance.systemMaterial(material);
+        applied = material !== undefined;
+      }
+    } catch (_) { /* Restore normal surface paint below. */ }
+  }
+  if (!applied && decision?.native === true) {
+    // The node may have selected a transparent fill for native material.
+    const fallback = materialFallbackPaint.get(decision);
+    if (fallback !== undefined) instance.backgroundColor(fallback);
+  }
   if (READER_LAYOUT_DEBUG_BUILD && (inspectPanel || decision?.style === 'thick' || decision?.style === 'ultraThick')) {
     // This classifies a native actor. The audit reads its actual SDK render
     // properties independently; the marker carries no expected paint values.
-    instance.customProperty(READER_LAYOUT_NATIVE_MATERIAL, decision?.native === true);
+    instance.customProperty(READER_LAYOUT_NATIVE_MATERIAL, applied);
   }
-  if (deviceInfo.distributionOSApiVersion >= 260000) {
-    if (deviceInfo.apiAvailable('26.0.0')) instance.systemMaterial(readerImmersiveMaterial(decision, applyShadow));
-  }
+  return applied;
 }
 
 /** Independent outline stays on the node when system material owns border and shadow. */
@@ -131,15 +175,24 @@ export class ReaderImmersiveMaterialModifier implements AttributeModifier<Common
   }
 
   applyNormalAttribute(instance: CommonAttribute): void {
-    applyReaderImmersiveMaterial(instance, this.material);
-    if (this.outline !== undefined) instance.outline(this.material?.native === true ? this.outline : undefined);
+    const applied = applyReaderImmersiveMaterial(instance, this.material);
+    if (this.outline !== undefined) instance.outline(applied ? this.outline : undefined);
   }
 }
 
-export function applyReaderPopupMaterial(options: CustomPopupOptions, decision: ReaderSurfaceMaterialDecision): void {
+export function applyReaderPopupMaterial(options: CustomPopupOptions, decision: ReaderSurfaceMaterialDecision): boolean {
+  if (!decision.native) return false;
   if (deviceInfo.distributionOSApiVersion >= 260000) {
-    if (deviceInfo.apiAvailable('26.0.0')) options.systemMaterial = readerImmersiveMaterial(decision);
+    try {
+      if (deviceInfo.apiAvailable('26.0.0')) {
+        const material = readerImmersiveMaterial(decision);
+        if (material === undefined) return false;
+        options.systemMaterial = material;
+        return true;
+      }
+    } catch (_) { /* Use the popup's regular background. */ }
   }
+  return false;
 }
 
 export function readerSheetBackdropBlur(

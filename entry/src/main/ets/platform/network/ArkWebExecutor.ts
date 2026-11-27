@@ -1,5 +1,7 @@
 import { NetworkEnvironmentError, prepareNetworkTarget, type NetworkTarget } from './NetworkRoutePolicy';
 import { httpUrlHostname, isPrivateNetworkTarget, redactedHttpUrl } from './HttpTransportPolicy';
+import { ArkWebJobQueue, ArkWebProxyAdmission, type ArkWebProxyAttempt } from './ArkWebAdmission';
+import systemDateTime from '@ohos.systemDateTime';
 import webview from '@ohos.web.webview';
 import { WebNetErrorList } from '@ohos.web.netErrorList';
 import type { JsonObject } from '@reader/core-harmony';
@@ -114,11 +116,18 @@ type ArkWebSurfaceLease = {
 
 type ArkWebProxyLease = {
   direct: boolean;
-  phase: 'configuring' | 'ready' | 'removing' | 'retired' | 'failed';
+  admission: ArkWebProxyAdmission;
   releaseRequested: boolean;
   error?: NetworkEnvironmentError;
   listeners: Set<() => void>;
 };
+
+interface ArkWebDnsPin {
+  host: string;
+  ttlMs: number;
+  expiresAt?: number;
+  expiryTimer?: number;
+}
 
 export type ArkWebDiagnosticEvent = {
   kind: string;
@@ -154,11 +163,11 @@ export class ArkWebExecutor {
   private surfaceLease: ArkWebSurfaceLease | undefined = undefined;
   private nextSurfaceId: number = 1;
   private proxyLease: ArkWebProxyLease | undefined = undefined;
-  private ownedDnsPin: string | undefined = undefined;
+  private ownedDnsPin: ArkWebDnsPin | undefined = undefined;
   private surfaceListener: ((surface: ArkWebSurface | undefined) => void) | undefined = undefined;
   private jobs: Map<number, ArkWebJob> = new Map<number, ArkWebJob>();
   private active: ArkWebJob | undefined = undefined;
-  private tail: Promise<void> = Promise.resolve();
+  private readonly jobQueue = new ArkWebJobQueue<JsonObject>();
   private presentationListener: ((presentation: ArkWebPresentation) => void) | undefined = undefined;
   private diagnosticObserver: ((event: ArkWebDiagnosticEvent) => void) | undefined = undefined;
 
@@ -225,9 +234,9 @@ export class ArkWebExecutor {
     this.surfaceListener = undefined;
     const lease = this.surfaceLease;
     if (lease !== undefined) {
+      lease.retired = true;
       const job = this.active;
       if (job?.surface === lease.surface) this.cancel(job.requestId);
-      if (!lease.attached) lease.retired = true;
     }
   }
 
@@ -287,21 +296,49 @@ export class ArkWebExecutor {
     this.assertCurrent(job);
     job.route = target;
     if (target.route !== 'systemProxy' && !host.includes(':') && !/^[0-9.]+$/.test(host)) {
-      webview.WebviewController.setHostIP(host, target.addresses[0],
-        Math.max(1, Math.ceil((job.deadlineAt - Date.now()) / 1000)));
-      this.ownedDnsPin = host;
+      const ttlSeconds = Math.max(1, Math.ceil((job.deadlineAt - Date.now()) / 1000));
+      // A synchronous SDK validation failure rejects registration.
+      webview.WebviewController.setHostIP(host, target.addresses[0], ttlSeconds);
+      this.ownedDnsPin = { host, ttlMs: ttlSeconds * 1000 };
+      this.dnsPinExpired(this.ownedDnsPin);
+    }
+  }
+
+  private dnsPinExpired(pin: ArkWebDnsPin): boolean {
+    try {
+      // Start measuring after the native registration. If the clock is
+      // temporarily unavailable, the fallback also waits a full relative TTL.
+      const now = systemDateTime.getUptime(systemDateTime.TimeType.ACTIVE, false);
+      if (pin.expiresAt === undefined) pin.expiresAt = now + pin.ttlMs;
+      return now >= pin.expiresAt;
+    } catch (_) {
+      if (pin.expiryTimer === undefined) {
+        pin.expiryTimer = setTimeout((): void => {
+          if (this.ownedDnsPin !== pin) return;
+          this.ownedDnsPin = undefined;
+          this.emitDiagnostic('dnsPinExpired', this.active);
+        }, pin.ttlMs);
+      }
+      return false;
     }
   }
 
   private clearOwnedDnsPin(): void {
-    const host = this.ownedDnsPin;
-    if (host === undefined) return;
+    const pin = this.ownedDnsPin;
+    if (pin === undefined) return;
     try {
-      webview.WebviewController.clearHostIP(host);
+      webview.WebviewController.clearHostIP(pin.host);
     } catch (error) {
-      throw NetworkEnvironmentError.fromPlatform('dns', '当前网络地址尚未恢复，请稍后重试',
-        'dns.clearHostIP', error);
+      // The platform has no distinct "already absent" error code. Retain
+      // ownership until a successful clear or the documented pin expiry.
+      if (!this.dnsPinExpired(pin)) {
+        this.emitDiagnostic('dnsPinClearDeferred', this.active);
+        throw NetworkEnvironmentError.fromPlatform('dns', '当前网络地址尚未恢复，请稍后重试',
+          'dns.clearHostIP', error);
+      }
+      this.emitDiagnostic('dnsPinExpired', this.active);
     }
+    if (pin.expiryTimer !== undefined) clearTimeout(pin.expiryTimer);
     this.ownedDnsPin = undefined;
   }
 
@@ -407,76 +444,73 @@ export class ArkWebExecutor {
       const check = (): void => {
         try { this.assertCurrent(job); } catch (error) { finish(error); return; }
         if (lease.error !== undefined) { finish(lease.error); return; }
-        if (lease.phase === (retired ? 'retired' : 'ready')) finish();
+        if (lease.admission.phase === (retired ? 'retired' : 'ready')) finish();
       };
       const timer = setTimeout((): void => {
         finish(new NetworkEnvironmentError('route', '系统网页代理配置尚未生效，请稍后重试', retired ? 'proxy.restoreAck' : 'proxy.configureAck'));
-      }, Math.max(0, Math.min(PROXY_ACK_TIMEOUT_MS, job.deadlineAt - Date.now())));
+      }, Math.max(0, job.deadlineAt - Date.now()));
       job.pendingWaitReject = finish;
       lease.listeners.add(check);
       check();
     });
   }
 
+  private issueProxyOperation(lease: ArkWebProxyLease, attempt: ArkWebProxyAttempt, timeoutMs: number,
+    operation: string, dispatch: (callback: () => void) => void): void {
+    const restoring = attempt.phase === 'removing';
+    const settle = (error?: NetworkEnvironmentError): void => {
+      const admitted = error === undefined ? lease.admission.acknowledge(attempt) : lease.admission.fail(attempt);
+      if (!admitted) return;
+      clearTimeout(timer);
+      lease.error = error;
+      this.notifyProxyLease(lease);
+      if (!restoring && lease.releaseRequested) this.releaseProxyLease(lease);
+    };
+    const timer = setTimeout((): void => settle(new NetworkEnvironmentError('route',
+      '系统网页代理配置尚未生效，请稍后重试', restoring ? 'proxy.restoreAck' : 'proxy.configureAck')), timeoutMs);
+    try {
+      dispatch((): void => settle());
+    } catch (error) {
+      settle(NetworkEnvironmentError.fromPlatform('route', restoring ? '系统网页代理尚未恢复，请稍后重试' :
+        '无法设置系统网页代理，请检查网络后重试', operation, error));
+    }
+  }
+
   private async configureProxy(job: ArkWebJob): Promise<void> {
     const lease: ArkWebProxyLease = {
       direct: job.route?.bypassSystemProxy === true,
-      phase: 'configuring', releaseRequested: false, listeners: new Set<() => void>(),
+      admission: new ArkWebProxyAdmission(), releaseRequested: false, listeners: new Set<() => void>(),
     };
     this.proxyLease = lease;
     job.proxyLease = lease;
-    const configured = (): void => {
-      if (lease.phase !== 'configuring') return;
-      lease.phase = 'ready';
-      this.notifyProxyLease(lease);
-      if (lease.releaseRequested) this.releaseProxyLease(lease);
-    };
-    let operation = 'proxy.removeProxyOverride';
-    try {
-      if (lease.direct) {
-        operation = 'proxy.config';
+    const timeout = Math.max(0, Math.min(PROXY_ACK_TIMEOUT_MS, job.deadlineAt - Date.now()));
+    this.issueProxyOperation(lease, lease.admission.configuration, timeout,
+      lease.direct ? 'proxy.applyProxyOverride' : 'proxy.removeProxyOverride', (configured: () => void): void => {
+        if (!lease.direct) {
+          webview.ProxyController.removeProxyOverride(configured);
+          return;
+        }
         const config = new webview.ProxyConfig();
-        operation = 'proxy.insertDirectRule';
         config.insertDirectRule();
-        operation = 'proxy.applyProxyOverride';
         webview.ProxyController.applyProxyOverride(config, configured);
-      } else {
-        webview.ProxyController.removeProxyOverride(configured);
-      }
-    } catch (error) {
-      // These synchronous SDK errors mean the configuration was not accepted.
-      lease.phase = 'ready';
-      lease.error = NetworkEnvironmentError.fromPlatform('route', '无法设置系统网页代理，请检查网络后重试', operation, error);
-    }
+      });
     await this.waitForProxyLease(job, lease, false);
   }
 
   private releaseProxyLease(lease: ArkWebProxyLease): void {
     lease.releaseRequested = true;
-    // A synchronous restoration failure leaves our override owned. Retry that
-    // same removal before the next job; no page may load until its native ACK.
-    if (lease.phase !== 'ready' && lease.phase !== 'failed') return;
-    if (!lease.direct) {
-      lease.phase = 'retired';
-      lease.error = undefined;
+    // Only an acknowledged removal can retire an uncertain override. A later
+    // job retries failure, and a stale ACK cannot retire a newer attempt.
+    if (!lease.direct && lease.admission.phase === 'ready') {
+      lease.admission.retireWithoutRestore();
       this.notifyProxyLease(lease);
       return;
     }
-    lease.phase = 'removing';
+    const attempt = lease.admission.beginRestore();
+    if (attempt === undefined) return;
     lease.error = undefined;
-    try {
-      webview.ProxyController.removeProxyOverride((): void => {
-        if (lease.phase !== 'removing') return;
-        lease.phase = 'retired';
-        this.notifyProxyLease(lease);
-      });
-    } catch (error) {
-      // Fail closed: no later job may load with an unacknowledged old override.
-      lease.phase = 'failed';
-      lease.error = NetworkEnvironmentError.fromPlatform('route', '系统网页代理尚未恢复，请稍后重试',
-        'proxy.removeProxyOverride', error);
-      this.notifyProxyLease(lease);
-    }
+    this.issueProxyOperation(lease, attempt, PROXY_ACK_TIMEOUT_MS, 'proxy.removeProxyOverride',
+      (restored: () => void): void => webview.ProxyController.removeProxyOverride(restored));
   }
 
   onPageEnd(url: string, surface: ArkWebSurface): boolean {
@@ -571,8 +605,7 @@ export class ArkWebExecutor {
     if (this.publicFixture) return Promise.reject(new Error('PUBLIC_FIXTURE_ARKWEB_DISABLED'));
     const job = this.parseJob(params, requestId);
     this.jobs.set(requestId, job);
-    const scheduled = this.tail.then((): Promise<JsonObject> => this.run(job));
-    this.tail = scheduled.then((): void => undefined, (): void => undefined);
+    const scheduled = this.jobQueue.submit(false, (): Promise<JsonObject> => this.run(job));
     return scheduled.finally((): void => {
       this.jobs.delete(requestId);
     });
@@ -594,8 +627,7 @@ export class ArkWebExecutor {
     job.clearInteractiveSession = clearSession;
     job.presentationTitle = title.trim().length > 0 ? title : '书源登录 / 验证';
     this.jobs.set(requestId, job);
-    const scheduled = this.tail.then((): Promise<JsonObject> => this.runInteractive(job, params));
-    this.tail = scheduled.then((): void => undefined, (): void => undefined);
+    const scheduled = this.jobQueue.submit(true, (): Promise<JsonObject> => this.runInteractive(job, params));
     return scheduled.finally((): void => {
       this.jobs.delete(requestId);
     });
@@ -725,7 +757,7 @@ export class ArkWebExecutor {
     this.assertCurrent(job);
     await this.waitForRetiredSurface(job);
     if (this.proxyLease !== undefined) {
-      if (this.proxyLease.phase === 'failed') this.releaseProxyLease(this.proxyLease);
+      if (this.proxyLease.admission.phase === 'failed') this.releaseProxyLease(this.proxyLease);
       await this.waitForProxyLease(job, this.proxyLease, true);
     }
     this.assertCurrent(job);
@@ -936,7 +968,7 @@ export class ArkWebExecutor {
     while (true) {
       this.assertCurrent(job);
       const lease = this.surfaceLease;
-      if (lease !== undefined && job.surface !== undefined && lease.surface === job.surface && lease.attached) {
+      if (lease !== undefined && !lease.retired && job.surface !== undefined && lease.surface === job.surface && lease.attached) {
         return lease.surface.controller;
       }
       await delay(100);

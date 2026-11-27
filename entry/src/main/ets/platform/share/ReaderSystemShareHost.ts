@@ -2,7 +2,7 @@ import { common } from '@kit.AbilityKit';
 import { uniformTypeDescriptor } from '@kit.ArkData';
 import { url } from '@kit.ArkTS';
 import { fileIo, fileUri } from '@kit.CoreFileKit';
-import { systemShare } from '@kit.ShareKit';
+import lazy { systemShare } from '@kit.ShareKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerHostCacheDirectory } from '../../app/diagnostics/ReaderPublicFixtureScope';
 import { readerVmJourneyDocumentsEnabled } from '../../app/diagnostics/ReaderVmJourneyDocuments';
@@ -125,7 +125,9 @@ export class ReaderSystemShareHost implements SystemSharePort {
 
   private present(context: common.UIAbilityContext, data: systemShare.SharedRecord,
     hasStagedFile: boolean, sequence: number): Promise<SystemShareResult> {
-    const controller = new systemShare.ShareController(new systemShare.SharedData(data));
+    let controller: systemShare.ShareController;
+    try { controller = new systemShare.ShareController(new systemShare.SharedData(data)); }
+    catch (_) { return Promise.resolve('unavailable'); }
     return new Promise<SystemShareResult>((resolve): void => {
       let finished = false;
       let dismissTimer: number | undefined;

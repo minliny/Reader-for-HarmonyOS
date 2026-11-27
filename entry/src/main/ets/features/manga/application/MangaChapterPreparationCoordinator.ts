@@ -200,6 +200,15 @@ export class MangaChapterPreparationCoordinator {
     }
   }
 
+  trimOptionalAdjacentPreparation(): void {
+    const key = this.adjacentKey;
+    if (key === undefined || key === this.currentKey) return;
+    const state = this.states.get(key);
+    // A user-directed replacement and the explicit download queue keep their
+    // existing ownership. Only revoke the optional neighbor cache consumer.
+    if (state !== undefined && state.replacementCurrent === undefined) state.cacheRequested = false;
+  }
+
   /** Caller owns explicit queue pause/cancel validity. This adapter never
    * enqueues, resumes, changes retention directly, or records a reading clock. */
   async prepareDownload(chapter: MangaChapterResult, totalPages: number, isCurrent: () => boolean): Promise<void> {
@@ -301,7 +310,8 @@ export class MangaChapterPreparationCoordinator {
       (Array.from(state.downloads).some(consumer => consumer.current()) ||
         (!this.closed && state.sessionRevision === this.sessionRevision && state.cacheRequested &&
           (state.replacementCurrent === undefined || state.replacementCurrent()) &&
-          (state.key === this.currentKey || this.runtime.allowOptionalMangaPreparation?.() === true)));
+          (state.key === this.currentKey ||
+            this.runtime.allowOptionalMangaPreparation?.(state.replacementCurrent !== undefined) === true)));
   }
 
   private async prepare(state: MangaPreparationState): Promise<void> {

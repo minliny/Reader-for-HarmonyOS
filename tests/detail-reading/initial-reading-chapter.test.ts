@@ -9,6 +9,7 @@ import type { LocalReadingProgressState, LocalReadingToc } from '../../entry/src
 import type { ReadingEntrySnapshot } from '../../entry/src/main/ets/features/reading/application/ReadingEntrySnapshot.ts';
 import type { ReadingInitialEntryGateway } from '../../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts';
 import { RemoteReadingGatewayError } from '../../entry/src/main/ets/features/reading/application/RemoteReadingContract.ts';
+import { createRequestedRemoteReadingPositionContext } from '../../entry/src/main/ets/features/reading/application/RemoteReadingPositionMigration.ts';
 import { ReaderBookmarkAnchorRequest } from '../../entry/src/main/ets/features/reading/presentation/ReaderBookmarkAnchorRequest.ts';
 
 const missing: LocalReadingProgressState = { kind: 'missing' };
@@ -213,6 +214,39 @@ test('a content epoch can retry twice, while each retry clears only its speculat
     fail: error => { assert.equal(error, failure); events.push('failure'); },
   }));
   assert.deepEqual(events, ['read', 'idle', 'discard', 'clear', 'read', 'idle', 'discard', 'clear', 'read', 'failure']);
+});
+
+test('a cold directory jump stops after its proof becomes stale during the narrow entry read', async () => {
+  const proof = { sourceId: 'local', bookId: 'book', chapterIndex: 5, nodeId: 'chapter-5',
+    url: 'local:5', catalogRevision: 'catalog-1', structureRevision: 'structure-1' };
+  const bookmark = new ReaderBookmarkAnchorRequest(1, 5, 0, undefined, proof);
+  const failure = new RemoteReadingGatewayError('positionContextStale', '章节内容已变化，原位置已保留。');
+  const events: string[] = [];
+  let epoch = 0;
+  const session = gateway({
+    captureEntryContentValidity: () => {
+      const requestEpoch = epoch;
+      return () => epoch === requestEpoch;
+    },
+    loadEntrySnapshot: async (index, _current, context) => {
+      assert.equal(index, 5);
+      assert.equal(context?.directoryTargetProof, proof);
+      events.push('read');
+      epoch = 1;
+      throw failure;
+    },
+  });
+  await loadInitialReading(12, host({
+    activeGateway: () => session,
+    selection: () => ({ chapterIndex: undefined, bookmark }),
+    positionContext: request => createRequestedRemoteReadingPositionContext(
+      'local', 'book', request.chapterIndex, request.chapterOffset, request.positionScope, request.directoryTargetProof),
+    waitForContentIdle: async () => { events.push('idle'); },
+    loadToc: async () => { events.push('toc'); return toc; },
+    openInitialChapter: async () => { events.push('open'); },
+    fail: error => { assert.equal(error, failure); events.push('failure'); },
+  }));
+  assert.deepEqual(events, ['read', 'failure']);
 });
 
 test('an unscoped remote bookmark fails before reading a targeted snapshot', async () => {

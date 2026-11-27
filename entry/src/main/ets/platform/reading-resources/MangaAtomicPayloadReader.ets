@@ -1,9 +1,9 @@
 import fs from '@ohos.file.fs';
 import taskpool from '@ohos.taskpool';
-import { bindMangaAtomicPayloadReader } from './MangaAtomicPayloadPort';
+import { bindMangaAtomicPayloadReader, type AtomicPayloadMetadata } from './MangaAtomicPayloadPort';
 
-// The SDK serial queue also covers manifest validation outside the Runtime's
-// existing image lane. Waiting tasks hold only path/length descriptors.
+// Both novels and comics use these serial queues for AtomicFile reads outside
+// the Runtime's image decode lane. Waiting tasks retain path/length descriptors.
 const mangaPayloadReads = new taskpool.SequenceRunner(taskpool.Priority.HIGH);
 // Inventory sidecars cannot occupy the visible-payload lane, or a budget
 // check may wait behind the very image operation whose publication it guards.
@@ -19,9 +19,10 @@ let mangaMetadataAdmission: Promise<void> = Promise.resolve();
  * Only immutable payload descriptors cross threads; Reader retains its chapter
  * and display read/write pins until the returned bytes have been admitted. */
 @Concurrent
-function readMangaAtomicPayloadOwned(path: string, expectedBytes: number, maximumBytes: number): ArrayBuffer {
+function readMangaAtomicPayloadOwned(path: string, expectedBytes: number, maximumBytes: number, textManifest: boolean): ArrayBuffer {
   if (!Number.isSafeInteger(expectedBytes) || expectedBytes <= 0 ||
-    !Number.isSafeInteger(maximumBytes) || maximumBytes <= 0 || maximumBytes > 32 * 1024 * 1024 ||
+    !Number.isSafeInteger(maximumBytes) || maximumBytes <= 0 ||
+    (textManifest ? maximumBytes !== expectedBytes : maximumBytes > 32 * 1024 * 1024) ||
     expectedBytes > maximumBytes) throw new Error('MANGA_ATOMIC_PAYLOAD_BUDGET');
   const before = fs.statSync(path);
   if (!before.isFile() || before.size !== expectedBytes) throw new Error('MANGA_ATOMIC_PAYLOAD_CHANGED');
@@ -36,17 +37,19 @@ function readMangaAtomicPayloadOwned(path: string, expectedBytes: number, maximu
 }
 
 async function readMangaAtomicPayloadOnWorker(path: string, expectedBytes: number, maximumBytes: number,
-  current: () => boolean, metadata: boolean = false): Promise<Uint8Array> {
-  if (metadata && maximumBytes > 2 * 1024 * 1024) throw new Error('MANGA_ATOMIC_PAYLOAD_BUDGET');
-  const previous = metadata ? mangaMetadataAdmission : mangaPayloadAdmission;
+  current: () => boolean, metadata: AtomicPayloadMetadata = false): Promise<Uint8Array> {
+  if (metadata === true && maximumBytes > 2 * 1024 * 1024) throw new Error('MANGA_ATOMIC_PAYLOAD_BUDGET');
+  const metadataLane = metadata !== false;
+  const previous = metadataLane ? mangaMetadataAdmission : mangaPayloadAdmission;
   let release: () => void = (): void => {};
   const admission = new Promise<void>((resolve): void => { release = resolve; });
-  if (metadata) mangaMetadataAdmission = admission; else mangaPayloadAdmission = admission;
+  if (metadataLane) mangaMetadataAdmission = admission; else mangaPayloadAdmission = admission;
   try {
     await previous;
     if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
-    const lane = metadata ? mangaMetadataReads : mangaPayloadReads;
-    const bytes = await lane.execute(new taskpool.Task(readMangaAtomicPayloadOwned, path, expectedBytes, maximumBytes)) as ArrayBuffer;
+    const lane = metadataLane ? mangaMetadataReads : mangaPayloadReads;
+    const bytes = await lane.execute(new taskpool.Task(readMangaAtomicPayloadOwned,
+      path, expectedBytes, maximumBytes, metadata === 'text-manifest')) as ArrayBuffer;
     if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
     // A taskpool result crosses an ArkTS worker boundary.  The returned
     // binary may be a cross-realm ArrayBuffer (or a typed-array view), so an

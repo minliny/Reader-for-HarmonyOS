@@ -159,6 +159,14 @@ async function loadInitialChapter(lifecycleToken: number, layoutReady: Promise<v
     if (!isCurrent()) return;
     if (!contentCurrent() && contentRetryCount < 2 &&
       !(error instanceof RemoteReadingGatewayError && (error.code === 'storageFailure' || error.code === 'identityMismatch'))) {
+      if (host.selection().bookmark?.directoryTargetProof !== undefined) {
+        // Reopening the same selection would also replay its old proof.
+        // Keep the original position and surface the current selection error.
+        const failure = error instanceof RemoteReadingGatewayError && error.code === 'positionContextStale' ?
+          error : new RemoteReadingGatewayError('positionContextStale', 'READING_DIRECTORY_TARGET_STALE');
+        host.fail(failure, lifecycleToken);
+        return;
+      }
       await host.waitForContentIdle();
       if (!isCurrent()) return;
       host.discardPreparedEntry();

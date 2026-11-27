@@ -92,10 +92,16 @@ export class ReadingBodyImageHost {
   private mangaMetadataInspector: MangaImageMetadataInspector | undefined;
   private mangaMetadataProofs: util.LRUCache<string, MangaImageMetadataProof> | undefined;
   private mangaMetadataGeneration: number = 0;
+  private mangaMetadataProofEpoch: number = 0;
+
+  trimMangaMetadataProofs(): void {
+    this.mangaMetadataProofEpoch++;
+    this.mangaMetadataProofs?.clear();
+  }
 
   setMangaMetadataInspector(inspector?: MangaImageMetadataInspector): void {
     this.mangaMetadataGeneration++;
-    this.mangaMetadataProofs?.clear();
+    this.trimMangaMetadataProofs();
     this.mangaMetadataInspector = inspector;
     if (inspector !== undefined && this.mangaMetadataProofs === undefined) this.mangaMetadataProofs = new util.LRUCache<string, MangaImageMetadataProof>(128);
   }
@@ -412,7 +418,7 @@ export class ReadingBodyImageHost {
   releaseAllDisplayFiles(): void {
     this.resourceGeneration += 1;
     this.mangaMetadataGeneration++;
-    this.mangaMetadataProofs?.clear();
+    this.trimMangaMetadataProofs();
     this.resourcePayloads.clear();
     this.resourceReads.clear();
     for (const path of this.displayFileReferences.keys()) {
@@ -486,6 +492,7 @@ export class ReadingBodyImageHost {
     const inspector = this.mangaMetadataInspector;
     if (inspector === undefined) throw new Error('MANGA_REGION_METADATA_UNAVAILABLE');
     const generation = this.mangaMetadataGeneration;
+    const proofEpoch = this.mangaMetadataProofEpoch;
     const current = (): boolean => generation === this.mangaMetadataGeneration && isCurrent?.() !== false;
     const key = `${sha256}:${bytes.byteLength}`;
     try {
@@ -498,7 +505,7 @@ export class ReadingBodyImageHost {
           (proof.status !== 'present' && proof.status !== 'absent') ||
           (proof.status === 'absent' && proof.orientation !== null) ||
           (proof.orientation !== null && (!Number.isSafeInteger(proof.orientation) || proof.orientation < 1 || proof.orientation > 8))) throw new Error('MANGA_METADATA_PROOF_INVALID');
-        this.mangaMetadataProofs?.put(key, proof);
+        if (proofEpoch === this.mangaMetadataProofEpoch) this.mangaMetadataProofs?.put(key, proof);
       }
       return proof;
     } catch (error) {

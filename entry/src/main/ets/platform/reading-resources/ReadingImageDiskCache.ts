@@ -181,6 +181,7 @@ export class ReadingImageDiskCache {
   private readonly freeSpaceProbe: ReadingImageFreeSpaceProbe;
   // Reuse the platform LRU; this contains no pixels or credentials.
   private readonly verifiedDigests: util.LRUCache<string, ReadingImageDigestProof> = new util.LRUCache<string, ReadingImageDigestProof>(16384);
+  private digestProofEpoch: number = 0;
   private readonly inFlightWrites = new Map<string, Promise<void>>();
   private inFlightWriteRevision: number = 0;
   /**
@@ -1393,7 +1394,12 @@ export class ReadingImageDiskCache {
   }
 
   close(): void {
-    this.closed = true; this.verifiedDigests.clear();
+    this.closed = true; this.trimVerifiedDigests();
+  }
+
+  trimVerifiedDigests(): void {
+    this.digestProofEpoch++;
+    this.verifiedDigests.clear();
   }
 
   private async loadTextResource(
@@ -1411,7 +1417,7 @@ export class ReadingImageDiskCache {
       // An old clear cannot delete unidentifiable bytes, but it also cannot
       // admit them again. Fresh text writes carry their own exact ownership.
       if (!(await fileIo.access(legacyRevocation)) || await this.ownsTextResource(requestedIdentity)) {
-        result = await this.readResourceBytes(path);
+        result = await this.readResourceBytes(path, isCurrent);
       }
       if (result === undefined && this.hasUnambiguousLegacyResourceIdentity(requestedIdentity) &&
         !(await fileIo.access(legacyRevocation))) {
@@ -1422,7 +1428,7 @@ export class ReadingImageDiskCache {
         const hash = await this.legacyResourceHash(requestedIdentity);
         if (manifest !== undefined && this.sameChapter(manifest, requestedIdentity) &&
           manifest.resourceHashes.indexOf(hash) >= 0) {
-          result = await this.readResourceBytes(`${directory}/${hash}.bin`);
+          result = await this.readResourceBytes(`${directory}/${hash}.bin`, isCurrent);
           if (result !== undefined) {
             const target = await this.chapterDirectory(requestedIdentity);
             await this.ensureDirectory(target);
@@ -1478,7 +1484,7 @@ export class ReadingImageDiskCache {
           const manifest = await this.readValidManifest(legacy, LEGACY_CACHE_FORMAT_VERSION);
           const hash = await this.legacyResourceHash(requestedIdentity);
           if (manifest !== undefined && this.sameChapter(manifest, requestedIdentity) && manifest.resourceHashes.indexOf(hash) >= 0) {
-            result = await this.readResourceBytes(`${legacy}/${hash}.bin`);
+            result = await this.readResourceBytes(`${legacy}/${hash}.bin`, isCurrent);
             if (result !== undefined) {
               await this.ensureDirectory(directory); await this.assertWriteCapacity(directory, result.byteLength);
               await this.writeAtomicBytes(path, result, isCurrent);
@@ -1522,7 +1528,7 @@ export class ReadingImageDiskCache {
       if (expected !== undefined && (!/^[0-9a-f]{64}$/.test(expected) || !(await this.matchesResourceDigest(path, expected, isCurrent)))) throw new Error('MANGA_CACHE_RESOURCE_CORRUPT');
       if (manifest?.manga === true && expected === undefined) throw new Error('MANGA_CACHE_RESOURCE_CORRUPT');
     }
-    return this.readResourceBytes(path, identity.resourceRef !== undefined, isCurrent);
+    return this.readResourceBytes(path, isCurrent);
   }
 
   private async migrateMangaResource(identity: ReadingImageCacheIdentity, path: string, bytes: Uint8Array, valid: () => boolean): Promise<void> {
@@ -1631,7 +1637,7 @@ export class ReadingImageDiskCache {
           throw new Error('offline reading image manifest cannot reference missing bytes');
         }
         if (manga) {
-          const bytes = await this.readResourceBytes(`${directory}/${hash}.bin`, true, isCurrent);
+          const bytes = await this.readResourceBytes(`${directory}/${hash}.bin`, isCurrent);
           if (bytes === undefined) throw new Error('offline manga bytes disappeared');
           resourceDigests[hash] = await this.sha256Bytes(bytes);
         }
@@ -1724,18 +1730,20 @@ export class ReadingImageDiskCache {
   private async matchesResourceDigest(path: string, expected: string,
     isCurrent: () => boolean = (): boolean => !this.closed): Promise<boolean> {
     this.assertCurrent(isCurrent);
+    const proofEpoch = this.digestProofEpoch;
     const before = await this.resourceFingerprint(path);
     const verified = this.verifiedDigests.get(path);
     if (before !== undefined && verified?.fingerprint === before && verified.digest === expected) {
       this.assertCurrent(isCurrent); return true;
     }
     this.verifiedDigests.remove(path);
-    const bytes = await this.readResourceBytes(path, true, isCurrent);
+    const bytes = await this.readResourceBytes(path, isCurrent);
     if (bytes === undefined || await this.sha256Bytes(bytes) !== expected) return false;
     const after = await this.resourceFingerprint(path);
     this.assertCurrent(isCurrent);
     if (before !== undefined && after !== before) return false;
-    if (after !== undefined && before === after) this.verifiedDigests.put(path, { fingerprint: after, digest: expected });
+    if (after !== undefined && before === after && proofEpoch === this.digestProofEpoch)
+      this.verifiedDigests.put(path, { fingerprint: after, digest: expected });
     return true;
   }
 
@@ -1749,17 +1757,30 @@ export class ReadingImageDiskCache {
     return bytes;
   }
 
+  private async readTextAtomicMetadata(path: string,
+    isCurrent: () => boolean = (): boolean => !this.closed): Promise<Uint8Array | undefined> {
+    this.assertCurrent(isCurrent);
+    const stat = await fileIo.stat(path);
+    if (!stat.isFile() || !Number.isSafeInteger(stat.size) || stat.size <= 0) return undefined;
+    // Existing text manifests have no format-defined byte limit. The worker
+    // uses the exact admitted size and rechecks it before the AtomicFile read.
+    const bytes = await readMangaAtomicPayload(path, stat.size, stat.size, isCurrent, 'text-manifest');
+    this.assertCurrent(isCurrent);
+    return bytes;
+  }
+
   private async readTextManifestIdentity(directory: string, formatVersion: number, fileName: string = 'manifest.json',
     retryIoErrors: boolean = false): Promise<ReadingImageChapterManifest | undefined> {
     const path = `${directory}/${fileName}`;
     if (!(await fileIo.access(path))) return undefined;
-    let bytes: Uint8Array;
+    let bytes: Uint8Array | undefined;
     try {
-      bytes = new Uint8Array(new fileIo.AtomicFile(path).readFully());
+      bytes = await this.readTextAtomicMetadata(path);
     } catch (error) {
       if (retryIoErrors && !this.isNotFoundError(error)) throw error;
       return undefined;
     }
+    if (bytes === undefined) return undefined;
     try {
       const raw = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes);
       const value = JSON.parse(raw) as ReadingImageChapterManifest;
@@ -1776,11 +1797,11 @@ export class ReadingImageDiskCache {
     manga: boolean = false, isCurrent: () => boolean = (): boolean => !this.closed): Promise<ReadingImageChapterManifest | undefined> {
     const path = this.manifestPath(directory, profile);
     if (!(await fileIo.access(path))) return undefined;
-    let bytes: Uint8Array;
     try {
       const bytes = manga || directory.includes('/.manga/') || profile !== undefined ?
         await this.readMangaMetadata(path, MANGA_MANIFEST_METADATA_BYTES, isCurrent) :
-        new Uint8Array(new fileIo.AtomicFile(path).readFully());
+        await this.readTextAtomicMetadata(path, isCurrent);
+      if (bytes === undefined) return undefined;
       const raw = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes);
       const value = JSON.parse(raw) as ReadingImageChapterManifest;
       if (value.mangaCacheProfile !== profile || value.formatVersion !== formatVersion || typeof value.sourceId !== 'string' ||
@@ -2309,21 +2330,15 @@ export class ReadingImageDiskCache {
     return !stat.isDirectory() && Number.isSafeInteger(stat.size) && stat.size > 0 && stat.size <= MAX_READING_IMAGE_BYTES;
   }
 
-  private async readResourceBytes(path: string, manga: boolean = false,
+  private async readResourceBytes(path: string,
     isCurrent: () => boolean = (): boolean => !this.closed): Promise<Uint8Array | undefined> {
-    if (!(await this.validResourceFile(path))) return undefined;
+    this.assertCurrent(isCurrent);
+    if (!(await fileIo.access(path))) return undefined;
     const stat = await fileIo.stat(path);
-    // Novel reads keep their existing path. Manga payloads retain AtomicFile's
-    // recovery semantics, with the bounded full read dispatched by the SDK.
-    if (manga) {
-      this.assertCurrent(isCurrent);
-      const bytes = await readMangaAtomicPayload(path, stat.size, MAX_READING_IMAGE_BYTES, isCurrent);
-      this.assertCurrent(isCurrent);
-      return bytes;
-    }
-    const buffer = new fileIo.AtomicFile(path).readFully();
-    if (buffer.byteLength !== stat.size) throw new Error('offline reading image changed while being read');
-    return new Uint8Array(buffer);
+    if (!stat.isFile() || !Number.isSafeInteger(stat.size) || stat.size <= 0 || stat.size > MAX_READING_IMAGE_BYTES) return undefined;
+    const bytes = await readMangaAtomicPayload(path, stat.size, MAX_READING_IMAGE_BYTES, isCurrent);
+    this.assertCurrent(isCurrent);
+    return bytes;
   }
 
   private sameChapter(left: ReadingImageChapterIdentity, right: ReadingImageChapterIdentity): boolean {

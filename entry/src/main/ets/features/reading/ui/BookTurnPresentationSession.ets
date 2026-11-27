@@ -3,6 +3,7 @@ import bookTurnNative from 'libreader_bookturn_napi.so';
 import type { BookTurnInput } from './BookTurnMotionState';
 import type { ReaderPageTurnDirection } from './ReaderPageGestureState';
 import { readerHighlightValuesEqual } from './ReaderDynamicHighlight';
+import { observeReaderMemoryTrim } from '../../../app/ReaderMemoryTrim';
 
 import type { BookTurnTextureCache, BookTurnTextureSlot } from './BookTurnTextureCapture';
 
@@ -57,6 +58,7 @@ export class BookTurnPresentationSession implements BookTurnTextureCache<image.P
   private pendingSlotGeneration: number = -1;
   private pendingSlotDirection: ReaderPageTurnDirection | undefined = undefined;
   private pendingSnapshot: BookTurnPendingSnapshot | undefined = undefined;
+  private stopPendingSnapshotTrim: (() => void) | undefined = undefined;
   private highlightIdentity: string = '';
   private highlightValues: number[] = [];
   private configuredWidth: number = 0;
@@ -100,6 +102,7 @@ export class BookTurnPresentationSession implements BookTurnTextureCache<image.P
   retainPendingSnapshot(identity: string, pageGeneration: number, pixelMap: image.PixelMap): void {
     this.releasePendingSnapshot();
     this.pendingSnapshot = { identity, pageGeneration, pixelMap };
+    this.stopPendingSnapshotTrim = observeReaderMemoryTrim((): void => this.releasePendingSnapshot());
   }
 
   takePendingSnapshot(identity: string, pageGeneration: number): image.PixelMap | undefined {
@@ -108,12 +111,16 @@ export class BookTurnPresentationSession implements BookTurnTextureCache<image.P
     if (pending.pageGeneration !== pageGeneration) { this.releasePendingSnapshot(); return undefined; }
     if (pending.identity !== identity) return undefined;
     this.pendingSnapshot = undefined;
+    this.stopPendingSnapshotTrim?.();
+    this.stopPendingSnapshotTrim = undefined;
     return pending.pixelMap;
   }
 
   releasePendingSnapshot(): void {
     const pending = this.pendingSnapshot;
     this.pendingSnapshot = undefined;
+    this.stopPendingSnapshotTrim?.();
+    this.stopPendingSnapshotTrim = undefined;
     if (pending !== undefined) { try { pending.pixelMap.release(); } catch (_) {} }
   }
 

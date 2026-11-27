@@ -26,6 +26,7 @@ import { readingEntryHandoff, retainConfirmedReadingPage, ReaderRetainedPageInpu
 import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
 import type { ReaderExitRequest } from '../presentation/ReadingEntryPresentation';
 import { ReadingCommit } from '../application/ReadingCommit';
+import { ReaderDirectoryJumpProof } from '../application/ReaderDirectoryJumpProof';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import type { ReaderBookmarkAnchorRequest } from '../presentation/ReaderBookmarkAnchorRequest';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../../../ui/feedback/ReaderTransientFeedback';
@@ -1283,6 +1284,7 @@ export struct ReadingExperience {
   private initialReadingTraceDelivered: boolean = false;
   /** Bumped per directory chapter selection so stale loads cannot win. */
   private chapterSelectionToken: number = 0;
+  private readonly directoryJumpProof: ReaderDirectoryJumpProof = new ReaderDirectoryJumpProof();
   private readonly chapterSelection: ReaderChapterSelectionOwner<ReaderControlSelectionDisplay, ReaderControlSelectionOrigin, ReaderControlSelectionCandidate> =
     new ReaderChapterSelectionOwner<ReaderControlSelectionDisplay, ReaderControlSelectionOrigin, ReaderControlSelectionCandidate>({
       prepare: (request: ReaderDeferredChapterSelection): boolean => this.prepareChapterSelectionRequest(request),
@@ -1858,6 +1860,7 @@ export struct ReadingExperience {
     this.retainedReadingRecencyVisible = false;
     this.cancelSourceSwitchCompletion();
     this.progressProducers.retireContinuous();
+    this.directoryJumpProof.clear();
     this.staticSessionCapsuleOrigin = undefined;
     this.finishSessionCapsuleMorph();
     this.bookmarkRollbackGeneration += 1;
@@ -4415,6 +4418,7 @@ export struct ReadingExperience {
    */
   private resetForChapterSelection(preserveRapidPageTarget: boolean = false, preserveTtsFollow: boolean = false,
     preserveDisplay: boolean = false): void {
+    this.directoryJumpProof.clear();
     this.loadingChapterIndex = undefined;
     this.measurementRun.resetSelection();
     this.transientFeedback.reset();
@@ -4485,6 +4489,13 @@ export struct ReadingExperience {
         return;
       }
       if (!refreshContent && !contentCurrent()) {
+        if (positionContext?.directoryTargetProof !== undefined) {
+          // An old selection proof cannot authorize a retry across a content
+          // change. Keep the original position so the user can select again.
+          this.fail(new RemoteReadingGatewayError('positionContextStale', 'READING_DIRECTORY_TARGET_STALE') as Error,
+            lifecycleToken);
+          return;
+        }
         if (contentRetryCount >= 2) {
           this.fail(new RemoteReadingGatewayError('sourceVersionChanged', 'READING_CONTENT_EPOCH_CHANGED') as Error, lifecycleToken);
           return;
@@ -4538,7 +4549,8 @@ export struct ReadingExperience {
       }
       const restored = isInitial && this.restoredProgress?.kind === 'restored' &&
         this.restoredProgress.progress.chapterIndex === chapterIndex ? this.restoredProgress.progress : undefined;
-      const prepared = isInitial && !refreshContent && this.preparedReadingEntry?.isCurrent() === true &&
+      const prepared = positionContext?.directoryTargetProof === undefined && isInitial && !refreshContent &&
+        this.preparedReadingEntry?.isCurrent() === true &&
         this.preparedReadingEntry.chapter.chapterIndex === chapterIndex ? this.preparedReadingEntry : undefined;
       operation = prepareReadingChapterOpening({
         chapterIndex, refreshContent, restored, explicitContext: positionContext, layoutReady,
@@ -4562,7 +4574,8 @@ export struct ReadingExperience {
           if (update.kind === 'requested') requestedOffset = update.offset;
           else this.restoredProgress = update.progress;
         },
-        admit: (chapter: ReadingSessionChapter, measurementProjection: ReadingChapterMeasurementProjection): void => {
+        admit: (loaded: ReadingSessionChapter, measurementProjection: ReadingChapterMeasurementProjection): void => {
+          const chapter = this.directoryJumpProof.admit(loaded, selectionToken, positionContext?.directoryTargetProof);
           const chapterMap = measurementProjection.map;
           this.preparedReadingEntry = undefined;
           this.admitChapterContentVersion(chapter.chapterIndex, chapter.contentVersion);
@@ -5805,18 +5818,21 @@ export struct ReadingExperience {
     }, (layoutSignature: string): ReaderFirstPagePlan => {
       const coreLayout = this.coreLayout();
       const chapter = this.requireChapter();
+      const directoryProof = this.directoryJumpProof.forProgress(chapter, selectionToken);
       const scalarCount = this.requireChapterLayoutMap().scalarCount();
       const presentation: ReaderMeasuredFirstPagePresentation = {
         page: visiblePage, chapter, progress: scalarCount === 0 ? 0 : visiblePage.startScalar / scalarCount,
         selectionToken, lifecycleToken,
       };
-      // Cold presentation already has a completed layout owner. Its first save cannot retain input.
+      // An ordinary cold entry already has a completed layout owner and can
+      // release input before saving. An explicit directory target must first
+      // consume its one-shot proof on the durable path.
       const coldFirstPaint = this.visiblePage === undefined && this.visibleFragments.length === 0 &&
         this.chapterSelection.ticket === undefined && this.sourceSwitchTransactionId === undefined &&
         this.sessionGateway?.hasPendingSourceSwitch?.() !== true;
       const ordinaryTurn = !coldFirstPaint && this.isOrdinaryPageMeasurement(chapter, selectionToken, lifecycleToken);
       this.ordinaryPageMeasurementSelection = -1;
-      if (coldFirstPaint || ordinaryTurn) {
+      if (directoryProof === undefined && (coldFirstPaint || ordinaryTurn)) {
         return { kind: 'ordinary', present: (): Promise<void> =>
           this.presentOrdinaryMeasuredFirstPage(presentation, coreLayout, layoutSignature, ordinaryTurn) };
       }
@@ -5829,12 +5845,15 @@ export struct ReadingExperience {
           if (this.retainedTtsOwner !== undefined) this.retainedTtsCommitAdmitted = true;
           return this.persistMeasuredCanonicalProgress(this.bookId, chapter.chapterTitle,
             new CoreReadingAnchor(chapter.chapterIndex, visiblePage.startScalar, presentation.progress,
-              chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), coreLayout, isAdmitted);
+              chapter.bodyVersion, chapter.processingVersion, directoryProof), coreLayout, isAdmitted);
         },
         matchesAnchor: (stored: ReadingSessionCommittedProgress): boolean =>
-          stored.chapterIndex === chapter.chapterIndex && stored.chapterOffset === visiblePage.startScalar,
-        admitSavedProgress: (stored: ReadingSessionCommittedProgress): void => this.admitCommittedProgress(stored),
-        present: (stored: ReadingSessionCommittedProgress): void => this.presentDurableMeasuredFirstPage(presentation, stored),
+          stored.bookId === chapter.bookId && stored.chapterIndex === chapter.chapterIndex &&
+          stored.chapterOffset === visiblePage.startScalar,
+        admitSavedProgress: (stored: ReadingSessionCommittedProgress): void =>
+          this.admitCommittedProgress(stored, directoryProof, selectionToken),
+        present: (stored: ReadingSessionCommittedProgress): void =>
+          this.presentDurableMeasuredFirstPage(presentation, stored, directoryProof),
       };
     });
   }
@@ -5879,7 +5898,7 @@ export struct ReadingExperience {
   }
 
   private presentDurableMeasuredFirstPage(presentation: ReaderMeasuredFirstPagePresentation,
-    stored: ReadingSessionCommittedProgress): void {
+    stored: ReadingSessionCommittedProgress, directoryProof: ReaderDirectoryTargetProof | undefined): void {
     const page = presentation.page;
     const chapter = presentation.chapter;
     const selectionToken = presentation.selectionToken;
@@ -5912,7 +5931,7 @@ export struct ReadingExperience {
     this.traceInitialReadingPhase?.('input-ready', lifecycleToken);
     // Publish the final page-turn owner before durable observers can act.
     this.schedulePageTurnPreparation();
-    this.admitCommittedProgress(stored);
+    this.admitCommittedProgress(stored, directoryProof, selectionToken);
     this.completeControlSelectionAfterCommit(stored, page, selectionToken, lifecycleToken);
     this.finishFirstPageProgressReady(chapter, page, selectionToken, lifecycleToken);
   }
@@ -5931,7 +5950,7 @@ export struct ReadingExperience {
     return this.ordinaryFirstPagePersistence.persist(this.progressProducers,
       (): ReaderProgressProducerIntent => this.progressProducerIntent(chapter,
         new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, chapterProgress,
-          chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), layout,
+          chapter.bodyVersion, chapter.processingVersion), layout,
         current, current, (stored: LocalReadingProgress): void => this.admitCommittedProgress(stored)),
       presentedTurn, {
         traceIfReaderCurrent: (): boolean => {
@@ -6084,6 +6103,11 @@ export struct ReadingExperience {
       this.pageTurnPendingExit = false;
       this.releasePageTurnRecoveryInput();
     }
+    if (this.pageTurnGestureState.owner === 'bookmark') {
+      this.pageTurnPendingExit = true;
+      this.retirePagePointer();
+      return;
+    }
     const inputPhase = this.pageTurnInputPhase();
     if (inputPhase === 'tracking' || inputPhase === 'dragging') {
       // Back wins over an uncommitted page turn, but it must first return the
@@ -6093,7 +6117,6 @@ export struct ReadingExperience {
       const cancelled = cancelReaderPagePan(this.pageTurnGestureState);
       if (cancelled !== this.pageTurnGestureState) {
         this.onReaderPageGestureStateChanged(cancelled);
-        if (cancelled.owner === 'bookmark') this.onReaderBookmarkGestureReleased(false);
         // The no-animation actor can finish the rollback synchronously. In
         // that case there is no completion callback to resume this exit.
         if (!this.isSessionActive(lifecycleToken) || this.pageTurnInputPhase() !== 'idle') return;
@@ -6178,7 +6201,7 @@ export struct ReadingExperience {
     if (samePosition && !renewal) return;
     const anchor = new CoreReadingAnchor(chapter.chapterIndex, offset,
       renewal && committed !== undefined ? committed.chapterProgress : count === 0 ? 0 : offset / count,
-      chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof);
+      chapter.bodyVersion, chapter.processingVersion);
     if (renewal && committed !== undefined) anchor.retainedProgressReceipt = {
       progressRevision: committed.progressRevision, updatedAt: committed.updatedAt, locationRevision: committed.locationRevision };
     gateway.handoffPresentedProgress(this.bookId, chapter.chapterTitle, anchor, this.coreLayout(),
@@ -6218,7 +6241,7 @@ export struct ReadingExperience {
           this.retainedReadingRecencyReceipt === committed && this.lastCommittedProgress === committed));
       const anchor = new CoreReadingAnchor(chapter.chapterIndex, page.startScalar,
         renewRetainedReading && committed !== undefined ? committed.chapterProgress : scalarCount === 0 ? 0 : page.startScalar / scalarCount,
-        chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof);
+        chapter.bodyVersion, chapter.processingVersion);
       if (renewRetainedReading && committed !== undefined) {
         anchor.retainedProgressReceipt = { progressRevision: committed.progressRevision,
           updatedAt: committed.updatedAt, locationRevision: committed.locationRevision };
@@ -6283,7 +6306,7 @@ export struct ReadingExperience {
         capturedRevision = revision;
         capturedIntent = this.progressProducerIntent(chapter,
           new CoreReadingAnchor(chapter.chapterIndex, scalar, scalarCount === 0 ? 0 : scalar / scalarCount,
-            chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof),
+            chapter.bodyVersion, chapter.processingVersion),
           this.coreLayout(), isOwner, isCurrent, (stored: LocalReadingProgress): void => this.admitCommittedProgress(stored));
         return capturedIntent;
       },
@@ -6308,7 +6331,10 @@ export struct ReadingExperience {
       publish: (stored: LocalReadingProgress): void => { if (owner()) publish(stored); } };
   }
 
-  private admitCommittedProgress(stored: ReadingSessionCommittedProgress): void {
+  private admitCommittedProgress(stored: ReadingSessionCommittedProgress, directoryProof?: ReaderDirectoryTargetProof,
+    proofSelection?: number): void {
+    if (directoryProof !== undefined && proofSelection !== undefined && this.isSelectionCurrent(proofSelection))
+      this.directoryJumpProof.acknowledge(proofSelection, directoryProof, stored.bookId, stored.chapterIndex);
     const commit = new ReadingCommit(
       this.sourceId,
       this.bookId,
@@ -7864,7 +7890,7 @@ export struct ReadingExperience {
     const offset = Math.max(0, Math.min(scalarCount, progress.charEnd));
     const intent = this.progressProducerIntent(chapter,
       new CoreReadingAnchor(chapter.chapterIndex, offset, scalarCount === 0 ? 0 : offset / scalarCount,
-        chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), this.coreLayout(),
+        chapter.bodyVersion, chapter.processingVersion), this.coreLayout(),
       isCurrent, isCurrent, (stored: LocalReadingProgress): void => {
         this.admitCommittedProgress(stored);
         if (!isCurrent()) return;
@@ -9687,6 +9713,10 @@ export struct ReadingExperience {
 
   /** Geometry/layout mutations wait for an active sheet to roll back first. */
   private rollbackPageTurnForDeferredMutation(): void {
+    if (this.pageTurnGestureState.owner === 'bookmark') {
+      this.retirePagePointer();
+      return;
+    }
     const phase = this.pageTurnInputPhase();
     if (phase === 'settling') {
       this.rollbackUncommittedBookTurnSettlement();
@@ -9909,13 +9939,20 @@ export struct ReadingExperience {
 
   private retirePagePointer(): void {
     const phase = this.pageTurnInputPhase();
+    const bookmark = this.pageTurnGestureState.owner === 'bookmark';
     if (this.activePagePointerId < 0 && !this.pendingPointerSegmentReserved &&
-      phase !== 'tracking' && phase !== 'dragging') return;
+      !bookmark && phase !== 'tracking' && phase !== 'dragging') return;
     this.pageTurnInputRevision += 1;
     this.activePagePointerId = -1;
     this.pagePointerEpoch += 1;
     this.pendingPointerSegmentReserved = false;
-    if (phase === 'tracking' || phase === 'dragging') this.rollbackPageTurnForDeferredMutation();
+    if (bookmark) {
+      this.finishInterruptedBookmarkGesture();
+      this.resumeDeferredPageTurnWork();
+      if (this.appForeground && !this.exitRequested) this.schedulePagePointerCompletion();
+    } else if (phase === 'tracking' || phase === 'dragging') {
+      this.rollbackPageTurnForDeferredMutation();
+    }
   }
 
   private dismissControlTemporaryLayers(): void {
@@ -11197,6 +11234,10 @@ export struct ReadingExperience {
   private releasePagePointer(pointerId: number): void {
     if (this.activePagePointerId !== pointerId) return;
     this.activePagePointerId = -1;
+    this.schedulePagePointerCompletion();
+  }
+
+  private schedulePagePointerCompletion(): void {
     const epoch = this.pagePointerEpoch;
     const lifecycle = this.lifecycleToken;
     // Finish the entire UP/CANCEL callback (including its new intent) before
@@ -11206,7 +11247,7 @@ export struct ReadingExperience {
         this.activePagePointerId >= 0) return;
       this.drainRapidPageTurn();
       this.resumePendingAutoPageTurn();
-    this.resumeTtsPageFollow?.();
+      this.resumeTtsPageFollow?.();
       this.drainPageTurnPreparationQueue();
     }, 0);
   }
@@ -11374,6 +11415,30 @@ export struct ReadingExperience {
       this.bookmarkGesturePointerEpoch === this.pagePointerEpoch &&
       this.bookmarkGestureInputRevision === this.pageTurnInputRevision &&
       this.isReaderPageInteractionEnabled() && !this.pageTurnTapOnlyInput() && this.canTurnPage();
+  }
+
+  private finishInterruptedBookmarkGesture(): void {
+    // Pointer retirement invalidates the epoch before the visual reset. Late
+    // callbacks can neither keep this owner alive nor toggle its bookmark.
+    this.bookmarkRollbackGeneration += 1;
+    const animator = this.bookmarkRollbackAnimator;
+    this.bookmarkRollbackAnimator = undefined;
+    if (animator !== undefined) {
+      try {
+        animator.onFrame = (_value: number): void => {};
+        animator.cancel();
+      } catch (_) {}
+    }
+    this.bookmarkGestureAnchor = '';
+    this.bookmarkPageOffsetY = 0;
+    this.bookmarkRibbonFrame = undefined;
+    this.bookmarkPullHintOpacity = 0;
+    this.bookmarkPreviewChanged = false;
+    this.clearPageTurnProjection();
+    this.pageTurnGestureState = createReaderPageGestureState();
+    this.pageTurnInputOwned = false;
+    this.pageTurnPresentationPhase = 'idle';
+    this.flushDeferredPageChromeState();
   }
 
   private onReaderBookmarkGestureReleased(changed: boolean): void {
@@ -12079,7 +12144,7 @@ export struct ReadingExperience {
     const current = (): boolean => this.isOrdinaryFirstPagePresentationCurrent(page, chapter, selectionToken, lifecycleToken);
     const intent = this.progressProducerIntent(chapter,
       new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, scalarCount === 0 ? 0 : page.startScalar / scalarCount,
-        chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), this.coreLayout(),
+        chapter.bodyVersion, chapter.processingVersion), this.coreLayout(),
       current, current, (stored: LocalReadingProgress): void => this.admitCommittedProgress(stored));
     try {
       await this.progressProducers.persistPresented(intent, 'READING_PAGE_TURN_PROGRESS_ANCHOR_MISMATCH');
@@ -12137,7 +12202,7 @@ export struct ReadingExperience {
     const offset = prepared.page.startScalar;
     return this.persistMeasuredCanonicalProgress(this.bookId, chapter.chapterTitle,
       new CoreReadingAnchor(chapter.chapterIndex, offset, scalarCount === 0 ? 0 : offset / scalarCount,
-        chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), this.coreLayout(), current);
+        chapter.bodyVersion, chapter.processingVersion), this.coreLayout(), current);
   }
 
   private isPreparedPageTurnCommitCurrent(

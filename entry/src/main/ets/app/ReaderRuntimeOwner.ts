@@ -63,6 +63,8 @@ import { ReaderPreparationNetworkHost } from './ReaderPreparationNetworkHost';
 import { ReaderStartupTrace } from './ReaderStartupTrace';
 import { MangaOfflineNetworkProbe, type MangaOfflineProbeScope, type MangaProbeSelectionMode } from './MangaOfflineNetworkProbe';
 import { MangaChapterPreparationCoordinator } from '../features/manga/application/MangaChapterPreparationCoordinator';
+import { MangaRetainedTileCache } from '../features/manga/application/MangaRetainedTileCache';
+import { MangaNeighborMemoryAdmission, notifyReaderMemoryTrim } from './ReaderMemoryTrim';
 import type { MangaStorageChapter, MangaStorageGrant } from '../platform/reading-resources/ReadingImageDiskCache';
 import type { MangaDisplaySessionScope } from '../features/reading/application/ReadingGatewayRuntime';
 import { SharedDownloadCoordinator } from '../features/downloads/application/SharedDownloadCoordinator';
@@ -232,6 +234,7 @@ export class ReaderRuntimeOwner {
   private deepReadingPrefetchObservers?: Set<() => void>;
   private preparationWakeTimer: number = -1;
   private preparationForeground: boolean = false;
+  private readonly mangaNeighborMemory: MangaNeighborMemoryAdmission = new MangaNeighborMemoryAdmission();
   private preparationCatalogAllowed: boolean = false;
   private preparationIntentEpoch: number = 0;
   /** Number of live UIAbility instances sharing this process runtime. */
@@ -625,8 +628,13 @@ export class ReaderRuntimeOwner {
     return this.bookAcquisitions().request(method, params, options, priority);
   }
 
-  allowOptionalMangaPreparation(): boolean {
-    return this.state === 'ready' && this.preparationForeground && this.preparationNetwork?.allowed() === true;
+  allowOptionalMangaPreparation(allowUnderMemoryPressure: boolean = false): boolean {
+    return (allowUnderMemoryPressure || this.mangaNeighborMemory.allows()) &&
+      this.state === 'ready' && this.preparationForeground && this.preparationNetwork?.allowed() === true;
+  }
+
+  captureOptionalMangaPreparation(): () => boolean {
+    return this.mangaNeighborMemory.capture((): boolean => this.allowOptionalMangaPreparation());
   }
 
   /** Deep text preparation may observe the same network lifecycle without
@@ -814,6 +822,25 @@ export class ReaderRuntimeOwner {
   releaseOptionalReadingEntryMemory(): void {
     this.entryPreparations?.releaseOptionalMemory();
     releaseReadingEntryMemory(this);
+  }
+
+  trimMemory(level: 'background' | 'moderate' | 'low' | 'critical'): void {
+    if (!ReaderRuntimeOwner.isCurrent(this) || this.state === 'closing' || this.state === 'closed') return;
+    this.releaseOptionalReadingEntryMemory();
+    if (level !== 'background') {
+      this.mangaNeighborMemory.update(level);
+      MangaRetainedTileCache.setMemoryBudget(level === 'moderate' ? 'normal' : level);
+      if (level !== 'moderate') {
+        MangaChapterPreparationCoordinator.forRuntime(this).trimOptionalAdjacentPreparation();
+        for (const [sessionId, session] of this.mangaDisplaySessions) {
+          if (!session.current()) this.endMangaDisplaySession(sessionId);
+        }
+      }
+    }
+    MangaRetainedTileCache.trimUnprotectedAll();
+    notifyReaderMemoryTrim();
+    ReadingBodyImageHost.instance.trimMangaMetadataProofs();
+    this.readingImageDiskCache.trimVerifiedDigests();
   }
 
   captureReadingContentValidity(sourceId: string, bookId: string): () => boolean {

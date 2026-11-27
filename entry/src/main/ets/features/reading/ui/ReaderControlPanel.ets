@@ -2337,14 +2337,14 @@ export struct ReaderControlPanel {
       radius: surface.borderRadius,
       arrowPointPosition: ArrowPointPosition.CENTER,
       targetSpace: 8,
-      popupColor: material.native ? Color.Transparent : readerAppColor(surface.surfaceBackgroundRole, this.appScheme),
+      popupColor: readerAppColor(surface.surfaceBackgroundRole, this.appScheme),
       backgroundBlurStyle: BlurStyle.NONE,
-      borderWidth: material.native ? 0 : surface.borderWidth,
-      borderLinearGradient: material.native ? undefined : { colors: [
+      borderWidth: surface.borderWidth,
+      borderLinearGradient: { colors: [
         [readerAppColor(surface.surfaceBorderRole, this.appScheme), 0],
         [readerAppColor(surface.surfaceBorderRole, this.appScheme), 1],
       ] },
-      shadow: material.native ? undefined : { radius: surface.shadowRadius * density,
+      shadow: { radius: surface.shadowRadius * density,
         color: readerAppColor(surface.surfaceShadowRole, this.appScheme),
         offsetY: surface.shadowOffsetY * density },
       autoCancel: true, mask: true, focusable: true, followTransformOfTarget: true,
@@ -2357,7 +2357,12 @@ export struct ReaderControlPanel {
         if (!event.isVisible) this.dismissMoreMenu(generation);
       },
     };
-    applyReaderPopupMaterial(options, material);
+    if (applyReaderPopupMaterial(options, material)) {
+      options.popupColor = Color.Transparent;
+      options.borderWidth = 0;
+      options.borderLinearGradient = undefined;
+      options.shadow = undefined;
+    }
     return options;
   }
 

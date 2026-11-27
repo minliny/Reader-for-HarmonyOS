@@ -645,6 +645,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     });
     const hostStopTask = this.stopHostTransportImmediately();
     const transaction = this.enqueue(async (): Promise<void> => {
+      let pauseFailed = false;
       try {
         const hostStopError = await hostStopTask;
         if (hostStopError !== undefined) throw hostStopError;
@@ -655,11 +656,12 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
           if (snapshot !== undefined && currentPause()) this.applyCoreSnapshot(snapshot, undefined, reason);
         }
       } catch (error) {
+        pauseFailed = true;
         if (currentPause()) this.host.publishPlaybackState('error');
         throw error;
       } finally {
         // The serialized owner releases platform leases even if pause cannot be acknowledged.
-        await this.host.deactivateAudioSession();
+        await this.host.deactivateAudioSession(!pauseFailed && currentPause() ? 'pause' : undefined);
         this.transport = { ...this.transport, audioSession: 'inactive', focus: systemPause ? 'interrupted' : 'none' };
       }
     });
@@ -1240,7 +1242,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     const paused = await this.gateway.pause(active.input.chapter);
     if (!this.isSessionCurrent(active.identity)) return true;
     this.applyCoreSnapshot(paused, undefined, 'user');
-    await this.host.deactivateAudioSession();
+    await this.host.deactivateAudioSession('pause');
     if (!this.isSessionCurrent(active.identity)) return true;
     this.transport = { ...this.transport, audioSession: 'inactive', focus: 'none' };
     if (!this.desiredPlaying) return true;

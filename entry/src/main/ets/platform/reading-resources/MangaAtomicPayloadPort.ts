@@ -1,9 +1,11 @@
-export type MangaAtomicPayloadReader = (path: string, expectedBytes: number, maximumBytes: number,
-  current: () => boolean, metadata?: boolean) => Promise<Uint8Array>;
+export type AtomicPayloadMetadata = boolean | 'text-manifest';
 
-// ETS owns the official Concurrent worker. TS consumers depend only on this
-// typed port, installed once by the Ability before Runtime creation. The stable
-// module function captures no Ability/context and stays bound for the process.
+export type MangaAtomicPayloadReader = (path: string, expectedBytes: number, maximumBytes: number,
+  current: () => boolean, metadata?: AtomicPayloadMetadata) => Promise<Uint8Array>;
+
+// ETS owns the official Concurrent worker for reading-cache images and manifests.
+// The Ability installs this typed port before Runtime creation. The binding
+// captures no Ability context and stays bound for the process.
 let mangaAtomicPayloadReader: MangaAtomicPayloadReader | undefined;
 
 export function bindMangaAtomicPayloadReader(reader: MangaAtomicPayloadReader): void {
@@ -13,7 +15,7 @@ export function bindMangaAtomicPayloadReader(reader: MangaAtomicPayloadReader): 
 }
 
 export async function readMangaAtomicPayload(path: string, expectedBytes: number, maximumBytes: number,
-  current: () => boolean, metadata: boolean = false): Promise<Uint8Array> {
+  current: () => boolean, metadata: AtomicPayloadMetadata = false): Promise<Uint8Array> {
   const reader = mangaAtomicPayloadReader;
   if (reader === undefined) throw new Error('MANGA_ATOMIC_READER_UNAVAILABLE');
   return reader(path, expectedBytes, maximumBytes, current, metadata);
