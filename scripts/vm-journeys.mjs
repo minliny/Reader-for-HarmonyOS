@@ -7,7 +7,8 @@ import { parseArgs } from 'node:util';
 import { applyVmJourneyProfile, journeys } from './lib/vm-journey-cases.mjs';
 import { renderVisualReview } from './lib/vm-visual-review.mjs';
 import { layoutReports, layoutReceiptProblem, matchesVmEnvironment, matchingTransitions, records, shareReports,
-  supportedVmDimensions, transitionReceiptProblem, transitionReports, transitionWatermark, vmJourneyMatrix } from './lib/vm-journey-evidence.mjs';
+  supportedVmDimensions, transitionReceiptProblem, transitionReports, transitionWatermark, verticalSwipeLane,
+  vmJourneyMatrix } from './lib/vm-journey-evidence.mjs';
 import { openProbe } from '../tools/ui-contract/collectors/harmonyos/transport.mjs';
 import { assertInstalled, assertRemoteVmReadiness, remoteVmServer } from '../tools/ui-contract/collectors/harmonyos/candidate-evidence.mjs';
 import { assertUnlockedFocus, assertVmLockDismissed, classifyFocusWindow, vmLockDismissalOperation } from '../tools/ui-contract/collectors/harmonyos/focus-window.mjs';
@@ -335,16 +336,24 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
       return { op: 'swipe', fromX: left + Math.max(4, Math.round(9 * density)), fromY: y,
         toX: left + Math.round((right - left) * .18), toY: y, velocity: 350 };
     }),
-    swipe: (description, selector, direction, outcome) => checkpoint(description, outcome, () => {
-      const [left, top, right, bottom] = actor(root, selector);
-      const { x, y } = center([left, top, right, bottom]);
+    swipe: (description, selector, direction, outcome, { avoid } = {}) => checkpoint(description, outcome, () => {
+      const bounds = actor(root, selector);
+      const [left, top, right, bottom] = bounds;
+      const { x, y } = center(bounds);
       const dx = direction === 'left' ? -1 : direction === 'right' ? 1 : 0;
       const dy = direction === 'up' ? -1 : direction === 'down' ? 1 : 0;
       demand(dx || dy, 'Unsupported swipe direction');
       const horizontal = Math.round((right - left) / 4);
       const vertical = Math.round((bottom - top) / 4);
-      return { op: 'swipe', fromX: x - dx * horizontal, fromY: y - dy * vertical,
-        toX: x + dx * horizontal, toY: y + dy * vertical, velocity: 500 };
+      const fromY = y - dy * vertical;
+      const toY = y + dy * vertical;
+      if (avoid) {
+        demand(dy, 'An obstruction selector requires a vertical scroll');
+        const lane = verticalSwipeLane(bounds, fromY, toY, matchingNodes(root, avoid).map(node => node.bounds));
+        demand(lane !== undefined, 'No unobstructed vertical scroll lane in the native viewport');
+        return { op: 'swipe', fromX: lane, fromY, toX: lane, toY, velocity: 500 };
+      }
+      return { op: 'swipe', fromX: x - dx * horizontal, fromY, toX: x + dx * horizontal, toY, velocity: 500 };
     }),
   };
 

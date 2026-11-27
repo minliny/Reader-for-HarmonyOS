@@ -116,6 +116,8 @@ export struct ReaderControlAutoPageContent {
   private minimumLastProgress: number = 0;
   @Prop @Watch('onSourceDetachedChanged') sourceDetached: boolean = false;
   @Prop sourceHandoffPending: boolean = false;
+  @Prop sourceTransferGeneration: number = 0;
+  onMorphActorRetired: (generation: number, actorId: string) => void = (_generation: number, _actorId: string): void => {};
   onMorphActorVisible: (kind: ReaderSessionMorphSourceKind) => void =
     (_kind: ReaderSessionMorphSourceKind): void => {};
 
@@ -618,6 +620,10 @@ export struct ReaderControlAutoPageContent {
     Stack() { this.islandPlaybackContents(); }
       .id(this.actorId(false)).width(this.availableWidth).height(this.islandPlaybackHeight())
       .attributeModifier(new ReaderPanelFrame('reader-island-emphasis', this.appScheme))
+      .onDisAppear((): void => {
+        if (this.sourceDetached && this.sourceTransferGeneration > 0)
+          this.onMorphActorRetired(this.sourceTransferGeneration, this.actorId(false));
+      })
       .onAreaChange((_old: Area, area: Area): void => this.measureActor(false, area))
       .onVisibleAreaChange([0, .01, 1], (visible: boolean, ratio: number): void => this.reportActorVisible(false, visible, ratio));
   }

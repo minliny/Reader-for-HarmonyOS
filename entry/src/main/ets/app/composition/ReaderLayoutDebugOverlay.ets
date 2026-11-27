@@ -11,6 +11,7 @@ import type { ReaderWindowMetricsSnapshot } from '../../ui/foundation/ReaderWind
 import { ExpandMode, FrameNode } from '@ohos.arkui.node';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerMotionNowMs } from '../../ui/foundation/ReaderMotionClock';
+import { readerFrameChildQueryRange } from '../../ui/layout/ReaderFrameChildQueryRange';
 import { ReaderPostLayoutFrame } from '../../ui/layout/ReaderPostLayoutFrame';
 import { READER_LAYOUT_INVARIANT_PROPERTY, readerLayoutOverlayRoots, readerOwnedLayoutModals } from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import { evaluateLayoutInvariants, READER_PAGED_INPUT_SCOPE } from '../../ui/layout/LayoutInvariantEvaluator';
@@ -98,6 +99,11 @@ interface LayoutInvariantReceipt extends LayoutInvariantResult {
   environment: ReaderJourneyEnvironment;
   violationCount: number;
   missingCount: number;
+  frameScanIssue?: string;
+  frameScanIssueNode?: string;
+  frameScanIssueDepth?: number;
+  frameScanIssueFirstChildIndex?: number;
+  frameScanIssueLastChildIndex?: number;
 }
 
 // 838 行书源页可达上万节点；每次全树扫描会挤占主线程，超出消费者需要。
@@ -134,6 +140,8 @@ export struct ReaderLayoutDebugOverlay {
   private childIndexQueries: number = 0;
   private frameScanIssueNode: string = '';
   private frameScanIssueDepth: number = -1;
+  private frameScanIssueFirstChildIndex: number | undefined = undefined;
+  private frameScanIssueLastChildIndex: number | undefined = undefined;
   private excludedBackgroundBranches: number = 0;
   private excludedTransparentBranches: number = 0;
   private uniqueNodes: number = 0;
@@ -269,6 +277,11 @@ export struct ReaderLayoutDebugOverlay {
       violationCount: result.violations.length, missingCount: result.missing.length,
       observedRules: result.observedRules, modalOpen, recoveryPending,
       nativeAudit: result.nativeAudit, features: result.features, environment: readerJourneyEnvironment(metrics, this.appThemeScheme),
+      frameScanIssue: this.frameScanIssue.length > 0 ? this.frameScanIssue : undefined,
+      frameScanIssueNode: this.frameScanIssueNode.length > 0 ? this.frameScanIssueNode : undefined,
+      frameScanIssueDepth: this.frameScanIssueDepth >= 0 ? this.frameScanIssueDepth : undefined,
+      frameScanIssueFirstChildIndex: this.frameScanIssueFirstChildIndex,
+      frameScanIssueLastChildIndex: this.frameScanIssueLastChildIndex,
     };
     if (recovery && receipt.status === 'measured' && result.violations.length === 0) {
       this.modalRecoveryAfter = -1;
@@ -334,11 +347,14 @@ export struct ReaderLayoutDebugOverlay {
     hilog.info(0x5244, 'Reader', 'READER_DEVELOPER_LAYOUT %{public}s', payload);
   }
 
-  private markFrameScanIncomplete(issue: string, nodeLabel: string, depth: number): void {
+  private markFrameScanIncomplete(issue: string, nodeLabel: string, depth: number,
+    firstChildIndex?: number, lastChildIndex?: number): void {
     if (!this.frameScanTruncated) {
       this.frameScanIssue = issue;
       this.frameScanIssueNode = nodeLabel;
       this.frameScanIssueDepth = depth;
+      this.frameScanIssueFirstChildIndex = firstChildIndex;
+      this.frameScanIssueLastChildIndex = lastChildIndex;
     }
     this.frameScanTruncated = true;
   }
@@ -355,6 +371,8 @@ export struct ReaderLayoutDebugOverlay {
       this.frameScanIssue = '';
       this.frameScanIssueNode = '';
       this.frameScanIssueDepth = -1;
+      this.frameScanIssueFirstChildIndex = undefined;
+      this.frameScanIssueLastChildIndex = undefined;
       this.paintFrameBounds();
       return;
     }
@@ -364,6 +382,8 @@ export struct ReaderLayoutDebugOverlay {
     this.frameScanIssue = '';
     this.frameScanIssueNode = '';
     this.frameScanIssueDepth = -1;
+    this.frameScanIssueFirstChildIndex = undefined;
+    this.frameScanIssueLastChildIndex = undefined;
     this.excludedBackgroundBranches = 0;
     this.excludedTransparentBranches = 0;
     this.uniqueNodes = 0;
@@ -404,6 +424,7 @@ export struct ReaderLayoutDebugOverlay {
     if (root === null) {
       this.frameBounds = [];
       this.frameCount = 0;
+      this.markFrameScanIncomplete('overlay-anchor-unresolved', 'reader-layout-debug-overlay', 0);
       this.reportInvariants(false);
       if (this.developerModeEnabled) this.reportWindowSample();
       this.paintFrameBounds();
@@ -584,8 +605,12 @@ export struct ReaderLayoutDebugOverlay {
         firstChildIndex = node.getFirstChildIndexWithoutExpand();
         lastChildIndex = node.getLastChildIndexWithoutExpand();
       } catch (_) {
-        this.markFrameScanIncomplete('child-index-read', this.debugNodeLabel(node), visit.depth);
+        this.markFrameScanIncomplete('child-index-read', this.debugNodeLabel(node), visit.depth, firstChildIndex, lastChildIndex);
       }
+      const remainingNodes = Math.max(1, FRAME_NODE_SCAN_LIMIT - this.scannedNodes);
+      const remainingQueries = FRAME_NODE_CHILD_QUERY_LIMIT - this.childIndexQueries;
+      const allowedQueries = Math.min(remainingNodes, Math.max(0, remainingQueries));
+      const childQuery = readerFrameChildQueryRange(firstChildIndex, lastChildIndex, allowedQueries);
       const audit = this.nativeLayoutAudit.record(this.getUIContext(), node, uniqueId, nodeId, nodeType, effectiveOpacity,
         invariantBounds, visit.clip, visit.auditParent, firstChildIndex < 0);
       const suppressInput = visit.auditParent?.suppressInput === true || audit.enabled === false || audit.hitTest === 'none';
@@ -640,47 +665,31 @@ export struct ReaderLayoutDebugOverlay {
       const auditParent: ReaderNativeLayoutParent = { key: audit.key, type: nodeType, bounds: invariantBounds,
         scrollClip, suppressInput };
       const childIds: Set<number> = new Set<number>();
-      if (firstChildIndex >= 0 && lastChildIndex >= firstChildIndex) {
-        const remainingBudget = Math.max(1, FRAME_NODE_SCAN_LIMIT - this.scannedNodes);
-        const remainingQueryBudget = FRAME_NODE_CHILD_QUERY_LIMIT - this.childIndexQueries;
-        const span = lastChildIndex - firstChildIndex + 1;
-        const allowedQueries = Math.min(remainingBudget, Math.max(0, remainingQueryBudget));
-        const probeLimit = firstChildIndex + allowedQueries - 1;
-        const exceedsNodeBudget = span > remainingBudget;
-        const exceedsQueryBudget = span > remainingQueryBudget;
-        if (exceedsQueryBudget && (!exceedsNodeBudget || remainingQueryBudget < remainingBudget)) {
-          this.markFrameScanIncomplete('child-index-query-limit', this.debugNodeLabel(node), visit.depth);
-        }
-        if (exceedsNodeBudget && (!exceedsQueryBudget || remainingBudget <= remainingQueryBudget)) {
-          this.markFrameScanIncomplete('child-index-limit', this.debugNodeLabel(node), visit.depth);
-        }
-        const boundedProbeLimit = Math.min(lastChildIndex + CHILD_INDEX_PROBE_WINDOW, probeLimit);
+      if (childQuery !== undefined) {
+        const probeLimit = childQuery.first + allowedQueries - 1;
+        const boundedProbeLimit = childQuery.byMountedIndex ? probeLimit :
+          Math.min(childQuery.last + CHILD_INDEX_PROBE_WINDOW, probeLimit);
+        let reachedMountedEnd = false;
         let consecutiveMisses = 0;
-        for (let index = firstChildIndex; index <= boundedProbeLimit; index += 1) {
-          if (this.childIndexQueries >= FRAME_NODE_CHILD_QUERY_LIMIT) {
-            this.markFrameScanIncomplete('child-index-query-limit', this.debugNodeLabel(node), visit.depth);
-            break;
-          }
+        for (let index = childQuery.first; index <= boundedProbeLimit; index += 1) {
           this.childIndexQueries += 1;
           let child: FrameNode | null = null;
           try {
-            // The mounted main-tree indices are not guaranteed to start at
-            // zero for generated ForEach/LazyForEach children. Enumerating the
-            // documented first..last range keeps the siblings that a virtual
-            // child cursor omits while NOT_EXPAND avoids creating the rest.
+            // NOT_EXPAND addresses only FrameNodes in the mounted main tree.
             child = node.getChild(index, ExpandMode.NOT_EXPAND);
           } catch (_) {
-            this.markFrameScanIncomplete('mounted-child-read', this.debugNodeLabel(node), visit.depth);
+            this.markFrameScanIncomplete('mounted-child-read', this.debugNodeLabel(node), visit.depth,
+              firstChildIndex, lastChildIndex);
             continue;
           }
           if (child === null) {
-            // Some generated subtrees report only their first mounted child in
-            // the no-expand range even though later mounted children remain
-            // addressable by index. Probe a bounded window past the reported
-            // range and stop after a short run of misses so a long virtual
-            // list is not walked page by page.
+            if (childQuery.byMountedIndex) {
+              reachedMountedEnd = true;
+              break;
+            }
+            // Keep the short tail probe for ordinary generated child ranges.
             consecutiveMisses += 1;
-            if (index > lastChildIndex && consecutiveMisses >= CHILD_INDEX_PROBE_MISS_LIMIT) break;
+            if (index > childQuery.last && consecutiveMisses >= CHILD_INDEX_PROBE_MISS_LIMIT) break;
             continue;
           }
           consecutiveMisses = 0;
@@ -693,6 +702,10 @@ export struct ReaderLayoutDebugOverlay {
           if (childUniqueId > 0) childIds.add(childUniqueId);
           queue.push({ node: child, depth: visit.depth + 1, opacity: effectiveOpacity,
             clip: childClip, headers, invariantHeaderId, auditParent });
+        }
+        if (childQuery.byMountedIndex && !reachedMountedEnd) {
+          const issue = remainingQueries < remainingNodes ? 'child-index-query-limit' : 'child-index-limit';
+          this.markFrameScanIncomplete(issue, this.debugNodeLabel(node), visit.depth, firstChildIndex, lastChildIndex);
         }
       }
       // ArkUI's unqualified child and sibling cursors can build lazy rows

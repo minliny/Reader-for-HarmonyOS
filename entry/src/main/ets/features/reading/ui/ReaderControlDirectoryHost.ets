@@ -248,6 +248,8 @@ export function readerNativeControlIntent(actors: ReaderNativeControlActors,
     switch (intent.kind) {
       case 'launchSourceReady':
         return actors.auxiliary.onSourceReady(intent.generation);
+      case 'launchSourceRetired':
+        return actors.auxiliary.onOriginalSourceRetired(intent.generation, intent.actorId);
       case 'launchSource':
         return actors.auxiliary.admitControlSource(intent.source);
       case 'sessionLaunchShellMeasured': {
@@ -542,7 +544,7 @@ function readerNativeControlFrame(input: ReaderNativeControlFrameInput,
     generation: activeLaunch?.generation ?? 0,
     sourceMinimum: input.auxiliary.sourceMinimum,
     sourceKind: activeLaunch?.geometry.kind ?? 'quickAutoPage',
-    ownsControls: activeLaunch?.ownership === 'stage',
+    ownsControls: activeLaunch?.ownership === 'stage' && activeLaunch.sourceTransfer !== 'preparingProxy',
     topBarOffsetY: activeLaunch?.sample.topBarOffsetY ?? 0,
     dockOffsetY: activeLaunch?.sample.dockOffsetY ?? 0,
     recovering: activeLaunch?.ownership === 'handoffPending',

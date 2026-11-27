@@ -13,6 +13,7 @@ import { applyReaderImmersiveMaterial, defaultNavigationPreferences, readerSurfa
 
 const AUTO_PAGE_CAPSULE_MIN_WIDTH = 96;
 const TTS_CAPSULE_MIN_WIDTH = 94;
+export const READER_SESSION_CAPSULE_TOGGLE_ID = 'reader-session-launch-toggle';
 export const READER_SESSION_CAPSULE_HEIGHT = 24;
 export const READER_SESSION_CAPSULE_RADIUS = 12;
 interface ReaderSessionCapsuleShadow { radius: number; offsetY: number; }
@@ -205,6 +206,7 @@ export struct ReaderSessionCapsulePause {
         (this.sessionState === 'preparing' && this.desiredPlaying) ?
         (this.themeScheme === 'night' ? $r('app.media.reader_session_pause_theme_night') : $r('app.media.reader_session_pause')) :
         (this.themeScheme === 'night' ? $r('app.media.reader_session_play_theme_night') : $r('app.media.reader_session_play')))
+        .id(`reader-session-capsule-state-${this.sessionState}`)
         .width(8).height(8);
     }
     .id(this.nativeId.length > 0 ? this.nativeId : undefined)
@@ -274,11 +276,13 @@ export struct ReaderSessionCapsule {
       readerSurfaceMaterialDecision('sessionCapsule', this.navigationPreferences, this.themeScheme, this.systemScheme)))
     .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }
+    .id(READER_SESSION_CAPSULE_TOGGLE_ID)
     .padding(0)
     .width(this.finalWidth()).height(this.metrics().targetHeight).backgroundColor(Color.Transparent)
     .hitTestBehavior(this.interactionEnabled ? HitTestMode.Block : HitTestMode.None)
     .enabled(this.interactionEnabled)
     .accessibilityText(readerSessionCapsuleAccessibility(this.type, this.sessionState, this.desiredPlaying))
+    .accessibilitySelected(this.sessionState === 'playing')
     // Keep capsule pointers out of the raw page handler, including UP/CANCEL
     // after playback state changes. Click recognition remains independent.
     .onTouch((event: TouchEvent): void => {

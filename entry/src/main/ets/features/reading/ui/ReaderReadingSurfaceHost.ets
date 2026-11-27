@@ -1562,7 +1562,8 @@ export function ReaderMountedReadingScene($$: ReaderMountedReadingSceneInput) {
           fontScale: $$.actors.viewport.readingLayout().systemFontScale,
           sample: $$.overlay.sessionLaunch.sample, sessionState: $$.actors.capsule.sessionLaunchBusinessStatus(),
           desiredPlaying: $$.overlay.sessionLaunch.desiredPlaying, countdown: $$.actors.playback.automaticState().remainingSeconds,
-          interactionEnabled: !$$.projection.pageTurnInputOwned && $$.overlay.sessionLaunch.ownership === 'stage',
+          interactionEnabled: !$$.projection.pageTurnInputOwned && $$.overlay.sessionLaunch.ownership === 'stage' &&
+            $$.overlay.sessionLaunch.sourceTransfer === 'presenting',
           ownsSourceRegion: $$.overlay.sessionLaunch.ownership === 'stage' || $$.overlay.sessionLaunch.ownership === 'handoffPending',
           material: $$.view.sessionLaunchMaterial(),
           sourceSurfaceColor: readerAppColor('TOK_READ_CARD_EMPHASIS', $$.view.scheme()),
@@ -1588,7 +1589,8 @@ export function ReaderMountedReadingScene($$: ReaderMountedReadingSceneInput) {
             },
           },
           onToggle: (): void => $$.actors.capsule.toggleSessionCapsule(),
-        }).id('reader-session-launch-fade-owner').opacity($$.overlay.sessionLaunchStageOpacity).zIndex(8)
+        }).id('reader-session-launch-fade-owner')
+          .opacity($$.overlay.sessionLaunch.sourceTransfer === 'presenting' ? $$.overlay.sessionLaunchStageOpacity : 0).zIndex(8)
           .visibility($$.view.sourceSwitchVisible() || $$.view.controlObscured() ? Visibility.Hidden : Visibility.Visible)
           .transition($$.view.reduceMotion() ? TransitionEffect.asymmetric(
             TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()), TransitionEffect.IDENTITY) :
@@ -1686,7 +1688,7 @@ export function ReaderMountedReadingScene($$: ReaderMountedReadingSceneInput) {
             $$.actors.capsule.onSessionCapsuleMeasured(identity, type, width, height),
         }).position({ x: $$.actors.capsule.sessionCapsuleLayout().sessionX, y: $$.actors.capsule.sessionCapsuleLayout().sessionY }).zIndex(8);
       }
-      if ($$.overlay.sessionLaunch !== undefined) {
+      if ($$.overlay.sessionLaunch?.sourceTransfer === 'presenting') {
         ReaderPageChrome({
           isSessionOverlay: true,
           topStartText: $$.actors.capsule.sessionChromeForPresentation($$.chrome.continuousChromeProgressText).topStartText,

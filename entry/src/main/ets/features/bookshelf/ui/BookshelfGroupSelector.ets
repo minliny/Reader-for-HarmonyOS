@@ -15,7 +15,7 @@ export struct BookshelfGroupSelector {
   @Prop selectedGroup: string = '';
   @Prop groups: BookGroup[] = [];
   @Prop busy: boolean = false;
-  @Prop focusId: string = '';
+  @Prop defaultOptionId: string = '';
   onSelect: (group: string) => void = (_group: string): void => {};
 
   build() {
@@ -34,7 +34,7 @@ export struct BookshelfGroupSelector {
       }.width('100%');
       Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
         space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(4) } }) {
-        this.groupChip('', '默认', this.focusId);
+        this.groupChip('', '默认', this.defaultOptionId);
         ForEach(this.groups, (group: BookGroup): void => {
           if (group.groupName.trim().length > 0) this.groupChip(group.groupName, group.groupName, '');
         }, (group: BookGroup): string => `${group.groupId}:${group.groupName}`);
@@ -43,7 +43,7 @@ export struct BookshelfGroupSelector {
   }
 
   @Builder
-  private groupChip(group: string, label: string, focusId: string) {
+  private groupChip(group: string, label: string, nativeId: string) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
         Text(label).fontFamily(TYPE_APP_FILTER_OPTION.fontFamily).fontWeight(TYPE_APP_FILTER_OPTION.fontWeight)
           .fontSize(TYPE_APP_FILTER_OPTION.fontSizeFp).lineHeight(TYPE_APP_FILTER_OPTION.lineHeightFp as number)
@@ -55,7 +55,7 @@ export struct BookshelfGroupSelector {
           .borderRadius(this.chipRadius());
     }.constraintSize({ minWidth: 44, minHeight: 44, maxWidth: '100%' })
       .padding(0)
-      .id(focusId.length > 0 ? focusId : undefined)
+      .id(nativeId.length > 0 ? nativeId : undefined)
       .attributeModifier(new ReaderActionAccessibility(group.length === 0 ? '默认分组' : label, !this.busy,
         group === this.selectedGroup, true,
         new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 999, !this.busy), 'nativeButton'))

@@ -18,7 +18,7 @@ import { ReaderControlDirectoryContent } from './ReaderControlDirectoryContent';
 import type { ReaderControlModuleFacts, ReaderControlPreparedModuleProfile } from './ReaderControlMinimumMeasurement';
 import type { ReaderControlMotionFrame } from './ReaderControlMotionGeometry';
 import { defaultReaderControlIntent, type ReaderControlIntent, type ReaderControlIntentHandler,
-  type ReaderControlIntentResult, type ReaderControlPanelFacts } from './ReaderControlPanelNativeContract';
+  type ReaderControlIntentResult, type ReaderControlLaunchSnapshot, type ReaderControlPanelFacts } from './ReaderControlPanelNativeContract';
 import type { ReaderControlPlaybackProfileReader } from './ReaderControlPlaybackProfile';
 import { ReaderControlReplaceContent } from './ReaderControlReplaceContent';
 import { ReaderControlSearchContent } from './ReaderControlSearchContent';
@@ -68,7 +68,6 @@ export interface ReaderControlPanelModuleInput {
 }
 
 export interface ReaderControlPanelModuleLaunch {
-  readonly detached: (module: 'tts' | 'autoPage') => boolean;
   readonly visible: (kind: ReaderSessionMorphSourceKind) => void;
   readonly measured: (kind: ReaderSessionMorphSourceKind, left: number, top: number, width: number, height: number) => void;
 }
@@ -122,8 +121,16 @@ export interface ReaderControlPanelModuleProps {
   readonly scene: ReaderControlPanelModuleScene;
 }
 
+export interface ReaderControlPlaybackModuleProps extends ReaderControlPanelModuleProps {
+  readonly launch: ReaderControlLaunchSnapshot;
+}
+
+function sourceDetached(launch: ReaderControlLaunchSnapshot, module: 'tts' | 'autoPage'): boolean {
+  return launch.sample?.type === module && (launch.ownsControls || launch.recovering);
+}
+
 @Builder
-export function ReaderControlPanelModuleContent($$: ReaderControlPanelModuleProps) {
+export function ReaderControlPanelModuleContent($$: ReaderControlPlaybackModuleProps) {
   if ($$.scene.geometry.location().module === 'directory') {
     ReaderControlModuleDirectory({ scene: $$.scene });
   } else if ($$.scene.geometry.location().module === 'search') {
@@ -131,9 +138,9 @@ export function ReaderControlPanelModuleContent($$: ReaderControlPanelModuleProp
   } else if ($$.scene.geometry.location().module === 'settings') {
     ReaderControlModuleSettings({ scene: $$.scene });
   } else if ($$.scene.geometry.location().module === 'tts') {
-    ReaderControlModuleTts({ scene: $$.scene });
+    ReaderControlModuleTts({ scene: $$.scene, launch: $$.launch });
   } else if ($$.scene.geometry.location().module === 'autoPage') {
-    ReaderControlModuleAutoPage({ scene: $$.scene });
+    ReaderControlModuleAutoPage({ scene: $$.scene, launch: $$.launch });
   } else if ($$.scene.geometry.location().module === 'replace') {
     ReaderControlModuleReplace({ scene: $$.scene });
   } else if ($$.scene.geometry.location().module === 'appearance') {
@@ -264,7 +271,7 @@ function ReaderControlModuleSettings($$: ReaderControlPanelModuleProps) {
 }
 
 @Builder
-function ReaderControlModuleTts($$: ReaderControlPanelModuleProps) {
+function ReaderControlModuleTts($$: ReaderControlPlaybackModuleProps) {
   ReaderControlTtsContent({
     fixedIsland: $$.scene.facts().geometry.fixedIsland,
     minimumIdentity: $$.scene.minimum.identity(), minimumKey: $$.scene.minimum.key(),
@@ -272,10 +279,14 @@ function ReaderControlModuleTts($$: ReaderControlPanelModuleProps) {
     onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => $$.scene.minimum.factsChanged(identity, facts),
     onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined,
       profileReader?: ReaderControlPlaybackProfileReader): void => $$.scene.minimum.bind('tts', identity, measurer, profileReader),
-    sourceDetached: $$.scene.launch.detached('tts'),
-    sourceHandoffPending: $$.scene.facts().launch.recovering,
+    sourceDetached: sourceDetached($$.launch, 'tts'),
+    sourceHandoffPending: $$.launch.recovering,
+    sourceTransferGeneration: $$.launch.generation,
+    onMorphActorRetired: (generation: number, actorId: string): void => {
+      $$.scene.dispatch({ kind: 'launchSourceRetired', generation, actorId });
+    },
     reduceMotion: $$.scene.facts().geometry.reduceMotion,
-    waveformActive: $$.scene.geometry.frame().visibility > 0 && !$$.scene.launch.detached('tts') && !$$.scene.facts().geometry.obscured,
+    waveformActive: $$.scene.geometry.frame().visibility > 0 && !sourceDetached($$.launch, 'tts') && !$$.scene.facts().geometry.obscured,
     onMorphActorVisible: (kind: ReaderSessionMorphSourceKind): void => $$.scene.launch.visible(kind),
     dismissTemporaryRevision: $$.scene.facts().geometry.temporary.dismissRevision,
     onTemporaryLayerChange: $$.scene.input.temporaryLayer('tts'),
@@ -337,7 +348,7 @@ function ReaderControlModuleTts($$: ReaderControlPanelModuleProps) {
 }
 
 @Builder
-function ReaderControlModuleAutoPage($$: ReaderControlPanelModuleProps) {
+function ReaderControlModuleAutoPage($$: ReaderControlPlaybackModuleProps) {
   ReaderControlAutoPageContent({
     fixedIsland: $$.scene.facts().geometry.fixedIsland,
     minimumIdentity: $$.scene.minimum.identity(), minimumKey: $$.scene.minimum.key(),
@@ -345,8 +356,12 @@ function ReaderControlModuleAutoPage($$: ReaderControlPanelModuleProps) {
     onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => $$.scene.minimum.factsChanged(identity, facts),
     onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined,
       profileReader?: ReaderControlPlaybackProfileReader): void => $$.scene.minimum.bind('autoPage', identity, measurer, profileReader),
-    sourceDetached: $$.scene.launch.detached('autoPage'),
-    sourceHandoffPending: $$.scene.facts().launch.recovering,
+    sourceDetached: sourceDetached($$.launch, 'autoPage'),
+    sourceHandoffPending: $$.launch.recovering,
+    sourceTransferGeneration: $$.launch.generation,
+    onMorphActorRetired: (generation: number, actorId: string): void => {
+      $$.scene.dispatch({ kind: 'launchSourceRetired', generation, actorId });
+    },
     onMorphActorVisible: (kind: ReaderSessionMorphSourceKind): void => $$.scene.launch.visible(kind),
     fullViewportHeight: $$.scene.geometry.endpointHeight(true),
     expandedLayout: $$.scene.geometry.expanded(), motionProgress: $$.scene.geometry.progress(),

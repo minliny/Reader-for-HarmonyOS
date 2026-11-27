@@ -7,6 +7,8 @@ export interface ReaderSessionLaunchViewHost {
   ready(): boolean;
   layoutCurrent(): boolean;
   retireForLayout(): void;
+  controlSourceReady(generation: number): boolean;
+  fallbackSourceTransfer(generation: number): void;
   context(): UIContext;
   observing(): boolean;
   drainPageTurn(): void;

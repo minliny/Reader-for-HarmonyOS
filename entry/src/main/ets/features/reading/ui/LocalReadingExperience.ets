@@ -2394,7 +2394,8 @@ export struct ReadingExperience {
   }
 
   private controlsPresentedForWindow(): boolean {
-    return this.overlayState.sessionLaunch?.ownership === 'stage' ? this.overlayState.sessionLaunch.sample.controlsPresented :
+    return this.overlayState.sessionLaunch?.ownership === 'stage' &&
+      this.overlayState.sessionLaunch.sourceTransfer === 'presenting' ? this.overlayState.sessionLaunch.sample.controlsPresented :
       readerControlHostVisible(this.controlDirectory.visualSession());
   }
   private onControlBookmarkFailureChanged(): void { this.directoryOps.onControlBookmarkFailureChanged(); }

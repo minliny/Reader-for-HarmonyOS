@@ -11,11 +11,13 @@ import { readerPaperActionIcon } from '../../../ui/foundation/ReaderActionIconRe
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
-import { readerImportCardTransition, readerImportOverlayTransition } from '../../../ui/surfaces/ReaderImportDialogStyle';
+import { readerImportCardTransition, readerImportCloseDurationMs, readerImportOverlayTransition } from '../../../ui/surfaces/ReaderImportDialogStyle';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_HINT, TYPE_FILE_IMPORT_LABEL, TYPE_FILE_IMPORT_NAME, TYPE_FILE_IMPORT_PROGRESS, TYPE_FILE_IMPORT_WAIT } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { READER_LAYOUT_INVARIANT_PROPERTY, ReaderLayoutOverlayRoot } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { motionAnimateParam, motionAnimateParamDelayed } from '../../../ui/foundation/MotionSpec';
 import { READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS } from './LocalImportMotion';
 import { readerMotionCurve, readerMotionDurationMs, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
@@ -65,6 +67,7 @@ class LocalImportSelectionFocusFrame extends FrameCallback {
 @Component
 export struct LocalImportDialog {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
+  private readonly layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('local-import');
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
@@ -195,10 +198,16 @@ export struct LocalImportDialog {
           .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
       }
     }
+    .id(this.embeddedPreview ? undefined : this.layoutOverlay?.id())
     .width('100%')
     .height('100%')
     .clip(true)
+    .customProperty(READER_LAYOUT_INVARIANT_PROPERTY, this.layoutModalTag())
     .transition(readerImportOverlayTransition(this.reduceMotion))
+    .onAppear((): void => {
+      if (!this.embeddedPreview) this.layoutOverlay?.mount(this.getUIContext());
+    })
+    .onDisAppear((): void => this.layoutOverlay?.unmount())
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       if (!this.embeddedPreview) return;
       const originX = newValue.globalPosition.x;
@@ -213,13 +222,20 @@ export struct LocalImportDialog {
     });
   }
 
+  private layoutModalTag(): LayoutInvariantTag | undefined {
+    if (this.layoutOverlay === undefined || this.embeddedPreview) return undefined;
+    return { role: 'modal-overlay', id: 'local-import', active: true, intercepts: true,
+      closeDurationMs: readerImportCloseDurationMs(this.reduceMotion) };
+  }
+
   @Builder
   private progressLayers() { this.importingPanel(); if (this.batch !== undefined) this.resultPanel(); }
 
   @Builder
   private fileSelectionPanel() {
     ReaderBoundedSurface({ specId: 'local-import-selection', surfaceWidth: this.panelFrame().width,
-      surfaceHeight: 0, maxSurfaceHeight: this.availableHeight(), body: (): void => { this.selectionDocument(); } });
+      surfaceHeight: 0, maxSurfaceHeight: this.availableHeight(), auditMountedRoot: !this.embeddedPreview,
+      body: (): void => { this.selectionDocument(); } });
   }
 
   @Builder
@@ -238,6 +254,7 @@ export struct LocalImportDialog {
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       ReaderIconButton({ specId: 'toolbar-standard', scheme: this.appThemeScheme,
         icon: readerPaperActionIcon('close', this.appThemeScheme), accessibilityLabel: '关闭',
+        focusId: this.embeddedPreview ? '' : 'reader-local-import-close',
         actionEnabled: this.canDismissSelection(), onTap: (): void => this.dismissSelection() });
     }.width('100%').padding({ left: 20, right: 12, top: 8 });
   }
@@ -285,6 +302,8 @@ export struct LocalImportDialog {
               .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)
               .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
             Text('支持多选 TXT、EPUB、MOBI、AZW3')
+              .width('100%')
+              .textAlign(TextAlign.Center)
               .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)
               .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)
               .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)
@@ -293,6 +312,7 @@ export struct LocalImportDialog {
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .margin({ top: 2 });
           }
+          .width('100%')
           .alignItems(HorizontalAlign.Center);
 
           Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Center }) {

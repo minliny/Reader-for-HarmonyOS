@@ -10,7 +10,6 @@ import { defaultNavigationPreferences, ReaderModalScrimModifier, readerSurfaceMa
 import { ReaderControlChapterProgressCard } from './ReaderControlChapterProgressCard';
 import { ReaderControlModuleNavigation, type ReaderControlNavigationModule } from './ReaderControlModuleNavigation';
 import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
-import type { ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { type ReaderControlPlaybackProfileReader } from './ReaderControlPlaybackProfile';
 import hilog from '@ohos.hilog';
@@ -164,7 +163,6 @@ export struct ReaderControlPanel {
       visualEpoch: (): number => this.motion.visualState().epoch,
     },
     {
-      detached: (type: ReaderSessionCapsuleType): boolean => this.motion.launchSourceDetached(type),
       visible: (kind: ReaderSessionMorphSourceKind): void => this.motion.onLaunchSourceVisible(kind),
       measured: (kind: ReaderSessionMorphSourceKind, left: number, top: number, width: number, height: number): void =>
         this.motion.reportSessionMorphSource(kind, left, top, width, height),
@@ -526,7 +524,9 @@ export struct ReaderControlPanel {
             .width(this.motion.frame().content.width).height(this.motion.frame().content.height).edgeEffect(EdgeEffect.None)
             .enableScrollInteraction(!readerControlExtentFits(this.quickHome.homeContentMinimumHeight(), this.motion.frame().content.height));
         } else {
-          ReaderControlPanelModuleContent({ scene: this.moduleScene });
+          // Read the observed launch publication in the render expression so the
+          // live source retires with the proxy's ownership update.
+          ReaderControlPanelModuleContent({ scene: this.moduleScene, launch: this.panelFrame.launch });
         }
       }
     }

@@ -5,7 +5,8 @@ import { READER_GLASS_BLUR_VP, READER_HEAVY_GLASS_BLUR_VP, readerSurfaceElevatio
   type SheetSpecId } from './ReaderSurfaceSpecs';
 import { ReaderInsetsVp } from '../foundation/ReaderWindowMetrics';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
-import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_SURFACE_HINT, newReaderLayoutModalId } from '../foundation/ReaderLayoutInvariantSignals';
+import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_SURFACE_HINT, ReaderLayoutOverlayRoot,
+  newReaderLayoutModalId } from '../foundation/ReaderLayoutInvariantSignals';
 import { readerBeginTransition, readerTransitionsEnabled } from '../foundation/ReaderTransitionSignals';
 import type { LayoutInvariantSurfaceHint } from '../layout/LayoutInvariantNativeAudit';
 import type { ReaderTransitionAxis } from '../layout/TransitionInvariantEvaluator';
@@ -136,19 +137,27 @@ export struct ReaderBoundedSurface {
   @Prop placement: 'bottom' | 'side' = 'bottom';
   @Prop scheme: 'auto' | 'day' | 'night' = 'auto';
   @Prop safeInsets: ReaderInsetsVp = new ReaderInsetsVp(0, 0, 0, 0);
+  @Prop auditMountedRoot: boolean = false;
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam body: () => void = this.emptySlot;
   @BuilderParam actions: () => void = this.emptySlot;
   private readonly transitionId: number = READER_LAYOUT_DEBUG_BUILD ? newReaderLayoutModalId() : 0;
+  private layoutOverlay: ReaderLayoutOverlayRoot | undefined = undefined;
 
   @Builder private emptySlot() {}
 
+  private boundedNativeId(): string { return `reader-transition-bounded:${this.transitionId}`; }
+
   private transitionNativeId(): string | undefined {
     if (!readerTransitionsEnabled() || this.specId === 'tts-config-picker' || this.specId === 'tts-config-manager') return undefined;
-    return `reader-transition-bounded:${this.transitionId}`;
+    return this.boundedNativeId();
   }
 
   private observeMount(): void {
+    if (this.auditMountedRoot && READER_LAYOUT_DEBUG_BUILD) {
+      if (this.layoutOverlay === undefined) this.layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('bounded-surface');
+      this.layoutOverlay?.mount(this.getUIContext(), this.boundedNativeId());
+    }
     const id = this.transitionNativeId();
     if (id === undefined) return;
     const drawer = this.specId === 'source-switch-drawer' || this.specId === 'reader-action-sheet';
@@ -178,8 +187,11 @@ export struct ReaderBoundedSurface {
         .attributeModifier(this.frameModifier()).id(this.transitionNativeId()).onAppear((): void => this.observeMount());
     } else {
       Column({ space: this.specId === 'reader-replace-editor' ? 8 : 0 }) { this.header(); this.body(); this.actions(); }
-        .attributeModifier(this.frameModifier()).id(this.transitionNativeId())
-        .customProperty(READER_LAYOUT_SURFACE_HINT, this.layoutAuditHint()).onAppear((): void => this.observeMount());
+        .attributeModifier(this.frameModifier())
+        .id(this.auditMountedRoot && READER_LAYOUT_DEBUG_BUILD ? this.boundedNativeId() : this.transitionNativeId())
+        .customProperty(READER_LAYOUT_SURFACE_HINT, this.layoutAuditHint())
+        .onAppear((): void => this.observeMount())
+        .onDisAppear((): void => this.layoutOverlay?.unmount());
     }
   }
 

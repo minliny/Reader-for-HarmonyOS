@@ -193,6 +193,8 @@ export struct ReaderControlTtsContent {
   @Prop waveformActive: boolean = true;
   @Prop @Watch('onSourceDetachedChanged') sourceDetached: boolean = false;
   @Prop sourceHandoffPending: boolean = false;
+  @Prop sourceTransferGeneration: number = 0;
+  onMorphActorRetired: (generation: number, actorId: string) => void = (_generation: number, _actorId: string): void => {};
   onMorphActorVisible: (kind: ReaderSessionMorphSourceKind) => void =
     (_kind: ReaderSessionMorphSourceKind): void => {};
 
@@ -909,6 +911,10 @@ export struct ReaderControlTtsContent {
     Stack() { this.islandPlaybackContents(); }
       .id(this.actorId(false)).width(this.availableWidth).height(this.islandPlaybackHeight())
       .attributeModifier(new ReaderPanelFrame('reader-island-emphasis', this.appScheme))
+      .onDisAppear((): void => {
+        if (this.sourceDetached && this.sourceTransferGeneration > 0)
+          this.onMorphActorRetired(this.sourceTransferGeneration, this.actorId(false));
+      })
       .onAreaChange((_old: Area, area: Area): void => this.measureActor(false, area))
       .onVisibleAreaChange([0, .01, 1], (visible: boolean, ratio: number): void => this.reportActorVisible(false, visible, ratio));
   }
@@ -1019,10 +1025,10 @@ export struct ReaderControlTtsContent {
     Column() {
       this.sectionHeader({ title: '定时停止', meta: this.timerCaption() });
       Row({ space: 4 }) {
-        this.islandTimerPreset('关闭', 0, this.displayTimerMode() === 'off');
-        this.islandTimerPreset('15 分钟', 15, this.timerPresetSelected(15));
-        this.islandTimerPreset('30 分钟', 30, this.timerPresetSelected(30));
-        this.islandTimerPreset('章末', 'chapterEnd', this.displayTimerMode() === 'chapterEnd');
+        this.islandTimerPreset('关闭', 0);
+        this.islandTimerPreset('15 分钟', 15);
+        this.islandTimerPreset('30 分钟', 30);
+        this.islandTimerPreset('章末', 'chapterEnd');
       }.width('100%').padding({ left: 8, right: 8 });
       this.islandTimerStep(true);
       this.islandTimerStep(false);
@@ -1030,10 +1036,11 @@ export struct ReaderControlTtsContent {
   }
 
   @Builder
-  private islandTimerPreset(label: string, value: number | 'chapterEnd', selected: boolean) {
+  private islandTimerPreset(label: string, value: number | 'chapterEnd') {
     ReaderButton({ scheme: this.appScheme, label,
-      layout: 'full', visualSize: 'small', variant: selected ? 'reader-island-selected' : 'reader-island',
-      primary: selected, selectionSemantic: true, actionEnabled: this.currentInputEnabled(),
+      layout: 'full', visualSize: 'small',
+      variant: this.timerPresetIsSelected(value) ? 'reader-island-selected' : 'reader-island',
+      primary: this.timerPresetIsSelected(value), selectionSemantic: true, actionEnabled: this.currentInputEnabled(),
       onAction: (): void => this.chooseTimerPreset(value),
     }).layoutWeight(1);
   }

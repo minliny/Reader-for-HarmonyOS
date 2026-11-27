@@ -1,6 +1,8 @@
 import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { TYPE_SHELF_SELECTION_ACTION, TYPE_SHELF_SELECTION_AUTHOR, TYPE_SHELF_SELECTION_AUTHOR_WIDE, TYPE_SHELF_SELECTION_HEADING, TYPE_SHELF_SELECTION_REMOVE, TYPE_SHELF_SELECTION_TITLE, TYPE_SHELF_SELECTION_TITLE_WIDE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_INVARIANT_PROPERTY } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { APP_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
@@ -104,6 +106,7 @@ export struct BookshelfMultiSelectPage {
       geometry: this.geometry,
       headerMeasurementKey: this.measurementKey,
       footerMeasurementKey: this.footerMeasurementKey,
+      auditFooterDock: false,
       content: (): void => { this.selectionList(); },
       header: (): void => { this.selectionTopBar(); },
       onHeaderHeightChange: (height: number, presentedKey: number): void => {
@@ -189,6 +192,8 @@ export struct BookshelfMultiSelectPage {
     }
     .width('100%')
     .constraintSize({ minHeight: APP_HEADER_BAR_HEIGHT })
+    .customProperty(READER_LAYOUT_INVARIANT_PROPERTY, READER_LAYOUT_DEBUG_BUILD
+      ? { role: 'fixed-header', id: 'bookshelf-multi-select-header', expectedTopGapVp: 0 } as LayoutInvariantTag : undefined)
     .padding({ left: 20, right: 20, top: 7, bottom: 7 })
     .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion());
   }
@@ -196,6 +201,8 @@ export struct BookshelfMultiSelectPage {
   @Builder
   private selectionHeading() {
     Text(`已选择 ${this.selectedVisibleCount()} 本`)
+      .customProperty(READER_LAYOUT_INVARIANT_PROPERTY, READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'header-content', id: 'bookshelf-multi-select-count' } as LayoutInvariantTag : undefined)
       .width(this.selectionHeaderInline() ? undefined : '100%')
       .layoutWeight(this.selectionHeaderInline() ? 1 : 0)
       .fontFamily(TYPE_SHELF_SELECTION_HEADING.fontFamily)
@@ -344,6 +351,8 @@ export struct BookshelfMultiSelectPage {
           .enabled(this.canRemoveSelection())
           .onClick((): void => this.removeVisibleSelection());
       }.width(Math.max(74, Math.ceil(TYPE_SHELF_SELECTION_REMOVE.fontSizeFp * this.fontScale() * '移除书架'.length) + 8))
+        .customProperty(READER_LAYOUT_INVARIANT_PROPERTY, READER_LAYOUT_DEBUG_BUILD
+          ? { role: 'primary-dock', id: 'bookshelf-multi-select-remove' } as LayoutInvariantTag : undefined)
         .constraintSize({ minHeight: this.removeActionHeight() });
     }
     .width('100%')

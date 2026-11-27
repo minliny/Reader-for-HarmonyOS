@@ -3,8 +3,9 @@ import { ReaderControlMotionPathCache, readerControlMotionClipPath } from './Rea
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { readerPressPointer } from '../../../ui/foundation/ReaderPressMotion';
-import { READER_SESSION_CAPSULE_RADIUS, ReaderSessionCapsuleFrame, ReaderSessionCapsuleLeading, ReaderSessionCapsulePause,
-  readerSessionCapsuleAccessibility, ReaderSessionCapsuleMetricsCache, type ReaderSessionCapsuleMetrics } from './ReaderSessionCapsule';
+import { READER_SESSION_CAPSULE_RADIUS, READER_SESSION_CAPSULE_TOGGLE_ID, ReaderSessionCapsuleFrame, ReaderSessionCapsuleLeading,
+  ReaderSessionCapsulePause, readerSessionCapsuleAccessibility, ReaderSessionCapsuleMetricsCache, type ReaderSessionCapsuleMetrics }
+  from './ReaderSessionCapsule';
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
 import { ReaderSessionLaunchSharpSource, type ReaderSessionLaunchSharpSourceInput } from './ReaderSessionLaunchSharpSource';
@@ -80,6 +81,13 @@ export struct ReaderSessionLaunchStage {
   }
 
   build() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      this.launchToggle();
+    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  @Builder
+  private launchToggle() {
     // TriggerMorphProxy: every child below has a stable identity across phases.
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -120,7 +128,7 @@ export struct ReaderSessionLaunchStage {
     .width(this.sample.proxyWidth).height(this.sample.proxyHeight)
     .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }
-    .id('reader-session-launch-toggle')
+    .id(READER_SESSION_CAPSULE_TOGGLE_ID)
     .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
     .width(Math.max(44, this.sample.proxyWidth))
     .height(Math.max(READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT, this.sample.proxyHeight))
@@ -129,6 +137,7 @@ export struct ReaderSessionLaunchStage {
     .hitTestBehavior(this.interactionEnabled && this.sample.pauseOpacity > 0 ? HitTestMode.Block : HitTestMode.None)
     .enabled(this.interactionEnabled && this.sample.pauseOpacity > 0)
     .accessibilityText(readerSessionCapsuleAccessibility(this.sample.type, this.sessionState, this.desiredPlaying))
+    .accessibilitySelected(this.sessionState === 'playing')
     // Transparent overlay ancestors also admit the page's raw touch owner.
     // Consume the whole pointer stream here; the click recognizer still runs.
     .onTouch((event: TouchEvent): void => {

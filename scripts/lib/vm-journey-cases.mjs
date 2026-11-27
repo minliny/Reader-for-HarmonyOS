@@ -98,9 +98,9 @@ export async function applyVmJourneyProfile(ui) {
   ui.assertProfile();
 }
 
-async function reveal(ui, selector, scroll, name, direction = 'up') {
+async function reveal(ui, selector, scroll, name, direction = 'up', swipeOptions) {
   for (let attempt = 0; attempt < 4 && !ui.has(selector); attempt += 1) {
-    await ui.swipe(`滚动${name}定位目标（${attempt + 1}）`, scroll, direction, { all: [scroll] });
+    await ui.swipe(`滚动${name}定位目标（${attempt + 1}）`, scroll, direction, { all: [scroll] }, swipeOptions);
   }
 }
 
@@ -303,12 +303,15 @@ export const journeys = {
     });
     const groups = enabled(/^reader-bookshelf-book-action-.*::edit-group$/);
     const multiSelect = enabled(/^reader-bookshelf-book-action-.*::multi-select$/);
+    const groupCard = id(/^reader-shelf-group:.*:card$/);
+    const defaultGroup = { ...selected(enabled(/^reader-shelf-group:.*:default$/)), within: groupCard, type: 'Button' };
+    const groupClose = { ...enabled(/^reader-shelf-group:.*:close$/), within: groupCard, type: 'Button', clickable: 'true' };
     await ui.tap('打开公开本地书的动作', shelfRowLocalMore, { all: [groups, multiSelect], modalOpen: true });
     await ui.tap('打开编辑分组弹窗', groups, {
-      route: 'bookshelf', all: [text('编辑分组'), selected(action('默认分组')), close],
-      requiredRules: ['R9', 'R10'], screenCapture: true,
+      route: 'bookshelf', modalOpen: true, all: [{ ...text('编辑分组'), within: groupCard }, defaultGroup, groupClose],
+      requiredRules: ['R9', 'R10', 'R13'], screenCapture: true,
     });
-    await ui.tap('关闭分组编辑，保留书架条目', close, { ...bookshelfReady, all: [shelfRowLocalMore] });
+    await ui.tap('关闭分组编辑，保留书架条目', groupClose, { ...bookshelfReady, all: [shelfRowLocalMore], none: [groupCard] });
     await ui.tap('再次打开本地书动作', shelfRowLocalMore, { all: [multiSelect], modalOpen: true });
     await ui.tap('进入多选并核对被选中书目', multiSelect, {
       route: 'bookshelfMultiSelect', all: [text(LOCAL_TXT), text('已选择 1 本')], requiredRules: ['R8', 'R13'],
@@ -607,6 +610,8 @@ export const journeys = {
     const mode = await openLocalReader(ui);
     const tts = moduleId('tts');
     const scroll = { type: 'Scroll', within: tts };
+    const revealTts = (selector, name) =>
+      reveal(ui, selector, scroll, name, 'up', { avoid: { type: 'Slider', within: tts } });
     const toggle = transport('tts', 'toggle');
     const next = transport('tts', 'next');
     const previous = transport('tts', 'previous');
@@ -622,13 +627,13 @@ export const journeys = {
     });
     const rate = { ...enabled('reader-control-tts-rate-slider'), type: 'Slider', within: tts };
     const rateValue = { type: 'Text', text: /^\d\.\d\d×$/, within: tts };
-    await reveal(ui, rate, scroll, '朗读设置');
+    await revealTts(rate, '朗读设置');
     const initialRate = ui.value(rateValue);
     if (initialRate === undefined) ui.block('当前窗口未同时暴露语速滑块与唯一的数值读数');
     await ui.slideTo('调整语速并核对新读数', rate, initialRate === '2.00×' ? .25 : .95, {
       route: 'reading', all: [rate, rateValue], none: [text(initialRate)],
     });
-    await reveal(ui, action('15 分钟'), scroll, '朗读设置');
+    await revealTts(action('15 分钟'), '朗读设置');
     await ui.tap('选择 15 分钟定时停止，核对选中项', action('15 分钟'), {
       route: 'reading', all: [selected(action('15 分钟'))],
     });
@@ -637,7 +642,7 @@ export const journeys = {
     for (const [field, title] of [['voice', '音色选项'], ['engine', '语音引擎'], ['language', '朗读语言'],
       ['session', '音频会话'], ['failure', '不可用处理']]) {
       const trigger = choiceRow(field);
-      await reveal(ui, trigger, scroll, '音频配置');
+      await revealTts(trigger, '音频配置');
       await ui.tap(`打开${title}并核对首帧与完整内容`, trigger, {
         route: 'reading', all: [picker, { ...text(title), within: picker }, { ...close, within: picker }],
         requiredRules: ['R9', 'R10', 'R13'], transition: surface(picker.id), filmstrip: true,
@@ -682,7 +687,7 @@ export const journeys = {
     });
     await ui.tap('退回上一句，核对下一句可用', previous, { route: 'reading', all: [tts, next, stop] });
     const seek = { ...enabled('reader-control-tts-seek-slider'), type: 'Slider', within: tts };
-    await reveal(ui, seek, scroll, '朗读播放区');
+    await revealTts(seek, '朗读播放区');
     if (!ui.has(seek)) ui.block('当前章未暴露可操作的逐句定位滑块，无法在有限窗口内触发自动跨章');
     await ui.slideTo('跳至最后一句，等待真实朗读跨章且正文不闪烁', seek, 1, {
       route: 'reading', all: [tts, stop], transition: chapterAdvance('reader-chapter-local'), filmstrip: true,
@@ -755,14 +760,19 @@ export const journeys = {
     await revealFontReorderPair(ui, originalSlots);
     await ui.wait('确认重新打开后新字体顺序仍保存', { ...fontOrder, order: reordered });
     await ui.drag('反向拖动还原初始字体顺序', originals[0], originals[1], { ...fontOrder, order: originals });
-    const fontSize = action('增加字号');
-    await reveal(ui, fontSize, appearance, '外观面板');
-    const size = id('reader-control-appearance-metric-value-fontSize');
+    const increaseFontSize = { ...enabled('reader-control-appearance-metric-step-fontSize-plus'), type: 'Button', within: appearance };
+    const decreaseFontSize = { ...enabled('reader-control-appearance-metric-step-fontSize-minus'), type: 'Button', within: appearance };
+    const size = { id: 'reader-control-appearance-metric-value-fontSize', type: 'Text', within: appearance };
+    await reveal(ui, increaseFontSize, appearance, '外观面板');
     const before = ui.value(size);
-    const typography = { route: 'reading', all: [appearance, text('排版'), fontSize] };
     if (before === undefined) ui.block('当前窗口未暴露可复核的字号数值');
-    await ui.tap('调大字号并核对原生读数更新', fontSize, { ...typography, all: [...typography.all, size], none: [text(before)] });
-    await ui.tap('还原字号并核对初始读数', action('减少字号'), { ...typography, all: [...typography.all, { ...size, text: before }] });
+    const typography = { route: 'reading', all: [appearance, text('排版')] };
+    await ui.tap('调大字号并核对原生读数更新', increaseFontSize, {
+      ...typography, all: [...typography.all, size, decreaseFontSize], none: [{ ...size, text: before }],
+    });
+    await ui.tap('还原字号并核对初始读数', decreaseFontSize, {
+      ...typography, all: [...typography.all, increaseFontSize, { ...size, text: before }],
+    });
     await ui.key('关闭外观模块', 'Back', { route: 'reading', all: [entry('settings')] });
     await ui.key('关闭阅读控制', 'Back', steadyReader(mode));
     const other = mode === 'paged' ? 'continuous' : 'paged';

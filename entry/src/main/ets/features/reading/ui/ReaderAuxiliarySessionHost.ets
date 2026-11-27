@@ -189,6 +189,7 @@ export class ReaderAuxiliarySessionHost {
   private readonly morphMeasurements: ReaderSessionMorphMeasurements = new ReaderSessionMorphMeasurements();
   private layoutKey: string = '';
   private minimumProfile: ReaderControlPlaybackLaunchProfile | undefined = undefined;
+  private preparedControlSource: ReaderControlLaunchSource | undefined = undefined;
   private flightSourceSample: ReaderSessionLaunchSample | undefined = undefined;
   private flightSpeechState: ReaderTtsState = createReaderTtsState(false);
   private flightAutoStatus: ReaderAutoPageStatus = 'stopped';
@@ -213,6 +214,11 @@ export class ReaderAuxiliarySessionHost {
       ready: (): boolean => this.environment.ready(),
       layoutCurrent: (): boolean => this.layoutCurrent(),
       retireForLayout: (): void => this.cancel('sourceChanged'),
+      controlSourceReady: (generation: number): boolean => {
+        const source = this.preparedControlSource;
+        return source !== undefined && source.generation === generation && source.current();
+      },
+      fallbackSourceTransfer: (generation: number): void => this.fallbackSourceTransfer(generation),
       context: (): UIContext => this.environment.uiContext(),
       observing: (): boolean => this.environment.observing(),
       drainPageTurn: (): void => this.environment.drainPageTurn(),
@@ -232,7 +238,9 @@ export class ReaderAuxiliarySessionHost {
   get sourceSample(): ReaderSessionLaunchSample | undefined { return this.flightSourceSample; }
 
   admitControlSource(source: ReaderControlLaunchSource): void {
-    if (source.generation === this.view.read()?.generation) this.view.publishControlSource(source);
+    if (source.generation !== this.view.read()?.generation) return;
+    this.preparedControlSource = source;
+    this.view.publishControlSource(source);
   }
 
   get sourceTtsState(): ReaderTtsState { return this.flightSpeechState; }
@@ -572,7 +580,8 @@ export class ReaderAuxiliarySessionHost {
     this.view.renderChanged();
     const launch = this.view.read();
     if (launch === undefined) return;
-    if (!launch.sample.controlsPresented) this.control.hide();
+    if (launch.sourceTransfer !== 'presenting') this.effects.armSourceTransferDeadline(launch.generation);
+    else if (!launch.sample.controlsPresented) this.control.hide();
     this.environment.updateWindow();
     const current = this.view.read();
     if (current !== undefined) this.effects.scheduleFrame(current.generation);
@@ -618,7 +627,9 @@ export class ReaderAuxiliarySessionHost {
       return;
     }
     if (!launch.sample.finished) this.verification.finish(launch.generation, 'reduce-motion');
-    this.view.publish(this.controller.setReduceMotion(true));
+    const updated = this.controller.setReduceMotion(true);
+    this.view.publish(updated);
+    if (updated?.sourceTransfer !== 'presenting') return;
     this.control.hide();
     AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', true);
     this.view.renderChanged();
@@ -635,7 +646,13 @@ export class ReaderAuxiliarySessionHost {
   }
 
   cancel(reason: ReaderSessionLaunchCancelReason): void {
-    if (this.view.read()?.ownership !== 'stage') return;
+    const current = this.view.read();
+    if (current?.ownership !== 'stage') return;
+    if (current.sourceTransfer !== 'presenting') {
+      if (reason === 'stop' || reason === 'failure') this.environment.retireBusinessStart(current.geometry.type);
+      this.finish();
+      return;
+    }
     const launch = this.controller.cancel(reason);
     if (launch === undefined) return;
     this.view.publish(launch);
@@ -664,6 +681,19 @@ export class ReaderAuxiliarySessionHost {
       this.control.restore(duration);
       this.environment.updateWindow();
     } else this.effects.fadeExit(launch.generation);
+  }
+
+  private fallbackSourceTransfer(generation: number): void {
+    const launch = this.view.read();
+    if (launch?.generation !== generation || launch.ownership !== 'stage' || launch.sourceTransfer === 'presenting') return;
+    const type = launch.geometry.type;
+    this.rememberStaticSessionCapsuleOrigin(type, this.flightControlState);
+    this.control.hide();
+    this.finish();
+  }
+
+  onOriginalSourceRetired(generation: number, actorId: string): void {
+    void Promise.resolve().then((): void => this.effects.confirmOriginalRetired(generation, actorId));
   }
 
   onSourceReady(generation: number): void {
@@ -711,6 +741,7 @@ export class ReaderAuxiliarySessionHost {
     this.view.publish(undefined);
     this.flightSourceSample = undefined;
     this.minimumProfile = undefined;
+    this.preparedControlSource = undefined;
     this.effects.retireFrame();
     this.view.setStageOpacity(1);
     this.view.clearFooterExit();

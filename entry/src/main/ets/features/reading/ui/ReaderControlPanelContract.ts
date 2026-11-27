@@ -193,6 +193,7 @@ export interface ReaderControlPanelFacts<Receipt, Theme, LaunchProfile, SearchPu
 /** Native actions deliver synchronously. Promise and font-plan results belong to their existing owner. */
 export type ReaderControlIntent<ProfileReader, ModuleFacts, PlaybackReceipt> =
   | { readonly kind: 'launchSourceReady'; readonly generation: number }
+  | { readonly kind: 'launchSourceRetired'; readonly generation: number; readonly actorId: string }
   | { readonly kind: 'launchSource'; readonly source: ReaderControlLaunchSource<PlaybackReceipt> }
   | { readonly kind: 'sessionLaunchShellMeasured'; readonly topExit: number; readonly dockExit: number }
   | { readonly kind: 'inputCurrent' }

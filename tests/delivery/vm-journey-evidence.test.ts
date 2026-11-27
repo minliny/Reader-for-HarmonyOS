@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { fontReorderPair, journeys } from '../../scripts/lib/vm-journey-cases.mjs';
 import { layoutReceiptProblem, layoutReports, matchingTransitions, matchesVmEnvironment, shareReports,
-  transitionReceiptProblem, transitionReports, transitionWatermark, vmJourneyMatrix } from '../../scripts/lib/vm-journey-evidence.mjs';
+  transitionReceiptProblem, transitionReports, transitionWatermark, verticalSwipeLane, vmJourneyMatrix } from '../../scripts/lib/vm-journey-evidence.mjs';
 import { READER_VM_IMPORT_SOURCE, readerVmJourneyImportDocument, readerVmJourneyResponse,
   readerVmJourneySources } from '../../entry/src/main/ets/app/diagnostics/ReaderVmJourneyData.ts';
 
@@ -42,6 +42,16 @@ test('matrix environment requires actual native measurements, including provisio
   assert.equal(matchesVmEnvironment(profile, { ...layout, environment: undefined }).length, 1);
   assert.equal(matchesVmEnvironment(profile, { ...layout, environment: { ...layout.environment,
     widthVp: 380, fontScale: 1.1, material: 'fallback', reducedMotion: false } }).length, 4);
+});
+
+test('J9 uses a clear scroll lane when the visible rate slider covers the previous swipe origin', () => {
+  const scroll = [101, 1772, 1181, 2388];
+  const rate = [123, 2198, 1159, 2352];
+  const lane = verticalSwipeLane(scroll, 2234, 1926, [rate]);
+  assert.ok(lane !== undefined && lane > scroll[0] && lane < scroll[2]);
+  assert.ok(lane < rate[0] || lane > rate[2]);
+  assert.equal(verticalSwipeLane(scroll, 2150, 1926, [rate]), 641);
+  assert.equal(verticalSwipeLane(scroll, 2234, 1926, [[101, 2100, 660, 2388], [655, 2000, 1181, 2300]]), undefined);
 });
 
 test('J11 derives an adjacent built-in font pair from fully visible native bounds', () => {

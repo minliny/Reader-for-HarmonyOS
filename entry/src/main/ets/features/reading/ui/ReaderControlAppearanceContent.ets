@@ -937,8 +937,7 @@ export struct ReaderControlAppearanceContent {
     Row({ space: 4 }) {
       Text(this.metricLabel(metric)).layoutWeight(1).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       this.islandStep(metric, -1);
-      Text(this.metricValue(metric)).id(READER_LAYOUT_DEBUG_BUILD ?
-        `reader-control-appearance-metric-value-${metric}` : undefined)
+      Text(this.metricValue(metric)).id(this.metricValueNativeId(metric))
         .width(46).textAlign(TextAlign.Center).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       this.islandStep(metric, 1);
@@ -949,6 +948,7 @@ export struct ReaderControlAppearanceContent {
   private islandStep(metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection) {
     ReaderIslandAction({
       scheme: this.appThemeScheme, label: direction < 0 ? '−' : '+',
+      nativeId: this.metricStepNativeId(metric, direction),
       actionReady: this.currentInputEnabled() && readerAppearanceCanStep(this.displaySnapshot(), metric, direction),
       visualAvailable: readerAppearanceCanStep(this.displaySnapshot(), metric, direction),
       accessibleLabel: `${direction < 0 ? '减少' : '增加'}${this.metricLabel(metric)}`,
@@ -1402,7 +1402,7 @@ export struct ReaderControlAppearanceContent {
         .position({ x: Math.max(0, this.stepperValueX() - (this.minimumProfile()?.stepButtonTextWidth ?? 26) - 1),
           y: this.stepperControlTop(7) }).hitTestBehavior(HitTestMode.None);
       this.stepButton(metric, -1, (): number => Math.max(0, this.stepperMinusX()));
-      Text(this.metricValue(metric)).width(this.minimumProfile()?.stepperValueWidth ?? 44)
+      Text(this.metricValue(metric)).id(this.metricValueNativeId(metric)).width(this.minimumProfile()?.stepperValueWidth ?? 44)
         .height(this.minimumProfile()?.stepperValueHeight ?? 25).fontFamily(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY.fontSizeFp)
         .fontWeight(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Center)
         .border({ width: { left: 1, right: 1 }, color: readerAppColor('app.border.stepper', this.appThemeScheme) })
@@ -1419,7 +1419,8 @@ export struct ReaderControlAppearanceContent {
       Text(direction < 0 ? '−' : '+').width(this.minimumProfile()?.stepButtonTextWidth ?? 26)
         .height(this.minimumProfile()?.stepButtonTextHeight ?? 25).fontFamily(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontSizeFp)
         .fontWeight(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
-    }.width(this.minimumProfile()?.stepButtonWidth ?? 44).height(this.stepperRowHeight() - this.stepperOffset())
+    }.id(this.metricStepNativeId(metric, direction))
+      .width(this.minimumProfile()?.stepButtonWidth ?? 44).height(this.stepperRowHeight() - this.stepperOffset())
       .padding(0).backgroundColor(Color.Transparent).borderRadius(0).position({ x: x(), y: this.stepperOffset() })
       .opacity(readerAppearanceCanStep(this.displaySnapshot(), metric, direction) ? 1 : 0.38)
       .enabled(this.fullInput() && readerAppearanceCanStep(this.displaySnapshot(), metric, direction))
@@ -1428,6 +1429,14 @@ export struct ReaderControlAppearanceContent {
         if (this.fullInput() && readerAppearanceCanStep(this.displaySnapshot(), metric, direction))
           this.onMetricStep(metric, direction);
       });
+  }
+
+  private metricStepNativeId(metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection): string {
+    return `reader-control-appearance-metric-step-${metric}-${direction < 0 ? 'minus' : 'plus'}`;
+  }
+
+  private metricValueNativeId(metric: ReaderAppearanceMetric): string | undefined {
+    return READER_LAYOUT_DEBUG_BUILD ? `reader-control-appearance-metric-value-${metric}` : undefined;
   }
 
   private selectLabel(kind: string): string {

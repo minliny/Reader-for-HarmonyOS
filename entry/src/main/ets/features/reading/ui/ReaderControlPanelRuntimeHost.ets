@@ -9,7 +9,6 @@ import { readerControlIslandHeight, type ReaderControlContentBudget } from './Re
 import { readerTtsWaveformSnapshot } from './ReaderTtsWaveform';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerControlIsDirectSheet } from './ReaderControlHostSession';
-import type { ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
 import { ReaderControlMotionFrameCache } from './ReaderControlMotionGeometry';
 import { readerControlPlaybackProfileMatches, readerControlPlaybackSourceKindMatches, type ReaderControlPlaybackProfileReceipt } from './ReaderControlPlaybackProfile';
 import { FrameCallback } from '@kit.ArkUI';
@@ -1127,10 +1126,6 @@ export class ReaderControlPanelRuntimeHost {
     this.launchSourceVisibleGeneration = this.host.facts().launch.generation;
     this.launchSourceVisibleKind = kind;
     this.confirmLaunchSourceReady();
-  }
-
-  launchSourceDetached(type: ReaderSessionCapsuleType): boolean {
-    return this.host.facts().launch.sample?.type === type && (this.host.facts().launch.ownsControls || this.host.facts().launch.recovering);
   }
 
   confirmLaunchSourceReady(): void {
