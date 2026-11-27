@@ -187,6 +187,10 @@ function operationPlan(operation, outputDir) {
     exactFields(operation, []);
     return shell('hilog', '-x', '-e', 'READER_JOURNEY_SHARE');
   }
+  if (operation.op === 'journeyTtsAuditionLog') {
+    exactFields(operation, []);
+    return shell('hilog', '-x', '-e', 'READER_VM_TTS_AUDITION');
+  }
   if (operation.op === 'journeySampledAction') {
     exactFields(operation, ['action', 'captures']);
     const action = operation.action;
@@ -430,6 +434,8 @@ function selfTest() {
   assert.deepEqual(plan('journeyEmptySearchFixtureLog').args, ['shell', 'hilog', '-x', '-e', 'Public UI fixture long-directory book verified']);
   const transitionLogArgs = plan('journeyTransitionLog').args;
   assert.deepEqual(transitionLogArgs, ['shell', 'hilog', '-x', '-e', 'READER_TRANSITION_']);
+  assert.deepEqual(plan('journeyTtsAuditionLog').args, ['shell', 'hilog', '-x', '-e', 'READER_VM_TTS_AUDITION']);
+  assert.throws(() => plan('journeyTtsAuditionLog', { filter: '.*' }), /operation field/);
   assert.match(transitionLogArgs.at(-1), /^[A-Z_]+$/u);
   const guestShellFailure = "/bin/sh: syntax error: unexpected '('\n";
   assert.equal(commandOK({ status: 0, stdout: guestShellFailure, stderr: '' }, transitionLogArgs), false);

@@ -692,8 +692,8 @@ export const journeys = {
           availableVoice = false;
           ui.defer('原生音色试听、朗读启停与自动跨章', '当前 VM 的音色选择器回读为无可用系统音色');
         } else {
-          await ui.tap('试听首个可用系统音色', audition, {
-            route: 'reading', all: [picker, { ...action('试听中'), within: picker }], screenCapture: true,
+          availableVoice = await ui.audition('试听首个可用系统音色', audition, {
+            route: 'reading', all: [picker, { ...closeTtsOverlay, within: picker }], screenCapture: true,
           });
         }
       }
@@ -766,7 +766,7 @@ export const journeys = {
     await ui.wait('等自动翻页倒计时重新开始，避开正在提交的翻页', {
       ...steadyReader(mode),
       all: [...steadyReader(mode).all, ...capsuleState('自动翻页', true),
-        { id: 'reader-session-launch-leading-icon', type: 'Text', text: '2', within: capsuleToggle(true) }],
+        { type: 'Text', text: '2', within: [capsuleToggle(true), id('reader-session-launch-leading-icon')] }],
     });
     await togglePlayback(ui, '自动翻页', mode);
     await returnFromPlaybackCapsule(ui, mode, 'autoPage', '自动翻页', toggle);
@@ -935,7 +935,8 @@ export const journeys = {
     const importEntry = enabled(/:import:footer$/u);
     const importOrigins = ['file', 'url', 'paste'].map(kind => enabled(`reader-source-v9-import-origin-${kind}`));
     await ui.tap('进入 V9 导入来源与解析步骤', importEntry, {
-      route: 'source', all: [imports, text('导入书源'), ...importOrigins, enabled('reader-source-v9-import-file')],
+      route: 'source', all: [imports, text('导入书源'), ...importOrigins, selected(importOrigins[0]),
+        enabled('reader-source-v9-import-file')],
       transition: routeMotion('push', 'source-import'), filmstrip: true,
     });
     const online = enabled('reader-source-v9-import-origin-url');
@@ -944,7 +945,8 @@ export const journeys = {
     const review = id('reader-source-v9-import-review');
     const importedSource = 'ReaderJourneyImportV9';
     await ui.tap('选择在线链接导入', online, {
-      route: 'source', all: [imports, urlField], none: [parse, enabled('reader-source-v9-import-file')],
+      route: 'source', all: [imports, urlField, selected(online)],
+      none: [parse, selected(importOrigins[0]), enabled('reader-source-v9-import-file')],
     });
     await ui.inputSourceUrl('填写限定的公开 V9 样本链接', urlField, { route: 'source', all: [urlField] });
     if (!ui.has(parse)) {

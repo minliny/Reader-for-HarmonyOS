@@ -3,6 +3,7 @@ export const TRANSITION_MARKER = 'READER_TRANSITION_INVARIANTS ';
 export const FRAME_MARKER = 'READER_TRANSITION_FRAMES ';
 const TRANSITION_BEGIN_MARKER = 'READER_TRANSITION_BEGIN ';
 export const SHARE_MARKER = 'READER_JOURNEY_SHARE ';
+const TTS_AUDITION_MARKER = 'READER_VM_TTS_AUDITION ';
 
 export function verticalSwipeLane(viewport, fromY, toY, obstructions) {
   const [left, , right] = viewport;
@@ -118,6 +119,13 @@ export function shareReports(text, pid) {
     if (!match || !Number.isSafeInteger(Number(match[1]))) return [];
     return [{ operationId: Number(match[1]), state: match[2] }];
   });
+}
+
+export function ttsAuditionReports(text, pid) {
+  return records(text, TTS_AUDITION_MARKER).filter(row => row.pid === pid).map(row => parse(row.payload))
+    .filter(row => row?.schemaVersion === 1 && Number.isSafeInteger(row.operationId) && row.operationId > 0 &&
+      ['started', 'completed', 'failed', 'unavailable'].includes(row.state) &&
+      (row.code === undefined || typeof row.code === 'string' && /^[a-z][a-z0-9-]{0,63}$/u.test(row.code)));
 }
 
 export function transitionReports(text, pid) {

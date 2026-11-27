@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { fontReorderPair, journeys } from '../../scripts/lib/vm-journey-cases.mjs';
-import { layoutReceiptProblem, layoutReports, matchingTransitions, matchesVmEnvironment, shareReports,
+import { layoutReceiptProblem, layoutReports, matchingTransitions, matchesVmEnvironment, shareReports, ttsAuditionReports,
   transitionReceiptProblem, transitionReports, transitionWatermark, verticalSwipeLane, vmJourneyMatrix } from '../../scripts/lib/vm-journey-evidence.mjs';
 import { READER_VM_IMPORT_SOURCE, readerVmJourneyImportDocument, readerVmJourneyResponse,
   readerVmJourneySources } from '../../entry/src/main/ets/app/diagnostics/ReaderVmJourneyData.ts';
@@ -118,6 +118,19 @@ test('share receipt accepts only native records in the current process with a va
     log('401', 'READER_JOURNEY_SHARE', '20 dismissed'), log('401', 'READER_JOURNEY_SHARE', '23 assumed'),
     log('401', 'READER_JOURNEY_SHARE', '0 shown')].join('\n');
   assert.deepEqual(shareReports(output, '401'), [{ operationId: 20, state: 'presented' }, { operationId: 20, state: 'dismissed' }]);
+});
+
+test('audition receipts bind native audio delivery to the current Reader process', () => {
+  const audition = (pid: string, operationId: number, state: string) =>
+    log(pid, 'READER_VM_TTS_AUDITION', JSON.stringify({ schemaVersion: 1, operationId, state }));
+  const output = [
+    audition('408', 12, 'started'), audition('401', 2, 'started'), audition('401', 2, 'synthesized'),
+    audition('401', 2, 'completed'), audition('401', 0, 'completed'),
+  ].join('\n');
+  assert.deepEqual(ttsAuditionReports(output, '401'), [
+    { schemaVersion: 1, operationId: 2, state: 'started' },
+    { schemaVersion: 1, operationId: 2, state: 'completed' },
+  ]);
 });
 
 test('source-journey input is exact, inert outside its finite synthetic transport and excluded from initial catalog', () => {

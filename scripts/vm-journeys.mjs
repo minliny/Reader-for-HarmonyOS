@@ -8,7 +8,7 @@ import { applyVmJourneyProfile, journeys } from './lib/vm-journey-cases.mjs';
 import { renderVisualReview } from './lib/vm-visual-review.mjs';
 import { layoutReports, layoutReceiptProblem, matchesVmEnvironment, matchingTransitions, records, shareReports,
   supportedVmDimensions, transitionReceiptProblem, transitionReports, transitionWatermark, verticalSwipeLane,
-  vmJourneyMatrix } from './lib/vm-journey-evidence.mjs';
+  ttsAuditionReports, vmJourneyMatrix } from './lib/vm-journey-evidence.mjs';
 import { openProbe } from '../tools/ui-contract/collectors/harmonyos/transport.mjs';
 import { assertInstalled, assertRemoteVmReadiness, remoteVmServer } from '../tools/ui-contract/collectors/harmonyos/candidate-evidence.mjs';
 import { assertUnlockedFocus, assertVmLockDismissed, classifyFocusWindow, vmLockDismissalOperation } from '../tools/ui-contract/collectors/harmonyos/focus-window.mjs';
@@ -307,6 +307,40 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
     wait: (description, outcome) => checkpoint(description, outcome),
     tap: (description, selector, outcome) => checkpoint(description, outcome,
       () => ({ op: 'click', ...center(actor(root, selector)) })),
+    audition: async (description, selector, outcome) => {
+      currentStep = description;
+      const before = await probe.command({ op: 'journeyTtsAuditionLog' });
+      const baseline = Math.max(0, ...ttsAuditionReports(before.stdout, processId).map(item => item.operationId));
+      const input = await probe.command({ op: 'click', ...center(actor(root, selector)) });
+      const step = { step: description, actionSeq: input.seq };
+      steps.push(step);
+      const deadline = performance.now() + 18000;
+      do {
+        const log = await probe.command({ op: 'journeyTtsAuditionLog' });
+        const reports = ttsAuditionReports(log.stdout, processId).filter(item => item.operationId > baseline);
+        const terminal = reports.find(item => item.state !== 'started');
+        if (terminal) {
+          step.ttsAudition = { seq: log.seq, reports };
+          demand(reports.every(item => item.operationId === terminal.operationId) &&
+            reports.filter(item => item.state !== 'started').length === 1,
+            'Expected a single native audition operation for this click');
+          if (terminal.state === 'unavailable') {
+            demand(terminal.code === 'system-capability-missing' && reports.length === 1,
+              'Native audition did not confirm a missing platform capability');
+            ui.defer(description, '当前 VM 缺少系统朗读能力');
+            await checkpoint('系统音色不可用后仍显示音色面板', outcome);
+            return false;
+          }
+          demand(terminal.state === 'completed', `系统试听失败 (${terminal.code ?? 'unknown'})`);
+          demand(reports.indexOf(terminal) > 0 && reports[0].state === 'started',
+            'No native playback start before audition completion');
+          await checkpoint('试听完成后仍显示音色面板', outcome);
+          return true;
+        }
+        await delay(250);
+      } while (performance.now() < deadline);
+      throw Error('No native audio completion or explicit unavailability after audition click');
+    },
     slideTo: (description, selector, fraction, outcome) => checkpoint(description, outcome, () => {
       demand(selector.type === 'Slider' && fraction >= 0 && fraction <= 1, 'Expected an observed slider and valid fraction');
       const [left, top, right, bottom] = actor(root, selector);
