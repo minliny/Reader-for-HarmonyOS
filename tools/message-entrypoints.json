@@ -614,10 +614,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.recoveryOverlay::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
-      "member": "recoveryOverlay",
+      "id": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets#<module>.MangaRecoveryOverlay::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets",
+      "owner": "<module>",
+      "member": "MangaRecoveryOverlay",
       "family": "shared.recovery-notice",
       "category": "原操作待核对/待继续或明确结果的消息表面",
       "effectiveHost": "当前漫画 reader 的 sourceId/bookId/presentationGeneration；独立 recoveryOverlay 使用实时 viewport/insets 的有界 Stack 层，controls、panel、章末或冷几何持有前景时关闭命中和读屏。",
@@ -625,9 +625,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.turnBoundaryChapter::shared.transient",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
+      "id": "entry/src/main/ets/features/manga/ui/MangaChapterBoundaryHost.ets#MangaChapterBoundaryHost.turnBoundaryChapter::shared.transient",
+      "file": "entry/src/main/ets/features/manga/ui/MangaChapterBoundaryHost.ets",
+      "owner": "MangaChapterBoundaryHost",
       "member": "turnBoundaryChapter",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
@@ -2247,9 +2247,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.openPanel::shared.transient",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
+      "id": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets#MangaReaderChrome.openPanel::shared.transient",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets",
+      "owner": "MangaReaderChrome",
       "member": "openPanel",
       "family": "shared.transient",
       "category": "当前手机面板打开明确失败，原漫画内容仍可用的短反馈",
@@ -2258,10 +2258,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.tabletDirectory::shared.page-state",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
-      "member": "tabletDirectory",
+      "id": "entry/src/main/ets/features/manga/ui/MangaDirectoryDrawer.ets#<module>.MangaTabletDirectory::shared.page-state",
+      "file": "entry/src/main/ets/features/manga/ui/MangaDirectoryDrawer.ets",
+      "owner": "<module>",
+      "member": "MangaTabletDirectory",
       "family": "shared.page-state",
       "category": "常驻目录局部内容的加载与无可用目录内容失败",
       "effectiveHost": "当前漫画常驻目录的原内容盒，真实panelFontTask/failed/ready及source/book/font generation；原成功标题/目录布局保持。",
@@ -2269,9 +2269,9 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.savePageImage::shared.transient",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
+      "id": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets#MangaReaderChrome.savePageImage::shared.transient",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets",
+      "owner": "MangaReaderChrome",
       "member": "savePageImage",
       "family": "shared.transient",
       "category": "当前页图片另存完成或明确失败",
@@ -2481,9 +2481,9 @@
     },
     {
       "id": "DEDICATED-MANGA-CHAPTER-BOUNDARY",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
-      "member": "boundaryHint",
+      "file": "entry/src/main/ets/features/manga/ui/MangaChapterBoundaryHost.ets",
+      "owner": "MangaChapterBoundaryHost",
+      "member": "boundaryCaption",
       "category": "漫画章末/章首拖动提示",
       "effectiveHost": "当前 reader boundaryGeneration、current chapter/原 ChapterTransitions 与真实拖动。",
       "retireRule": "不足阈值回弹，阈值合格松手才换章；退场/新边界代次清理旧提示，失败保留原章节回退。",
@@ -2492,9 +2492,9 @@
     },
     {
       "id": "DEDICATED-MANGA-IMAGE-UNAVAILABLE",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
-      "member": "imageViewport",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReadingViewportHost.ets",
+      "owner": "MangaReadingViewportHost",
+      "member": "rowHasError",
       "category": "漫画单图/多图不可用占位",
       "effectiveHost": "当前 controller/manifest/逻辑图像行 renderKey；按原默认图像单元格和边界逐格绘制。",
       "retireRule": "图像新请求/renderKey/章节变化后重绘；单图失败不触发全局消息，书源/整章失败由 ReaderPageState。",
@@ -2536,9 +2536,9 @@
     },
     {
       "id": "DEDICATED-MANGA-CHAPTER-REFRESH",
-      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
-      "owner": "MangaReadingSurface",
-      "member": "refreshProgress",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReaderChrome.ets",
+      "owner": "MangaReaderChrome",
+      "member": "refreshProgressVisible",
       "category": "漫画本章刷新进度",
       "effectiveHost": "当前前景漫画 reader 的已打开章节与原刷新操作，面板和章末打开时暂退。",
       "retireRule": "原刷新返回或当前 reader 退场时结束进度展示；图像和位置继续由章节控制器管理。",
