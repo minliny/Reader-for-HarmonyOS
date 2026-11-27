@@ -19,7 +19,7 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_INVARIANT_PROPERTY, ReaderLayoutOverlayRoot }
   from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
-import { READER_LAYOUT_IMPORT_HINT_TEXT_ID, READER_LAYOUT_MOUNTED_TEXT_CONTROLLER }
+import { READER_LAYOUT_IMPORT_HINT_TEXT_ID, READER_LAYOUT_IMPORT_LABEL_TEXT_ID, READER_LAYOUT_MOUNTED_TEXT_CONTROLLER }
   from '../../../ui/layout/LayoutInvariantNativeAudit';
 import { motionAnimateParam, motionAnimateParamDelayed } from '../../../ui/foundation/MotionSpec';
 import { READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS } from './LocalImportMotion';
@@ -300,6 +300,7 @@ export struct LocalImportDialog {
 
           Column({ space: 0 }) {
             Text('从系统文件中选择')
+              .id(READER_LAYOUT_IMPORT_LABEL_TEXT_ID)
               .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)
               .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)
               .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)

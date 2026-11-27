@@ -11,11 +11,12 @@ import { READER_LAYOUT_CLOSE_CONTROL, READER_LAYOUT_FOOTER, READER_LAYOUT_NATIVE
   from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import { inspectReaderNativeMaterialPaint, type ReaderNativeMaterialAttributes } from '../../ui/layout/ReaderNativeMaterialPaint';
 import { evaluateReaderIslandContrast, readerIslandContrastPalette } from '../../ui/layout/ReaderIslandContrastEvaluator';
-import { measureMountedTextEvidence, READER_LAYOUT_IMPORT_HINT_TEXT_ID, READER_LAYOUT_MOUNTED_TEXT_CONTROLLER,
+import { measureMountedTextEvidence, measuredTextReflowClips, READER_LAYOUT_IMPORT_HINT_TEXT_ID,
+  READER_LAYOUT_IMPORT_LABEL_TEXT_ID, READER_LAYOUT_MOUNTED_TEXT_CONTROLLER,
   type LayoutAuditClose, type LayoutAuditHitTest, type LayoutAuditPlacement, type LayoutInvariantDensityAudit,
   type LayoutInvariantFeatureAssertion, type LayoutInvariantMountedTextDiagnostics, type LayoutInvariantMountedTextEvidence,
   type LayoutInvariantMountedTextStyle, type LayoutInvariantNativeNode, type LayoutInvariantNativeSample,
-  type LayoutInvariantSurfaceAudit, type LayoutInvariantTextLineRange }
+  type LayoutInvariantSurfaceAudit, type LayoutInvariantTextLineRange, type LayoutInvariantTextReflow }
   from '../../ui/layout/LayoutInvariantNativeAudit';
 import type { LayoutInvariantSurfaceHint } from '../../ui/layout/LayoutInvariantNativeAudit';
 import { readerNativeTextSliceAudit } from '../../ui/layout/ReaderNativeTextSliceAudit';
@@ -161,14 +162,15 @@ function recordTextReflow(context: UIContext, node: LayoutInvariantNativeNode,
     frame === undefined || frame.width <= 0) return;
   const overflow = typeof attrs.textOverflow === 'string' ? attrs.textOverflow.toLowerCase() : '';
   if (overflow.includes('ellipsis') || overflow.includes('marquee')) return;
-  const height = reflowTextHeight(context, content, frame, attrs);
-  if (height === undefined) return;
-  node.textClipped = height > frame.height + 3;
-  node.textReflow = { independentHeightVp: height };
-  if (node.textClipped) {
-    node.textReflow.style = inspectorTextStyle(attrs);
-    node.textReflow.matchedStyleHeightVp = reflowTextHeight(context, content, frame, attrs, true);
+  const reflow: LayoutInvariantTextReflow = { independentHeightVp: reflowTextHeight(context, content, frame, attrs) };
+  // The import label shrink-wraps its explicit bold face and negative tracking.
+  // Use that same style at its measured pixel width for the independent check.
+  if (node.id === READER_LAYOUT_IMPORT_LABEL_TEXT_ID || measuredTextReflowClips(node.id, frame.height, reflow) === true) {
+    reflow.style = inspectorTextStyle(attrs);
+    reflow.matchedStyleHeightVp = reflowTextHeight(context, content, frame, attrs, true);
   }
+  node.textClipped = measuredTextReflowClips(node.id, frame.height, reflow);
+  node.textReflow = reflow;
 }
 
 function measuredInk(context: UIContext, frame: LayoutInvariantRect, layout: LayoutManager,

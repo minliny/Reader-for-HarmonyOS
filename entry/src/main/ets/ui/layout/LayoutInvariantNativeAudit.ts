@@ -6,6 +6,7 @@ import type { ReaderNativeMaterialPaint } from './ReaderNativeMaterialPaint';
 export type LayoutAuditHitTest = 'none' | 'block' | 'default' | 'transparent';
 export type LayoutAuditPlacement = 'center' | 'bottom-center' | 'side-end' | 'anchor' | 'anchor-overlap';
 export type LayoutAuditClose = 'visible' | 'scroll-reachable' | 'native-dismiss' | 'absent' | 'unknown';
+export const READER_LAYOUT_IMPORT_LABEL_TEXT_ID = 'reader-local-import-file-selection-label';
 export const READER_LAYOUT_IMPORT_HINT_TEXT_ID = 'reader-local-import-selection-hint';
 export const READER_LAYOUT_MOUNTED_TEXT_CONTROLLER = 'readerLayoutMountedTextController';
 
@@ -35,6 +36,13 @@ export interface LayoutInvariantTextReflow {
   style?: LayoutInvariantMountedTextStyle;
   independentHeightVp?: number;
   matchedStyleHeightVp?: number;
+}
+
+export function measuredTextReflowClips(id: string, frameHeightVp: number,
+  reflow: LayoutInvariantTextReflow): boolean | undefined {
+  const matchedHeight = id === READER_LAYOUT_IMPORT_LABEL_TEXT_ID ? reflow.matchedStyleHeightVp : undefined;
+  const height = matchedHeight ?? reflow.independentHeightVp;
+  return height === undefined ? undefined : height > frameHeightVp + 3;
 }
 
 export interface LayoutInvariantMountedTextDiagnostics extends LayoutInvariantTextReflow {

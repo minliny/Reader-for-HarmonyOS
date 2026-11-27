@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { layoutReceiptProblem } from '../../scripts/lib/vm-journey-evidence.mjs';
 import { evaluateLayoutInvariants, type LayoutInvariantRect } from '../../entry/src/main/ets/ui/layout/LayoutInvariantEvaluator.ts';
-import { measureMountedTextEvidence, type LayoutInvariantNativeNode, type LayoutInvariantNativeSample,
+import { measureMountedTextEvidence, measuredTextReflowClips, READER_LAYOUT_IMPORT_LABEL_TEXT_ID,
+  type LayoutInvariantNativeNode, type LayoutInvariantNativeSample,
   type LayoutInvariantSurfaceAudit }
   from '../../entry/src/main/ets/ui/layout/LayoutInvariantNativeAudit.ts';
 import { inspectReaderNativeMaterialPaint } from '../../entry/src/main/ets/ui/layout/ReaderNativeMaterialPaint.ts';
@@ -174,6 +175,23 @@ test('R13 clipping evidence identifies the native node and the reason without ex
   assert.equal(multiple.violations.length, 5);
   assert.equal(multiple.nativeAudit.clippingOffenderCount, 5);
   assert.equal(multiple.nativeAudit.clippingOffenders?.length, 3);
+});
+
+test('the local import label uses matched native reflow without weakening R13 clipping', () => {
+  // Round 8 FrameNode 1502 was one fully drawn line at this measured width.
+  // Repeating the measurement with the exact inspector style and px width
+  // returns one line, while reflow with the omitted style returns two.
+  const singleLine = 19.428571428571427;
+  const twoLines = 38.857142857142854;
+  const measured = { independentHeightVp: twoLines, matchedStyleHeightVp: singleLine };
+  assert.equal(measuredTextReflowClips(READER_LAYOUT_IMPORT_LABEL_TEXT_ID, singleLine, measured), false);
+  assert.equal(measuredTextReflowClips(READER_LAYOUT_IMPORT_LABEL_TEXT_ID, singleLine, {
+    ...measured, matchedStyleHeightVp: twoLines,
+  }), true);
+  assert.equal(measuredTextReflowClips(READER_LAYOUT_IMPORT_LABEL_TEXT_ID, singleLine, {
+    independentHeightVp: twoLines,
+  }), true);
+  assert.equal(measuredTextReflowClips('other-text', singleLine, measured), true);
 });
 
 test('a long scroll-backed dialog can reach its close action while a bounded drawer must meet the correct window edge', () => {
