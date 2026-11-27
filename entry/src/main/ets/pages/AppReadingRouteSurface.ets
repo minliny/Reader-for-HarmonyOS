@@ -15,6 +15,8 @@ import { readerBeginTransition, readerRouteTransitionLaneId, readerTransitionAct
   readerTransitionsEnabled, READER_DETAIL_PRIMARY_ACTION, READER_DETAIL_TRANSITION_HEADER }
   from '../ui/foundation/ReaderTransitionSignals';
 
+const DETAIL_NATIVE_FRAME_GRACE_MS = 300;
+
 export interface AppReadingDetailMotionPorts {
   readonly current: () => ReaderDetailSceneSnapshot | undefined;
   readonly publish: (snapshot: ReaderDetailSceneSnapshot | undefined) => void;
@@ -95,10 +97,11 @@ export class AppReadingDetailMotion {
     catch (_error) { /* A completed native animator is already retired. */ }
   }
 
-  animate(): void {
+  animate(nativePoseReady: boolean = false): void {
     this.stop();
     const motion = this.ports.current();
-    if (motion === undefined || motion.phase === 'preview' || motion.phase === 'covered' ||
+    if (motion === undefined || motion.phase === 'preview' || motion.phase === 'cancel-pending' ||
+      motion.phase === 'covered' ||
       motion.phase === 'retired') return;
     const target = motion.phase === 'pop' ? 0 : 1;
     const distance = Math.abs(target - motion.coverage);
@@ -115,7 +118,7 @@ export class AppReadingDetailMotion {
     const duration = Math.max(1, Math.round((motionSpecGet(id)?.durationMs ?? 200) * distance));
     const context = this.ports.ui();
     const reduced = this.ports.reduceMotion();
-    this.deadline = setTimeout(finish, duration + 300);
+    this.deadline = setTimeout(finish, duration + DETAIL_NATIVE_FRAME_GRACE_MS);
     const start = (): void => {
       if (!current()) return;
       if (motion.phase === 'push' && readerTransitionsEnabled()) {
@@ -140,9 +143,12 @@ export class AppReadingDetailMotion {
         animator.play();
       } catch (_error) { finish(); }
     };
-    // A freshly pushed detail and a restored reader receive native layout before motion.
-    try { context.postFrameCallback(new ReaderPostLayoutFrame(context, start)); }
-    catch (_error) { finish(); }
+    if (nativePoseReady) start();
+    else {
+      // A freshly pushed detail and a restored reader receive native layout before motion.
+      try { context.postFrameCallback(new ReaderPostLayoutFrame(context, start)); }
+      catch (_error) { finish(); }
+    }
   }
 
   private observe(action: string, stationary: boolean = false): void {
@@ -174,10 +180,26 @@ export class AppReadingDetailMotion {
   }
 
   cancelPreview(): void {
-    const cancel = this.transition.cancelPreview();
-    if (cancel === undefined) return;
-    this.ports.publish(cancel);
-    this.animate();
+    const released = this.transition.requestPreviewCancel();
+    if (released === undefined) return;
+    this.stop();
+    this.ports.publish(released);
+    const settle = (): void => {
+      if (this.transition.snapshot()?.generation === released.generation) this.settleActive();
+    };
+    if (!this.ports.foreground()) { settle(); return; }
+    const context = this.ports.ui();
+    this.deadline = setTimeout(settle, DETAIL_NATIVE_FRAME_GRACE_MS);
+    // Keep the last touch pose through native layout before the return takes ownership.
+    try {
+      context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
+        if (!this.ports.foreground()) { settle(); return; }
+        const cancel = this.transition.beginPreviewCancel(released.generation);
+        if (cancel === undefined) return;
+        this.ports.publish(cancel);
+        this.animate(true);
+      }));
+    } catch (_error) { settle(); }
   }
 }
 

@@ -26,7 +26,7 @@ export function readerDetailSceneOpacity(coverage: number, reducedMotion: boolea
   return reducedMotion ? unit(coverage) : 1;
 }
 
-export type ReaderDetailScenePhase = 'push' | 'covered' | 'preview' | 'cancel' | 'pop' | 'retired';
+export type ReaderDetailScenePhase = 'push' | 'covered' | 'preview' | 'cancel-pending' | 'cancel' | 'pop' | 'retired';
 
 export interface ReaderDetailSceneSnapshot {
   generation: number;
@@ -71,13 +71,19 @@ export class ReaderDetailSceneTransition {
 
   previewViewportMatches(width: number): boolean { return width === this.previewWidth; }
 
-  cancelPreview(): ReaderDetailSceneSnapshot | undefined {
-    return this.current?.phase === 'preview' ? this.begin('cancel', this.current.coverage) : undefined;
+  requestPreviewCancel(): ReaderDetailSceneSnapshot | undefined {
+    return this.current?.phase === 'preview' ? this.begin('cancel-pending', this.current.coverage) : undefined;
+  }
+
+  beginPreviewCancel(generation: number): ReaderDetailSceneSnapshot | undefined {
+    const current = this.current;
+    return current?.generation === generation && current.phase === 'cancel-pending' ?
+      this.begin('cancel', current.coverage) : undefined;
   }
 
   sample(generation: number, fraction: number): ReaderDetailSceneSnapshot | undefined {
     const current = this.current;
-    if (current?.generation !== generation || current.phase === 'preview' ||
+    if (current?.generation !== generation || current.phase === 'preview' || current.phase === 'cancel-pending' ||
       current.phase === 'covered' || current.phase === 'retired') return current;
     const target = current.phase === 'pop' ? 0 : 1;
     const coverage = this.from + (target - this.from) * unit(fraction);

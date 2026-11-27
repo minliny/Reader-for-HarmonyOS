@@ -104,7 +104,14 @@ test('side swipe cancel moves back to detail, while a committed swipe continues 
   assert.equal(scene.previewViewportMatches(width + 2), false);
   scene.updatePreview(first.generation, 80);
   assert.equal(scene.shouldCommitPreview(), false);
-  const cancel = scene.cancelPreview();
+  const released = scene.requestPreviewCancel();
+  assert.ok(released);
+  assert.equal(released.phase, 'cancel-pending');
+  assert.equal(released.coverage, 0.8);
+  assert.equal(scene.updatePreview(first.generation, 88), released);
+  assert.equal(scene.sample(released.generation, 0.4), released);
+  assert.equal(scene.beginPreviewCancel(first.generation), undefined);
+  const cancel = scene.beginPreviewCancel(released.generation);
   assert.ok(cancel);
   assert.equal(cancel.phase, 'cancel');
   assert.equal(cancel.coverage, 0.8);
@@ -118,9 +125,25 @@ test('side swipe cancel moves back to detail, while a committed swipe continues 
   const pop = scene.back();
   assert.ok(pop);
   assert.equal(pop.coverage, 0.6);
-  assert.equal(scene.cancelPreview(), undefined);
+  assert.equal(scene.requestPreviewCancel(), undefined);
   assert.equal(scene.updatePreview(second.generation, 20), pop);
   assert.equal(scene.sample(pop.generation, 0.5)?.coverage, 0.3);
+});
+
+test('a settled or interrupted edge release cannot start a stale cancel animation', () => {
+  for (const interrupt of ['settle', 'back'] as const) {
+    const scene = new ReaderDetailSceneTransition();
+    scene.open(false);
+    const preview = scene.preview(width);
+    assert.ok(preview);
+    scene.updatePreview(preview.generation, 80);
+    const released = scene.requestPreviewCancel();
+    assert.ok(released);
+    const next = interrupt === 'settle' ? scene.settle(released.generation) : scene.back();
+    assert.equal(next?.phase, interrupt === 'settle' ? 'covered' : 'pop');
+    assert.equal(scene.beginPreviewCancel(released.generation), undefined);
+    assert.equal(scene.snapshot(), next);
+  }
 });
 
 test('reduced-motion detail Back settles invisible at the same horizontal position', () => {
