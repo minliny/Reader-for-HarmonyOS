@@ -1,3 +1,5 @@
+import { nativeBounds } from '../../tools/lib/native-ui-evidence.mjs';
+
 const SHELF_NOVEL = 'ReaderShelfNovel';
 const NEW_NOVEL = 'ReaderNewNovel';
 const COMIC = 'ReaderComic';
@@ -52,6 +54,7 @@ const moduleId = name => id('reader-control-module-' + name);
 const transport = (service, kind, active = true) => ({ id: `reader-control-${service}-transport-${kind}`, enabled: String(active) });
 const close = label('关闭');
 const appearance = moduleId('appearance');
+const appearanceFontGrid = id('reader-control-font-grid');
 const readerSettings = moduleId('settings');
 const bookshelfReady = { route: 'bookshelf', all: [searchEntry, text(LOCAL_TXT)], modalOpen: false };
 const settingsHome = { route: 'settings', all: [text('设置'), tab('settings')] };
@@ -101,6 +104,49 @@ async function reveal(ui, selector, scroll, name, direction = 'up') {
   }
 }
 
+const BUILT_IN_FONT_SLOTS = ['system', 'serif', 'sans', 'kai', 'fangSong', 'mono', 'sourceHanSerif', 'lxgwWenKai'];
+const fontCard = slot => ({ id: `reader-control-font-${slot}`, within: [appearance, appearanceFontGrid] });
+const draggableFontCard = slot => ({ ...fontCard(slot), type: 'Button', enabled: 'true', clickable: 'true' });
+
+export function fontReorderPair(viewportBounds, cards, requiredPair) {
+  const viewport = nativeBounds(viewportBounds);
+  if (!viewport) return undefined;
+  const placed = cards.map(card => ({ ...card, frame: nativeBounds(card.origBounds), visible: nativeBounds(card.bounds) }))
+    .filter(card => card.frame && card.visible)
+    .sort((a, b) => a.frame[1] - b.frame[1] || a.frame[0] - b.frame[0]);
+  const fullyVisible = ({ frame, visible }) => frame.every((edge, index) => edge === visible[index]) &&
+    frame[2] > frame[0] && frame[3] > frame[1] &&
+    frame[0] >= viewport[0] && frame[1] >= viewport[1] && frame[2] <= viewport[2] && frame[3] <= viewport[3];
+
+  for (let index = 1; index < placed.length; index += 1) {
+    const left = placed[index - 1];
+    const right = placed[index];
+    if (left.frame[1] !== right.frame[1] || left.frame[3] !== right.frame[3] || left.frame[2] > right.frame[0]) continue;
+    if (!left.canDrag || !right.canDrag || !fullyVisible(left) || !fullyVisible(right)) continue;
+    if (requiredPair && (!requiredPair.includes(left.slot) || !requiredPair.includes(right.slot))) continue;
+    return [left.slot, right.slot];
+  }
+  return undefined;
+}
+
+async function revealFontReorderPair(ui, requiredPair) {
+  for (let attempt = 0; attempt <= 4; attempt += 1) {
+    const cards = [...BUILT_IN_FONT_SLOTS, 'custom', 'import'].map(slot => ({
+      slot, bounds: ui.value(fontCard(slot), 'bounds'), origBounds: ui.value(fontCard(slot), 'origBounds'),
+      canDrag: BUILT_IN_FONT_SLOTS.includes(slot) && ui.has(draggableFontCard(slot)),
+    }));
+    const pair = fontReorderPair(ui.value(appearance, 'bounds'), cards, requiredPair);
+    if (pair) return pair;
+    if (attempt < 4) {
+      await ui.swipe(`滚动字体列表，定位完整相邻的内置字体卡片（${attempt + 1}）`, appearance, 'up', {
+        route: 'reading', all: [appearance], modalOpen: true,
+      });
+    }
+  }
+  throw Error(requiredPair ? `重开外观后未找到原先两张完整相邻的字体卡片（${requiredPair.join('、')}）` :
+    '当前原生字体视口未找到两张完整相邻的可操作内置字体卡片');
+}
+
 async function controls(ui, name) {
   await ui.tap('从正文打开阅读控制', readingStage, { route: 'reading', all: [entry(name)] });
   await ui.tap(`打开阅读控制模块 ${name}`, entry(name), { route: 'reading', all: [moduleId(name)], modalOpen: true });
@@ -132,11 +178,13 @@ async function openReadingDirectory(ui) {
 }
 
 const chapterRow = title => ({ text: title, within: [readerDirectoryContent, { type: 'ListItem' }] });
-const controlTitle = title => ({ text: `${title} · 本地书籍`, within: id('reader-control-motion-topbar') });
+const controlTopBar = id('reader-control-motion-topbar');
+const controlTitle = title => ({ text: `${title} · 本地书籍`, within: controlTopBar });
 
 async function jumpToLocalChapter(ui, target) {
   await ui.tap(`选择目录锚点 ${target}`, chapterRow(target), {
-    route: 'reading', all: [readingStage, controlTitle(target)], none: [readerDirectoryContent],
+    route: 'reading', all: [readingStage, { type: 'Text', text: target, within: readingStage }],
+    none: [readerDirectoryContent, controlTopBar], modalOpen: false,
     transition: chapterAdvance('reader-chapter-local'), filmstrip: true,
   });
 }
@@ -572,7 +620,7 @@ export const journeys = {
       route: 'reading', all: [tts, toggle, stopDisabled], none: [stop],
       requiredRules: ['R13', 'R14'], features: ['tts-transport'], screenCapture: true,
     });
-    const rate = { type: 'Slider', label: '朗读语速', within: tts };
+    const rate = { ...enabled('reader-control-tts-rate-slider'), type: 'Slider', within: tts };
     const rateValue = { type: 'Text', text: /^\d\.\d\d×$/, within: tts };
     await reveal(ui, rate, scroll, '朗读设置');
     const initialRate = ui.value(rateValue);
@@ -633,7 +681,7 @@ export const journeys = {
       route: 'reading', all: [tts, previous, stop], requiredRules: ['R14'], features: ['tts-transport'],
     });
     await ui.tap('退回上一句，核对下一句可用', previous, { route: 'reading', all: [tts, next, stop] });
-    const seek = { type: 'Slider', label: '跳转朗读句子', within: tts };
+    const seek = { ...enabled('reader-control-tts-seek-slider'), type: 'Slider', within: tts };
     await reveal(ui, seek, scroll, '朗读播放区');
     if (!ui.has(seek)) ui.block('当前章未暴露可操作的逐句定位滑块，无法在有限窗口内触发自动跨章');
     await ui.slideTo('跳至最后一句，等待真实朗读跨章且正文不闪烁', seek, 1, {
@@ -653,11 +701,11 @@ export const journeys = {
     const stopDisabled = transport('auto-page', 'stop', false);
     const next = transport('auto-page', 'next');
     const previous = transport('auto-page', 'previous');
-    const speed = { type: 'Slider', label: '自动翻页间隔', within: auto };
+    const speed = { ...enabled('reader-auto-speed-slider'), type: 'Slider', within: auto };
+    const speedValue = { id: 'reader-auto-speed-current', type: 'Text', text: '2 秒', within: auto };
     await openReadingDirectory(ui);
     const current = ui.has(controlTitle(SECOND_LOCAL_CHAPTER)) ? THIRD_LOCAL_CHAPTER : SECOND_LOCAL_CHAPTER;
     await jumpToLocalChapter(ui, current);
-    if (ui.has(entry('autoPage'))) await ui.key('关闭目录选择后的阅读控制', 'Back', steadyReader(mode));
     await controls(ui, 'autoPage');
     await ui.wait('核对自动翻页停止与启动的可用状态', {
       route: 'reading', all: [auto, toggle, stopDisabled, next], none: [stop],
@@ -665,7 +713,7 @@ export const journeys = {
     });
     await reveal(ui, speed, { type: 'Scroll', within: auto }, '自动翻页模块');
     await ui.slideTo('把自动翻页间隔调到下限并回读', speed, 0, {
-      route: 'reading', all: [speed, { text: '2 秒', within: auto }],
+      route: 'reading', all: [speed, speedValue],
     });
     await ui.tap('启动自动翻页并采集飞行动效', toggle, {
       ...steadyReader(mode), all: [capsule('自动翻页', true)], none: [auto],
@@ -692,20 +740,21 @@ export const journeys = {
     await ui.tap('切换并核对阅读纸面主题', changedTheme, {
       route: 'reading', all: [appearance, selected(changedTheme)], requiredRules: ['R14'], features: ['reading-appearance'],
     });
-    const systemFont = enabled('reader-control-font-system');
-    const serifFont = enabled('reader-control-font-serif');
-    await reveal(ui, serifFont, appearance, '字体列表');
-    await ui.wait('核对可排序的系统与衬线字体', { route: 'reading', all: [systemFont, serifFont] });
-    const originals = ui.inOrder(systemFont, serifFont) ? [systemFont, serifFont] : [serifFont, systemFont];
+    const originalSlots = await revealFontReorderPair(ui);
+    const originals = originalSlots.map(draggableFontCard);
     const reordered = originals.slice().reverse();
-    await ui.drag('按住原生字体控件并拖到另一插槽', systemFont, serifFont, {
-      route: 'reading', all: [appearance], order: reordered, screenCapture: true,
+    const fontOrder = { route: 'reading', all: [appearance], modalOpen: true };
+    await ui.wait(`核对内置字体初始顺序（${originalSlots.join(' → ')}）`, { ...fontOrder, order: originals });
+    await ui.drag('按住原生字体控件并拖到相邻插槽', originals[0], originals[1], {
+      ...fontOrder, order: reordered, screenCapture: true,
     });
-    await ui.key('退出外观模块以验证字体顺序继续保留', 'Back', { route: 'reading', all: [entry('appearance')] });
-    await ui.tap('重新打开并定位字体列表', entry('appearance'), { route: 'reading', all: [appearance] });
-    await reveal(ui, serifFont, appearance, '字体列表');
-    await ui.wait('确认重新打开后新字体顺序仍保存', { route: 'reading', order: reordered });
-    await ui.drag('反向拖动还原初始字体顺序', systemFont, serifFont, { route: 'reading', order: originals });
+    await ui.key('退出外观模块以验证字体顺序继续保留', 'Back', {
+      route: 'reading', all: [entry('appearance')], none: [appearance],
+    });
+    await ui.tap('重新打开并定位字体列表', entry('appearance'), fontOrder);
+    await revealFontReorderPair(ui, originalSlots);
+    await ui.wait('确认重新打开后新字体顺序仍保存', { ...fontOrder, order: reordered });
+    await ui.drag('反向拖动还原初始字体顺序', originals[0], originals[1], { ...fontOrder, order: originals });
     const fontSize = action('增加字号');
     await reveal(ui, fontSize, appearance, '外观面板');
     const size = id('reader-control-appearance-metric-value-fontSize');
@@ -791,7 +840,7 @@ export const journeys = {
     const source = id('reader-source-content');
     const groups = id('reader-source-v9-groups');
     const imports = id('reader-source-v9-import');
-    const more = label('书源管理更多操作');
+    const more = { ...enabled(/^source-back:\d+:tools:header$/u), clickable: 'true' };
     const sourceName = text(/^ReaderNovel[AB]$/u);
     await ui.tap('进入书源管理，核对公开书源', enabled('reader-settings-source-management'), {
       route: 'source', all: [source, sourceName, more], requiredRules: ['R8', 'R13'],

@@ -54,7 +54,8 @@ import { isReaderPageTurnStyleAvailable, type ReaderPageTurnStyle } from '../app
 import {
   readerControlAppearanceEndpoint, readerControlAppearanceFontActor,
   readerControlAppearanceFontDropIndex, readerControlAppearanceFontInput, sampleReaderControlAppearance,
-  READER_CONTROL_ISLAND_FONT_TARGET_HEIGHT, readerControlIslandFontGrid, type ReaderControlIslandFontGrid,
+  READER_CONTROL_ISLAND_FONT_TARGET_HEIGHT, readerControlIslandFontGrid, readerControlIslandFontAutoScrollDelta,
+  type ReaderControlIslandFontGrid,
   type ReaderControlAppearanceActor, type ReaderControlAppearanceFrame,
   type ReaderControlAppearanceImportLayout,
   type ReaderControlAppearanceMinimumProfile,
@@ -1496,7 +1497,6 @@ export struct ReaderControlAppearanceContent {
       this.islandFontScrollStart = this.islandScroller.currentOffset()?.yOffset ?? 0;
       this.islandFontDragX = 0;
       this.islandFontDragY = this.fontDownY;
-      this.updateIslandFontAutoScroll();
     }
     this.suppressFontClick = true;
     this.onFontReorderActivityChange(true);
@@ -1559,11 +1559,9 @@ export struct ReaderControlAppearanceContent {
   }
 
   private islandFontAutoScrollDelta(): number {
-    if (this.draggedFontId === '' || this.islandScrollHeight <= 0) return 0;
-    const edge = Math.min(52, this.islandScrollHeight / 3);
-    const position = this.islandFontDragY - this.islandScrollTop;
-    if (position < edge) return -10 * Math.min(1, (edge - position) / edge);
-    return 10 * Math.max(0, Math.min(1, (position - this.islandScrollHeight + edge) / edge));
+    if (this.draggedFontId === '') return 0;
+    return readerControlIslandFontAutoScrollDelta(this.islandFontDragY - this.islandScrollTop,
+      this.islandScrollHeight, this.islandFontDragY - this.fontDownY);
   }
 
   private updateIslandFontAutoScroll(): void {

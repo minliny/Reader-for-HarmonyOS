@@ -14,8 +14,11 @@ import { assertUnlockedFocus, assertVmLockDismissed, classifyFocusWindow, vmLock
 import { candidateIdentity, nativeBounds, normalReaderWindowRoots, sha256 } from '../tools/lib/native-ui-evidence.mjs';
 
 const STEP_MS = 12000;
+const MAX_TRANSPARENT_OPACITY = 0.01;
 const readJson = file => JSON.parse(readFileSync(file, 'utf8'));
 const demand = (condition, message) => { if (!condition) throw Error(message); };
+const isUnpainted = attrs => attrs.visible === 'false' || attrs.visible === false ||
+  Number(attrs.opacity ?? 1) <= MAX_TRANSPARENT_OPACITY;
 
 class JourneyBlocked extends Error {}
 
@@ -29,7 +32,7 @@ function nativeNodes(root) {
   const result = [];
   const visit = (node, parents, clip) => {
     const attrs = node.attributes ?? {};
-    if (attrs.visible === 'false' || attrs.visible === false || Number(attrs.opacity ?? 1) <= 0) return;
+    if (isUnpainted(attrs)) return;
     const bounds = nativeBounds(attrs.bounds);
     const visible = bounds && clip ? [
       Math.max(bounds[0], clip[0]), Math.max(bounds[1], clip[1]),
@@ -63,7 +66,7 @@ function matchesAttributes(attributes, selector, childLabels = []) {
 function buttonLabels(node) {
   return (node.children ?? []).flatMap(child => {
     const attributes = child.attributes ?? {};
-    if (attributes.clickable === 'true' || attributes.visible === 'false' || Number(attributes.opacity ?? 1) <= 0) return [];
+    if (attributes.clickable === 'true' || isUnpainted(attributes)) return [];
     return attributes.type === 'Text' && attributes.text ? [attributes.text] : buttonLabels(child);
   });
 }

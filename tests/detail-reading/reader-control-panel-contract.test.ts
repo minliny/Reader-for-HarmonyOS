@@ -8,8 +8,11 @@ import type { ReaderControlPanelFacts, ReaderControlNativeFactDelivery } from
 import { ReaderControlRuntime } from '../../entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts';
 import { createDefaultReaderControlLayout } from '../../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts';
 import {
-  createReaderControlSessionState, openReaderControlSession,
+  advanceReaderControlSession, createReaderControlSessionState, dismissReaderControlSession,
+  enterReaderControlModule, openReaderControlSession, sampleReaderControlSession,
 } from '../../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
+import { ReaderControlMotionFrameCache } from
+  '../../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts';
 import {
   buildReaderSessionLaunchGeometry, sampleReaderSessionLaunch,
 } from '../../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts';
@@ -73,6 +76,26 @@ function closedFacts(): ReaderControlPanelFacts {
     },
   };
 }
+
+test('directory dismissal leaves no opacity in the settled control dock or top bar', () => {
+  const opened = openReaderControlSession(createReaderControlSessionState(), 0);
+  const directory = enterReaderControlModule(opened, 'directory', 0);
+  const dismissing = dismissReaderControlSession(directory, 240);
+  const frameCache = new ReaderControlMotionFrameCache();
+  const easingWithTail = (fraction: number) => Math.min(fraction, 0.99986);
+  const nearEnd = advanceReaderControlSession(dismissing, 239.99, dismissing.epoch, easingWithTail);
+  assert.ok(sampleReaderControlSession(nearEnd).visibilityProgress > 0);
+
+  const settled = advanceReaderControlSession(nearEnd, 1, nearEnd.epoch, easingWithTail);
+  const { visibilityProgress, expansionProgress } = sampleReaderControlSession(settled);
+  const frame = frameCache.sample(visibilityProgress, expansionProgress, 320, 300, 28, 190, 0, undefined, 'home');
+  assert.equal(settled.location.level, 'hidden');
+  assert.equal(settled.transition, undefined);
+  assert.equal(visibilityProgress, 0);
+  assert.equal(expansionProgress, 0);
+  assert.equal(frame.topBar.opacity, 0);
+  assert.equal(frame.dock.opacity, 0);
+});
 
 test('control delivery keeps the intermediate disable that retires a real captured gesture', () => {
   const before = closedFacts();

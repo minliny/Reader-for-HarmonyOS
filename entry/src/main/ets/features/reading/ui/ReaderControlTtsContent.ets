@@ -881,6 +881,7 @@ export struct ReaderControlTtsContent {
                 Row() {
                   Slider({ value: this.displayState().sliceIndex ?? 0, min: 0,
                     max: this.displayState().totalSlices - 1, step: 1 })
+                    .id('reader-control-tts-seek-slider')
                     .attributeModifier(new ReaderPaperMaterial())
                     .width('100%').height(44).selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
                     .trackColor(readerAppColor('app.readerIsland.controlBorder', this.appScheme))
@@ -1002,6 +1003,7 @@ export struct ReaderControlTtsContent {
       this.sectionHeader({ title: '语速', meta: this.effectiveRate().toFixed(2) + '×' });
       Row() {
         Slider({ value: this.effectiveRate(), min: READER_TTS_RATE_MIN, max: READER_TTS_RATE_MAX, step: READER_TTS_RATE_STEP })
+          .id('reader-control-tts-rate-slider')
           .attributeModifier(new ReaderPaperMaterial())
           .width('100%').height(44).selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
           .enabled(this.sharedInput())
@@ -1498,6 +1500,7 @@ export struct ReaderControlTtsContent {
         if (this.displayState().totalSlices > 1) {
           Slider({ value: this.displayState().sliceIndex ?? 0, min: 0, max: this.displayState().totalSlices - 1,
             step: 1, style: SliderStyle.OutSet, direction: Axis.Horizontal, reverse: false })
+            .id(this.sourceOnly === 'none' ? 'reader-control-tts-seek-slider' : '')
             .attributeModifier(new ReaderPaperMaterial())
             .width(this.frame().playback.width - 32).height(44).position({ x: 16, y: this.textMinimum()?.seekY ?? 198 })
             .selectedColor(readerAppColor('TOK_TTS_TEAL', this.appScheme)).enabled(this.fullInput()).opacity(this.p())

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { journeys } from '../../scripts/lib/vm-journey-cases.mjs';
+import { fontReorderPair, journeys } from '../../scripts/lib/vm-journey-cases.mjs';
 import { layoutReceiptProblem, layoutReports, matchingTransitions, matchesVmEnvironment, shareReports,
   transitionReceiptProblem, transitionReports, transitionWatermark, vmJourneyMatrix } from '../../scripts/lib/vm-journey-evidence.mjs';
 import { READER_VM_IMPORT_SOURCE, readerVmJourneyImportDocument, readerVmJourneyResponse,
@@ -42,6 +42,33 @@ test('matrix environment requires actual native measurements, including provisio
   assert.equal(matchesVmEnvironment(profile, { ...layout, environment: undefined }).length, 1);
   assert.equal(matchesVmEnvironment(profile, { ...layout, environment: { ...layout.environment,
     widthVp: 380, fontScale: 1.1, material: 'fallback', reducedMotion: false } }).length, 4);
+});
+
+test('J11 derives an adjacent built-in font pair from fully visible native bounds', () => {
+  const viewport = '[89,1772][1193,2388]';
+  const card = (slot: string, bounds: string, origBounds = bounds, canDrag = true) =>
+    ({ slot, bounds, origBounds, canDrag });
+  const partiallyVisible = [
+    card('serif', '[120,2291][370,2388]', '[120,2291][370,2445]'),
+    card('sans', '[384,2291][634,2388]', '[384,2291][634,2445]'),
+  ];
+  assert.equal(fontReorderPair(viewport, partiallyVisible), undefined);
+
+  const measured = [
+    card('kai', '[911,1996][1161,2150]'),
+    card('import', '[384,1996][634,2150]', undefined, false),
+    card('serif', '[120,1996][370,2150]'),
+    card('sans', '[648,1996][898,2150]'),
+    card('system', '[120,2162][370,2316]'),
+  ];
+  assert.deepEqual(fontReorderPair(viewport, measured), ['sans', 'kai']);
+  assert.equal(fontReorderPair(viewport, measured, ['serif', 'sans']), undefined);
+  assert.equal(fontReorderPair(viewport, measured, ['serif', 'system']), undefined);
+  assert.deepEqual(fontReorderPair(viewport, measured.map(item => {
+    if (item.slot === 'kai') return { ...item, slot: 'sans' };
+    if (item.slot === 'sans') return { ...item, slot: 'kai' };
+    return item;
+  }), ['sans', 'kai']), ['kai', 'sans']);
 });
 
 test('layout evidence isolates current process and rejects missing rules, features and violations', () => {

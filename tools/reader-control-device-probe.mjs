@@ -29,7 +29,7 @@ const SESSION_MS = 600000;
 const hdcEnvironment = hdcDirectEnvironment();
 const MAX_OUTPUT = 4 * 1024 * 1024;
 const fatalOutput = /Connect server failed|Device not found|No devices|LIFECYCLE_TIMEOUT|SceneBoard exits 4times|kernel panic|guest reset|9568332|9568320|Error loading shared library|Error relocating|\berror\s*:|\bfailed\b/i;
-const fatalLogTransportOutput = /Connect server failed|Device not found|No devices|LIFECYCLE_TIMEOUT|SceneBoard exits 4times|kernel panic|guest reset|9568332|9568320|Error loading shared library|Error relocating/i;
+const fatalLogTransportOutput = /Connect server failed|Device not found|No devices|LIFECYCLE_TIMEOUT|SceneBoard exits 4times|kernel panic|guest reset|9568332|9568320|Error loading shared library|Error relocating|^(?:\/bin\/|\/system\/bin\/)?sh:[^\r\n]*\bsyntax error\b/im;
 const logRead = args => Array.isArray(args) && args[0] === 'shell' && args[1] === 'hilog' && args[2] === '-x';
 const inputDispatch = args => Array.isArray(args) && args[0] === 'shell' && args[1] === 'uitest' &&
   args[2] === 'uiInput' && args[3] !== 'help';
@@ -181,7 +181,7 @@ function operationPlan(operation, outputDir) {
   }
   if (operation.op === 'journeyTransitionLog') {
     exactFields(operation, []);
-    return shell('hilog', '-x', '-e', 'READER_TRANSITION_(BEGIN|INVARIANTS|FRAMES)');
+    return shell('hilog', '-x', '-e', 'READER_TRANSITION_');
   }
   if (operation.op === 'journeyShareLog') {
     exactFields(operation, []);
@@ -428,6 +428,16 @@ function selfTest() {
     ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
       '--ps', 'readerPublicFixture', 'empty-sources', '--ps', 'readerPublicFixtureBook', 'long-directory'] });
   assert.deepEqual(plan('journeyEmptySearchFixtureLog').args, ['shell', 'hilog', '-x', '-e', 'Public UI fixture long-directory book verified']);
+  const transitionLogArgs = plan('journeyTransitionLog').args;
+  assert.deepEqual(transitionLogArgs, ['shell', 'hilog', '-x', '-e', 'READER_TRANSITION_']);
+  assert.match(transitionLogArgs.at(-1), /^[A-Z_]+$/u);
+  const guestShellFailure = "/bin/sh: syntax error: unexpected '('\n";
+  assert.equal(commandOK({ status: 0, stdout: guestShellFailure, stderr: '' }, transitionLogArgs), false);
+  assert.equal(commandOK({ status: 0, stdout: '', stderr: guestShellFailure }, transitionLogArgs), false);
+  assert.equal(commandOK({ status: 0, stdout: '', stderr: '' }, transitionLogArgs), true);
+  const nativeLog = '11-27 19:56:11.000 17907 17907 I A05244/Reader: READER_TRANSITION_FRAMES 3/0/1 ' +
+    '{"detail":"/bin/sh: syntax error: recorded content"}\n';
+  assert.equal(commandOK({ status: 0, stdout: nativeLog, stderr: '' }, transitionLogArgs), true);
   assert.deepEqual(plan('startRemoteBackupJourneyFixture').args.slice(-3), ['--pb', 'readerPublicFixtureRecovery', 'true']);
   assert.deepEqual(plan('openJourneyInvalidBook').args.slice(-3), ['--pb', 'readerPublicFixtureInvalidBook', 'true']);
   assert.equal(plan('inputSourceJourneyUrl', { x: 1, y: 2 }).args.at(-1), 'https://novel-a.reader-journeys.invalid/fixtures/v9-source.json');

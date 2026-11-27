@@ -573,13 +573,14 @@ export struct ReaderControlAutoPageContent {
               Text('每页停留').layoutWeight(1).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
                 .fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
               this.islandStep('speed', -1, this.effectiveSpeedSeconds() > READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS);
-              Text(`${this.effectiveSpeedSeconds()} 秒`).width(52).textAlign(TextAlign.Center)
+              Text(`${this.effectiveSpeedSeconds()} 秒`).id(this.speedActorId('current')).width(52).textAlign(TextAlign.Center)
                 .fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
               this.islandStep('speed', 1, this.effectiveSpeedSeconds() < READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS);
             }.width('100%');
             Row() {
               Slider({ value: this.effectiveSpeedSeconds(), min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
                 max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, step: 1 })
+                .id(this.speedActorId('slider'))
                 .attributeModifier(new ReaderPaperMaterial())
                 .width('100%').height(44)
                 .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
@@ -1130,6 +1131,7 @@ export struct ReaderControlAutoPageContent {
         Slider({ value: this.effectiveSpeedSeconds(), min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
           max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, step: 1, style: SliderStyle.OutSet,
           direction: Axis.Horizontal, reverse: false })
+          .id(this.speedActorId('slider'))
           .attributeModifier(new ReaderPaperMaterial())
           .width(this.speedActor('slider').width).height(this.speedActor('slider').height)
           .trackThickness(4).blockSize({ width: 14, height: 14 })
