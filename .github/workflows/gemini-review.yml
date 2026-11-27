@@ -11,10 +11,6 @@ permissions:
   pull-requests: write
   issues: write
 
-concurrency:
-  group: gemini-review-${{ github.event.pull_request.number || github.event.issue.number }}
-  cancel-in-progress: true
-
 jobs:
   gemini-review:
     if: >-
@@ -35,6 +31,9 @@ jobs:
           )
         )
       }}
+    concurrency:
+      group: gemini-review-${{ github.event.pull_request.number || github.event.issue.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -94,17 +93,19 @@ jobs:
           github_pr_number: ${{ steps.pr-context.outputs.pr_number }}
           settings: |-
             {
-              "coreTools": [
-                "read_file",
-                "list_directory",
-                "glob",
-                "search_file_content",
-                "run_shell_command(gh pr view)",
-                "run_shell_command(gh pr diff)",
-                "run_shell_command(gh pr comment)",
-                "run_shell_command(git diff)",
-                "run_shell_command(rg)"
-              ]
+              "tools": {
+                "core": [
+                  "read_file",
+                  "list_directory",
+                  "glob",
+                  "search_file_content",
+                  "run_shell_command(gh pr view)",
+                  "run_shell_command(gh pr diff)",
+                  "run_shell_command(gh pr comment)",
+                  "run_shell_command(git diff)",
+                  "run_shell_command(rg)"
+                ]
+              }
             }
           prompt: |-
             你正在对仓库中打开的 PR #${PR_NUMBER} 进行严格只读代码审查。
