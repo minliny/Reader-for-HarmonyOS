@@ -541,6 +541,9 @@ export class CapabilityRouter {
   }
 }
 
+const NATIVE_EVENT_READ_LIMIT = 64;
+const RESULT_EVENT_YIELD_LIMIT = 16;
+
 type QueuedReaderCoreEvent = {
   event: ReaderCoreEvent;
 };
@@ -549,6 +552,11 @@ type ResultWaiter = {
   requestId: number;
   interruption?: Error;
   wake?: () => void;
+};
+
+type NativePollWait = {
+  wakeAt: number;
+  finish: () => void;
 };
 
 export class ReaderCoreRuntime {
@@ -566,9 +574,13 @@ export class ReaderCoreRuntime {
   private readonly pendingEvents = new Set<QueuedReaderCoreEvent>();
   private readonly pendingEventsByRequest = new Map<number, Set<QueuedReaderCoreEvent>>();
   private pendingEventCountValue = 0;
-  /** One shared native-event poll lane for all concurrent request waiters. */
-  private pollTail: Promise<void> = Promise.resolve();
-  /** Requests whose waiter has already returned after timeout/cancellation. */
+  /** Only parked result consumers drive the shared nonblocking native reader. */
+  private readonly nativePollWaits = new Map<ResultWaiter, NativePollWait>();
+  private nativePollQueued = false;
+  private nativePollBacklog = false;
+  private nativePollTimer: ReturnType<typeof setTimeout> | undefined;
+  private nativePollTimerAt = 0;
+  /** Cancelled admissions whose terminal delivery still belongs to this runtime. */
   private readonly abandonedRequestIds = new Set<number>();
   private nextRequestId = 1;
   private closed = false;
@@ -641,7 +653,6 @@ export class ReaderCoreRuntime {
   }
 
   get pendingEventCount(): number {
-    this.discardAbandonedPendingEvents();
     return this.pendingEventCountValue + this.native.pendingEventCount(this.runtime);
   }
 
@@ -655,6 +666,7 @@ export class ReaderCoreRuntime {
       return;
     }
     this.closed = true;
+    this.clearNativePollTimer();
     const active = Array.from(this.activeHostRequests.values());
     for (const waiters of this.resultWaiters.values()) {
       for (const waiter of waiters) {
@@ -662,6 +674,7 @@ export class ReaderCoreRuntime {
       }
     }
     this.resultWaiters.clear();
+    this.nativePollWaits.clear();
     for (const event of active) {
       try {
         this.capabilityRouter?.cancel(event);
@@ -720,7 +733,11 @@ export class ReaderCoreRuntime {
       method,
       params,
     };
-    this.abandonedRequestIds.delete(requestId);
+    this.drainAbandonedEvents();
+    if (this.abandonedRequestIds.has(requestId) || this.resultWaiters.has(requestId) ||
+        (this.deliveryMode === "legacyCallback" && this.acceptedRequestIds.has(requestId))) {
+      throw new Error("requestId is still owned by an earlier request");
+    }
     try {
       this.native.sendCommand(this.runtime, command);
     } catch (error) {
@@ -743,7 +760,7 @@ export class ReaderCoreRuntime {
       }
       throw error;
     }
-    if (this.deliveryMode === "explicitAck") this.acceptedRequestIds.add(requestId);
+    this.acceptedRequestIds.add(requestId);
     this.diagnosticRequestMethods.set(requestId, TERMINAL_DIAGNOSTIC_METHODS.has(method) ? method : "unknown");
     if (this.diagnosticRequestMethods.size > 256) {
       for (const oldest of this.diagnosticRequestMethods.keys()) {
@@ -751,6 +768,7 @@ export class ReaderCoreRuntime {
         break;
       }
     }
+    this.kickNativePoll();
     return requestId;
   }
 
@@ -763,16 +781,24 @@ export class ReaderCoreRuntime {
   readEvent(timeoutMs = 0): ReaderCoreEvent | null {
     this.ensureOpen();
     assertNonNegativeSafeInteger(timeoutMs, "timeoutMs");
-    this.discardAbandonedPendingEvents();
     const queued = this.takeNextPendingEvent();
     if (queued !== undefined) {
       this.acknowledgeConsumedEvent(queued);
       return queued;
     }
 
-    const event = this.readNativeEvent(timeoutMs);
-    if (event !== null) this.acknowledgeConsumedEvent(event);
-    return event;
+    for (let read = 0; read < NATIVE_EVENT_READ_LIMIT; read++) {
+      const event = this.readNativeEvent(read === 0 ? timeoutMs : 0);
+      if (event === null) return null;
+      if (this.discardAbandonedEvent(event)) continue;
+      if (this.resultWaiters.has(event.requestId)) {
+        this.enqueuePendingEvent(event);
+        continue;
+      }
+      this.acknowledgeConsumedEvent(event);
+      return event;
+    }
+    return null;
   }
 
   completeHostRequest(
@@ -791,6 +817,7 @@ export class ReaderCoreRuntime {
     }
     assertJsonObjectValue(result, "host.complete result");
     this.native.completeHostRequest(this.runtime, operationId, result, requestId);
+    this.kickNativePoll();
   }
 
   failHostRequest(
@@ -808,6 +835,7 @@ export class ReaderCoreRuntime {
       assertNonNegativeSafeInteger(requestId, "requestId");
     }
     this.native.failHostRequest(this.runtime, operationId, normalizeHostError(error), requestId);
+    this.kickNativePoll();
   }
 
   async request(
@@ -826,6 +854,7 @@ export class ReaderCoreRuntime {
     this.ensureOpen();
     const timeoutMs = readTimeoutMs(options.timeoutMs);
     const pollMs = readPollMs(options.pollMs);
+    if (this.abandonedRequestIds.has(requestId)) throw new Error(`Reader-Core request cancelled by caller: ${requestId}`);
     if (this.deliveryMode === "explicitAck") {
       if (!this.acceptedRequestIds.has(requestId)) throw new Error("request was not admitted by this SDK runtime");
       if (this.resultWaiters.has(requestId)) throw new Error("request already has a result consumer");
@@ -836,13 +865,14 @@ export class ReaderCoreRuntime {
     waiters.add(waiter);
     this.resultWaiters.set(requestId, waiters);
     let immediateTurns = 0;
+    let parkedForNative = false;
 
     try {
       while (Date.now() <= deadline) {
         this.checkWaiter(waiter);
         // A long chain of immediately available events/Host results must still
         // let UI timers and cancellation producers run. This is not Host polling.
-        if (++immediateTurns >= 32) {
+        if (immediateTurns >= RESULT_EVENT_YIELD_LIMIT) {
           await this.waitForWake(waiter, 0);
           immediateTurns = 0;
           this.checkWaiter(waiter);
@@ -853,16 +883,15 @@ export class ReaderCoreRuntime {
         }
         const event = this.takePendingForRequest(requestId);
         if (event === null) {
-          await this.pollNativeQueue(waiter, Math.min(pollMs, Math.max(0, deadline - Date.now())));
+          if (parkedForNative && Date.now() >= deadline) break;
+          await this.waitForNativePoll(waiter, Math.min(Date.now() + pollMs, deadline), !parkedForNative);
+          parkedForNative = true;
           continue;
         }
+        parkedForNative = false;
+        immediateTurns++;
 
         if (event.type === "host.request") {
-          if (event.requestId !== requestId) {
-            this.enqueuePendingEvent(event);
-            await this.waitForWake(waiter, 0);
-            continue;
-          }
           const routerHandler = this.capabilityRouter?.has(event.capability)
             ? this.capabilityRouter
             : undefined;
@@ -905,16 +934,9 @@ export class ReaderCoreRuntime {
           continue;
         }
 
-        if (event.requestId === requestId) {
-          this.acknowledgeConsumedEvent(event);
-          if (event.type === "error") {
-            throw new ReaderCoreRequestError(event);
-          }
-          return event;
-        }
-
-        this.enqueuePendingEvent(event);
-        await this.waitForWake(waiter, 0);
+        this.acknowledgeConsumedEvent(event);
+        if (event.type === "error") throw new ReaderCoreRequestError(event);
+        return event;
       }
 
       const error = new Error(`Reader-Core request timed out: ${requestId}`);
@@ -1003,19 +1025,23 @@ export class ReaderCoreRuntime {
   ): void {
     const active = this.activeHostRequests.get(requestId);
     const waiters = this.resultWaiters.get(requestId);
-    const alreadyCancelled = this.abandonedRequestIds.has(requestId);
-    if (active !== undefined || waiters !== undefined) {
+    const alreadyCancelled = this.abandonedRequestIds.has(requestId) ||
+      (waiters !== undefined && Array.from(waiters).every((waiter) => waiter.interruption !== undefined));
+    if (!alreadyCancelled && (this.acceptedRequestIds.has(requestId) || active !== undefined)) {
       this.abandonedRequestIds.add(requestId);
-      this.discardAbandonedPendingEvents();
     }
     if (waiters !== undefined) {
       for (const waiter of waiters) this.interruptWaiter(waiter, error);
     }
     if (alreadyCancelled || this.closed) return;
     try {
+      this.discardAbandonedPendingEvents(requestId);
       if (active !== undefined) this.capabilityRouter?.cancel(active);
     } finally {
-      this.native.cancelRequest(this.runtime, requestId);
+      if (!this.closed) {
+        try { this.native.cancelRequest(this.runtime, requestId); }
+        finally { if (!this.closed) this.drainAbandonedEvents(); }
+      }
     }
   }
 
@@ -1145,45 +1171,102 @@ export class ReaderCoreRuntime {
       this.diagnosticRequestMethods.delete(event.requestId);
       if (this.terminalMetadata.length > 16) this.terminalMetadata.shift();
     }
-    return this.discardAbandonedEvent(event) ? null : event;
+    return event;
   }
 
-  /** Serialize only the native non-blocking read. The retry delay deliberately
-   * stays outside this lane so one empty waiter cannot hold every concurrent
-   * request behind its timer. */
-  private async pollNativeQueue(waiter: ResultWaiter, waitMs: number): Promise<void> {
-    if (await this.pollNativeOnce()) {
+  private waitForNativePoll(waiter: ResultWaiter, wakeAt: number, readNow: boolean): Promise<void> {
+    return new Promise((resolve) => {
+      const finish = (): void => {
+        if (!this.nativePollWaits.delete(waiter)) return;
+        if (waiter.wake === finish) waiter.wake = undefined;
+        if (this.nativePollWaits.size === 0) this.clearNativePollTimer();
+        resolve();
+      };
+      this.nativePollWaits.set(waiter, { wakeAt, finish });
+      waiter.wake = finish;
+      if (this.closed || waiter.interruption !== undefined || this.pendingEventsByRequest.has(waiter.requestId)) finish();
+      else if (readNow) this.kickNativePoll();
+      else this.scheduleNativePoll();
+    });
+  }
+
+  private kickNativePoll(): void {
+    if (this.closed || this.nativePollWaits.size === 0 || this.nativePollQueued ||
+        (this.nativePollTimer !== undefined && this.nativePollTimerAt <= Date.now())) return;
+    if (this.nativePollBacklog) {
+      this.scheduleNativePoll();
       return;
     }
-    if (waitMs > 0) {
-      await this.waitForWake(waiter, waitMs);
-    }
-    this.checkWaiter(waiter);
-    await this.pollNativeOnce();
+    this.clearNativePollTimer();
+    this.nativePollQueued = true;
+    void Promise.resolve().then(() => {
+      this.nativePollQueued = false;
+      this.driveNativePoll();
+    });
   }
 
-  private async pollNativeOnce(): Promise<boolean> {
-    const predecessor = this.pollTail;
-    let release: (() => void) | undefined;
-    this.pollTail = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    await predecessor;
+  private driveNativePoll(): void {
+    if (this.closed) return;
+    let empty = false;
+    let read = 0;
     try {
-      this.ensureOpen();
-      const event = this.readNativeEvent(0);
-      if (event !== null) {
-        this.enqueuePendingEvent(event);
-        return true;
+      for (; read < NATIVE_EVENT_READ_LIMIT && this.nativePollWaits.size > 0; read++) {
+        if (this.pollNativeOnce() === "empty") {
+          empty = true;
+          break;
+        }
       }
-      return false;
-    } finally {
-      release?.();
+    } catch (cause) {
+      const error = cause instanceof Error ? cause : new Error(String(cause));
+      for (const waiter of this.nativePollWaits.keys()) this.interruptWaiter(waiter, error);
+      return;
+    }
+
+    this.nativePollBacklog = !empty && read === NATIVE_EVENT_READ_LIMIT;
+    const now = Date.now();
+    for (const parked of this.nativePollWaits.values()) {
+      if (parked.wakeAt <= now) parked.finish();
+    }
+    // Only real emptiness delays the next read. A full slice yields once to
+    // timers even when it contained nothing but abandoned deliveries.
+    this.scheduleNativePoll();
+  }
+
+  private scheduleNativePoll(): void {
+    if (this.closed || this.nativePollWaits.size === 0 || this.nativePollQueued) return;
+    let at = this.nativePollBacklog ? Date.now() : Infinity;
+    for (const parked of this.nativePollWaits.values()) at = Math.min(at, parked.wakeAt);
+    if (this.nativePollTimer !== undefined && this.nativePollTimerAt <= at) return;
+    this.clearNativePollTimer();
+    this.nativePollTimerAt = at;
+    this.nativePollTimer = setTimeout(() => {
+      this.nativePollTimer = undefined;
+      this.driveNativePoll();
+    }, Math.min(0x7fffffff, Math.max(0, at - Date.now())));
+  }
+
+  private clearNativePollTimer(): void {
+    if (this.nativePollTimer === undefined) return;
+    clearTimeout(this.nativePollTimer);
+    this.nativePollTimer = undefined;
+  }
+
+  private pollNativeOnce(): "empty" | "discarded" | "queued" {
+    const event = this.readNativeEvent(0);
+    if (event === null) return "empty";
+    if (this.discardAbandonedEvent(event)) return "discarded";
+    this.enqueuePendingEvent(event);
+    return "queued";
+  }
+
+  /** Drain ready receipts only. Live events keep their original unread order. */
+  private drainAbandonedEvents(limit = NATIVE_EVENT_READ_LIMIT): void {
+    for (let read = 0; read < limit && this.abandonedRequestIds.size > 0; read++) {
+      if (this.pollNativeOnce() === "empty") return;
     }
   }
 
   private takePendingForRequest(requestId: number): ReaderCoreEvent | null {
-    this.discardAbandonedPendingEvents();
     const requestQueue = this.pendingEventsByRequest.get(requestId);
     if (requestQueue === undefined) {
       return null;
@@ -1196,22 +1279,13 @@ export class ReaderCoreRuntime {
     return null;
   }
 
-  private discardAbandonedPendingEvents(): void {
-    for (const requestId of Array.from(this.abandonedRequestIds)) {
-      const requestQueue = this.pendingEventsByRequest.get(requestId);
-      if (requestQueue === undefined) {
-        continue;
-      }
-      let terminalSeen = false;
-      for (const queued of requestQueue) {
-        this.consumePendingEvent(queued);
-        this.acknowledgeConsumedEvent(queued.event);
-        terminalSeen = terminalSeen || this.isTerminalEvent(queued.event);
-      }
-      this.pendingEventsByRequest.delete(requestId);
-      if (terminalSeen) {
-        this.abandonedRequestIds.delete(requestId);
-      }
+  private discardAbandonedPendingEvents(requestId: number): void {
+    if (!this.abandonedRequestIds.has(requestId)) return;
+    const requestQueue = this.pendingEventsByRequest.get(requestId);
+    if (requestQueue === undefined) return;
+    for (const queued of requestQueue) {
+      this.consumePendingEvent(queued);
+      this.discardAbandonedEvent(queued.event);
     }
   }
 
@@ -1222,10 +1296,12 @@ export class ReaderCoreRuntime {
     requestQueue.add(queued);
     this.pendingEventsByRequest.set(event.requestId, requestQueue);
     this.pendingEventCountValue += 1;
+    this.resultWaiters.get(event.requestId)?.forEach((waiter) => this.nativePollWaits.get(waiter)?.finish());
   }
 
   private takeNextPendingEvent(): ReaderCoreEvent | undefined {
     for (const queued of this.pendingEvents) {
+      if (this.resultWaiters.has(queued.event.requestId)) continue;
       this.consumePendingEvent(queued);
       return queued.event;
     }
@@ -1257,11 +1333,13 @@ export class ReaderCoreRuntime {
   }
 
   private acknowledgeConsumedEvent(event: ReaderCoreEvent): void {
-    if (this.closed || this.deliveryMode !== "explicitAck" || this.consumedDeliveries.has(event)) return;
-    if (!Number.isSafeInteger(event.deliveryId) || event.deliveryId! <= 0) {
-      throw new Error("negotiated Reader-Core event is missing a delivery receipt");
+    if (this.closed || this.consumedDeliveries.has(event)) return;
+    if (this.deliveryMode === "explicitAck") {
+      if (!Number.isSafeInteger(event.deliveryId) || event.deliveryId! <= 0) {
+        throw new Error("negotiated Reader-Core event is missing a delivery receipt");
+      }
+      this.native.acknowledgeEvent!(this.runtime, event.deliveryId!);
     }
-    this.native.acknowledgeEvent!(this.runtime, event.deliveryId!);
     if (this.isTerminalEvent(event)) this.acceptedRequestIds.delete(event.requestId);
     this.consumedDeliveries.add(event);
   }
