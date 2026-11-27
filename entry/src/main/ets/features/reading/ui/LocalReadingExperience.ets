@@ -1537,8 +1537,10 @@ export struct ReadingExperience {
       preparationOrigin: this.turnRuntime.preparation.pending?.origin.chapter,
     }),
     hasVisibleBody: (): boolean => this.pageTurnProjection.visibleFragments.length > 0,
-    publishPhysicalPage: (page: PhysicalReadingPage, lifecycle: number, selection: number): void =>
-      this.measuredPage.publishFirstPage(page, lifecycle, selection, this.firstPageSurfacePublication),
+    publishPhysicalPage: (page: PhysicalReadingPage, chapterIndex: number, lifecycle: number, selection: number): void => {
+      this.chapterPresentation.observeRetainedChapterCommit(chapterIndex, lifecycle, selection);
+      this.measuredPage.publishFirstPage(page, lifecycle, selection, this.firstPageSurfacePublication);
+    },
     setMeasuredPosition: (offset: number, progress: number): void => {
       this.measuredPage.desiredChapterOffset = offset; this.measuredPage.desiredChapterProgress = progress;
     },
@@ -1883,7 +1885,6 @@ export struct ReadingExperience {
     exiting: (): boolean => this.sessionStatus.exitRequested,
   };
   private readonly chapterPresentationView: ReaderReadingChapterPresentationView = {
-    currentChapterIndex: (): number => this.currentChapterIndex(),
     localSource: (): boolean => this.sourceId === LOCAL_READING_SOURCE_ID,
     captureRetained: (): ReaderRetainedChapterFrame | undefined => this.pageChrome.captureRetained(),
     continuous: (): boolean => this.chromeState.readerSettingsSnapshot.navigationMode === 'continuous',

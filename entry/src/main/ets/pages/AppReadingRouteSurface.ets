@@ -12,7 +12,8 @@ import type { SourceSwitchPresentation } from '../features/source/presentation/S
 import { ReaderPostLayoutFrame } from '../ui/layout/ReaderPostLayoutFrame';
 import { motionSpecGet, readerMotionStandardCurve } from '../ui/foundation/MotionSpec';
 import { readerBeginTransition, readerRouteTransitionLaneId, readerTransitionActorX,
-  readerTransitionsEnabled } from '../ui/foundation/ReaderTransitionSignals';
+  readerTransitionsEnabled, READER_DETAIL_PRIMARY_ACTION, READER_DETAIL_TRANSITION_HEADER }
+  from '../ui/foundation/ReaderTransitionSignals';
 
 export interface AppReadingDetailMotionPorts {
   readonly current: () => ReaderDetailSceneSnapshot | undefined;
@@ -101,7 +102,7 @@ export class AppReadingDetailMotion {
     if (motion === undefined || motion.phase === 'preview' || motion.phase === 'covered') return;
     const target = motion.phase === 'pop' ? 0 : 1;
     const distance = Math.abs(target - motion.coverage);
-    this.observe(motion.phase, distance < .001);
+    if (motion.phase !== 'push') this.observe(motion.phase, distance < .001);
     const current = (): boolean => this.transition.snapshot()?.generation === motion.generation;
     const finish = (): void => {
       if (!current()) return;
@@ -117,6 +118,13 @@ export class AppReadingDetailMotion {
     this.deadline = setTimeout(finish, duration + 300);
     const start = (): void => {
       if (!current()) return;
+      if (motion.phase === 'push' && readerTransitionsEnabled()) {
+        this.observe('push');
+        // Both real detail anchors may move horizontally with this route.
+        // Their vertical geometry and size must settle without a jump.
+        readerBeginTransition({ kind: 'surface', action: 'mount', subject: 'reader-detail',
+          scope: 'reader-detail-anchors', nodes: [READER_DETAIL_TRANSITION_HEADER, READER_DETAIL_PRIMARY_ACTION], axis: 'x' });
+      }
       try {
         const animator = context.createAnimator({ duration, easing: reduced ? 'ease-out' : 'linear',
           delay: 0, fill: 'forwards', direction: 'normal', iterations: 1, begin: 0, end: 1 });

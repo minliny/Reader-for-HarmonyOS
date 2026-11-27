@@ -52,6 +52,21 @@ export function sourceV9ForegroundPane(view: SourceV9View): SourceV9ForegroundPa
   return undefined;
 }
 
+export interface SourceV9PaneTransition {
+  readonly actor: SourceV9View;
+  readonly nodeId: string;
+  readonly popping: boolean;
+}
+
+export function sourceV9PaneTransition(previous: SourceV9View, next: SourceV9View): SourceV9PaneTransition | undefined {
+  if (previous === next) return undefined;
+  const popping = sourceV9ParentView(previous) === next;
+  const actor = popping ? previous : next;
+  const scene = sourceV9ForegroundPane(actor);
+  if (scene === undefined) return undefined;
+  return { actor, popping, nodeId: `reader-source-v9-${actor === 'group-detail' ? actor : scene}-motion` };
+}
+
 export function sourceV9BlocksOuterBackPreview(view: SourceV9View, temporaryInput: boolean): boolean {
   return view !== 'list' || temporaryInput;
 }

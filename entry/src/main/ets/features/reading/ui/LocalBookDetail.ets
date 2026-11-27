@@ -1,4 +1,5 @@
 import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_DETAIL_PRIMARY_ACTION, READER_DETAIL_TRANSITION_HEADER } from '../../../ui/foundation/ReaderTransitionSignals';
 import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
 import { readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
@@ -260,6 +261,7 @@ export struct LocalBookDetail {
       geometry: this.geometry,
       headerMeasurementKey: this.measurementKey,
       footerMeasurementKey: this.footerMeasurementKey,
+      transitionHeaderNativeId: READER_DETAIL_TRANSITION_HEADER,
       content: (): void => { this.detailContent(); },
       header: (): void => { this.detailHeader(); },
       onHeaderHeightChange: (height: number, presentedKey: number): void => {
@@ -391,7 +393,7 @@ export struct LocalBookDetail {
             999, primary ? 'read' : 'shelf', primary ? this.readingActionAvailable() : this.shelfActionAvailable()))
           .textAlign(TextAlign.Center).accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
       }.width('100%').constraintSize({ minWidth: 44, minHeight: 44 })
-        .id(primary ? 'reader-detail-primary-action' : `reader-detail-shelf-action:${this.shelfActionLabel()}`)
+        .id(primary ? READER_DETAIL_PRIMARY_ACTION : `reader-detail-shelf-action:${this.shelfActionLabel()}`)
         .padding(0).backgroundColor(Color.Transparent).borderRadius(999)
         .enabled(primary ? this.readingActionAvailable() : this.shelfActionAvailable())
         .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
@@ -1162,7 +1164,7 @@ export struct LocalBookDetail {
           .fontColor(this.detailColor('TOK_ON_PRIMARY', 'onGreen'))
           .textAlign(TextAlign.Center).accessibilityLevel('no');
         }.layoutWeight(1)
-          .id('reader-detail-primary-action')
+          .id(READER_DETAIL_PRIMARY_ACTION)
           .constraintSize({ minHeight: 44 })
           .padding(0).borderRadius(999)
           .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD

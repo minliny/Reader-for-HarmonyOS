@@ -144,6 +144,8 @@ export class ReaderReadingRouteSelectionHost {
 
   restoreVerifiedControlSelection(display: ReaderControlSelectionDisplay,
     stored: ReaderControlSelectionStoredProgress): void {
+    this.actors.chapter().observeRetainedChapterCommit(display.context.chapter.chapterIndex,
+      this.actors.mount().lifecycleToken, this.view.selection());
     const measured = this.actors.measured();
     measured.restoreMaterializedChapterContext(display.context, true);
     measured.admit(display.page, this.view.selection());

@@ -57,10 +57,11 @@ function attributeMatches(matcher, values) {
 
 function matchesAttributes(attributes, selector, childLabels = []) {
   return attributeMatches(selector.id, [attributes.id, attributes.key]) && attributeMatches(selector.type, [attributes.type]) &&
-    attributeMatches(selector.text, [attributes.text]) &&
+    attributeMatches(selector.text, [attributes.text]) && attributeMatches(selector.originalText, [attributes.originalText]) &&
     attributeMatches(selector.label, [attributes.text, attributes.description, attributes.accessibilityText, ...childLabels]) &&
     attributeMatches(selector.enabled, [attributes.enabled]) && attributeMatches(selector.clickable, [attributes.clickable]) &&
-    attributeMatches(selector.selected, [attributes.selected]) &&
+    attributeMatches(selector.selected, [attributes.selected]) && attributeMatches(selector.opacity, [attributes.opacity]) &&
+    attributeMatches(selector.hitTestBehavior, [attributes.hitTestBehavior]) &&
     attributeMatches(selector.checked, [attributes.checked]);
 }
 
@@ -154,6 +155,17 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
     return { seq: log.seq, reports, watermark: transitionWatermark(log.stdout, processId, reports) };
   }
 
+  async function transitionBeforeLayout(expectations, watermark) {
+    const deadline = performance.now() + STEP_MS;
+    do {
+      const evidence = await transitionLog();
+      if (expectations.every(expected => matchingTransitions(evidence.reports, watermark, expected)
+        .some(report => report.frames.length === report.frameCount))) return evidence;
+      await delay(180);
+    } while (performance.now() < deadline);
+    return undefined;
+  }
+
   async function waitShare(predicate, until = performance.now() + STEP_MS) {
     do {
       const result = await probe.command({ op: 'journeyShareLog' });
@@ -182,6 +194,10 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
       const { content, ...evidence } = await receiveCapture(image.path);
       transitionCaptures.push({ ...evidence, timestampMs: image.timestampMs, acquisitionMs: image.acquisitionMs });
     }
+    // Native tree export overlaps the VM UI thread's frame window. Read the
+    // completed native sampling receipt before requesting the steady tree.
+    let sampledTransition = action && expectations.length && !outcome.filmstrip ?
+      await transitionBeforeLayout(expectations, priorTransition) : undefined;
     const until = performance.now() + STEP_MS;
     let lastStep;
     do {
@@ -217,7 +233,8 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
         const problems = [layoutReceiptProblem(observed, outcome)].filter(Boolean);
         let waitingForTransition = false;
         if (expectations.length) {
-          const transition = await transitionLog();
+          const transition = sampledTransition ?? await transitionLog();
+          sampledTransition = undefined;
           step.transitionReportSeq = transition.seq;
           step.transition = [];
           for (const expected of expectations) {
@@ -333,7 +350,9 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
       const [left, top, right, bottom] = bounds;
       const y = Math.round((top + bottom) / 2);
       const density = (right - left) / sample.environment.widthVp;
-      return { op: 'swipe', fromX: left + Math.max(4, Math.round(9 * density)), fromY: y,
+      // Stay inside the reader's native 18 vp edge lane but away from the
+      // OS-facing margin where the previous VM swipe reached no app gesture.
+      return { op: 'swipe', fromX: left + Math.max(4, Math.round(17 * density)), fromY: y,
         toX: left + Math.round((right - left) * .18), toY: y, velocity: 350 };
     }),
     swipe: (description, selector, direction, outcome, { avoid } = {}) => checkpoint(description, outcome, () => {

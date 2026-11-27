@@ -24,7 +24,6 @@ export interface ReaderReadingChapterPresentationLifetime {
 }
 
 export interface ReaderReadingChapterPresentationView {
-  readonly currentChapterIndex: () => number;
   readonly localSource: () => boolean;
   readonly captureRetained: () => ReaderRetainedChapterFrame | undefined;
   readonly continuous: () => boolean;
@@ -114,13 +113,7 @@ export class ReaderReadingChapterPresentationHost {
     this.retainedSpeech = ttsOwner;
     this.speechCommitAdmitted = false;
     this.view.publishRevision();
-    if (source !== 'coldRemote') {
-      if (retained !== undefined && this.view.currentChapterIndex() !== chapterIndex) {
-        this.observeChapterTransition(source, chapterIndex);
-      }
-      return;
-    }
-    this.armChapterLoadingDelay(lease, lifecycle, selection);
+    if (source === 'coldRemote') this.armChapterLoadingDelay(lease, lifecycle, selection);
   }
 
   markRetainedChapterBodyReady(lifecycle: number, selection: number): void {
@@ -214,13 +207,23 @@ export class ReaderReadingChapterPresentationHost {
     this.loadingDelayTimer = -1;
   }
 
-  observeChapterTransition(source: 'local' | 'cache', targetChapterIndex: number): void {
+  observeRetainedChapterCommit(targetChapterIndex: number, lifecycle: number, selection: number): void {
+    if (!readerTransitionsEnabled()) return;
+    const lease = this.gate.current(lifecycle, selection);
+    if (lease === undefined || lease.source === 'coldRemote') return;
+    const origin = this.gate.visibleOrigin(lease)?.context.chapter.chapterIndex;
+    if (origin !== undefined && origin !== targetChapterIndex) {
+      this.observeChapterTransition(lease.source, targetChapterIndex, origin);
+    }
+  }
+
+  observeChapterTransition(source: 'local' | 'cache', targetChapterIndex: number, originChapterIndex?: number): void {
     if (!readerTransitionsEnabled()) return;
     const nodes = this.view.continuous() ? ['reader-reading-interaction-host-continuous'] :
       [READER_PAGE_TURN_SLOT_A + ':transition-body', READER_PAGE_TURN_SLOT_B + ':transition-body'];
     const chapterBodyCount = nodes.length;
     nodes.push('reader-chapter-loading-state');
     readerBeginTransition({ kind: 'chapter', action: 'advance', subject: 'reader-chapter-' + source,
-      scope: 'reader-chapter', nodes, chapterBodyCount, targetChapterIndex });
+      scope: 'reader-chapter', nodes, chapterBodyCount, originChapterIndex, targetChapterIndex });
   }
 }

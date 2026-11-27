@@ -45,7 +45,7 @@ export interface ReaderMeasuredPageAdmissionNative {
   readonly captureMaterializedChapter: () => ReaderMaterializedChapterContext;
   readonly currentPage: () => ReaderMeasuredPageVisibility;
   readonly hasVisibleBody: () => boolean;
-  readonly publishPhysicalPage: (page: PhysicalReadingPage, lifecycle: number, selection: number) => void;
+  readonly publishPhysicalPage: (page: PhysicalReadingPage, chapterIndex: number, lifecycle: number, selection: number) => void;
   readonly setMeasuredPosition: (offset: number, progress: number) => void;
   readonly finishMeasurement: () => void;
   readonly releaseCompleting: () => void;
@@ -223,7 +223,7 @@ export class ReaderReadingMeasurementAdmissionHost {
     const lifecycle = first.lifecycleToken;
     this.mount.hydration.trace(lifecycle, 'first-persist');
     this.native.setMeasuredPosition(first.page.startScalar, first.progress);
-    this.native.publishPhysicalPage(first.page, lifecycle, first.selectionToken);
+    this.native.publishPhysicalPage(first.page, first.chapter.chapterIndex, lifecycle, first.selectionToken);
     this.view.publishTitleVisibility(first.page.startScalar);
     this.view.publishReadyPhase();
     this.flow.beginReadingRecord(lifecycle);
@@ -243,7 +243,7 @@ export class ReaderReadingMeasurementAdmissionHost {
   }
 
   publishMeasuredFirstPage(page: PhysicalReadingPage, chapter: ReadingSessionChapter, selection: number): void {
-    this.native.publishPhysicalPage(page, this.mount.lifecycleToken, selection);
+    this.native.publishPhysicalPage(page, chapter.chapterIndex, this.mount.lifecycleToken, selection);
     this.view.publishTitleVisibility(page.startScalar);
     this.view.publishTitle(chapter.chapterTitle);
     this.view.refreshPageProvider();

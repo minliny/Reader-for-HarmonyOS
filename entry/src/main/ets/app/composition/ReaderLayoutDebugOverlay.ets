@@ -159,6 +159,7 @@ export struct ReaderLayoutDebugOverlay {
   private invariantNodes: LayoutInvariantNode[] = [];
   private readonly nativeLayoutAudit: ReaderNativeLayoutAudit = new ReaderNativeLayoutAudit();
   private invariantFramePending: boolean = false;
+  private invariantScanDeferred: boolean = false;
   private mounted: boolean = false;
   private modalWasOpen: boolean = false;
   private modalCloseDurationMs: number = 0;
@@ -194,15 +195,24 @@ export struct ReaderLayoutDebugOverlay {
   }
 
   private scheduleInvariantScan(): void {
-    if (!this.diagnosticsActive() || this.invariantFramePending) return;
+    if (!this.diagnosticsActive() || this.deferInvariantScanForMotion() || this.invariantFramePending) return;
     this.invariantFramePending = true;
     try {
       const context = this.getUIContext();
       context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
         this.invariantFramePending = false;
-        if (this.diagnosticsActive()) this.scanFrameTree();
+        // A transition may begin after this layout callback was queued.
+        if (!this.diagnosticsActive() || this.deferInvariantScanForMotion()) return;
+        this.invariantScanDeferred = false;
+        this.scanFrameTree();
       }));
     } catch (_) { this.invariantFramePending = false; }
+  }
+
+  private deferInvariantScanForMotion(): boolean {
+    if (!this.automationEnabled || this.developerModeEnabled || this.transitionRecorder?.isRecording() !== true) return false;
+    this.invariantScanDeferred = true;
+    return true;
   }
 
   private onDeveloperModeChanged(): void {
@@ -214,7 +224,9 @@ export struct ReaderLayoutDebugOverlay {
     }
     if (this.diagnosticsActive()) {
       if (this.transitionRecorder === undefined) {
-        const recorder = new ReaderTransitionRecorder(() => this.getUIContext(), () => this.route);
+        const recorder = new ReaderTransitionRecorder(() => this.getUIContext(), () => this.route, (): void => {
+          if (this.invariantScanDeferred) this.scheduleInvariantScan();
+        });
         this.transitionRecorder = recorder;
         this.detachTransitionRecorder = observeReaderTransitions(observation => recorder.start(observation));
       }
@@ -240,6 +252,7 @@ export struct ReaderLayoutDebugOverlay {
   private retireTransitionRecorder(): void {
     this.detachTransitionRecorder?.();
     this.detachTransitionRecorder = undefined;
+    this.invariantScanDeferred = false;
     this.transitionRecorder?.retire();
     this.transitionRecorder = undefined;
   }

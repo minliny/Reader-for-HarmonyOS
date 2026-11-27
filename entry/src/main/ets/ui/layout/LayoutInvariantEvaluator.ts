@@ -107,7 +107,8 @@ export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutI
     node.tag.role === 'scroll-content' && node.tag.active !== false);
   const controls = sample.nodes.filter((node: LayoutInvariantNode): boolean => node.tag.role === 'key-control');
   const checkRecovery = sample.checkRecovery && !sample.recoveryPending && !sample.modalOpen;
-  const recoveredPageInputs = checkRecovery ? sample.nodes.filter((node: LayoutInvariantNode): boolean =>
+  const checkNativeReadingInput = checkRecovery && sample.requiresNativeMainInput === true;
+  const recoveredPageInputs = checkNativeReadingInput ? sample.nodes.filter((node: LayoutInvariantNode): boolean =>
     node.tag.role === 'main-input' && node.tag.scope === READER_PAGED_INPUT_SCOPE) : [];
   const expectsModalControl = sample.nodes.some((node: LayoutInvariantNode): boolean =>
     node.tag.role === 'modal-overlay' && node.tag.active === true && node.tag.expectsModalControl === true);
@@ -221,9 +222,10 @@ export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutI
   }
 
   if (checkRecovery) {
-    const nativeInput = sample.nodes.find((node: LayoutInvariantNode): boolean =>
-      node.tag.role === 'main-input' && node.tag.scope !== READER_PAGED_INPUT_SCOPE);
-    if (sample.mainInputEnabled === undefined || (sample.requiresNativeMainInput === true && nativeInput?.enabled === undefined)) {
+    // A covered reader stays mounted and intentionally disables its native host.
+    const nativeInput = checkNativeReadingInput ? sample.nodes.find((node: LayoutInvariantNode): boolean =>
+      node.tag.role === 'main-input' && node.tag.scope !== READER_PAGED_INPUT_SCOPE) : undefined;
+    if (sample.mainInputEnabled === undefined || (checkNativeReadingInput && nativeInput?.enabled === undefined)) {
       missing.push('recovered-input');
     } else observed.add('R6');
     if (sample.mainInputEnabled === false) violations.push({ rule: 'R6', nodeId: 'route', detail: 'main input is still blocked' });
