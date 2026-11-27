@@ -479,7 +479,7 @@ struct Index {
             openDetailSourceSwitch: (): void => this.journeys.openDetailSourceSwitch(),
             onBack: (): boolean => this.onBackPress(),
             shelfPreparing: this.readingEntryActions.shelfPreparing,
-            bookshelfAcceptsInput: this.journeys.bookshelfContentAcceptsInput(),
+            bookshelfAcceptsInput: this.bookshelfContentAcceptsInput(),
             detailIsForeground: this.journeys.detailContentIsForeground(), detailDirectoryActive: this.journeys.isDetailDirectoryRoute(),
             bookshelfPorts: (owner: ReaderRuntimeOwner | undefined, mounting: number): BookshelfScenePorts =>
               this.journeys.bookshelfScenePorts(owner, mounting),
@@ -537,6 +537,13 @@ struct Index {
     });
   }
 
+  private bookshelfContentAcceptsInput(): boolean {
+    // Read the root's observed presentations so both rendered input gates update on dismissal.
+    const modalVisible = this.shelfMutations.snapshot.importPresentation !== undefined ||
+      this.shelfGroupPresentation.identity.length > 0;
+    return this.journeys.bookshelfContentAcceptsInput(modalVisible);
+  }
+
   @Builder
   private pageOverlays() {
     AppOverlayHost({
@@ -564,13 +571,13 @@ struct Index {
       },
       feedback: {
         detail: this.detailShelf, messageTopInset: this.messageSafeTop(),
-        startupVisible: this.journeys.bookshelfContentAcceptsInput(),
+        startupVisible: this.bookshelfContentAcceptsInput(),
         startup: readerLegacySnapshotRecoveryView(this.journeys.runtime()?.legacySnapshotMigrationRecovery()),
         interactive: this.journeys.journeyRecoveryInputAllowed(), canInteract: (): boolean => this.journeys.journeyRecoveryInputAllowed(),
         mangaVisible: this.journeys.canPresentMangaRecovery(), canRetryManga: (): boolean => this.journeys.canPresentMangaRecovery(),
         firstContentRequired: (): boolean => this.route === 'bookshelf' &&
           this.shelfRead.snapshot.visualAdmitted && !this.shelfRead.headerScrolled,
-        pageInputEnabled: (): boolean => !this.arkWebCapturesInput && (this.route === 'bookshelf' ? this.journeys.bookshelfContentAcceptsInput() :
+        pageInputEnabled: !this.arkWebCapturesInput && (this.route === 'bookshelf' ? this.bookshelfContentAcceptsInput() :
           this.route === 'detail' ? this.journeys.detailContentIsForeground() :
           !this.sourceSwitchPresentation.isSurfacePresented() && !this.mangaSourceSwitch.selectionVisible),
       },

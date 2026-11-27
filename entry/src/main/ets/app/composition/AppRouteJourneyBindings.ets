@@ -856,9 +856,9 @@ export class AppRouteJourneyBindings {
       this.shelfGroupPresentation.identity.length > 0);
   }
 
-  bookshelfContentAcceptsInput(): boolean {
+  bookshelfContentAcceptsInput(modalVisible: boolean = this.bookshelfModalVisible()): boolean {
     return !this.arkWebCapturesInput && this.route === 'bookshelf' && !this.readingEntryActions.shelfPreparing &&
-      !this.readingEntry.sessionActive && !this.bookshelfModalVisible() &&
+      !this.readingEntry.sessionActive && !modalVisible &&
       !this.sourceSwitchPresentation.isSurfacePresented() && !this.mangaSourceSwitch.selectionVisible;
   }
 
