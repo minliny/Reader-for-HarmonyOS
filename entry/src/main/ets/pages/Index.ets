@@ -16,6 +16,7 @@ import { ReaderLibrarySearchSurface } from '../features/search/ui/ReaderLibraryS
 import { LibrarySearchPresentation } from '../features/search/presentation/LibrarySearchPresentation';
 import { LibrarySearchResults } from '../features/search/ui/LibrarySearchResults';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
+import { AppRouteCoordinator, type AppExtensionOpeningPorts, type AppExtensionOpeningScope } from '../app/AppRouteCoordinator';
 import { ReaderUIVerificationProbe, type ReaderUIVerificationChannel } from '../app/diagnostics/ReaderUIVerificationProbe';
 import { ReaderEntryStartupTrace, ReaderStartupTrace, type ReaderShelfEntryPhase } from '../app/ReaderStartupTrace';
 import { ReaderExitActions, type ReaderExitActionPorts } from '../app/composition/ReaderExitActions';
@@ -228,6 +229,7 @@ struct Index {
   private readonly bookRemovalConfirmation: BookRemovalDialogPresentation = new BookRemovalDialogPresentation();
   @State private shelfManagement: BookshelfManagementPresentation = new BookshelfManagementPresentation();
   private readonly navigationOwner: ReaderNavigation = new ReaderNavigation();
+  private readonly routeCoordinator: AppRouteCoordinator = new AppRouteCoordinator();
   private arkWebBack: (() => boolean) | undefined = undefined;
   private detailMoreBack: (() => boolean) | undefined = undefined;
   private detailMoreBackIdentity: string = '';
@@ -254,7 +256,6 @@ struct Index {
   private readerDetailBook: string = '';
   private readerDetailAnimator: AnimatorResult | undefined = undefined;
   private readerDetailDeadline: number = -1;
-  private readerOriginLane: ReaderRoute = 'bookshelf';
   @State private sourceOpeningGeneration: number = 0;
   @State private sourceBackPreviewBlocked: boolean = false;
   @State private sourceToolsOpeningGeneration: number = 0;
@@ -276,17 +277,17 @@ struct Index {
       this.detailMoreBackIdentity = '';
     }
     const routeChanged = snapshot.route !== this.route;
-    const fromReader = this.route === 'reading' || (this.route === 'directory' && this.directoryReturnTarget === 'readerControl');
-    const toReader = snapshot.route === 'reading' ||
-      (snapshot.route === 'directory' && snapshot.directoryReturnTarget === 'readerControl');
-    const previousLane = routeChanged && !fromReader && toReader ? this.appRouteLane() : this.readerOriginLane;
     const routeMotion = this.navigationOwner.routeMotion();
-    const incomingDetail = routeChanged && fromReader && snapshot.route === 'detail' && routeMotion === 'push' &&
-      this.searchAppForeground && this.readingEntry.book !== undefined;
-    const returningFromDetail = routeChanged && this.route === 'detail' && toReader &&
-      this.readingEntry.sessionActive && routeMotion === 'pop' && this.searchAppForeground;
+    const transition = this.routeCoordinator.transition(this.route, this.directoryReturnTarget, snapshot, {
+      routeMotion, foreground: this.searchAppForeground, hasReadingBook: this.readingEntry.book !== undefined,
+      readingSessionActive: this.readingEntry.sessionActive,
+      readingOrigin: this.navigationOwner.returns.snapshot().readingOrigin,
+      currentLane: (): ReaderRoute => this.appRouteLane(),
+    });
+    const fromReader = transition.fromReader, toReader = transition.toReader;
+    const incomingDetail = transition.incomingDetail, returningFromDetail = transition.returningFromDetail;
     if (routeChanged) {
-      const from = this.route, to = snapshot.route;
+      const to = snapshot.route;
       if (to === 'source') this.sourceOpeningGeneration = snapshot.generation;
       else if (to === 'sourceTools') this.sourceToolsOpeningGeneration = snapshot.generation;
       if (fromReader && !toReader) {
@@ -306,21 +307,13 @@ struct Index {
       } else if (this.readerDetailScene !== undefined) {
         this.clearReaderDetailMotion();
       }
-      const shelfSearch = (from === 'bookshelf' && to === 'search') || (from === 'search' && to === 'bookshelf');
-      const readerChangesHost = !fromReader && toReader && previousLane !== this.navigationOwner.returns.snapshot().readingOrigin;
-      this.visibleRouteMotion = shelfSearch || (fromReader && toReader) || readerChangesHost || incomingDetail || returningFromDetail ?
-        'none' : routeMotion;
+      if (transition.paintMotion !== undefined) this.visibleRouteMotion = transition.paintMotion;
     }
     // Keep the last right-hand pane mounted while the whole Settings tab leaves.
-    const pane = this.navigationOwner.settingsPane();
-    if (pane !== undefined) {
-      const lane: ReaderRouteSurfaceKey = pane === 'general' ? 'settings-general' :
-        pane === 'backup' ? 'settings-backup' : pane === 'about' ? 'settings-about' :
-        snapshot.route === 'sourceTools' ? 'sourceTools' : pane;
-      if (lane !== this.wideSettingsLane) {
-        this.wideSettingsMotion = snapshot.route === this.route ? 'tab' : this.navigationOwner.routeMotion();
-        this.wideSettingsLane = lane;
-      }
+    const lane = this.routeCoordinator.settingsLane(snapshot.route, this.navigationOwner.settingsPane());
+    if (lane !== undefined && lane !== this.wideSettingsLane) {
+      this.wideSettingsMotion = snapshot.route === this.route ? 'tab' : this.navigationOwner.routeMotion();
+      this.wideSettingsLane = lane;
     }
     this.navigationGeneration = snapshot.generation;
     this.directoryReturnTarget = snapshot.directoryReturnTarget;
@@ -328,8 +321,7 @@ struct Index {
     this.route = snapshot.route;
     if (routeChanged && fromReader !== toReader) {
       const lane = returningFromDetail ? this.navigationOwner.returns.snapshot().readingOrigin : this.appRouteLane();
-      if (toReader) this.readerOriginLane = lane;
-      this.updateReaderParentMotion(toReader, previousLane === lane && !incomingDetail && !returningFromDetail);
+      this.updateReaderParentMotion(toReader, this.routeCoordinator.readerParentSharesLane(transition, lane));
     }
     if (incomingDetail || returningFromDetail) this.animateReaderDetailMotion();
     else if (routeChanged && fromReader !== toReader && readerTransitionsEnabled()) {
@@ -1058,7 +1050,7 @@ struct Index {
   }
 
   private discoverIdentity(generation: number, mounting: number): string {
-    return JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'discover']);
+    return this.routeCoordinator.extensionIdentity(this.rssInstanceIdentity, mounting, generation, 'discover');
   }
 
   @Builder
@@ -1341,13 +1333,9 @@ struct Index {
   }
 
   private appRouteLane(): ReaderRoute {
-    if (this.readerDetailScene?.phase === 'pop') return 'detail';
-    if (this.route === 'search') return 'bookshelf';
-    if (retainedReaderRoute(this.route, this.directoryReturnTarget) !== undefined) {
-      return this.navigationOwner.returns.snapshot().readingOrigin;
-    }
-    if (this.wideSettingsPane() !== undefined) return 'settings';
-    return this.route;
+    return this.routeCoordinator.appLane(this.route, this.directoryReturnTarget,
+      this.readerDetailScene?.phase === 'pop', this.navigationOwner.returns.snapshot().readingOrigin,
+      (): boolean => this.wideSettingsPane() !== undefined);
   }
 
   private appRouteSafeTop(route: ReaderRoute): number {
@@ -1509,7 +1497,7 @@ struct Index {
   }
 
   private syncIdentity(generation: number, mounting: number): string {
-    return JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'sync']);
+    return this.routeCoordinator.extensionIdentity(this.rssInstanceIdentity, mounting, generation, 'sync');
   }
 
   @Builder
@@ -1765,18 +1753,9 @@ struct Index {
   }
 
   private openDiscover(returningFromDetail: boolean = false, motion?: 'tab'): void {
-    if (!isReaderProductSurfaceEnabled('discover')) {
-      return;
-    }
-    this.nextNavigationGeneration();
-    this.readingEntry.endReading(this.mountedRuntimeOwner);
-    this.navigateTo('discover', returningFromDetail ? 'pop' : motion);
-    const owner = this.mountedRuntimeOwner;
-    if (owner === undefined) return;
-    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
-    this.discoverPresentation.open(owner, this.discoverIdentity(generation, mounting), (): boolean =>
-      !this.shelfReceiptRetired && this.isCurrentRoute(generation, 'discover') && isReaderProductSurfaceEnabled('discover') &&
-      owner === this.mountedRuntimeOwner && mounting === this.detailShelfAdmissionMount && this.isCurrentRuntime(owner), returningFromDetail);
+    this.routeCoordinator.openExtension(this.rssInstanceIdentity, 'discover', returningFromDetail ? 'pop' : motion,
+      this.extensionOpeningPorts((owner: ReaderRuntimeOwner, identity: string, current: () => boolean): void =>
+        this.discoverPresentation.open(owner, identity, current, returningFromDetail)));
   }
 
   @Builder
@@ -1987,18 +1966,23 @@ struct Index {
   }
 
   private openSync(): void {
-    if (!isReaderProductSurfaceEnabled('sync')) {
-      return;
-    }
-    this.nextNavigationGeneration();
-    this.readingEntry.endReading(this.mountedRuntimeOwner);
-    this.navigateTo('sync');
-    const owner = this.mountedRuntimeOwner;
-    if (owner === undefined) return;
-    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
-    this.syncPresentation.open(owner, this.syncIdentity(generation, mounting), (): boolean =>
-      !this.shelfReceiptRetired && this.isCurrentRoute(generation, 'sync') && isReaderProductSurfaceEnabled('sync') &&
-      owner === this.mountedRuntimeOwner && mounting === this.detailShelfAdmissionMount && this.isCurrentRuntime(owner));
+    this.routeCoordinator.openExtension(this.rssInstanceIdentity, 'sync', undefined,
+      this.extensionOpeningPorts((owner: ReaderRuntimeOwner, identity: string, current: () => boolean): void =>
+        this.syncPresentation.open(owner, identity, current)));
+  }
+
+  private extensionOpeningPorts(
+    open: (owner: ReaderRuntimeOwner, identity: string, current: () => boolean) => void,
+  ): AppExtensionOpeningPorts {
+    return {
+      advance: (): void => { this.nextNavigationGeneration(); },
+      endReading: (): void => { this.readingEntry.endReading(this.mountedRuntimeOwner); },
+      show: (route: ReaderRoute, motion?: ReaderRouteMotionKind): void => this.navigateTo(route, motion),
+      scope: (): AppExtensionOpeningScope => ({ owner: this.mountedRuntimeOwner, mounting: this.detailShelfAdmissionMount,
+        generation: this.navigationGeneration, route: this.route, retired: this.shelfReceiptRetired }),
+      isCurrentOwner: (owner: ReaderRuntimeOwner): boolean => this.isCurrentRuntime(owner),
+      open,
+    };
   }
 
   private onSearchVisibilityChanged(): void {
