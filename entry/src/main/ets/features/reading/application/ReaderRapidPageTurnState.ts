@@ -1,4 +1,4 @@
-import type { ReaderPageTurnDirection } from './ReaderPageGestureState';
+import type { ReaderPageTurnDirection } from '../ui/ReaderPageGestureState';
 
 /**
  * Pure dynamic target for manual rapid page turns.
