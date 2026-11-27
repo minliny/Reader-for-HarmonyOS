@@ -1,113 +1,46 @@
 import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
-import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
-import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
-import { ReaderEditableTarget, ReaderEditableInputModifier } from '../../../ui/layout/ReaderEditableTarget';
-import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
-import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_INVARIANT_PROPERTY,
-  readerLayoutInvariantChanged } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
-import { READER_SHEET_CLOSE_MS } from '../../../ui/foundation/ProductMotionTiming';
-import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
-import { LengthMetrics } from '@kit.ArkUI';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
-import { ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
-import { ReaderDialogViewport } from '../../../ui/surfaces/ReaderDialogViewport';
-import { MESSAGE_TITLE, MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
-import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
+import { ReaderScrollLayout, readerScrollLayout } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
-import { PageBackBar } from '../../../ui/chrome/PageBackBar';
-import { DOWNLOAD_HEADER_HEIGHT, DOWNLOAD_HEADER_ACTION_WIDTH, DOWNLOAD_HEADER_ACTION_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
-import { readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
-import { ReaderButton } from '../../../ui/controls/ReaderButton';
-import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
+import { DOWNLOAD_HEADER_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { readerPageAreaLength, readerPresentedHeaderBottom } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
-import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader, readerPageSafeLeft,
-  readerPageSafeRight, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
+import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader, readerPageSafeLeft, readerPageSafeRight, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { prepareSharedDownloadFonts } from '../../../ui/foundation/ReaderFonts';
-import { DOWNLOAD_VISUAL, downloadVisualColor, sharedDownloadSheetMaxHeight, sharedDownloadContentInsets } from './SharedDownloadVisualSpec';
-import { SharedDownloadBookCover } from './SharedDownloadBookCover';
-import {
-  TYPE_DOWNLOAD_CONTROL, TYPE_DOWNLOAD_META, TYPE_DOWNLOAD_TAG,
-  TYPE_DOWNLOAD_BOOK_TITLE, TYPE_DOWNLOAD_SHEET_TITLE, TYPE_DOWNLOAD_EMPTY_TITLE, TYPE_DOWNLOAD_META_LINE,
-  TYPE_DOWNLOAD_STORAGE_META, TYPE_DOWNLOAD_STATUS_BODY,
-  TYPE_DOWNLOAD_TAB, TYPE_DOWNLOAD_TAB_SELECTED,
-  TYPE_DOWNLOAD_LIST_TOOLS, TYPE_DOWNLOAD_SOURCE,
-  TYPE_DOWNLOAD_CHAPTER_TITLE,
-  TYPE_DOWNLOAD_STORAGE_TOTAL, TYPE_DOWNLOAD_STORAGE_VALUE,
-} from './DownloadTypography';
-import { TYPE_APP_ROW_LABEL, TYPE_DOWNLOAD_BODY, TYPE_SELECT_DEFAULT_VALUE } from '../../../ui/foundation/ReaderTypography';
-import { ReaderWindowCoordinator, ReaderWindowChromeStyle } from '../../../app/ReaderWindowCoordinator';
-import { ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot, readerStableInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { DOWNLOAD_VISUAL, downloadVisualColor, sharedDownloadContentInsets } from './SharedDownloadVisualSpec';
+import { TYPE_DOWNLOAD_CONTROL, TYPE_DOWNLOAD_META, TYPE_DOWNLOAD_TAG, TYPE_DOWNLOAD_BOOK_TITLE, TYPE_DOWNLOAD_CHAPTER_TITLE } from './DownloadTypography';
+import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
+import { ReaderWindowMetricsSnapshot, readerStableInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import type { DownloadBookView, DownloadChapterView, SharedDownloadFilters, DownloadReadingTarget, DownloadStorageSummary, DownloadStoragePolicyView } from '../presentation/SharedDownloadProjection';
-import { filterDownloadBooks, describeDownloadReadingTarget, downloadChapterDetailLabel, downloadChapterBookTitle,
-  downloadsProvenEmpty, formatDownloadStorageBytes, canCleanDownloadStorage, currentDownloadReadingChapterIndex } from '../presentation/SharedDownloadProjection';
-import { readerScrimmedOpaqueColor } from '../../../ui/surfaces/ReaderScrimColor';
-import { ReaderInlineSelect } from '../../../ui/controls/ReaderInlineSelect';
-import { ReaderChoiceRow } from '../../../ui/controls/ReaderChoiceRow';
-import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
-import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
-import { isReaderRealtimeBlurEnabled, resolveReaderModalScrimSpec, type ReaderNavigationPreferences }
-  from '../../../app/HarmonyCapabilityPolicy';
-import { defaultNavigationPreferences, ReaderModalScrimModifier, readerSurfaceMaterialDecision }
-  from '../../../ui/surfaces/ReaderSurfaceMaterial';
-import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
-import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
-import { resolveDialogSpec, resolveDrawerSpec, readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { readerAvailableWindowHeight, readerDynamicSurfaceWidth, readerSurfaceMaxHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
-import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
-import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
-import type { SharedDownloadReadingControl, SharedDownloadReadingFocus, SharedDownloadUiAction,
-  SharedDownloadUiBookTarget, SharedDownloadUiIntent, SharedDownloadViewState } from '../presentation/SharedDownloadUiContract';
+import { type ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { readerAvailableWindowHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import type { SharedDownloadReadingControl, SharedDownloadReadingFocus, SharedDownloadUiAction, SharedDownloadUiIntent, SharedDownloadViewState } from '../presentation/SharedDownloadUiContract';
 import type { SharedDownloadExpectedChapter } from '../application/SharedDownloadCoordinator';
-
-interface DownloadChoice { id: string; label: string; }
-interface SharedDownloadScrollAnchor {
-  detailKey: string;
-  offset: number;
-  managing: boolean;
-  identity: string;
-  presentation: number;
-  fonts: number;
-  windowRevision: number;
-  viewportWidth: number;
-  viewportHeight: number;
-}
-interface SharedDownloadListRestore {
-  epoch: number;
-  offset: number;
-  identity: string;
-  presentation: number;
-  fonts: number;
-  windowRevision: number;
-  viewportWidth: number;
-  viewportHeight: number;
-  fontScale: number;
-  managing: boolean;
-}
-class SharedDownloadIdleFrame extends ReaderPostLayoutFrame {}
+import { SharedDownloadBookList, SharedDownloadBookListOwner, SharedDownloadBookListPaint, SharedDownloadIdleFrame,
+  SharedDownloadHeader, SharedDownloadManageHeaderAction, SharedDownloadSelectionDock,
+  sharedDownloadChapterUnit, sharedDownloadFocusKey, sharedDownloadFontScale, sharedDownloadControlHeight,
+  type SharedDownloadFrameView, type SharedDownloadBookListView, type SharedDownloadFilterField, type DownloadChoice } from './SharedDownloadBookList';
+import { SharedDownloadChapterList, SharedDownloadChapterListOwner, SharedDownloadChapterListPaint,
+  type SharedDownloadChapterListView } from './SharedDownloadChapterList';
+import { SharedDownloadSheets, SharedDownloadSheetsOwner, SharedDownloadSheetsPaint, DownloadOperationsHeader,
+  DownloadOperationsBody, DownloadStorageCleanupIcon, DownloadConfirmationSurface, DownloadConfirmationSurfaceBody,
+  type SharedDownloadSheetsView } from './SharedDownloadSheets';
 
 /** Native implementation of the user-approved shared-download-demo.html layout. */
 @Component
 export struct SharedDownloadPage {
+
   @Prop embeddedWide: boolean = false;
-  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
-  private readonly rangeEditingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
-  private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
-  private readonly rangeScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
-  private readonly rangeScroller: Scroller = new Scroller();
-  private readonly rangeStartController: TextInputController = new TextInputController();
-  private readonly rangeEndController: TextInputController = new TextInputController();
-  private readonly rangeStartTarget: ReaderEditableTarget = new ReaderEditableTarget();
-  private readonly rangeEndTarget: ReaderEditableTarget = new ReaderEditableTarget();
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') @Watch('syncOverlayChrome') private appThemeScheme: string = 'day';
   @StorageLink('readerSystemScheme') @Watch('syncOverlayChrome') private systemScheme: string = 'day';
@@ -129,7 +62,9 @@ export struct SharedDownloadPage {
   @Prop initialViewState: SharedDownloadViewState = {
     query: '', type: 'all', state: 'all', sourceId: 'all', sort: 'recent', direction: 'desc',
   };
+
   isOpeningCurrent: (() => boolean) | undefined = undefined;
+
   takeReadingFocus: () => SharedDownloadReadingFocus | undefined = (): SharedDownloadReadingFocus | undefined => undefined;
   onViewStateChanged: (state: SharedDownloadViewState) => void = (_state: SharedDownloadViewState): void => {};
   onBack: () => void = (): void => {};
@@ -142,9 +77,7 @@ export struct SharedDownloadPage {
     (_target: DownloadReadingTarget, _current: () => boolean, _control: SharedDownloadReadingControl): void => {};
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string, blocksSettingsSwitch?: () => boolean) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
-
   @State @Watch('onListFilterChanged') private query: string = '';
-  @State private searchInputRevision: number = 0;
   @State @Watch('onListFilterChanged') private bookType: string = 'all';
   @State @Watch('onListFilterChanged') private stateFilter: string = 'all';
   @State @Watch('onListFilterChanged') private sourceFilter: string = 'all';
@@ -153,81 +86,235 @@ export struct SharedDownloadPage {
   @State @Watch('onDetailChanged') private detailKey: string = '';
   @State private managing: boolean = false;
   @State private managementGeneration: number = 0;
-  @State private selectedBookKeys: string[] = [];
-  private closeSelectionAfterRemoval: boolean = false;
-  @State private selectedChapters: Map<number, string> = new Map<number, string>();
   @State @Watch('onSheetChanged') private sheet: string = '';
-  @State private filterSourceOptions: DownloadChoice[] = [];
-  @State private actionBookKeys: string[] = [];
-  @State private actionChapters: SharedDownloadExpectedChapter[] = [];
   @State @Watch('onConfirmationChanged') private confirmation: string = '';
-  @State private rangeChoice: string = 'all';
-  @State private rangeStart: string = '';
-  @State private rangeEnd: string = '';
-  @State private rangeBookKey: string = '';
-  @State private rangeBookOptions: DownloadChoice[] = [];
-  @State private rangeDraftRevision: number = 0;
-  @State private rangeCatalog: SharedDownloadExpectedChapter[] | undefined = undefined;
-  @State private rangeCatalogChanged: boolean = false;
   @State private fontsReady: boolean = false;
   @State private fontsFailed: boolean = false;
   @State @Watch('onListGeometryChanged') private pageWidth: number = 0;
   @State private pageOriginX: number = 0;
   @State private pageOriginY: number = 0;
   @State @Watch('onListGeometryChanged') private pageHeight: number = 0;
-  // Ordinary chrome belongs to the active List. A viable management dock
-  // alone may occupy the footer; its inner geometry survives placement changes.
   @State private measurementRevision: number = 0;
   @State private storageDockShape: ReaderRaisedShape | undefined = undefined;
   @State private selectionDockShape: ReaderRaisedShape | undefined = undefined;
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
-  @State private sheetTitleMeasuredHeight: number = DOWNLOAD_VISUAL.sheetTitleHeight;
-  @State private operationsHeaderMeasuredHeight: number = 0;
-  @State private dialogActionsMeasuredHeight: number = DOWNLOAD_VISUAL.buttonHeight;
-  @State private sheetFooterMeasuredHeight: number = DOWNLOAD_VISUAL.buttonHeight + DOWNLOAD_VISUAL.sheetFooterTop + DOWNLOAD_VISUAL.sheetFooterBottom + DOWNLOAD_VISUAL.borderWidth;
-  @State private bookCopyHeights: Map<string, number> = new Map<string, number>();
-  @State private bookContentHeights: Map<string, number> = new Map<string, number>();
-  private listScroller: Scroller = new Scroller();
-  private chapterScroller: Scroller = new Scroller();
-  private listOffset: number = 0;
-  private listScrollRestoreEpoch: number = 0;
-  private listScrollRestorePending: SharedDownloadListRestore | undefined;
-  private chapterOffset: number = 0;
-  private chapterLayoutReady: boolean = false;
-  private chapterScrollRestoreEpoch: number = 0;
-  private chapterScrollRestorePending: boolean = false;
-  private chapterScrollRestoreScheduled: boolean = false;
-  private managingScrollRestore: SharedDownloadScrollAnchor | undefined;
-  private managingScrollAnchor: SharedDownloadScrollAnchor | undefined;
-  private browseScrollBeforeManaging: SharedDownloadScrollAnchor | undefined;
-  private managingDockMeasured: boolean = false;
   private mountedIdentity: string = '';
   private mounted: boolean = false;
   private fontPreparationGeneration: number = 0;
   private presentationGeneration: number = 0;
-  private overlayChromeClaimed: boolean = false;
-  private overlayChromeRequestGeneration: number = 0;
-  private sheetWasVisible: boolean = false;
-  private sheetMaskReady: boolean = false;
-  @State private sheetExitPending: boolean = false;
-  // One mounted download-sheet opening only. These are Native presentation
-  // actors, not download/confirmation/operation state.
-  private sheetActorGeneration: number = 0;
-  private sheetActorAttachment: number = 0;
-  private sheetActorOwner: number = -1;
-  private sheetActors: string[] = [];
-  @State private sheetOpeningGeneration: number = 0;
-  @State private confirmationGeneration: number = 0;
-  private previousConfirmation: string = '';
-  private sheetTriggerKey: string = '';
   private managingTriggerKey: string = 'manage';
   private focusGeneration: number = 0;
-  private readingHandoffRevision: number = 0;
-  private readingReturnFocus: SharedDownloadReadingFocus | undefined;
+  @State private bookPaint: SharedDownloadBookListPaint = new SharedDownloadBookListPaint();
+  @State private chapterPaint: SharedDownloadChapterListPaint = new SharedDownloadChapterListPaint();
+  @State private sheetsPaint: SharedDownloadSheetsPaint = new SharedDownloadSheetsPaint();
+  private readonly frameView: SharedDownloadFrameView = {
+    mount: {
+      mounted: (): boolean => this.mounted,
+      mountedIdentity: (): string => this.mountedIdentity,
+      presentationGeneration: (): number => this.presentationGeneration,
+      fontsReady: (): boolean => this.fontsReady,
+      fontPreparationGeneration: (): number => this.fontPreparationGeneration,
+      detailKey: (): string => this.detailKey,
+      managing: (): boolean => this.managing,
+      pageWidth: (): number => this.pageWidth,
+      pageHeight: (): number => this.pageHeight,
+      pageOriginX: (): number => this.pageOriginX,
+      pageOriginY: (): number => this.pageOriginY,
+      readerWindowMetricsRevision: (): number => this.readerWindowMetricsRevision,
+    },
+    layout: {
+      pageViewportWidth: (): number => this.pageViewportWidth(),
+      availableHeight: (): number => this.availableHeight(),
+      leftInset: (): number => this.leftInset(),
+      rightInset: (): number => this.rightInset(),
+      contentLeftInset: (): number => this.contentLeftInset(),
+      contentRightInset: (): number => this.contentRightInset(),
+      contentTop: (): number => this.contentTop(),
+      bottomInset: (): number => this.bottomInset(),
+      scrollLayout: (): ReaderScrollLayout => this.scrollLayout(),
+      fixedSelectionDockVisible: (): boolean => this.fixedSelectionDockVisible(),
+      dockMaterialRadius: (selection: boolean): number => this.dockMaterialRadius(selection),
+      raisedDockAreaChangeHandler: (selection: boolean): ((_old: Area, area: Area) => void) =>
+        this.raisedDockAreaChangeHandler(selection),
+    },
+    scheme: (): string => this.appThemeScheme,
+    getUIContext: (): UIContext => this.getUIContext(),
+    metrics: (): ReaderWindowMetricsSnapshot => this.currentMetrics(),
+    fontScale: (): number => sharedDownloadFontScale(this.currentMetrics()),
+    presentationIsCurrent: (generation?: number): boolean => this.presentationIsCurrent(generation),
+    uiInputIsCurrent: (generation?: number): boolean => this.uiInputIsCurrent(generation),
+    syncOverlayFocus: (preferred?: string, managing?: boolean, readingReturn?: SharedDownloadReadingFocus): void =>
+      this.syncOverlayFocus(preferred, managing, readingReturn),
+  };
+
+  private readonly bookListView: SharedDownloadBookListView = {
+    frame: this.frameView,
+    input: {
+      books: (): DownloadBookView[] => this.books,
+      embeddedWide: (): boolean => this.embeddedWide,
+      loading: (): boolean => this.loading,
+      error: (): string => this.error,
+    },
+    chrome: {
+      headerTop: (): number => this.headerTop(),
+      resolvedHeaderHeight: (): number => this.resolvedHeaderHeight(),
+      dockLeftInset: (): number => this.dockLeftInset(),
+      dockRightInset: (): number => this.dockRightInset(),
+      canEnterManaging: (): boolean => this.canEnterManaging(),
+      headerHeightChangeHandler: (): ((height: number) => void) => this.headerHeightChangeHandler(),
+      back: (): void => this.back(),
+      selectionLabel: (): string => this.selectionLabel(),
+      allSelected: (): boolean => this.allSelected(),
+      manageSelectAllAction: (generation: number): (() => void) => this.manageSelectAllAction(generation),
+      managementGeneration: (): number => this.managementGeneration,
+      renderManageAction: (): void => this.renderManageHeaderAction(),
+    },
+    chapters: {
+      cancelChapterScrollRestore: (): void => this.chapterList.cancelChapterScrollRestore(),
+      captureChapterOffset: (): number | undefined => this.chapterList.captureChapterOffset(),
+      restoreManagementPosition: (offset: number): void => this.chapterList.restoreManagementPosition(offset),
+      retireReadingReturnFocus: (): void => this.chapterList.retireReadingReturnFocus(),
+      currentChapter: (): DownloadChapterView | undefined => this.chapterList.currentChapter(),
+      locateCurrent: (): void => this.chapterList.locateCurrent(),
+      selectedChapterActionAvailable: (action: SharedDownloadUiAction): boolean => this.chapterList.selectedChapterActionAvailable(action),
+      selectedCount: (): number => this.chapterList.selectedCount(),
+    },
+    actions: {
+      modalBlocking: (): boolean => this.sheets.modalBlocking(),
+      openTool: (kind: 'filter' | 'sort' | 'settings', trigger: string): void => this.sheets.openSheet(kind, trigger),
+      openBookActions: (bookKey: string): void => this.sheets.openBookActions(bookKey),
+      activateBookStatus: (book: DownloadBookView): void => this.sheets.activateBookStatus(book),
+      canRemoveBooks: (books: DownloadBookView[]): boolean => this.sheets.canRemoveBooks(books),
+      runSelectedChapters: (action: 'download' | 'pause'): void => this.sheets.runSelectedChapters(action),
+      openSelectionActions: (chapters: boolean): void => this.sheets.openSelectionActions(chapters),
+    },
+    filters: (): SharedDownloadFilters => this.currentFilters(),
+    setFilter: (field: SharedDownloadFilterField, value: string): void => this.editFilter(field, value),
+    focusGeneration: (): number => this.focusGeneration,
+    advanceFocusGeneration: (): number => ++this.focusGeneration,
+    setManaging: (managing: boolean, trigger?: string): void => this.setManaging(managing, trigger),
+    openBook: (book: DownloadBookView, generation?: number): void => this.openBook(book, generation),
+    publishViewState: (): void => this.publishViewState(),
+    onRefresh: (): void => this.onRefresh(),
+    onRefreshStorage: (): void => this.onRefreshStorage(),
+    onIntent: (intent: SharedDownloadUiIntent): void => this.onIntent(intent),
+  };
+
+  private readonly chapterListView: SharedDownloadChapterListView = {
+    frame: this.frameView,
+    input: {
+      appForeground: (): boolean => this.appForeground,
+      covered: (): boolean => this.covered,
+      embeddedWide: (): boolean => this.embeddedWide,
+      loading: (): boolean => this.loading,
+      reduceMotion: (): boolean => this.reduceMotion,
+    },
+    books: {
+      detail: (): DownloadBookView | undefined => this.bookList.detail(),
+      bookGetter: (book: DownloadBookView): (() => DownloadBookView) => this.bookList.bookGetter(book),
+      findCurrentBook: (book: DownloadBookView): DownloadBookView | undefined => this.bookList.findCurrentBook(book),
+      eventBook: (book: () => DownloadBookView, generation?: number): DownloadBookView | undefined => this.bookList.eventBook(book, generation),
+      cancelManagingScroll: (): void => this.bookList.cancelManagingScroll(),
+      onListTouch: (event: TouchEvent): void => this.bookList.onListTouch(event),
+      onListWillScroll: (offset: number, source: ScrollSource, generation: number, bookKey: string): void =>
+        this.bookList.onListWillScroll(offset, source, generation, bookKey),
+    },
+    actions: {
+      modalBlocking: (): boolean => this.sheets.modalBlocking(),
+      available: (action: SharedDownloadUiAction, books: DownloadBookView[], proofs: SharedDownloadExpectedChapter[]): boolean =>
+        this.sheets.actionAvailable(action, books, proofs),
+      runChapterAction: (bookKey: string, proof: SharedDownloadExpectedChapter, action: 'download' | 'pause'): void =>
+        this.sheets.runChapterAction(bookKey, proof, action),
+      openChapterActions: (bookKey: string, proof: SharedDownloadExpectedChapter, trigger: string): void =>
+        this.sheets.openChapterActions(bookKey, proof, trigger),
+    },
+    onOpenBook: (book: DownloadBookView): void => this.onOpenBook(book),
+    onReadTarget: (target: DownloadReadingTarget, current: () => boolean, control: SharedDownloadReadingControl): void =>
+      this.onReadTarget(target, current, control),
+    publishViewState: (): void => this.publishViewState(),
+  };
+
+  private readonly sheetsView: SharedDownloadSheetsView = {
+    frame: this.frameView,
+    input: {
+      appForeground: (): boolean => this.appForeground,
+      appearancePreferences: (): ReaderNavigationPreferences => this.appearancePreferences,
+      batchRecovery: (): ReaderRecoveryView => this.batchRecovery,
+      books: (): DownloadBookView[] => this.books,
+      covered: (): boolean => this.covered,
+      loading: (): boolean => this.loading,
+      reduceMotion: (): boolean => this.reduceMotion,
+      systemScheme: (): string => this.systemScheme,
+      storagePolicy: (): DownloadStoragePolicyView | undefined => this.storagePolicy,
+      storagePolicyBusy: (): boolean => this.storagePolicyBusy,
+      storageSummary: (): DownloadStorageSummary => this.storageSummary,
+      storageCleanupBusy: (): boolean => this.storageCleanupBusy,
+    },
+    books: {
+      detail: (): DownloadBookView | undefined => this.bookList.detail(),
+      visibleSelectedBooks: (): DownloadBookView[] => this.bookList.visibleSelectedBooks(),
+      retireSearchInput: (): void => this.bookList.retireSearchInput(),
+      retireEmptyBookSelection: (): void => this.bookList.retireEmptyBookSelection(),
+      deferSelectionCloseAfterRemoval: (): void => this.bookList.deferSelectionCloseAfterRemoval(),
+      sourceChoices: (): DownloadChoice[] => this.bookList.sourceChoices(),
+      sortChoices: (): DownloadChoice[] => this.bookList.sortChoices(),
+      stateChoices: (): DownloadChoice[] => this.bookList.stateChoices(),
+    },
+    chapters: {
+      invalidateReadingHandoff: (): void => this.chapterList.invalidateReadingHandoff(),
+      selectedCount: (): number => this.chapterList.selectedCount(),
+      selectionProofs: (): SharedDownloadExpectedChapter[] => this.chapterList.selectedChapterProofs(),
+    },
+    sheetSlots: {
+      operationsHeader: (opening: number): void => this.renderOperationsHeader(opening),
+      operationsBody: (opening: number): void => this.renderOperationsBody(opening),
+      storageCleanupIcon: (): void => this.renderStorageCleanupIcon(),
+      confirmationSurface: (opening: number, width: number, height: number): void =>
+        this.renderConfirmationSurface(opening, width, height),
+      confirmationBody: (opening: number, viewportHeight: number): void => this.renderConfirmationSurfaceBody(opening, viewportHeight),
+    },
+    modal: { sheet: (): string => this.sheet, confirmation: (): string => this.confirmation },
+    setSheet: (kind: string): void => { this.sheet = kind; },
+    setConfirmation: (kind: string): void => { this.confirmation = kind; },
+    filters: (): SharedDownloadFilters => this.currentFilters(),
+    setFilter: (field: SharedDownloadFilterField, value: string): void => this.editFilter(field, value),
+    measurementGeneration: (): number => this.measurementGeneration(),
+    onRefreshBatchRecovery: (generation: number): void => this.onRefreshBatchRecovery(generation),
+    onIntent: (intent: SharedDownloadUiIntent): void => this.onIntent(intent),
+  };
+
+  private readonly bookList = new SharedDownloadBookListOwner(this.bookListView, (): SharedDownloadBookListPaint => this.bookPaint);
+  private readonly chapterList = new SharedDownloadChapterListOwner(this.chapterListView,
+    (): SharedDownloadChapterListPaint => this.chapterPaint);
+  private readonly sheets = new SharedDownloadSheetsOwner(this.sheetsView, (): SharedDownloadSheetsPaint => this.sheetsPaint);
+
+  private currentFilters(): SharedDownloadFilters {
+    return { query: this.query, type: this.bookType as 'all' | 'novel' | 'manga',
+      state: this.stateFilter as 'all' | 'downloading' | 'downloaded' | 'none', sourceId: this.sourceFilter,
+      sort: this.sortField as 'recent' | 'title' | 'progress' | 'size', direction: this.sortDirection as 'asc' | 'desc' };
+  }
+
+  private editFilter(field: SharedDownloadFilterField, value: string): void {
+      switch (field) {
+        case 'query': this.query = value; break;
+        case 'type': this.bookType = value; break;
+        case 'state': this.stateFilter = value; break;
+        case 'sourceId': this.sourceFilter = value; break;
+        case 'sort': this.sortField = value; break;
+        case 'direction': this.sortDirection = value; break;
+      }
+
+  }
+
+  private onListGeometryChanged(): void { this.bookList.onListGeometryChanged(); }
+  private onListFilterChanged(): void { this.bookList.onListFilterChanged(); }
+  private onSheetChanged(): void { this.sheets.onSheetChanged(); }
+  private onConfirmationChanged(): void { this.sheets.onConfirmationChanged(); }
+  private syncOverlayChrome(): void { this.sheets.syncOverlayChrome(); }
 
   aboutToAppear(): void {
-    this.cancelListScrollRestore();
-    this.cancelChapterScrollRestore();
+    this.bookList.cancelListScrollRestore();
+    this.chapterList.cancelChapterScrollRestore();
     this.presentationGeneration += 1;
     this.measurements.clear();
     this.storageDockShape = undefined;
@@ -240,15 +327,11 @@ export struct SharedDownloadPage {
     this.sortField = this.initialViewState.sort;
     this.sortDirection = this.initialViewState.direction;
     this.detailKey = this.initialViewState.detailKey ?? '';
-    this.listOffset = this.initialViewState.listScroll ?? 0;
-    this.chapterOffset = this.initialViewState.chapterScroll ?? 0;
-    this.chapterLayoutReady = false;
-    this.chapterScrollRestorePending = this.detailKey.length > 0;
-    this.chapterScrollRestoreScheduled = false;
-    this.closeSelectionAfterRemoval = false;
+    this.bookList.beginOpening(this.initialViewState.listScroll ?? 0);
+    this.chapterList.initializePosition(this.initialViewState.chapterScroll ?? 0, this.detailKey.length > 0);
     this.mounted = true;
-    this.onSheetChanged();
-    this.readingReturnFocus = this.takeReadingFocus();
+    this.sheets.onSheetChanged();
+    this.chapterList.acceptReturnFocus(this.takeReadingFocus());
     this.prepareFonts();
     this.onErrorChanged();
     this.onTemporaryBackBridge((): boolean => this.consumeBack(), this.mountedIdentity,
@@ -256,30 +339,25 @@ export struct SharedDownloadPage {
   }
 
   aboutToDisappear(): void {
-    this.cancelListScrollRestore();
-    this.cancelChapterScrollRestore();
+    this.bookList.cancelListScrollRestore();
+    this.chapterList.cancelChapterScrollRestore();
     this.transientFeedback.reset();
     this.fontPreparationGeneration += 1;
     this.publishViewState();
     // The scene may retire before ArkUI destroys its child. Release chrome
     // already acquired by this mount even though its input lease has ended.
-    const restoreChrome = this.overlayChromeClaimed && this.mounted && this.presentationIdentity === this.mountedIdentity;
+    const restoreChrome = this.sheets.ownsOverlayChrome() && this.mounted && this.presentationIdentity === this.mountedIdentity;
     this.presentationGeneration += 1;
-    this.overlayChromeRequestGeneration += 1;
-    this.retireSheetActors();
+    this.sheets.retireAttachment();
     this.focusGeneration += 1;
-    this.readingReturnFocus = undefined;
-    this.sheetWasVisible = false;
-    this.sheetMaskReady = false;
-    this.sheetExitPending = false;
-    this.chapterLayoutReady = false;
-    this.chapterScrollRestorePending = false;
-    this.chapterScrollRestoreScheduled = false;
+    this.chapterList.retireReadingReturnFocus();
+    this.sheets.resetExitPaint(true);
+    this.chapterList.discardMeasuredPosition();
+    this.chapterList.releaseOldFontFrame();
     this.mounted = false;
     this.measurements.clear();
-    this.cancelManagingScroll();
-    this.overlayChromeClaimed = false;
-    if (restoreChrome) ReaderWindowCoordinator.requestAppChrome();
+    this.bookList.cancelManagingScroll();
+    this.sheets.releaseUnmountedChrome(restoreChrome);
     this.onTemporaryBackBridge(undefined, this.mountedIdentity);
   }
 
@@ -305,12 +383,44 @@ export struct SharedDownloadPage {
   }
 
   @Builder
+  private topBar() { SharedDownloadHeader({ owner: this.bookList }); }
+
+  @Builder
+  private renderManageHeaderAction() { SharedDownloadManageHeaderAction({ owner: this.bookList }); }
+
+  @Builder
+  private pageOverlays() { SharedDownloadSheets({ owner: this.sheets }); }
+
+  @Builder
+  private renderOperationsHeader(opening: number) {
+    DownloadOperationsHeader(this.sheets, { opening });
+  }
+
+  @Builder
+  private renderOperationsBody(opening: number) {
+    DownloadOperationsBody(this.sheets, { opening });
+  }
+
+  @Builder
+  private renderStorageCleanupIcon() { DownloadStorageCleanupIcon({ owner: this.sheets }); }
+
+  @Builder
+  private renderConfirmationSurface(opening: number, width: number, height: number) {
+    DownloadConfirmationSurface(this.sheets, { opening, width, height });
+  }
+
+  @Builder
+  private renderConfirmationSurfaceBody(opening: number, viewportHeight: number) {
+    DownloadConfirmationSurfaceBody(this.sheets, { opening, viewportHeight });
+  }
+
+  @Builder
   private pageContent() {
     Stack({ alignContent: Alignment.TopStart }) {
       this.pageBody();
-    }.width('100%').height('100%').enabled(!this.modalBlocking())
-      .accessibilityLevel(this.modalBlocking() ? 'no-hide-descendants' : 'auto')
-      .hitTestBehavior(this.modalBlocking() ? HitTestMode.None : HitTestMode.Default);
+    }.width('100%').height('100%').enabled(!this.sheets.modalBlocking())
+      .accessibilityLevel(this.sheets.modalBlocking() ? 'no-hide-descendants' : 'auto')
+      .hitTestBehavior(this.sheets.modalBlocking() ? HitTestMode.None : HitTestMode.Default);
   }
 
   @Builder
@@ -321,88 +431,50 @@ export struct SharedDownloadPage {
           loading: !this.fontsFailed, actionLabel: this.fontsFailed ? '重试' : '',
           onAction: (): void => { if (this.uiInputIsCurrent()) this.prepareFonts(); } });
       }.width('100%').padding({ left: this.leftInset(), right: this.rightInset(), top: this.contentTop() });
-    } else if (this.detail() !== undefined) {
-      this.chapterPage(this.bookGetter(this.detail() as DownloadBookView));
+    } else if (this.bookList.detail() !== undefined) {
+      SharedDownloadChapterList(this.chapterList, { chromeOwner: this.bookList, book: this.bookList.bookGetter(this.bookList.detail() as DownloadBookView), ownerGeneration: this.presentationGeneration });
     } else {
-      this.bookPage();
+      SharedDownloadBookList(this.bookList, { ownerGeneration: this.presentationGeneration });
     }
   }
 
   @Builder
   private fixedDock() {
     if (this.fixedSelectionDockVisible()) {
-      Column() { this.selectionDock(); }.width('100%').enabled(!this.modalBlocking())
-        .accessibilityLevel(this.modalBlocking() ? 'no-hide-descendants' : 'auto')
-        .hitTestBehavior(this.modalBlocking() ? HitTestMode.None : HitTestMode.Default)
+      Column() { SharedDownloadSelectionDock({ owner: this.bookList }); }.width('100%').enabled(!this.sheets.modalBlocking())
+        .accessibilityLevel(this.sheets.modalBlocking() ? 'no-hide-descendants' : 'auto')
+        .hitTestBehavior(this.sheets.modalBlocking() ? HitTestMode.None : HitTestMode.Default)
         .responseRegion(readerLayoutCarrierResponseRegion());
     }
   }
 
-  @Builder
-  private pageOverlays() {
-    if (this.batchRecovery.visible && this.appForeground && !this.covered && !this.modalBlocking()) {
-      Column() {
-        ReaderRecoveryNotice({ view: this.batchRecovery, layoutWidthVp: Math.max(0, this.pageViewportWidth() - this.leftInset() - this.rightInset()), maxHeightVp: Math.max(0, this.availableHeight() - this.contentTop() - this.bottomInset()), tag: '下载待处理', actionLabel: '刷新列表', busy: this.loading,
-          onReconcile: (generation: number): void => {
-            if (this.uiInputIsCurrent() && !this.modalBlocking() &&
-              this.batchRecovery.visible && generation === this.batchRecovery.generation) this.onRefreshBatchRecovery(generation);
-          } });
-      }.width('100%').padding({ left: this.leftInset(), right: this.rightInset(), top: this.contentTop() })
-        .hitTestBehavior(HitTestMode.Transparent);
-    }
-    if (this.sheet.length > 0 || this.sheetExitPending) {
-      // Keep an empty carrier until its actually mounted Native actors exit.
-      ForEach([this.sheetActorAttachment], (attachment: number): void => {
-        Stack() { this.sheetOverlay(attachment, this.sheetActorOwner); }.width('100%').height('100%')
-          .customProperty(READER_LAYOUT_INVARIANT_PROPERTY, READER_LAYOUT_DEBUG_BUILD ? this.sheetLayoutTag() : undefined)
-          .enabled(this.confirmation.length === 0)
-          .accessibilityLevel(this.confirmation.length > 0 ? 'no-hide-descendants' : 'auto')
-          .hitTestBehavior(this.confirmation.length > 0 ? HitTestMode.None : HitTestMode.Transparent);
-      }, (attachment: number): string => attachment.toString());
-    }
-    if (this.confirmation.length > 0) {
-      ForEach([this.confirmationGeneration], (opening: number): void => { this.confirmationOverlay(opening); },
-        (opening: number): string => opening.toString());
-    }
-  }
-
-  private sheetLayoutTag(): LayoutInvariantTag {
-    return { role: 'modal-overlay', id: 'download-sheet', active: this.sheet.length > 0,
-      closeDurationMs: READER_SHEET_CLOSE_MS, intercepts: this.sheet.length > 0 || this.sheetExitPending };
-  }
-
   private lastErrorFeedback: string = '';
   private lastChapterFeedback: string = '';
+
   private onLoadingChanged(): void {
-    this.restoreChapterOffset();
-    this.retireEmptyBookSelection();
+    this.chapterList.restoreChapterOffset();
+    this.bookList.retireEmptyBookSelection();
   }
+
   private onErrorChanged(): void {
     if (!this.error) {
       this.lastErrorFeedback = '';
-      this.retireEmptyBookSelection();
+      this.bookList.retireEmptyBookSelection();
       return;
     }
     if (!this.mounted || !this.presentationIsCurrent() || this.books.length === 0 || !this.error || this.error === this.lastErrorFeedback) return;
     this.lastErrorFeedback = this.error;
     try { this.transientFeedback.show(() => this.getUIContext(), { message: this.error, duration: READER_FEEDBACK_BRIEF_MS }, (): boolean => this.mounted && this.presentationIsCurrent()); } catch (_) {}
   }
+
   private onBooksChanged(): void {
     this.onErrorChanged();
-    const keys = new Set<string>(this.books.map((book: DownloadBookView): string => book.key));
-    const retainedBookKeys = this.selectedBookKeys.filter((key: string): boolean => keys.has(key));
-    if (retainedBookKeys.length !== this.selectedBookKeys.length) this.selectedBookKeys = retainedBookKeys;
-    this.retireEmptyBookSelection();
-    this.syncRangeCatalog();
-    this.restoreChapterOffset();
-    const book = this.detail();
-    if (book?.projectionStatus === 'ready' && this.selectedChapters.size > 0) {
-      const retained = new Map<number, string>();
-      for (const chapter of book.chapters) {
-        if (chapter.navigable && this.chapterSelected(chapter)) retained.set(chapter.index, chapter.chapterId);
-      }
-      if (retained.size !== this.selectedChapters.size) this.selectedChapters = retained;
-    }
+    this.bookList.retainCurrentBookSelection();
+    this.bookList.retireEmptyBookSelection();
+    this.sheets.syncRangeCatalog();
+    this.chapterList.restoreChapterOffset();
+    const book = this.bookList.detail();
+    this.chapterList.retainSelection(book);
     if (book?.projectionStatus !== 'unavailable') { this.lastChapterFeedback = ''; return; }
     if (!this.mounted || !this.presentationIsCurrent() || book.chapters.length === 0) return;
     const message = book.projectionError ?? '章节下载情况暂不可用';
@@ -412,762 +484,9 @@ export struct SharedDownloadPage {
     try { this.transientFeedback.show(() => this.getUIContext(), { message, duration: READER_FEEDBACK_BRIEF_MS }, (): boolean => this.mounted && this.presentationIsCurrent()); } catch (_) {}
   }
 
-  @Builder
-  private topBar() {
-    PageBackBar({ variant: this.embeddedWide ? 'standard' : 'download', floating: this.embeddedWide,
-      layoutExpectedTopGapVp: this.headerTop(),
-      centered: this.embeddedWide, elevation: this.embeddedWide ? 'floating' : 'fixed', trailingWidthVp: this.manageHeaderActionWidth(),
-      showBack: !this.embeddedWide || this.detailKey.length > 0 || this.managing,
-      title: this.detailKey.length === 0 ? '下载管理' : '章节下载',
-      backFocusId: this.focusKey('page-back'),
-      backLabel: this.managing ? '退出管理' : this.detailKey.length > 0 ? '返回书籍列表' : '返回',
-      onBack: (): void => this.back(), onHeightChange: this.headerHeightChangeHandler(),
-      trailing: (): void => { this.manageHeaderAction(); },
-    });
-  }
-
-  @Builder
-  private manageHeaderAction() {
-    Button({ type: ButtonType.Normal }) {
-      Text(this.managing ? '完成' : '管理').fontFamily(TYPE_DOWNLOAD_CONTROL.fontFamily)
-        .fontWeight(TYPE_DOWNLOAD_CONTROL.fontWeight).fontSize(TYPE_DOWNLOAD_CONTROL.fontSizeFp)
-        .lineHeight(`${TYPE_DOWNLOAD_CONTROL.lineHeightFp}fp`).halfLeading(true).fontColor(this.primaryInk())
-        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-    }.id(this.focusKey('manage')).width(this.manageHeaderActionWidth())
-      .constraintSize({ minHeight: DOWNLOAD_HEADER_ACTION_HEIGHT }).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-      .responseRegion(readerActionTouchRegion(this.manageHeaderActionWidth(), DOWNLOAD_HEADER_ACTION_HEIGHT))
-      .enabled(this.managing || this.canEnterManaging())
-      .opacity(this.managing || this.canEnterManaging() ? 1 : DOWNLOAD_VISUAL.disabledOpacity).onClick((): void => {
-        if (this.uiInputIsCurrent()) this.setManaging(!this.managing);
-      });
-  }
-
-  private manageHeaderActionWidth(): number {
-    return Math.max(DOWNLOAD_HEADER_ACTION_WIDTH, Math.ceil(2 * TYPE_DOWNLOAD_CONTROL.fontSizeFp * this.fontScale() + 12));
-  }
-
-  @Builder
-  private compactHeader() {
-    Column() { this.topBar(); }.width('100%').padding({ left: this.leftInset(), right: this.rightInset(),
-      top: this.headerTop(), bottom: this.contentTop() - this.headerTop() - this.resolvedHeaderHeight() });
-  }
-
-  @Builder
-  private compactDock() {
-    Column() {
-      if (this.managing || this.detail() !== undefined) { this.selectionDock(); }
-      else { this.storageDock(); }
-    }.width('100%').padding({ left: this.dockLeftInset(), right: this.dockRightInset(),
-      top: DOWNLOAD_VISUAL.dockBottom, bottom: this.bottomInset() });
-  }
-
-  @Builder
-  private bookPage(ownerGeneration: number = this.presentationGeneration) {
-    List({ scroller: this.listScroller }) {
-      if (!this.embeddedWide) { ListItem() { this.compactHeader(); } }
-      ListItem() { Column() { this.listControls(); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
-      if (this.loading && this.books.length === 0) {
-        ListItem() { Column() { ReaderPageState({ title: '正在读取书架…', loading: true }); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
-      } else if (this.error.length > 0 && this.books.length === 0) {
-        ListItem() { Column() { ReaderPageState({ title: '下载信息读取失败', message: this.error, actionLabel: '重试', onAction: (): void => { if (this.uiInputIsCurrent()) this.onRefresh(); } }); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
-      }
-      if (this.visibleBooks().length === 0 && !this.loading && !(this.error.length > 0 && this.books.length === 0)) {
-        ListItem() {
-          Column() {
-            ReaderPageState({ title: this.books.length === 0 ? '书架为空' : '没有匹配的书籍',
-              message: this.books.length === 0 ? '加入书架后，可在这里管理下载' : '调整搜索关键词或筛选条件',
-              actionLabel: this.books.length === 0 ? '' : '清除筛选',
-              onAction: (): void => this.clearFilters(ownerGeneration) });
-          }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() });
-        }
-      }
-      if (!this.managing && this.visibleBooks().length > 0 && this.downloadTasksEmpty()) {
-        ListItem() {
-          Column() {
-            ReaderPageState({ title: '暂无下载任务', message: '打开书籍，选择要下载的章节。' });
-          }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() });
-        }
-      }
-      ForEach(this.visibleBooks(), (book: DownloadBookView) => {
-        ListItem() { Column() { this.bookRow(this.bookGetter(book), false); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
-      }, (book: DownloadBookView): string => book.key);
-      if (!this.fixedSelectionDockVisible()) { ListItem() { this.compactDock(); } }
-    }.width('100%').height('100%').scrollBar(BarState.Auto).onScrollStop((): void => this.publishViewState())
-      .id(this.editingScroll.id)
-      .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.listScroller,
-        (): number => readerScrollStartOffset(this.scrollLayout())))
-      .onDisAppear((): void => this.editingScroll.unmount())
-      .onAreaChange((): void => this.editingHost.refresh())
-      .onTouch((event: TouchEvent): void => this.onListTouch(event))
-      .onWillScroll((offset: number, _state: ScrollState, source: ScrollSource): void =>
-        this.onListWillScroll(offset, source, ownerGeneration, ''))
-      .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
-      .contentEndOffset(readerScrollEndOffset(this.scrollLayout()));
-  }
-
-  @Builder
-  private listControls() {
-    ForEach([this.searchInputIdentity()], (identity: string): void => {
-    Column({ space: 0 }) {
-      this.searchField(identity);
-      Row({ space: DOWNLOAD_VISUAL.tabsGap }) {
-        this.typeTab('all', '全部', identity);
-        this.typeTab('manga', '漫画', identity);
-        this.typeTab('novel', '小说', identity);
-      }.width('100%').padding(DOWNLOAD_VISUAL.tabsPadding).backgroundColor(downloadVisualColor('soft', this.appThemeScheme)).borderRadius(DOWNLOAD_VISUAL.tabsRadius)
-        .margin({ top: DOWNLOAD_VISUAL.tabsTop, bottom: DOWNLOAD_VISUAL.tabsBottom });
-      this.listTools(identity);
-    }.width('100%');
-    }, (identity: string): string => identity);
-  }
-
-  @Builder
-  private listTools(identity: string = this.searchInputIdentity()) {
-    if (this.listToolsInline()) {
-      Row({ space: DOWNLOAD_VISUAL.listToolsGap }) {
-        this.listFilterControl(identity);
-        this.listSortControls(identity);
-        Blank().layoutWeight(1);
-        this.listToolCount();
-      }.width('100%').constraintSize({ minHeight: this.listToolControlHeight() })
-        .margin({ bottom: DOWNLOAD_VISUAL.listToolsBottom });
-    } else {
-      Column({ space: DOWNLOAD_VISUAL.listToolsGap }) {
-        Flex({ wrap: FlexWrap.Wrap }) {
-          Column() { this.listFilterControl(identity); }.width(this.listFilterWidth())
-            .margin({ right: DOWNLOAD_VISUAL.listToolsGap, bottom: DOWNLOAD_VISUAL.listToolsGap });
-          Column() { this.listSortControls(identity); }.width(this.listSortWidth())
-            .margin({ right: DOWNLOAD_VISUAL.listToolsGap, bottom: DOWNLOAD_VISUAL.listToolsGap });
-        }.width('100%').constraintSize({ minHeight: this.listToolControlHeight() });
-        Row() { Blank().layoutWeight(1); this.listToolCount(); }.width('100%');
-      }.width('100%').margin({ bottom: DOWNLOAD_VISUAL.listToolsBottom });
-    }
-  }
-
-  @Builder
-  private listFilterControl(identity: string = this.searchInputIdentity()) {
-    Button({ type: ButtonType.Normal }) {
-      Row({ space: DOWNLOAD_VISUAL.listToolIconGap }) {
-        Image(this.visualIcon('filter')).width(DOWNLOAD_VISUAL.listToolIconSize).height(DOWNLOAD_VISUAL.listToolIconSize);
-        Text(this.filterLabel()).fontFamily(TYPE_DOWNLOAD_LIST_TOOLS.fontFamily).fontWeight(TYPE_DOWNLOAD_LIST_TOOLS.fontWeight)
-          .fontSize(TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp).lineHeight(TYPE_DOWNLOAD_LIST_TOOLS.lineHeightFp as number).halfLeading(true)
-          .minFontScale(1).maxFontScale(this.fontScale()).fontColor(downloadVisualColor('ink', this.appThemeScheme)).layoutWeight(1);
-      }.width('100%');
-    }.width(this.listFilterWidth()).padding({ top: DOWNLOAD_VISUAL.toolPaddingY, bottom: DOWNLOAD_VISUAL.toolPaddingY })
-      .constraintSize({ minHeight: this.listToolControlHeight() }).borderRadius(0).backgroundColor(Color.Transparent)
-      .accessibilityText('筛选书籍').id(this.focusKey('filter')).onClick((): void => {
-        if (this.searchInputIsCurrent(identity)) this.openSheet('filter', 'filter');
-      });
-  }
-
-  @Builder
-  private listSortControls(identity: string = this.searchInputIdentity()) {
-    Row({ space: DOWNLOAD_VISUAL.sortPairGap }) {
-      Button({ type: ButtonType.Normal }) {
-        Stack({ alignContent: Alignment.Center }) { this.sortBars(); }.width(DOWNLOAD_VISUAL.sortWidth).height(DOWNLOAD_VISUAL.sortWidth);
-      }.width(DOWNLOAD_VISUAL.touchTarget).constraintSize({ minHeight: this.listToolControlHeight() }).padding(0)
-        .borderRadius(0).backgroundColor(Color.Transparent)
-        .accessibilityText(this.sortDirection === 'asc' ? '当前正序，切换为倒序' : '当前倒序，切换为正序')
-        .onClick((): void => {
-          if (this.searchInputIsCurrent(identity)) this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-        });
-      Button({ type: ButtonType.Normal }) {
-        Text(this.sortLabel()).fontFamily(TYPE_DOWNLOAD_LIST_TOOLS.fontFamily).fontWeight(TYPE_DOWNLOAD_LIST_TOOLS.fontWeight)
-          .fontSize(TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp).lineHeight(TYPE_DOWNLOAD_LIST_TOOLS.lineHeightFp as number).halfLeading(true)
-          .minFontScale(1).maxFontScale(this.fontScale()).fontColor(downloadVisualColor('ink', this.appThemeScheme));
-      }.width(this.listSortLabelWidth()).padding({ top: DOWNLOAD_VISUAL.toolPaddingY, bottom: DOWNLOAD_VISUAL.toolPaddingY })
-        .constraintSize({ minHeight: this.listToolControlHeight() }).borderRadius(0).backgroundColor(Color.Transparent)
-        .accessibilityText('选择排序字段').id(this.focusKey('sort')).onClick((): void => {
-          if (this.searchInputIsCurrent(identity)) this.openSheet('sort', 'sort');
-        });
-    }.width(this.listSortWidth()).constraintSize({ minHeight: this.listToolControlHeight() });
-  }
-
-  @Builder
-  private listToolCount() {
-    Text(`${this.visibleBooks().length} / ${this.books.length} 本书`)
-      .fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-      .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
-      .minFontScale(1).maxFontScale(this.fontScale()).width(this.listToolCountWidth()).textAlign(TextAlign.End)
-      .fontColor(downloadVisualColor('muted', this.appThemeScheme));
-  }
-
-  private listToolsAvailableWidth(): number {
-    return Math.max(0, this.pageViewportWidth() - this.contentLeftInset() - this.contentRightInset());
-  }
-
-  private listToolControlHeight(): number {
-    return this.textControlHeight(DOWNLOAD_VISUAL.touchTarget, TYPE_DOWNLOAD_LIST_TOOLS.lineHeightFp as number,
-      DOWNLOAD_VISUAL.toolPaddingY * 2);
-  }
-
-  private listFilterWidth(): number {
-    return Math.min(Math.max(0, this.listToolsAvailableWidth() - DOWNLOAD_VISUAL.listToolsGap),
-      Math.max(DOWNLOAD_VISUAL.touchTarget, this.filterLabel().length * TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp * this.fontScale() +
-        DOWNLOAD_VISUAL.listToolIconSize + DOWNLOAD_VISUAL.listToolIconGap));
-  }
-
-  private listSortLabelWidth(): number {
-    return Math.min(Math.max(0, this.listToolsAvailableWidth() - DOWNLOAD_VISUAL.listToolsGap -
-      DOWNLOAD_VISUAL.touchTarget - DOWNLOAD_VISUAL.sortPairGap),
-      Math.max(DOWNLOAD_VISUAL.touchTarget, this.sortLabel().length * TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp * this.fontScale()));
-  }
-
-  private listSortWidth(): number { return DOWNLOAD_VISUAL.touchTarget + DOWNLOAD_VISUAL.sortPairGap + this.listSortLabelWidth(); }
-  private listToolCountWidth(): number {
-    return Math.min(this.listToolsAvailableWidth(), `${this.visibleBooks().length} / ${this.books.length} 本书`.length *
-      TYPE_DOWNLOAD_META.fontSizeFp * this.fontScale());
-  }
-
-  private listToolsInline(): boolean {
-    return this.listFilterWidth() + this.listSortWidth() + this.listToolCountWidth() + DOWNLOAD_VISUAL.listToolsGap * 3 <=
-      this.listToolsAvailableWidth();
-  }
-
-  @Builder
-  private searchField(identity: string = this.searchInputIdentity()) {
-    ReaderSearchField({ editingHost: this.editingHost, variant: 'pageForm', mode: 'live', text: this.query,
-      editingCurrent: (): boolean => this.searchInputIsCurrent(identity),
-      placeholder: '筛选下载书籍', accessibilityLabel: '按书名、作者或书源筛选下载书籍', clearAccessibilityLabel: '清除搜索',
-      onTextChange: (value: string): void => this.changeSearchInput(value, identity),
-      onClear: (): void => this.clearSearchInput(identity) });
-  }
-
-  private searchInputIdentity(): string {
-    return JSON.stringify([this.mountedIdentity, this.presentationGeneration, this.searchInputRevision]);
-  }
-
-  private ownsSearchInput(identity: string): boolean {
-    return this.presentationIsCurrent() && this.detailKey.length === 0 && identity === this.searchInputIdentity();
-  }
-
-  private searchInputIsCurrent(identity: string): boolean {
-    return this.ownsSearchInput(identity) && this.uiInputIsCurrent() && !this.modalBlocking();
-  }
-
-  private changeSearchInput(value: string, identity: string): void {
-    if (!this.ownsSearchInput(identity)) return;
-    if (!this.searchInputIsCurrent(identity)) {
-      // A native edit may have painted before its callback lost input rights.
-      // Replace only this current field; an old opening cannot rebuild its successor.
-      if (value !== this.query) this.searchInputRevision += 1;
-      return;
-    }
-    this.cancelManagingScroll();
-    this.query = value; this.listScroller.scrollTo({ xOffset: 0, yOffset: 0 });
-  }
-
-  private clearSearchInput(identity: string): void {
-    if (!this.searchInputIsCurrent(identity) || this.query.length === 0) return;
-    this.query = '';
-  }
-
-  @Builder
-  private typeTab(id: string, label: string, identity: string = this.searchInputIdentity()) {
-    Button({ type: ButtonType.Normal }) {
-      Text(label).fontFamily(this.bookType === id ? TYPE_DOWNLOAD_TAB_SELECTED.fontFamily : TYPE_DOWNLOAD_TAB.fontFamily)
-        .fontWeight(this.bookType === id ? TYPE_DOWNLOAD_TAB_SELECTED.fontWeight : TYPE_DOWNLOAD_TAB.fontWeight)
-        .fontSize(TYPE_DOWNLOAD_TAB.fontSizeFp).lineHeight(TYPE_DOWNLOAD_TAB.lineHeightFp as number).halfLeading(true)
-        .fontColor(this.tabInk(id));
-    }.constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget }).padding({ top: DOWNLOAD_VISUAL.tabPaddingY, bottom: DOWNLOAD_VISUAL.tabPaddingY, left: DOWNLOAD_VISUAL.tabPaddingX, right: DOWNLOAD_VISUAL.tabPaddingX }).layoutWeight(1).borderRadius(DOWNLOAD_VISUAL.tabRadius)
-      .fontColor(this.tabInk(id))
-      .backgroundColor(this.bookType === id ? downloadVisualColor('surface', this.appThemeScheme) : Color.Transparent)
-      .shadow(readerSurfaceElevation(this.bookType === id ? 'card' : 'embedded', this.appThemeScheme))
-      .accessibilityText(`${label}${this.bookType === id ? '，已选择' : ''}`)
-      .onClick((): void => {
-        if (!this.searchInputIsCurrent(identity)) return;
-        this.bookType = id;
-      });
-  }
-
-  @Builder
-  private sortBars() {
-    Image(this.visualIcon(this.sortDirection === 'asc' ? 'sort_asc' : 'sort_desc'))
-      .width(DOWNLOAD_VISUAL.sortIconSize).height(DOWNLOAD_VISUAL.sortIconSize);
-  }
-
-  @Builder
-  private bookRow(book: () => DownloadBookView, secondary: boolean, ownerGeneration: number = this.presentationGeneration) {
-    Row({ space: DOWNLOAD_VISUAL.bookGap }) {
-      Stack() {
-        SharedDownloadBookCover({ bookKey: book().key, coverUrl: book().coverUrl ?? '',
-          presentationGeneration: ownerGeneration, coverWidth: DOWNLOAD_VISUAL.coverWidth,
-          coverHeight: this.bookHeight(book().key), bookTitle: book().title,
-          kindLabel: book().contentKind === undefined ? '' : book().contentKind === 'manga' ? '漫画' : '小说' });
-      }.width(DOWNLOAD_VISUAL.coverWidth).height(this.bookHeight(book().key)).borderRadius(DOWNLOAD_VISUAL.coverRadius).clip(true)
-        .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', this.appThemeScheme) })
-        .backgroundColor(downloadVisualColor(book().contentKind === 'manga' ? 'softGreen' : 'soft', this.appThemeScheme));
-      Column({ space: 0 }) {
-        Column({ space: 0 }) {
-        Row({ space: DOWNLOAD_VISUAL.bookTopGap }) {
-          Flex({ direction: FlexDirection.Row, justifyContent: FlexAlign.Start, alignItems: ItemAlign.Center }) {
-            Text(secondary ? downloadChapterBookTitle(book()) : book().title).fontFamily(TYPE_DOWNLOAD_BOOK_TITLE.fontFamily).fontWeight(TYPE_DOWNLOAD_BOOK_TITLE.fontWeight)
-              .fontSize(TYPE_DOWNLOAD_BOOK_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BOOK_TITLE.lineHeightFp as number).halfLeading(true)
-              .fontColor(downloadVisualColor('ink', this.appThemeScheme)).flexShrink(1).textAlign(TextAlign.Start).wordBreak(WordBreak.BREAK_WORD);
-            if (!secondary) {
-              Image(this.visualIcon('chevron')).width(DOWNLOAD_VISUAL.titleChevronSize).height(DOWNLOAD_VISUAL.titleChevronSize)
-                .flexShrink(0).margin({ left: DOWNLOAD_VISUAL.statusGap });
-            }
-          }.layoutWeight(1).constraintSize({ minHeight: DOWNLOAD_VISUAL.bookTopHeight });
-          if (!secondary && book().contentKind !== undefined) {
-            Text(book().contentKind === 'manga' ? '漫画' : '小说')
-              .fontFamily(TYPE_DOWNLOAD_TAG.fontFamily).fontWeight(TYPE_DOWNLOAD_TAG.fontWeight)
-              .fontSize(TYPE_DOWNLOAD_TAG.fontSizeFp).lineHeight(TYPE_DOWNLOAD_TAG.lineHeightFp as number).halfLeading(true)
-              .fontColor(downloadVisualColor('greenInk', this.appThemeScheme))
-              .padding({ left: DOWNLOAD_VISUAL.tagPaddingX, right: DOWNLOAD_VISUAL.tagPaddingX }).backgroundColor(downloadVisualColor('green', this.appThemeScheme)).borderRadius(DOWNLOAD_VISUAL.tagRadius);
-          }
-          if (!secondary) {
-            if (this.managing) {
-              Stack({ alignContent: Alignment.Center }) {
-              Checkbox().select(this.selectedBookKeys.includes(book().key)).width(DOWNLOAD_VISUAL.chapterCheckSize).height(DOWNLOAD_VISUAL.chapterCheckSize)
-                .accessibilityText(`选择书籍：${book().title}，${this.authorSource(book())}`)
-                .responseRegion(readerActionTouchRegion(DOWNLOAD_VISUAL.chapterCheckSize, DOWNLOAD_VISUAL.chapterCheckSize))
-                .selectedColor(downloadVisualColor('green', this.appThemeScheme))
-                .unselectedColor(downloadVisualColor('muted', this.appThemeScheme))
-                .mark({ strokeColor: downloadVisualColor('greenInk', this.appThemeScheme) })
-                .onChange((selected: boolean): void => {
-                  const current = this.eventBook(book, ownerGeneration);
-                  if (current !== undefined) this.toggleBook(current.key, selected);
-                });
-              }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.bookTopHeight);
-            } else {
-              Stack({ alignContent: Alignment.Center }) {
-                this.moreButton((): string => `${book().title}的书籍操作`, (): void => {
-                  const current = this.eventBook(book, ownerGeneration);
-                  if (current === undefined) return;
-                  this.actionBookKeys = [current.key]; this.actionChapters = [];
-                  this.openSheet('book-actions', 'book-menu:' + current.key);
-                }, false, (): string => 'book-menu:' + book().key);
-              }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.bookTopHeight);
-            }
-          }
-        }.constraintSize({ minHeight: DOWNLOAD_VISUAL.bookTopHeight }).width('100%').alignItems(VerticalAlign.Center);
-        Text(this.authorSource(book())).fontFamily(TYPE_DOWNLOAD_SOURCE.fontFamily).fontWeight(TYPE_DOWNLOAD_SOURCE.fontWeight)
-          .fontSize(TYPE_DOWNLOAD_SOURCE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_SOURCE.lineHeightFp as number).halfLeading(true)
-          .fontColor(downloadVisualColor('muted', this.appThemeScheme)).width('100%').wordBreak(WordBreak.BREAK_WORD)
-          .constraintSize({ minHeight: DOWNLOAD_VISUAL.sourceLineHeight * this.fontScale() }).margin({ top: DOWNLOAD_VISUAL.sourceTop });
-        Row({ space: DOWNLOAD_VISUAL.bookTopGap }) {
-          Text(this.downloadCount(book(), secondary)).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-            .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
-            .fontColor(downloadVisualColor('muted', this.appThemeScheme)).layoutWeight(1)
-            .constraintSize({ minHeight: DOWNLOAD_VISUAL.sourceLineHeight * this.fontScale() });
-          if (secondary) {
-            Text(book().stateLabel === '下载失败' ? '下载失败' : book().totalChapters === undefined ? '' : `目录 ${book().totalChapters}${this.unit(book())}`)
-              .fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-              .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
-              .fontColor(downloadVisualColor(book().stateLabel === '下载失败' ? 'danger' : 'green', this.appThemeScheme))
-              .constraintSize({ minHeight: DOWNLOAD_VISUAL.statusHeight });
-          } else if (book().stateLabel.length > 0) {
-            this.statusButton(book, ownerGeneration);
-          } else {
-            Blank().width(DOWNLOAD_VISUAL.statusWidth).height(DOWNLOAD_VISUAL.statusHeight);
-          }
-        }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.statusHeight }).margin({ top: DOWNLOAD_VISUAL.progressTop });
-        if (book().stateLabel === '下载失败' && (book().downloadError?.trim().length ?? 0) > 0) {
-          Text(book().downloadError ?? '').fontFamily(TYPE_DOWNLOAD_META_LINE.fontFamily).fontWeight(TYPE_DOWNLOAD_META_LINE.fontWeight)
-            .fontSize(TYPE_DOWNLOAD_META_LINE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META_LINE.lineHeightFp as number).halfLeading(true)
-            .fontColor(downloadVisualColor('danger', this.appThemeScheme)).width('100%').wordBreak(WordBreak.BREAK_WORD)
-            .margin({ top: DOWNLOAD_VISUAL.progressGap });
-        }
-        }.width('100%').alignItems(HorizontalAlign.Start)
-          .onAreaChange((_old: Area, area: Area): void => {
-            if (!this.presentationIsCurrent(ownerGeneration)) return;
-            const current = this.findCurrentBook(book());
-            if (current !== undefined) this.recordBookContentHeight(current.key, readerPageAreaLength(area.height));
-          });
-        Blank().height(this.bookProgressSpacer(book().key));
-        Progress({ value: book().progressPercent ?? 0, total: 100, type: ProgressType.Linear })
-          .width('100%').height(DOWNLOAD_VISUAL.progressHeight).color(downloadVisualColor('green', this.appThemeScheme))
-          .backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
-          .style({ strokeWidth: DOWNLOAD_VISUAL.progressHeight, enableSmoothEffect: false }).visibility(book().progressPercent === undefined ? Visibility.Hidden : Visibility.Visible);
-      }.layoutWeight(1).constraintSize({ minHeight: DOWNLOAD_VISUAL.bookMinHeight }).alignItems(HorizontalAlign.Start)
-        .onAreaChange((_old: Area, area: Area): void => {
-          if (!this.presentationIsCurrent(ownerGeneration)) return;
-          const current = this.findCurrentBook(book());
-          if (current !== undefined) this.recordBookHeight(current.key, readerPageAreaLength(area.height));
-        });
-    }.width('100%').alignItems(VerticalAlign.Top).padding({ top: DOWNLOAD_VISUAL.bookPaddingY, bottom: DOWNLOAD_VISUAL.bookPaddingY })
-      .id(secondary ? '' : this.focusKey('book-title:' + book().key))
-      .accessibilityRole(AccessibilityRoleType.BUTTON)
-      .accessibilityText(secondary ? '' : `${book().title}，${this.authorSource(book())}，${this.downloadCount(book(), false)}` +
-        (this.managing ? `，${this.selectedBookKeys.includes(book().key) ? '取消选择' : '选择'}` : '，打开书籍'))
-      .accessibilitySelected(this.managing && this.selectedBookKeys.includes(book().key))
-      .accessibilityLevel(secondary ? 'no' : 'yes')
-      .focusable(!secondary && this.uiInputIsCurrent(ownerGeneration) && !this.modalBlocking())
-      .enabled(secondary || (this.uiInputIsCurrent(ownerGeneration) && !this.modalBlocking()))
-      .onClick((): void => { if (!secondary) this.openBook(book(), ownerGeneration); })
-      .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
-  }
-
-  @Builder
-  private statusButton(book: () => DownloadBookView, ownerGeneration: number = this.presentationGeneration) {
-    if (book().statusAction === 'completed') {
-      Row({ space: DOWNLOAD_VISUAL.statusGap }) {
-        Image(this.statusIcon(book())).width(DOWNLOAD_VISUAL.statusIconSize).height(DOWNLOAD_VISUAL.statusIconSize);
-        Text(book().stateLabel).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-          .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
-          .fontColor(this.statusInk(book())).textAlign(TextAlign.Center).layoutWeight(1);
-      }.width(DOWNLOAD_VISUAL.statusWidth).constraintSize({ minHeight: DOWNLOAD_VISUAL.statusHeight }).padding({ left: DOWNLOAD_VISUAL.statusPaddingX, right: DOWNLOAD_VISUAL.statusPaddingX }).borderRadius(DOWNLOAD_VISUAL.statusRadius)
-        .backgroundColor(downloadVisualColor('soft', this.appThemeScheme));
-    } else {
-    Button({ type: ButtonType.Normal }) {
-      Row({ space: DOWNLOAD_VISUAL.statusGap }) {
-        Image(this.statusIcon(book())).width(DOWNLOAD_VISUAL.statusIconSize).height(DOWNLOAD_VISUAL.statusIconSize);
-        Text(this.statusActionLabel(book())).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-          .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
-          .fontColor(this.statusInk(book()))
-          .textAlign(TextAlign.Center).layoutWeight(1);
-      }.width('100%');
-    }.id(this.focusKey('book-status:' + book().key)).width(DOWNLOAD_VISUAL.statusWidth).constraintSize({ minHeight: DOWNLOAD_VISUAL.statusHeight })
-      .responseRegion([{ x: 0, y: 0, width: '100%', height: '100%' },
-        readerActionTouchRegion(DOWNLOAD_VISUAL.statusWidth, DOWNLOAD_VISUAL.statusHeight)])
-      .padding({ left: DOWNLOAD_VISUAL.statusPaddingX, right: DOWNLOAD_VISUAL.statusPaddingX }).borderRadius(DOWNLOAD_VISUAL.statusRadius)
-      .backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
-      .enabled(!this.managing).opacity(this.managing ? DOWNLOAD_VISUAL.disabledOpacity : 1)
-      .accessibilityText(this.statusActionAccessibility(book()))
-      .onClick((): void => {
-        const current = this.eventBook(book, ownerGeneration);
-        if (this.managing || current === undefined || current.statusAction === 'completed') return;
-        this.actionBookKeys = [current.key]; this.actionChapters = [];
-        if (current.statusAction === 'pause') this.sendAction('pause');
-        else { this.prepareRange(current.key); this.openSheet('range', 'book-status:' + current.key); }
-      });
-    }
-  }
-
-  @Builder
-  private chapterToolbar(book: () => DownloadBookView, ownerGeneration: number = this.presentationGeneration) {
-    Row({ space: DOWNLOAD_VISUAL.chapterToolbarGap }) {
-      Text('章节内容').fontFamily(TYPE_DOWNLOAD_BOOK_TITLE.fontFamily).fontWeight(TYPE_DOWNLOAD_BOOK_TITLE.fontWeight)
-        .fontSize(TYPE_DOWNLOAD_BOOK_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BOOK_TITLE.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('muted', this.appThemeScheme)).layoutWeight(1);
-      if (this.managing) {
-        ReaderInlineSelect({ reduceMotion: this.reduceMotion,
-          value: '快速选择',
-          options: ['快速选择', '当前章节', '从当前往后', '全部章节'],
-          controlWidth: this.selectClosedWidth('快速选择', ['快速选择', '当前章节', '从当前往后', '全部章节'],
-            DOWNLOAD_VISUAL.chapterToolbarSelectMaxWidth, '章节内容', true),
-          onSelect: (index: number, _value: string): void => {
-            const current = this.eventBook(book, ownerGeneration);
-            if (current !== undefined && this.detailKey === current.key) this.quickSelectChapters(index);
-          },
-        });
-      } else {
-        Text(book().totalChapters === undefined ? '' : `共 ${book().totalChapters}${this.unit(book())}`)
-          .fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-          .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
-          .fontColor(downloadVisualColor('muted', this.appThemeScheme));
-      }
-    }.width('100%').padding({ top: DOWNLOAD_VISUAL.chapterToolbarTop, bottom: DOWNLOAD_VISUAL.chapterToolbarBottom });
-  }
-
-  @Builder
-  private chapterPage(book: () => DownloadBookView, ownerGeneration: number = this.presentationGeneration) {
-    List({ scroller: this.chapterScroller }) {
-      if (!this.embeddedWide) { ListItem() { this.compactHeader(); } }
-      ListItem() { Column() { this.bookRow(book, true, ownerGeneration); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
-      ListItem() { Column() { this.chapterToolbar(book, ownerGeneration); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
-      if (book().projectionStatus === 'unloaded' && book().chapters.length === 0) {
-        ListItem() { Column() { ReaderPageState({ title: '正在读取章节下载情况…', loading: true }); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
-      } else if (book().projectionStatus === 'unavailable' && book().chapters.length === 0) {
-        ListItem() { Column() { ReaderPageState({ title: '章节下载情况暂不可用', message: book().projectionError ?? '', actionLabel: '重试',
-          onAction: (): void => {
-            const current = this.eventBook(book, ownerGeneration);
-            if (current !== undefined && current.key === this.detailKey &&
-              current.projectionStatus === 'unavailable' && current.chapters.length === 0) this.onOpenBook(current);
-          } }); }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() }); }
-      } else if (book().projectionStatus === 'ready' && (book().chapters.length === 0 || book().totalChapters === 0)) {
-        ListItem() {
-          Column() {
-            ReaderPageState({ title: book().totalChapters === 0 ? '暂无可下载章节' : '暂无章节下载信息' });
-          }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() });
-        }
-      }
-      ForEach(book().chapters, (chapter: DownloadChapterView) => {
-        ListItem() {
-          Column() {
-            if (this.currentChapterView(book(), chapter).navigable) { this.chapterRow(book, this.chapterGetter(book, chapter), ownerGeneration); }
-            else { this.chapterGroup(book, this.chapterGetter(book, chapter), ownerGeneration); }
-          }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() });
-        }
-      }, (chapter: DownloadChapterView): string => JSON.stringify([chapter.key, chapter.chapterId]));
-      if (!this.fixedSelectionDockVisible()) { ListItem() { this.compactDock(); } }
-    }.width('100%').height('100%').scrollBar(BarState.Auto)
-      .onScrollStop((): void => { this.captureChapterOffset(); this.publishViewState(); })
-      .onTouch((event: TouchEvent): void => this.onListTouch(event))
-      .onWillScroll((offset: number, _state: ScrollState, source: ScrollSource): void =>
-        this.onListWillScroll(offset, source, ownerGeneration, book().key))
-      .onKeyEvent((): void => { this.readingReturnFocus = undefined; })
-      .onAreaChange((_old: Area, area: Area): void => {
-        const height = readerPageAreaLength(area.height);
-        this.chapterLayoutReady = Number.isFinite(height) && height > 0;
-        if (this.chapterLayoutReady) this.restoreChapterOffset();
-      })
-      .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
-      .contentEndOffset(readerScrollEndOffset(this.scrollLayout()));
-  }
-
-  @Builder
-  private chapterGroup(book: () => DownloadBookView, chapter: () => DownloadChapterView, ownerGeneration: number = this.presentationGeneration) {
-    Row() {
-      Text(chapter().title).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-        .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).layoutWeight(1);
-      if (this.managing) {
-        Button({ type: ButtonType.Normal }) {
-          Text('选择本卷').fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-            .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true).fontColor(this.primaryInk());
-        }.constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget, minWidth: DOWNLOAD_VISUAL.touchTarget }).padding({ left: DOWNLOAD_VISUAL.progressGap, right: 0,
-          top: DOWNLOAD_VISUAL.textActionPaddingY, bottom: DOWNLOAD_VISUAL.textActionPaddingY })
-          .backgroundColor(Color.Transparent).borderRadius(0)
-          .onClick((): void => {
-            const currentBook = this.eventBook(book, ownerGeneration);
-            const currentChapter = this.eventChapter(book, chapter, ownerGeneration);
-            if (currentBook !== undefined && currentChapter !== undefined)
-              this.selectChapters(this.groupChapters(currentBook, currentChapter), true);
-          });
-      }
-    }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.chapterGroupHeight }).padding(DOWNLOAD_VISUAL.chapterGroupPadding).margin({ top: DOWNLOAD_VISUAL.chapterGroupTop }).backgroundColor(downloadVisualColor('soft', this.appThemeScheme));
-  }
-
-  private chapterTextAvailableWidth(): number {
-    return Math.max(0, this.pageViewportWidth() - this.contentLeftInset() - this.contentRightInset() -
-      DOWNLOAD_VISUAL.chapterPaddingX * 2 - (this.managing ? DOWNLOAD_VISUAL.touchTarget + DOWNLOAD_VISUAL.chapterGap : 0));
-  }
-
-  private chapterTextMinimum(): number {
-    return Math.min(this.chapterTextAvailableWidth(), 120 * this.fontScale());
-  }
-
-  private chapterRowWrap(): FlexWrap {
-    const scale = this.fontScale();
-    const copyWidth = 120 * scale;
-    if (this.managing) {
-      // The available width already excludes the checkbox and its gap.
-      return this.chapterTextAvailableWidth() >= copyWidth ? FlexWrap.NoWrap : FlexWrap.Wrap;
-    }
-    // Every visible primary chapter action has two full-width glyphs.
-    const primaryWidth = Math.max(DOWNLOAD_VISUAL.touchTarget,
-      Math.ceil(2 * TYPE_DOWNLOAD_META.fontSizeFp * scale) + DOWNLOAD_VISUAL.chapterActionPaddingX * 2);
-    const actionsWidth = primaryWidth + DOWNLOAD_VISUAL.chapterTailGap + DOWNLOAD_VISUAL.touchTarget;
-    return this.chapterTextAvailableWidth() >= copyWidth + DOWNLOAD_VISUAL.chapterGap + actionsWidth ?
-      FlexWrap.NoWrap : FlexWrap.Wrap;
-  }
-
-  @Builder
-  private chapterRow(book: () => DownloadBookView, chapter: () => DownloadChapterView, ownerGeneration: number = this.presentationGeneration) {
-    Flex({ wrap: this.chapterRowWrap(), alignItems: ItemAlign.Start,
-      space: { main: LengthMetrics.vp(DOWNLOAD_VISUAL.chapterGap), cross: LengthMetrics.vp(DOWNLOAD_VISUAL.chapterGap) } }) {
-      if (this.managing) {
-        Stack({ alignContent: Alignment.Center }) {
-        Checkbox().select(this.chapterSelected(chapter())).width(DOWNLOAD_VISUAL.chapterCheckSize).height(DOWNLOAD_VISUAL.chapterCheckSize)
-          .accessibilityText(`选择章节：${chapter().title}，${book().title}`)
-          .responseRegion(readerActionTouchRegion(DOWNLOAD_VISUAL.chapterCheckSize, DOWNLOAD_VISUAL.chapterCheckSize))
-          .enabled(chapter().chapterId.length > 0)
-          .selectedColor(downloadVisualColor('green', this.appThemeScheme))
-          .unselectedColor(downloadVisualColor('muted', this.appThemeScheme))
-          .mark({ strokeColor: downloadVisualColor('greenInk', this.appThemeScheme) })
-          .onChange((selected: boolean): void => {
-            const current = this.eventChapter(book, chapter, ownerGeneration);
-            if (current !== undefined) this.toggleChapter(current, selected);
-          });
-        }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.touchTarget);
-      }
-      Column({ space: 0 }) {
-        Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
-          space: { main: LengthMetrics.vp(DOWNLOAD_VISUAL.statusGap), cross: LengthMetrics.vp(DOWNLOAD_VISUAL.statusGap) } }) {
-          Text(chapter().title).fontFamily(TYPE_DOWNLOAD_CHAPTER_TITLE.fontFamily).fontWeight(TYPE_DOWNLOAD_CHAPTER_TITLE.fontWeight)
-            .fontSize(TYPE_DOWNLOAD_CHAPTER_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CHAPTER_TITLE.lineHeightFp as number).halfLeading(true)
-            .fontColor(downloadVisualColor(!chapter().localComplete && chapter().queueState === 'inProgress' ? 'green' : 'ink', this.appThemeScheme)).flexGrow(1).flexShrink(0).flexBasis(this.chapterTextMinimum())
-            .id(this.focusKey(this.chapterReadingFocusKey(chapter(), 'title'))).focusable(!this.managing)
-            .accessibilityRole(AccessibilityRoleType.BUTTON)
-            .accessibilityText(`打开章节：${chapter().title}，${book().title}`)
-            .accessibilityLevel(this.managing ? 'no' : 'yes')
-            .constraintSize({ minWidth: this.chapterTextMinimum(), maxWidth: '100%', minHeight: DOWNLOAD_VISUAL.touchTarget })
-            .onClick((): void => { if (!this.managing) this.showReadTarget(book(), chapter(), ownerGeneration); });
-          if (this.currentChapterForBook(book())?.key === chapter().key) {
-            Text('当前阅读').fontFamily(TYPE_DOWNLOAD_TAG.fontFamily).fontWeight(TYPE_DOWNLOAD_TAG.fontWeight)
-              .fontSize(TYPE_DOWNLOAD_TAG.fontSizeFp).lineHeight(TYPE_DOWNLOAD_TAG.lineHeightFp as number).halfLeading(true)
-              .fontColor(downloadVisualColor('green', this.appThemeScheme)).maxLines(1).flexShrink(0)
-              .padding({ left: DOWNLOAD_VISUAL.tagPaddingX, right: DOWNLOAD_VISUAL.tagPaddingX })
-              .backgroundColor(downloadVisualColor('softGreen', this.appThemeScheme)).borderRadius(DOWNLOAD_VISUAL.tagRadius);
-          }
-        }.width('100%');
-        Text(downloadChapterDetailLabel(book().contentKind, chapter())).fontFamily(TYPE_DOWNLOAD_META_LINE.fontFamily).fontWeight(TYPE_DOWNLOAD_META_LINE.fontWeight)
-          .fontSize(TYPE_DOWNLOAD_META_LINE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META_LINE.lineHeightFp as number).halfLeading(true)
-          .fontColor(downloadVisualColor('muted', this.appThemeScheme)).width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.sourceLineHeight });
-      }.flexGrow(1).flexShrink(this.managing || this.chapterRowWrap() === FlexWrap.NoWrap ? 1 : 0)
-        .flexBasis(this.chapterTextMinimum())
-        .constraintSize({ minWidth: this.chapterTextMinimum() }).alignItems(HorizontalAlign.Start);
-      if (!this.managing) {
-        Row({ space: DOWNLOAD_VISUAL.chapterTailGap }) {
-        Button({ type: ButtonType.Normal }) {
-          Text(this.chapterButtonLabel(chapter())).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-            .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true).fontColor(this.primaryInk());
-        }.constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget, minWidth: DOWNLOAD_VISUAL.touchTarget })
-          .id(chapter().localComplete ? this.focusKey(this.chapterReadingFocusKey(chapter(), 'action')) : '')
-          .fontColor(this.primaryInk())
-          .backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
-          .padding({ left: DOWNLOAD_VISUAL.chapterActionPaddingX, right: DOWNLOAD_VISUAL.chapterActionPaddingX, top: DOWNLOAD_VISUAL.chapterActionPaddingY, bottom: DOWNLOAD_VISUAL.chapterActionPaddingY }).borderRadius(DOWNLOAD_VISUAL.chapterActionRadius)
-          .enabled(chapter().queueState !== 'unknown' || chapter().localComplete)
-          .onClick((): void => {
-            const currentBook = this.eventBook(book, ownerGeneration);
-            const currentChapter = this.eventChapter(book, chapter, ownerGeneration);
-            if (currentBook === undefined || currentChapter === undefined) return;
-            if (currentChapter.localComplete) this.showReadTarget(currentBook, currentChapter, ownerGeneration, 'action');
-            else {
-              this.actionBookKeys = [currentBook.key]; this.actionChapters = [this.chapterProof(currentChapter)];
-              this.sendAction(this.chapterIsRunning(currentChapter) ? 'pause' : 'download');
-            }
-          });
-        this.moreButton((): string => `${chapter().title}的章节操作`, (): void => {
-          const currentBook = this.eventBook(book, ownerGeneration);
-          const currentChapter = this.eventChapter(book, chapter, ownerGeneration);
-          if (currentBook === undefined || currentChapter === undefined) return;
-          this.actionBookKeys = [currentBook.key]; this.actionChapters = [this.chapterProof(currentChapter)];
-          this.openSheet('chapter-actions', this.chapterMenuFocusKey(currentChapter));
-        }, true, (): string => this.chapterMenuFocusKey(chapter()));
-        }.flexShrink(0);
-      }
-    }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.chapterHeight }).padding({ left: DOWNLOAD_VISUAL.chapterPaddingX, right: DOWNLOAD_VISUAL.chapterPaddingX, top: DOWNLOAD_VISUAL.chapterPaddingY, bottom: DOWNLOAD_VISUAL.chapterPaddingY })
-      .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
-  }
-
-  @Builder
-  private moreButton(label: () => string, action: () => void, chapter: boolean = false, focusTarget: () => string = (): string => '') {
-    Button({ type: ButtonType.Normal }) {
-      Image(this.visualIcon('more'))
-        .width(DOWNLOAD_VISUAL.moreIconSize).height(DOWNLOAD_VISUAL.moreIconSize);
-    }.id(this.focusKey(focusTarget())).width(chapter ? DOWNLOAD_VISUAL.touchTarget : DOWNLOAD_VISUAL.moreWidth)
-      .height(chapter ? DOWNLOAD_VISUAL.touchTarget : DOWNLOAD_VISUAL.moreHeight)
-      .responseRegion(readerActionTouchRegion(chapter ? DOWNLOAD_VISUAL.touchTarget : DOWNLOAD_VISUAL.moreWidth,
-        chapter ? DOWNLOAD_VISUAL.touchTarget : DOWNLOAD_VISUAL.moreHeight))
-      .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-      .accessibilityText(label()).onClick((): void => action());
-  }
-
-  @Builder
-  private notice(message: () => string, retry: boolean, ownerGeneration: number = this.presentationGeneration) {
-    Row({ space: DOWNLOAD_VISUAL.actionGap }) {
-      Text(message()).fontFamily(TYPE_DOWNLOAD_STATUS_BODY.fontFamily).fontWeight(TYPE_DOWNLOAD_STATUS_BODY.fontWeight).fontSize(TYPE_DOWNLOAD_STATUS_BODY.fontSizeFp).lineHeight(TYPE_DOWNLOAD_STATUS_BODY.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('muted', this.appThemeScheme)).layoutWeight(1);
-      if (retry) {
-        Button({ type: ButtonType.Normal }) {
-          Text('重试').fontFamily(TYPE_DOWNLOAD_CONTROL.fontFamily).fontWeight(TYPE_DOWNLOAD_CONTROL.fontWeight)
-            .fontSize(TYPE_DOWNLOAD_CONTROL.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CONTROL.lineHeightFp as number).halfLeading(true).fontColor(this.primaryInk());
-        }.constraintSize({ minWidth: DOWNLOAD_VISUAL.touchTarget, minHeight: DOWNLOAD_VISUAL.touchTarget }).padding(0).borderRadius(0)
-          .backgroundColor(Color.Transparent).onClick((): void => {
-            if (!this.uiInputIsCurrent(ownerGeneration)) return;
-            if (this.fontsFailed) { this.prepareFonts(); return; }
-            const book = this.detail(); if (book !== undefined) this.onOpenBook(book); else this.onRefresh();
-          });
-      }
-    }.width('100%').padding({ top: DOWNLOAD_VISUAL.rangePaddingY, bottom: DOWNLOAD_VISUAL.rangePaddingY });
-  }
-
-  @Builder
-  private storageDock() {
-    Stack({ alignContent: Alignment.TopStart }) {
-    Row({ space: DOWNLOAD_VISUAL.dockGap }) {
-      Column({ space: 0 }) {
-        Text(this.totalBytesLabel()).fontFamily(TYPE_DOWNLOAD_STORAGE_META.fontFamily).fontWeight(TYPE_DOWNLOAD_STORAGE_META.fontWeight)
-          .fontSize(TYPE_DOWNLOAD_STORAGE_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_STORAGE_META.lineHeightFp as number).halfLeading(true)
-          .fontColor(downloadVisualColor('ink', this.appThemeScheme)).width('100%')
-          .constraintSize({ minHeight: DOWNLOAD_VISUAL.storageLineHeight * this.fontScale() });
-        if (this.books.some((book: DownloadBookView): boolean => book.bytes === undefined)) {
-          Text('容量暂未统计完整')
-            .fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-            .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
-            .fontColor(downloadVisualColor('muted', this.appThemeScheme)).width('100%');
-        }
-      }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start);
-      Button({ type: ButtonType.Normal }) {
-        Image(this.visualIcon('storage'))
-          .width(DOWNLOAD_VISUAL.moreIconSize).height(DOWNLOAD_VISUAL.moreIconSize);
-      }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.touchTarget).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-        .id(this.focusKey('storage')).accessibilityText('存储管理')
-        .onClick((): void => {
-          if (!this.uiInputIsCurrent() || this.modalBlocking()) return;
-          this.openSheet('settings', 'storage');
-          this.onRefreshStorage();
-        });
-    }.width('100%').padding({ left: DOWNLOAD_VISUAL.dockPaddingX, right: DOWNLOAD_VISUAL.dockPaddingX,
-      top: DOWNLOAD_VISUAL.dockPaddingY, bottom: DOWNLOAD_VISUAL.dockPaddingY })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(readerAppColor('app.surface.dock', this.appThemeScheme))
-      .border({ width: DOWNLOAD_VISUAL.borderWidth, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) }).borderRadius(this.dockMaterialRadius(false)).clip(false)
-      .shadow(readerSurfaceElevation('raised', this.appThemeScheme))
-      .onAreaChange(this.raisedDockAreaChangeHandler(false));
-    }.width('100%').clip(false);
-  }
-
-  @Builder
-  private selectionDock() {
-    Stack({ alignContent: Alignment.TopStart }) {
-    Column({ space: DOWNLOAD_VISUAL.selectionSummaryBottom }) {
-      Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center }) {
-        Text(this.selectionLabel()).fontFamily(TYPE_DOWNLOAD_CONTROL.fontFamily).fontWeight(TYPE_DOWNLOAD_CONTROL.fontWeight)
-          .fontSize(TYPE_DOWNLOAD_CONTROL.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CONTROL.lineHeightFp as number).halfLeading(true)
-          .fontColor(downloadVisualColor('ink', this.appThemeScheme)).flexGrow(1).flexShrink(0)
-          .constraintSize({ maxWidth: '100%' }).padding({ right: DOWNLOAD_VISUAL.selectionSummaryGap });
-        if (this.managing) {
-          ReaderButton({ scheme: this.appThemeScheme, variant: 'subtle', visualSize: 'small',
-            label: this.allSelected() ? '取消全选' : '全选', focusId: this.focusKey('select-all'),
-            actionEnabled: this.detail() !== undefined || this.visibleBooks().length > 0,
-            onAction: this.manageSelectAllAction(this.managementGeneration) });
-          this.managementDone(this.managementGeneration);
-        }
-      }.width('100%');
-      Row({ space: DOWNLOAD_VISUAL.actionGap }) {
-        if (this.detail() !== undefined && !this.managing) {
-          ForEach([this.detailKey], (bookKey: string): void => {
-            this.actionButton((): string => '选择章节', true,
-              (): boolean => this.detailKey === bookKey && this.canEnterManaging() && !this.managing,
-              (): void => this.setManaging(true, 'select-chapters:' + bookKey), 'select-chapters:' + bookKey);
-          }, (bookKey: string): string => bookKey);
-          this.actionButton((): string => '定位当前', false, (): boolean => this.currentChapter() !== undefined, (): void => this.locateCurrent());
-        } else if (this.detail() !== undefined) {
-          this.actionButton((): string => '下载所选', true, (): boolean => this.selectedChapterActionAvailable('download'), (): void => {
-            if (this.captureSelection(true)) this.sendAction('download');
-          });
-          this.actionButton((): string => '暂停所选', false, (): boolean => this.selectedChapterActionAvailable('pause'), (): void => {
-            if (this.captureSelection(true)) this.sendAction('pause');
-          });
-          this.actionButton((): string => '更多', false, (): boolean => this.selectedChapters.size > 0, (): void => {
-            if (this.captureSelection(true)) this.openSheet('chapter-actions', 'selection-more');
-          }, 'selection-more');
-        } else {
-          this.actionButton((): string => '暂停所选', false, (): boolean => this.selectedQueueTargets(false).length > 0,
-            (): void => this.sendSelectedQueueAction(false));
-          this.actionButton((): string => '继续所选', true, (): boolean => this.selectedQueueTargets(true).length > 0,
-            (): void => this.sendSelectedQueueAction(true));
-          this.actionButton((): string => '移除', false, (): boolean => this.selectedBooksCanBeRemoved(), (): void => {
-            if (this.captureSelection()) this.openSheet('book-actions', 'selection-more');
-          }, 'selection-more');
-        }
-      }.width('100%');
-    }.width('100%').padding(DOWNLOAD_VISUAL.selectionPadding).backgroundColor(readerAppColor('app.surface.dock', this.appThemeScheme))
-      .border({ width: DOWNLOAD_VISUAL.borderWidth, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) }).borderRadius(this.dockMaterialRadius(true)).clip(false)
-      .shadow(readerSurfaceElevation('raised', this.appThemeScheme))
-      .hitTestBehavior(HitTestMode.Default)
-      .onTouch((): void => {})
-      .onAreaChange(this.raisedDockAreaChangeHandler(true));
-    }.width('100%').clip(false).hitTestBehavior(HitTestMode.Default)
-      .responseRegion(readerLayoutCarrierResponseRegion());
-  }
-
-  @Builder
-  private managementDone(management: number) {
-    ReaderButton({ scheme: this.appThemeScheme, variant: 'tonal', visualSize: 'small', label: '完成',
-      actionAccessibilityLabel: '完成批量管理', onAction: (): void => {
-        if (this.uiInputIsCurrent() && !this.modalBlocking() && this.managing && management === this.managementGeneration)
-          this.setManaging(false);
-      } });
-  }
-
   private raisedDockShapeIdentity(selection: boolean): string {
     return JSON.stringify(['download-dock', selection, this.mountedIdentity, this.presentationGeneration,
-      this.detailKey, this.managing, this.readerWindowMetricsRevision, this.pageViewportWidth(), this.fontScale()]);
+      this.detailKey, this.managing, this.readerWindowMetricsRevision, this.pageViewportWidth(), this.frameView.fontScale()]);
   }
 
   private currentRaisedDockShape(selection: boolean): ReaderRaisedShape | undefined {
@@ -1190,7 +509,7 @@ export struct SharedDownloadPage {
 
   private recordRaisedDockSurface(selection: boolean, area: Area, identity: string): void {
     if (!this.presentationIsCurrent() || identity !== this.raisedDockShapeIdentity(selection) ||
-      selection !== (this.managing || this.detail() !== undefined)) return;
+      selection !== (this.managing || this.bookList.detail() !== undefined)) return;
     const width = readerPageAreaLength(area.width);
     const height = readerPageAreaLength(area.height);
     const shape = resolveReaderRaisedShape(identity, width, height, DOWNLOAD_VISUAL.dockRadius);
@@ -1203,630 +522,6 @@ export struct SharedDownloadPage {
     this.recordDockHeight(height, identity);
   }
 
-  @Builder
-  private actionButton(label: () => string, primary: boolean, enabled: () => boolean, action: () => void,
-    focusTarget: string = '', inSheet: boolean = false, ownerGeneration: number = this.presentationGeneration) {
-    ReaderButton({ scheme: this.appThemeScheme, variant: primary ? 'primary' : 'tonal',
-      visualSize: inSheet ? 'large' : 'medium', label: label(), focusId: this.focusKey(focusTarget),
-      layout: 'equal', actionEnabled: enabled(), onAction: (): void => {
-        if (this.uiInputIsCurrent(ownerGeneration) && (inSheet || !this.modalBlocking()) && enabled()) action();
-      } });
-  }
-
-  @Builder
-  private sheetOverlay(attachment: number = this.sheetActorAttachment, ownerGeneration: number = this.sheetActorOwner) {
-    Stack({ alignContent: Alignment.Bottom }) {
-      if (this.sheet.length > 0) {
-        Stack().width('100%').height('100%')
-          .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
-            this.sheetScrimColor(), this.operationsSheetUsesNativeMaterial()))
-          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
-          .accessibilityLevel('no')
-          .onClick((): void => {
-            if (this.uiInputIsCurrent() && this.sheetActorIsCurrent(attachment, ownerGeneration) &&
-              this.sheetMaskReady && this.confirmation.length === 0)
-              this.sheet = '';
-          })
-          .onAppear((): void => this.onSheetActorAppeared(attachment, ownerGeneration, 'scrim'))
-          .transition(TransitionEffect.OPACITY.animation(this.reduceMotion ?
-            readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.scrim')),
-            (transitionIn: boolean): void => this.onSheetActorTransitionFinished(attachment, ownerGeneration, 'scrim', transitionIn));
-        ForEach([this.sheetOpeningGeneration], (opening: number): void => {
-          if (this.isOperationsSheet()) this.operationsSurface(opening, attachment, ownerGeneration);
-          else this.sheetSurface(opening, attachment, ownerGeneration);
-        }, (opening: number): string => opening.toString());
-      }
-    }.width('100%').height('100%');
-  }
-
-  @Builder
-  private sheetSurface(opening: number, attachment: number, ownerGeneration: number) {
-    Column({ space: 0 }) {
-      this.sheetContent(false, opening);
-    }.width('100%').constraintSize({ maxHeight: this.sheetMaxHeight() })
-      .padding({ left: this.sheetSafeLeft(), right: this.sheetSafeRight() })
-      .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
-      .borderRadius({ topLeft: DOWNLOAD_VISUAL.sheetRadius, topRight: DOWNLOAD_VISUAL.sheetRadius }).clip(true)
-      .border({ width: { top: DOWNLOAD_VISUAL.borderWidth }, color: readerAppColor('app.border.modalHighlight', this.appThemeScheme) })
-      .shadow(readerSurfaceElevation('sheet', this.appThemeScheme))
-      .hitTestBehavior(HitTestMode.Default)
-      .onAppear((): void => this.onSheetActorAppeared(attachment, ownerGeneration, 'sheet:' + opening, opening))
-      .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : TransitionEffect.asymmetric(
-        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.open')),
-        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.close'))),
-        (transitionIn: boolean): void => this.onSheetActorTransitionFinished(attachment, ownerGeneration, 'sheet:' + opening, transitionIn));
-  }
-
-  private isOperationsSheet(): boolean { return this.sheet === 'book-actions' || this.sheet === 'chapter-actions'; }
-
-  private operationsSheetUsesNativeMaterial(): boolean {
-    return this.isOperationsSheet() &&
-      readerSurfaceMaterialDecision('modalSheet', this.appearancePreferences, this.appThemeScheme, this.systemScheme).native;
-  }
-
-  private sheetScrimColor(): string {
-    return readerAppColor(this.isOperationsSheet() ? resolveDrawerSpec('reader-action-sheet').scrimRole :
-      'app.scrim.warmModal', this.appThemeScheme);
-  }
-
-  private operationsSurfaceWidth(): number {
-    return readerDynamicSurfaceWidth(resolveDrawerSpec('reader-action-sheet').maxWidth,
-      Math.max(0, this.pageViewportWidth() - this.sheetSafeLeft() - this.sheetSafeRight()));
-  }
-
-  @Builder
-  private operationsSurface(opening: number, attachment: number = this.sheetActorAttachment, ownerGeneration: number = this.sheetActorOwner) {
-    Column() {
-      ReaderBoundedSurface({ specId: 'reader-action-sheet', surfaceWidth: this.operationsSurfaceWidth(),
-        maxSurfaceHeight: this.sheetMaxHeight(), scheme: this.appThemeScheme === 'night' ? 'night' : 'day',
-        safeInsets: new ReaderInsetsVp(0, 0, 0, this.operationsBottomInset()),
-        header: (): void => { this.operationsHeader(opening); }, body: (): void => { this.operationsBody(opening); } })
-        .hitTestBehavior(HitTestMode.Default);
-    }.opacity(this.confirmation.length > 0 ? 0 : 1)
-      .animation(this.reduceMotion ? readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.scrim'))
-      .width('100%')
-      .padding({ left: this.sheetSafeLeft(), right: this.sheetSafeRight() })
-      .onAppear((): void => this.onSheetActorAppeared(attachment, ownerGeneration, 'operations:' + opening, opening))
-      .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : TransitionEffect.asymmetric(
-        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.open')),
-        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.close'))),
-        (transitionIn: boolean): void => this.onSheetActorTransitionFinished(attachment, ownerGeneration, 'operations:' + opening, transitionIn));
-  }
-
-  @Builder
-  private operationsHeader(opening: number) {
-    Column() {
-      ReaderBoundedSurfaceHeader({ specId: 'reader-action-sheet', title: this.sheetTitle(),
-        surfaceWidth: this.operationsSurfaceWidth(), scheme: this.appThemeScheme === 'night' ? 'night' : 'day',
-        closeFocusId: this.focusKey('sheet'),
-        onClose: (): void => { if (this.sheetOpeningIsCurrent(opening)) this.sheet = ''; } });
-    }.width('100%').onAreaChange(this.sheetAreaHandler('operations-header', opening));
-  }
-
-  @Builder
-  private operationsBody(opening: number) {
-    Scroll() {
-      Column() { this.operationsSheet(this.presentationGeneration, opening); }.width('100%')
-        .padding({ left: resolveDrawerSpec('reader-action-sheet').contentInset,
-          right: resolveDrawerSpec('reader-action-sheet').contentInset,
-          bottom: this.sheet === 'book-actions' ? 0 : resolveDrawerSpec('reader-action-sheet').contentInset })
-    }.width('100%')
-      .constraintSize({ maxHeight: Math.max(1,
-        this.sheetMaxHeight() - this.operationsHeaderHeight() - this.operationsBottomInset()) }).scrollBar(BarState.Auto);
-  }
-
-  private operationsBottomInset(): number {
-    const safe = readerStableInteractiveSafeBottom(this.currentMetrics());
-    return this.sheet === 'book-actions' ? Math.max(20, safe) : safe;
-  }
-
-  private operationsHeaderHeight(): number {
-    const spec = resolveDrawerSpec('reader-action-sheet');
-    return Math.max(this.operationsHeaderMeasuredHeight,
-      spec.handleZone + Math.max(spec.titleHeight, spec.titleLineHeight * this.fontScale()));
-  }
-
-  @Builder
-  private sheetContent(_wholeDocument: boolean, opening: number = this.sheetOpeningGeneration) {
-    if (!this.sheetChromeOverflow()) this.editingSheetHeader(opening);
-    Scroll(this.rangeScroller) {
-      Column({ space: 0 }) {
-        if (this.sheetChromeOverflow()) this.editingSheetHeader(opening);
-        this.sheetBody(opening);
-        if (this.sheetChromeOverflow()) this.editingSheetFooter(opening);
-      }.width('100%');
-    }.width('100%').constraintSize({ maxHeight: this.sheetChromeOverflow() ? this.sheetMaxHeight() : this.sheetBodyMaxHeight() })
-      .id(this.rangeScroll.idFor(`${opening}`)).scrollBar(BarState.Auto)
-      .onAppear((): void => {
-        if (this.mounted && opening === this.sheetOpeningGeneration)
-          this.rangeScroll.mount(this.getUIContext(), this.rangeEditingHost, this.rangeScroller, (): number => 0, `${opening}`);
-      })
-      .onDisAppear((): void => this.rangeScroll.unmount(`${opening}`))
-      .onAreaChange((): void => this.rangeEditingHost.refresh());
-    if (!this.sheetChromeOverflow()) this.editingSheetFooter(opening);
-  }
-  @Builder
-  private editingSheetHeader(opening: number) {
-    Rect().width(DOWNLOAD_VISUAL.gripWidth).height(DOWNLOAD_VISUAL.gripHeight)
-      .fill(downloadVisualColor('line', this.appThemeScheme)).radius(DOWNLOAD_VISUAL.gripRadius)
-      .margin({ top: DOWNLOAD_VISUAL.gripTop, bottom: DOWNLOAD_VISUAL.gripBottom });
-    Row() {
-      Text(this.sheetTitle()).fontFamily(TYPE_DOWNLOAD_SHEET_TITLE.fontFamily).fontWeight(TYPE_DOWNLOAD_SHEET_TITLE.fontWeight)
-        .fontSize(TYPE_DOWNLOAD_SHEET_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_SHEET_TITLE.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).layoutWeight(1).wordBreak(WordBreak.BREAK_WORD);
-      Button({ type: ButtonType.Normal }) {
-        Image(this.visualIcon('close')).width(DOWNLOAD_VISUAL.moreIconSize).height(DOWNLOAD_VISUAL.moreIconSize);
-      }.id(this.focusKey('sheet')).height(DOWNLOAD_VISUAL.headerIconHeight).width(DOWNLOAD_VISUAL.headerIconWidth).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-        .responseRegion({ x: (DOWNLOAD_VISUAL.headerIconWidth - DOWNLOAD_VISUAL.touchTarget) / 2, y: 0, width: DOWNLOAD_VISUAL.touchTarget, height: DOWNLOAD_VISUAL.touchTarget }).accessibilityText('关闭面板')
-        .onClick((): void => { if (this.sheetOpeningIsCurrent(opening)) this.sheet = ''; });
-    }.constraintSize({ minHeight: DOWNLOAD_VISUAL.sheetTitleHeight }).width('100%')
-      .padding({ left: DOWNLOAD_VISUAL.sheetTitleLeft, right: DOWNLOAD_VISUAL.sheetTitleRight })
-      .onAreaChange(this.sheetAreaHandler('title', opening));
-  }
-  @Builder
-  private editingSheetFooter(opening: number) {
-    if (this.sheetHasFooter()) {
-      if (this.sheet === 'settings') {
-        Row() { this.clearStorageButton(); }
-          .width('100%').padding({ left: DOWNLOAD_VISUAL.storageFooterSide, right: DOWNLOAD_VISUAL.storageFooterSide,
-            top: DOWNLOAD_VISUAL.storageFooterTop, bottom: this.sheetFooterBottomInset() })
-          .onAreaChange(this.sheetAreaHandler('footer', opening));
-      } else {
-        Row() {
-        this.actionButton((): string => this.sheet === 'range' ? '开始下载' : '完成', true,
-          (): boolean => this.sheet !== 'range' || this.rangeEligible(), (): void => {
-            if (!this.sheetOpeningIsCurrent(opening)) return;
-            if (this.sheet === 'range') this.sendRange(); else this.sheet = '';
-          }, '', true);
-      }.width('100%').padding({ left: DOWNLOAD_VISUAL.sheetFooterSide, right: DOWNLOAD_VISUAL.sheetFooterSide,
-        top: DOWNLOAD_VISUAL.sheetFooterTop, bottom: this.sheetFooterBottomInset() })
-        .border({ width: { top: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) })
-        .onAreaChange(this.sheetAreaHandler('footer', opening));
-      }
-    }
-  }
-
-  @Builder
-  private sheetBody(opening: number = this.sheetOpeningGeneration) {
-    Column({ space: 0 }) {
-      if (this.sheet === 'filter') {
-        ForEach([opening], (filterOpening: number): void => { this.filterSheet(filterOpening); },
-          (filterOpening: number): string => filterOpening.toString());
-      }
-      else if (this.sheet === 'sort') { this.sortSheet(); }
-      else if (this.sheet === 'settings') { this.settingsSheet(); }
-      else if (this.sheet === 'range') { this.rangeSheet(opening); }
-    }.width('100%').padding({ left: this.sheet === 'settings' ? DOWNLOAD_VISUAL.storageBodySide : DOWNLOAD_VISUAL.sheetBodySide,
-      right: this.sheet === 'settings' ? DOWNLOAD_VISUAL.storageBodySide : DOWNLOAD_VISUAL.sheetBodySide,
-      top: this.sheet === 'settings' ? DOWNLOAD_VISUAL.storageBodyTop : 0,
-      bottom: this.sheetBodyBottomInset() });
-  }
-
-  @Builder
-  private filterSheet(opening: number) {
-    Row({ space: DOWNLOAD_VISUAL.settingsGap }) {
-      Text('下载状态').fontFamily(TYPE_APP_ROW_LABEL.fontFamily).fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
-        .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp).lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).layoutWeight(1);
-      ReaderInlineSelect({ reduceMotion: this.reduceMotion,
-        value: this.stateChoices().find((choice: DownloadChoice): boolean => choice.id === this.stateFilter)?.label ?? '全部状态',
-        options: this.stateChoices().map((choice: DownloadChoice): string => choice.label),
-        selectedIndex: Math.max(0, this.stateChoices().findIndex((choice: DownloadChoice): boolean => choice.id === this.stateFilter)),
-        controlWidth: this.selectClosedWidth(this.stateChoices().find((choice: DownloadChoice): boolean => choice.id === this.stateFilter)?.label ?? '全部状态', this.stateChoices().map((choice: DownloadChoice): string => choice.label), DOWNLOAD_VISUAL.settingsSelectMaxWidth, '下载状态'),
-        onSelect: (_index: number, value: string): void => {
-          if (!this.sheetOpeningIsCurrent(opening) || this.sheet !== 'filter') return;
-          const choice = this.stateChoices().find((option: DownloadChoice): boolean => option.label === value);
-          if (choice === undefined) return;
-          this.stateFilter = choice.id;
-        },
-      });
-    }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.settingsHeight })
-      .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
-    Row({ space: DOWNLOAD_VISUAL.settingsGap }) {
-      Text('书源').fontFamily(TYPE_APP_ROW_LABEL.fontFamily).fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
-        .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp).lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).layoutWeight(1);
-      ReaderInlineSelect({ reduceMotion: this.reduceMotion,
-        value: this.sourceFilterLabel(),
-        menuKind: 'source',
-        options: this.filterSourceOptions.map((choice: DownloadChoice): string => choice.label),
-        selectedIndex: Math.max(0, this.filterSourceOptions.findIndex((choice: DownloadChoice): boolean => choice.id === this.sourceFilter)),
-        controlWidth: this.selectClosedWidth(this.sourceFilterLabel(),
-          this.filterSourceOptions.map((choice: DownloadChoice): string => choice.label), DOWNLOAD_VISUAL.settingsSelectMaxWidth, '书源'),
-        onSelect: (_index: number, value: string): void => {
-          if (!this.sheetOpeningIsCurrent(opening) || this.sheet !== 'filter') return;
-          const choice = this.filterSourceOptions.find((option: DownloadChoice): boolean => option.label === value);
-          if (choice === undefined || (choice.id !== 'all' &&
-            !this.books.some((book: DownloadBookView): boolean => book.sourceId === choice.id))) return;
-          this.sourceFilter = choice.id;
-        },
-      });
-    }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.settingsHeight })
-      .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
-  }
-
-  @Builder
-  private sortSheet() {
-    ForEach(this.sortChoices(), (choice: DownloadChoice) => {
-      this.choiceRow(choice.id, choice.label, (): boolean => this.sortField === choice.id, (): void => { this.sortField = choice.id; });
-    }, (choice: DownloadChoice): string => choice.id);
-  }
-
-  @Builder
-  private choiceRow(optionId: string, label: string, selected: () => boolean, action: () => void,
-    ownerGeneration: number = this.presentationGeneration, sheetId: string = this.sheet,
-    sheetGeneration: number = this.sheetOpeningGeneration) {
-    ReaderChoiceRow({ specId: 'download-radio', optionId: optionId, label: label, selected: selected(), scheme: this.appThemeScheme,
-      groupId: `shared-download-${sheetId}-${sheetGeneration}`,
-      onChoose: (id: string): void => {
-        if (id === optionId && this.presentationIsCurrent(ownerGeneration) &&
-          sheetId === this.sheet && this.sheetOpeningIsCurrent(sheetGeneration)) action();
-      } });
-  }
-
-  @Builder
-  private operationsSheet(ownerGeneration: number, opening: number) {
-    ReaderActionMenuSurface({ variant: 'grouped', actions: this.operationsActions(), scheme: this.appThemeScheme === 'night' ? 'night' : 'day',
-      actionIdPrefix: 'reader-download:sheet-action:',
-      onAction: (id: string): void => this.performOperationsAction(id, ownerGeneration, opening) });
-  }
-
-  private operationsActions(): ReaderMenuActionView[] {
-    const books = this.actionBooks();
-    const deletion = books.some((book: DownloadBookView): boolean => book.sourceId !== 'local') ? [
-      new ReaderMenuActionView('deleteLocal', '删除本地内容', this.actionAvailable('deleteLocal', books),
-        readerActionIcon('trash', this.appThemeScheme), '删除本地内容', '', '', '', 'danger'),
-    ] : [];
-    if (this.sheet === 'book-actions') {
-      if (this.managing && this.detailKey.length === 0) {
-        return [
-          new ReaderMenuActionView('cancel', '取消下载任务', this.actionAvailable('cancel'), readerActionIcon('close', this.appThemeScheme)),
-          ...deletion,
-        ];
-      }
-      const complete = books.length > 0 && books.every((book: DownloadBookView): boolean => book.projectionStatus === 'ready' &&
-        book.totalChapters !== undefined && book.totalChapters > 0 && book.downloadedChapters === book.totalChapters &&
-        book.chapters.filter((chapter: DownloadChapterView): boolean => chapter.navigable).length === book.totalChapters &&
-        book.chapters.filter((chapter: DownloadChapterView): boolean => chapter.navigable).every((chapter: DownloadChapterView): boolean => chapter.localComplete));
-      const cancel = !complete && this.actionAvailable('cancel');
-      return [
-        new ReaderMenuActionView(cancel ? 'cancel' : 'download', complete ? '已下载' : cancel ? '取消下载' : '下载',
-          !complete && this.actionAvailable(cancel ? 'cancel' : 'download'), readerActionIcon(complete ? 'check' : cancel ? 'close' : 'download', this.appThemeScheme)),
-        ...deletion,
-      ];
-    }
-    // Chapter actions retain their established download/pause/cancel entries.
-    const running = this.selectedIsRunning();
-    return [
-      new ReaderMenuActionView(running ? 'pause' : 'download', running ? '暂停' : '下载',
-        this.actionAvailable(running ? 'pause' : 'download'), readerActionIcon(running ? 'pause' : 'download', this.appThemeScheme)),
-      new ReaderMenuActionView('cancel', '取消下载任务', this.actionAvailable('cancel'), readerActionIcon('close', this.appThemeScheme)),
-      ...deletion,
-    ];
-  }
-
-  private performOperationsAction(id: string, ownerGeneration: number, opening: number): void {
-    if (!this.uiInputIsCurrent(ownerGeneration) || !this.sheetOpeningIsCurrent(opening) || !this.isOperationsSheet()) return;
-    const action = this.operationsActions().find((item: ReaderMenuActionView): boolean => item.id === id);
-    if (action === undefined || !action.enabled) return;
-    if (id === 'pause') this.sendAction('pause');
-    else if (id === 'download') {
-      if (this.sheet === 'book-actions') {
-        this.prepareRange(this.actionBookKeys[0] ?? ''); this.sheet = 'range';
-      } else this.sendAction('download');
-    } else if (id === 'cancel' || id === 'deleteLocal') {
-      this.confirmation = id;
-    }
-  }
-
-  @Builder
-  private settingsSheet(opening: number = this.sheetOpeningGeneration) {
-    this.storageSummaryContent();
-    Column({ space: 0 }) {
-      Text('自动保存设置').width('100%').fontFamily(TYPE_DOWNLOAD_META_LINE.fontFamily).fontWeight(TYPE_DOWNLOAD_META_LINE.fontWeight)
-        .fontSize(TYPE_DOWNLOAD_META_LINE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META_LINE.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('muted', this.appThemeScheme))
-        .margin({ top: DOWNLOAD_VISUAL.storageSettingsTitleTop });
-    Row({ space: DOWNLOAD_VISUAL.storageSettingsGap }) {
-      Text('空间上限').layoutWeight(1).fontFamily(TYPE_APP_ROW_LABEL.fontFamily).fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
-        .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp).lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme));
-      ReaderInlineSelect({ reduceMotion: this.reduceMotion,
-        value: this.limitLabels()[this.limitIndex()] ?? '暂不可用',
-        options: this.limitLabels(),
-        selectedIndex: this.limitIndex(),
-        controlWidth: this.storageSelectWidth(),
-        actionEnabled: this.storagePolicy !== undefined && !this.storagePolicyBusy,
-        onSelect: (_index: number, value: string): void => this.changeStoragePolicy(opening, 'capacity', value),
-      });
-    }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.storageSettingsHeight })
-      .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
-    Row({ space: DOWNLOAD_VISUAL.storageSettingsGap }) {
-      Text('多久未阅读后清理').layoutWeight(1).fontFamily(TYPE_APP_ROW_LABEL.fontFamily).fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
-        .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp).lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme));
-      ReaderInlineSelect({ reduceMotion: this.reduceMotion,
-        value: this.dayLabels()[this.daysIndex()] ?? '暂不可用',
-        options: this.dayLabels(),
-        selectedIndex: this.daysIndex(),
-        controlWidth: this.storageSelectWidth(),
-        actionEnabled: this.storagePolicy !== undefined && !this.storagePolicyBusy,
-        onSelect: (_index: number, value: string): void => this.changeStoragePolicy(opening, 'expiry', value),
-      });
-    }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.storageSettingsHeight })
-      .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
-    }.width('100%').border({ width: { top: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
-  }
-
-  @Builder
-  private storageSummaryContent() {
-    // Empty native Text has a different fallback baseline from Chromium.
-    // Preserve the same numeric actor and the approved empty line box.
-    Flex({ direction: FlexDirection.Row, alignItems: formatDownloadStorageBytes(this.storageSummary.totalBytes).length === 0 ? ItemAlign.Start : ItemAlign.Baseline }) {
-      Text('已下载内容').layoutWeight(1).fontFamily(TYPE_DOWNLOAD_BODY.fontFamily).fontWeight(TYPE_DOWNLOAD_BODY.fontWeight)
-        .fontSize(TYPE_DOWNLOAD_BODY.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BODY.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).margin({ right: DOWNLOAD_VISUAL.storageSummaryGap,
-          top: formatDownloadStorageBytes(this.storageSummary.totalBytes).length === 0 ? DOWNLOAD_VISUAL.storageUnknownSummaryLabelTop * this.fontScale() : 0 });
-      Text(formatDownloadStorageBytes(this.storageSummary.totalBytes))
-        .fontFeature('"tnum" 1')
-        .fontFamily(TYPE_DOWNLOAD_STORAGE_TOTAL.fontFamily).fontWeight(TYPE_DOWNLOAD_STORAGE_TOTAL.fontWeight)
-        .fontSize(TYPE_DOWNLOAD_STORAGE_TOTAL.fontSizeFp).lineHeight(TYPE_DOWNLOAD_STORAGE_TOTAL.lineHeightFp as number).halfLeading(true)
-        .constraintSize({ minHeight: (TYPE_DOWNLOAD_STORAGE_TOTAL.lineHeightFp as number) * this.fontScale() })
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).textAlign(TextAlign.End);
-    }.width('100%').constraintSize({ minHeight: formatDownloadStorageBytes(this.storageSummary.totalBytes).length === 0 ?
-      DOWNLOAD_VISUAL.storageUnknownSummaryMinHeight * this.fontScale() : 0 });
-    Column({ space: DOWNLOAD_VISUAL.storageBreakdownGap }) {
-      this.storageRetentionRow('保留下载', '长期保留，仅手动删除', (): number | undefined => this.storageSummary.retainedBytes);
-      this.storageRetentionRow('自动保存', '阅读时保存，按设置自动清理', (): number | undefined => this.storageSummary.automaticBytes);
-    }.width('100%').margin({ top: DOWNLOAD_VISUAL.storageBreakdownTop });
-    Row({ space: DOWNLOAD_VISUAL.storageFreeGap }) {
-      Text('设备可用空间').layoutWeight(1).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-        .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('muted', this.appThemeScheme));
-      Text(formatDownloadStorageBytes(this.storageSummary.availableBytes))
-        .fontFeature('"tnum" 1')
-        .fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
-        .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
-        .constraintSize({ minHeight: (TYPE_DOWNLOAD_META.lineHeightFp as number) * this.fontScale() })
-        .fontColor(downloadVisualColor('muted', this.appThemeScheme)).textAlign(TextAlign.End);
-    }.width('100%').margin({ top: DOWNLOAD_VISUAL.storageFreeTop, bottom: DOWNLOAD_VISUAL.storageFreeBottom });
-  }
-
-  @Builder
-  private storageRetentionRow(label: string, caption: string, bytes: () => number | undefined) {
-    Row({ space: DOWNLOAD_VISUAL.storageRowGap }) {
-      Column({ space: DOWNLOAD_VISUAL.storageCaptionGap }) {
-        Text(label).width('100%').fontFamily(TYPE_DOWNLOAD_BODY.fontFamily).fontWeight(TYPE_DOWNLOAD_BODY.fontWeight)
-          .fontSize(TYPE_DOWNLOAD_BODY.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BODY.lineHeightFp as number).halfLeading(true)
-          .fontColor(downloadVisualColor('ink', this.appThemeScheme));
-        Text(caption).width('100%').fontFamily(TYPE_DOWNLOAD_META_LINE.fontFamily).fontWeight(TYPE_DOWNLOAD_META_LINE.fontWeight)
-          .fontSize(TYPE_DOWNLOAD_META_LINE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META_LINE.lineHeightFp as number).halfLeading(true)
-          .fontColor(downloadVisualColor('muted', this.appThemeScheme));
-      }.layoutWeight(1);
-      Text(formatDownloadStorageBytes(bytes()))
-        .fontFeature('"tnum" 1')
-        .fontFamily(TYPE_DOWNLOAD_STORAGE_VALUE.fontFamily).fontWeight(TYPE_DOWNLOAD_STORAGE_VALUE.fontWeight)
-        .fontSize(TYPE_DOWNLOAD_STORAGE_VALUE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_STORAGE_VALUE.lineHeightFp as number).halfLeading(true)
-        .constraintSize({ minHeight: (TYPE_DOWNLOAD_STORAGE_VALUE.lineHeightFp as number) * this.fontScale() })
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).textAlign(TextAlign.End);
-    }.width('100%').alignItems(VerticalAlign.Top);
-  }
-
-  @Builder
-  private clearStorageButton(ownerGeneration: number = this.presentationGeneration, opening: number = this.sheetOpeningGeneration) {
-    ReaderButton({ scheme: this.appThemeScheme, variant: 'tonal', visualSize: 'large', layout: 'full',
-      label: this.storageCleanLabel(), focusId: this.focusKey('storage-clean'), actionEnabled: this.storageCleanupAvailable(),
-      leading: (): void => { this.storageCleanupIcon(); },
-      onAction: (): void => this.openStorageCleanup(ownerGeneration, opening) });
-  }
-
-  @Builder
-  private storageCleanupIcon() {
-    Image(this.visualIcon(this.storageCleanupAvailable() ? 'trash' : 'trash_disabled'))
-      .width(DOWNLOAD_VISUAL.storageActionIconSize).height(DOWNLOAD_VISUAL.storageActionIconSize);
-  }
-
-  @Builder
-  private rangeSheet(opening: number = this.sheetOpeningGeneration) {
-    if (this.actionBookKeys.length > 1) {
-      ReaderInlineSelect({ reduceMotion: this.reduceMotion,
-        value: this.availableRangeBooks().find((choice: DownloadChoice): boolean => choice.id === this.rangeBookKey)?.label ?? '',
-        options: this.availableRangeBooks().map((choice: DownloadChoice): string => choice.label),
-        selectedIndex: Math.max(0, this.availableRangeBooks().findIndex((choice: DownloadChoice): boolean => choice.id === this.rangeBookKey)),
-        controlWidth: 0,
-        onSelect: (_index: number, value: string): void => {
-          if (!this.sheetOpeningIsCurrent(opening) || this.sheet !== 'range') return;
-          const choice = this.availableRangeBooks().find((option: DownloadChoice): boolean => option.label === value);
-          if (choice !== undefined && choice.id !== this.rangeBookKey) this.resetRangeDraft(choice.id);
-        },
-      }).width('100%').margin({ bottom: DOWNLOAD_VISUAL.rangeBookBottom });
-    }
-    this.choiceRow('all', '全部章节', (): boolean => this.rangeChoice === 'all', (): void => this.selectRangeChoice('all'));
-    this.choiceRow('forward', '从当前章节往后', (): boolean => this.rangeChoice === 'forward', (): void => this.selectRangeChoice('forward'));
-    this.choiceRow('custom', '选择章节范围', (): boolean => this.rangeChoice === 'custom', (): void => this.selectRangeChoice('custom'));
-    if (this.rangeChoice === 'custom') {
-      ForEach([this.rangeDraftRevision], (revision: number): void => { this.rangeInputs(opening, revision); },
-        (revision: number): string => revision.toString());
-      if (this.rangeCatalogChanged) {
-        ForEach([this.rangeDraftRevision], (revision: number): void => {
-        ReaderPageState({ title: '目录已更新', message: '目录已变化，请按当前目录重新填写下载范围。',
-          padded: false, actionLabel: '重新填写', actionEnabled: this.rangeBook()?.projectionStatus === 'ready',
-          onAction: (): void => {
-            if (this.sheetOpeningIsCurrent(opening) && this.sheet === 'range' && this.rangeChoice === 'custom' &&
-              revision === this.rangeDraftRevision && this.rangeCatalogChanged &&
-              this.rangeBook()?.projectionStatus === 'ready') this.resetRangeDraft(this.rangeBookKey);
-          } }).margin({ top: DOWNLOAD_VISUAL.rangeSelectionTop });
-        }, (revision: number): string => `download-range-invalid:${revision}`);
-      }
-    }
-  }
-
-  @Builder
-  private rangeInputs(opening: number, revision: number) {
-    Row({ space: DOWNLOAD_VISUAL.actionGap }) {
-      this.rangeBoundInput(true, opening, revision);
-      Text('至').fontFamily(TYPE_DOWNLOAD_CONTROL.fontFamily).fontWeight(TYPE_DOWNLOAD_CONTROL.fontWeight).fontSize(TYPE_DOWNLOAD_CONTROL.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CONTROL.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('muted', this.appThemeScheme));
-      this.rangeBoundInput(false, opening, revision);
-    }.width('100%').margin({ top: DOWNLOAD_VISUAL.rangeSelectionTop });
-  }
-
-  private mountRangeEditing(start: boolean, opening: number, revision: number): void {
-    if (!this.mounted || opening !== this.sheetOpeningGeneration || revision !== this.rangeDraftRevision || this.sheet !== 'range') return;
-    const target = start ? this.rangeStartTarget : this.rangeEndTarget;
-    target.mount(this.getUIContext(), this.rangeEditingHost, start ? this.rangeStartController : this.rangeEndController,
-      (): boolean => this.sheetOpeningIsCurrent(opening) && revision === this.rangeDraftRevision &&
-        this.rangeCatalog !== undefined && !this.rangeCatalogChanged,
-      (): number => DOWNLOAD_VISUAL.controlLineHeight * this.fontScale(), this.rangeInputId(start, opening, revision));
-  }
-
-  private rangeInputId(start: boolean, opening: number, revision: number): string {
-    return `${start ? this.rangeStartTarget.id : this.rangeEndTarget.id}:${opening}:${revision}`;
-  }
-
-  @Builder
-  private rangeBoundInput(start: boolean, opening: number, revision: number) {
-    TextInput({ text: start ? this.rangeStart : this.rangeEnd, placeholder: start ? '起始序号' : '结束序号',
-      controller: start ? this.rangeStartController : this.rangeEndController })
-      .attributeModifier(new ReaderEditableInputModifier(start ? this.rangeStartTarget : this.rangeEndTarget,
-        this.rangeInputId(start, opening, revision),
-        (editing: boolean): void => (start ? this.rangeStartTarget : this.rangeEndTarget).edit(editing)))
-      .onAppear((): void => this.mountRangeEditing(start, opening, revision))
-      .onDisAppear((): void => (start ? this.rangeStartTarget : this.rangeEndTarget).unmount(this.rangeInputId(start, opening, revision)))
-      .layoutWeight(1).type(InputType.Number)
-      .enabled(this.rangeCatalog !== undefined && !this.rangeCatalogChanged)
-      .height(this.textControlHeight(DOWNLOAD_VISUAL.searchHeight, DOWNLOAD_VISUAL.controlLineHeight, DOWNLOAD_VISUAL.searchPaddingY * 2))
-      .fontFamily(TYPE_DOWNLOAD_CONTROL.fontFamily).fontWeight(TYPE_DOWNLOAD_CONTROL.fontWeight)
-      .fontSize(TYPE_DOWNLOAD_CONTROL.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CONTROL.lineHeightFp as number)
-      .fontColor(downloadVisualColor('ink', this.appThemeScheme)).backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
-      .onChange((value: string): void => this.updateRangeBound(value, start, opening, revision));
-  }
-
-  @Builder
-  private confirmationOverlay(opening: number = this.confirmationGeneration) {
-    Stack({ alignContent: Alignment.TopStart }) {
-      // A nested confirmation keeps the sheet's existing backdrop in place.
-      if (this.sheet.length === 0 && !this.sheetExitPending) {
-        Stack().width('100%').height('100%')
-          .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
-            downloadVisualColor('scrim', this.appThemeScheme)))
-          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
-          .accessibilityLevel('no');
-      }
-      ReaderDialogViewport({ host: this.confirmationHost(), edgeGapY: DOWNLOAD_VISUAL.dialogOuterSide,
-        content: (width: number, height: number): void => {
-          ReaderDialogSurface({ specId: 'download-confirmation',
-            containerWidthVp: Math.max(0, width - 2 * DOWNLOAD_VISUAL.dialogOuterSide),
-            body: (): void => { this.confirmationSurfaceBody(opening, height); },
-          }).clip(true);
-        },
-      });
-    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Default);
-  }
-
-  @Builder
-  private confirmationSurfaceBody(opening: number, viewportHeight: number) {
-    this.confirmationContent(viewportHeight <= this.dialogChromeHeight(), viewportHeight, this.presentationGeneration, opening);
-  }
-
-  @Builder
-  private confirmationContent(wholeDocument: boolean, viewportHeight: number, ownerGeneration: number,
-    opening: number) {
-    Column({ space: 0 }) {
-      if (wholeDocument) {
-        this.confirmationBody();
-      } else {
-        Scroll() { this.confirmationBody(); }.width('100%')
-          .constraintSize({ maxHeight: readerSurfaceMaxHeight(viewportHeight, this.dialogChromeHeight()) })
-          .scrollBar(BarState.Auto);
-      }
-      Row({ space: DOWNLOAD_VISUAL.actionGap }) {
-        this.confirmationButton((): string => '取消', false, (): void => {
-          if (this.confirmationIsCurrent(opening, ownerGeneration)) this.confirmation = '';
-        });
-        this.confirmationButton((): string => this.confirmation === 'cleanup' ? `清理 ${formatDownloadStorageBytes(this.storageSummary.cleanableBytes)}` :
-          this.confirmation === 'cancel' ? '取消任务' : '删除内容', true, (): void => {
-          if (!this.confirmationIsCurrent(opening, ownerGeneration) || !this.confirmationActionAvailable()) return;
-          if (this.confirmation === 'cleanup') { this.confirmStorageCleanup(ownerGeneration); return; }
-          const action = this.confirmation === 'cancel' ? 'cancel' : 'deleteLocal';
-          this.confirmation = ''; this.sendAction(action);
-        }, (): boolean => this.confirmationActionAvailable());
-      }.width('100%').onAreaChange(this.confirmationAreaHandler(opening, ownerGeneration));
-    }.width('100%');
-  }
-
-  @Builder
-  private confirmationBody() {
-    Column({ space: 0 }) {
-      Text(this.confirmationTitle())
-        .fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
-        .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number).halfLeading(true)
-        .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme)).width('100%').margin({ bottom: 16 });
-      Text(this.confirmationCopy())
-        .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
-        .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number).halfLeading(true)
-        .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme)).width('100%').margin({ bottom: 28 });
-    }.width('100%');
-  }
-
-  @Builder
-  private confirmationButton(label: () => string, danger: boolean, action: () => void, enabled: () => boolean = (): boolean => true) {
-    ReaderButton({ scheme: this.appThemeScheme, variant: danger ? 'danger' : 'subtle', visualSize: 'medium',
-      label: label(), layout: 'equal', focusId: this.focusKey(danger ? 'confirm' : 'confirm-cancel'), preferDefaultFocus: !danger,
-      actionEnabled: enabled(), onAction: (): void => { if (enabled()) action(); } });
-  }
-
-  private confirmationActionAvailable(): boolean {
-    if (this.confirmation === 'cleanup') return this.storageCleanupAvailable();
-    if (this.confirmation === 'cancel') return this.actionAvailable('cancel');
-    return this.confirmation === 'deleteLocal' && this.actionAvailable('deleteLocal');
-  }
-
-  private confirmationTitle(): string {
-    if (this.confirmation === 'cleanup') return '清理临时缓存？';
-    const books = this.removalActionBooks(this.confirmation === 'cancel' ? 'cancel' : 'deleteLocal');
-    const label = this.confirmation === 'cancel' ? '取消任务' : '删除内容';
-    if (this.actionChapters.length > 0)
-      return `确认${label} · ${this.actionChapters.length}${this.unit(books[0])}？`;
-    const title = this.confirmation === 'cancel' ? '取消下载任务？' : '删除本地内容？';
-    return `${title}（${books.length}本书）`;
-  }
-  private confirmationCopy(): string {
-    if (this.confirmation === 'cleanup')
-      return `将清理 ${formatDownloadStorageBytes(this.storageSummary.cleanableBytes)} 的临时缓存。保留下载、正在阅读和下载的内容不受影响，书架与阅读记录保留。`;
-    if (this.actionChapters.length > 0)
-      return this.confirmation === 'cancel' ? '仅取消所选章节的剩余下载，已下载内容保留。' :
-        '仅删除所选章节的本地内容，并取消这些章节的剩余下载。书架和阅读记录保留。';
-    return this.confirmation === 'cancel' ? '已下载的内容会保留，可以继续阅读。' :
-      '删除所选书籍的本地内容，之后阅读需要重新获取。书架与阅读记录保留。';
-  }
-  private primaryInk(): string { return downloadVisualColor('green', this.appThemeScheme); }
-
-  private storageCleanupAvailable(): boolean {
-    return !this.storageCleanupBusy && canCleanDownloadStorage(this.storageSummary);
-  }
-  private storageCleanLabel(): string {
-    if (this.storageCleanupBusy) return '正在清理临时缓存…';
-    if (formatDownloadStorageBytes(this.storageSummary.cleanableBytes).length === 0) return '清理临时缓存';
-    return canCleanDownloadStorage(this.storageSummary) ?
-      `清理临时缓存 · ${formatDownloadStorageBytes(this.storageSummary.cleanableBytes)}` : '暂无可清理的临时缓存';
-  }
-  private openStorageCleanup(generation: number = this.presentationGeneration, opening: number = this.sheetOpeningGeneration): void {
-    if (!this.presentationIsCurrent(generation) || !this.sheetOpeningIsCurrent(opening) ||
-      this.sheet !== 'settings' || !this.storageCleanupAvailable()) return;
-    this.confirmation = 'cleanup';
-  }
-  private confirmStorageCleanup(generation: number = this.presentationGeneration): void {
-    if (!this.uiInputIsCurrent(generation) || this.confirmation !== 'cleanup' || !this.storageCleanupAvailable()) return;
-    this.confirmation = ''; this.sendAction('cleanup');
-  }
-  private tabInk(id: string): string {
-    return downloadVisualColor(this.bookType === id ? 'green' : 'ink', this.appThemeScheme);
-  }
-  private statusInk(book: DownloadBookView): string {
-    return downloadVisualColor(book.stateLabel === '下载失败' ? 'danger' : book.stateLabel === '未下载' ? 'muted' : 'green', this.appThemeScheme);
-  }
-
   private presentationIsCurrent(generation: number = this.presentationGeneration): boolean {
     return this.mounted && generation === this.presentationGeneration &&
       this.presentationIdentity === this.mountedIdentity && (this.isOpeningCurrent?.() ?? true);
@@ -1836,46 +531,6 @@ export struct SharedDownloadPage {
     return this.presentationIsCurrent(generation) && this.appForeground && !this.covered;
   }
 
-  private modalBlocking(): boolean {
-    return this.sheet.length > 0 || this.confirmation.length > 0 || this.sheetExitPending;
-  }
-
-  private sheetOpeningIsCurrent(opening: number): boolean {
-    return this.uiInputIsCurrent() && this.sheet.length > 0 &&
-      this.sheetOpeningGeneration === opening && this.confirmation.length === 0;
-  }
-
-  private confirmationIsCurrent(opening: number, generation: number): boolean {
-    return this.uiInputIsCurrent(generation) && this.confirmation.length > 0 &&
-      this.confirmationGeneration === opening;
-  }
-
-  private focusKey(target: string): string { return target.length > 0 ? 'reader-download:' + target : ''; }
-
-  private chapterMenuFocusKey(chapter: DownloadChapterView): string {
-    return 'chapter-menu:' + JSON.stringify([chapter.key, chapter.chapterId]);
-  }
-
-  private chapterReadingFocusKey(chapter: DownloadChapterView, control: SharedDownloadReadingControl): string {
-    return 'chapter-reading:' + JSON.stringify([chapter.key, chapter.chapterId, control]);
-  }
-
-  private chapterReadingFocusTarget(focus: SharedDownloadReadingFocus): string {
-    const book = this.detail();
-    const chapter = book?.key === focus.bookKey && book.projectionStatus === 'ready' ?
-      book.chapters.find((row: DownloadChapterView): boolean =>
-        row.navigable && row.key === focus.chapterKey && row.chapterId === focus.chapterId) : undefined;
-    return chapter !== undefined && (focus.control === 'title' || chapter.localComplete) ?
-      this.chapterReadingFocusKey(chapter, focus.control) : 'page-back';
-  }
-
-  private openSheet(kind: string, trigger: string): void {
-    if (!this.uiInputIsCurrent() || this.modalBlocking()) return;
-    if (kind === 'filter') this.filterSourceOptions = this.sourceChoices();
-    this.sheetTriggerKey = trigger;
-    this.sheet = kind;
-  }
-
   private syncOverlayFocus(preferred: string = '', expectedManaging: boolean = this.managing,
     readingReturn?: SharedDownloadReadingFocus): void {
     if (!this.uiInputIsCurrent()) return;
@@ -1883,23 +538,22 @@ export struct SharedDownloadPage {
     const focusGeneration = ++this.focusGeneration;
     const detailKey = this.detailKey;
     const returning = this.sheet.length === 0 && this.confirmation.length === 0;
-    if (returning && this.sheetExitPending) return;
+    if (returning && this.sheetsPaint.sheetExitPending) return;
     const target = preferred.length > 0 ? preferred :
-      this.confirmation.length > 0 ? 'confirm-cancel' : this.sheet.length > 0 ? 'sheet' : this.sheetTriggerKey;
+      this.confirmation.length > 0 ? 'confirm-cancel' : this.sheet.length > 0 ? 'sheet' : this.sheets.sheetTriggerKey;
     if (target.length === 0 && readingReturn === undefined) return;
     try {
       this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame(this.getUIContext(), (): void => {
         if (!this.uiInputIsCurrent(generation) || focusGeneration !== this.focusGeneration ||
-          detailKey !== this.detailKey || expectedManaging !== this.managing || (returning && this.modalBlocking())) return;
+          detailKey !== this.detailKey || expectedManaging !== this.managing || (returning && this.sheets.modalBlocking())) return;
         if (readingReturn !== undefined) {
-          if (this.readingReturnFocus !== readingReturn || !this.appForeground || this.covered) return;
-          this.readingReturnFocus = undefined;
+          if (!this.chapterList.consumeReturnFocus(readingReturn)) return;
         }
-        if (returning) this.sheetTriggerKey = '';
-        const resolved = readingReturn === undefined ? target : this.chapterReadingFocusTarget(readingReturn);
+        if (returning) this.sheets.sheetTriggerKey = '';
+        const resolved = readingReturn === undefined ? target : this.chapterList.chapterReadingFocusTarget(readingReturn);
         const currentTarget = !resolved.startsWith('chapter-menu:') || (!this.managing &&
-          this.detail()?.chapters.some((chapter: DownloadChapterView): boolean =>
-            chapter.navigable && this.chapterMenuFocusKey(chapter) === resolved) === true);
+          this.bookList.detail()?.chapters.some((chapter: DownloadChapterView): boolean =>
+            chapter.navigable && this.chapterList.chapterMenuFocusKey(chapter) === resolved) === true);
         const targets: string[] = currentTarget ? [resolved] : [];
         if (returning) {
           if (readingReturn === undefined && this.books.length > 0 && target !== 'manage') targets.push('manage');
@@ -1909,7 +563,7 @@ export struct SharedDownloadPage {
         }
         for (const candidate of targets) {
           try {
-            this.getUIContext().getFocusController().requestFocus(this.focusKey(candidate));
+            this.getUIContext().getFocusController().requestFocus(sharedDownloadFocusKey(candidate));
             return;
           } catch (_missingOrDisabledTarget) {}
         }
@@ -1917,333 +571,42 @@ export struct SharedDownloadPage {
     } catch (_unmounted) {}
   }
 
-  private onSheetChanged(): void {
-    this.searchInputRevision += 1;
-    this.invalidateReadingHandoff();
-    this.sheetOpeningGeneration += 1;
-    const visible = this.sheet.length > 0;
-    if (visible !== this.sheetWasVisible) {
-      this.sheetWasVisible = visible;
-      this.sheetMaskReady = false;
-      if (visible) {
-        this.sheetActorAttachment = ++this.sheetActorGeneration;
-        this.sheetActorOwner = this.presentationGeneration;
-        this.sheetActors = [];
-        this.sheetExitPending = false;
-      } else {
-        this.sheetExitPending = this.sheetActors.length > 0;
-        if (!this.sheetExitPending) this.retireSheetActors();
-      }
-    }
-    this.syncOverlayChrome();
-    this.retireEmptyBookSelection();
-    this.syncOverlayFocus();
-    if (READER_LAYOUT_DEBUG_BUILD) readerLayoutInvariantChanged();
-  }
-
-  private onConfirmationChanged(): void {
-    this.searchInputRevision += 1;
-    this.invalidateReadingHandoff();
-    this.confirmationGeneration += 1;
-    const returnToCleanup = this.previousConfirmation === 'cleanup' &&
-      this.confirmation.length === 0 && this.sheet === 'settings';
-    this.previousConfirmation = this.confirmation;
-    this.syncOverlayChrome();
-    this.syncOverlayFocus(returnToCleanup ? 'storage-clean' : '');
-  }
-
-  private sheetActorIsCurrent(attachment: number, ownerGeneration: number): boolean {
-    return attachment > 0 && attachment === this.sheetActorAttachment && ownerGeneration === this.sheetActorOwner &&
-      this.presentationIsCurrent(ownerGeneration);
-  }
-
-  private onSheetActorAppeared(attachment: number, ownerGeneration: number, part: string, opening: number = -1): void {
-    if (!this.sheetActorIsCurrent(attachment, ownerGeneration) || this.sheet.length === 0 || this.sheetExitPending ||
-      (opening >= 0 && opening !== this.sheetOpeningGeneration) || this.sheetActors.includes(part)) return;
-    this.sheetActors = [...this.sheetActors, part];
-  }
-
-  private onSheetActorTransitionFinished(attachment: number, ownerGeneration: number, part: string, transitionIn: boolean): void {
-    if (!this.sheetActorIsCurrent(attachment, ownerGeneration) || !this.sheetActors.includes(part)) return;
-    if (transitionIn) {
-      if (part === 'scrim' && this.sheet.length > 0) this.sheetMaskReady = true;
-      return;
-    }
-    this.sheetActors = this.sheetActors.filter((candidate: string): boolean => candidate !== part);
-    if (this.sheetExitPending && this.sheetActors.length === 0) this.onSheetExitFinished(attachment, ownerGeneration);
-  }
-
-  private onSheetExitFinished(attachment: number, ownerGeneration: number): void {
-    if (!this.sheetActorIsCurrent(attachment, ownerGeneration) || !this.sheetExitPending ||
-      this.sheet.length > 0 || this.sheetActors.length > 0) return;
-    this.retireSheetActors();
-    this.sheetExitPending = false;
-    this.syncOverlayChrome();
-    this.retireEmptyBookSelection();
-    this.syncOverlayFocus();
-    if (READER_LAYOUT_DEBUG_BUILD) readerLayoutInvariantChanged();
-  }
-
-  private retireSheetActors(): void {
-    this.sheetActorGeneration += 1;
-    this.sheetActorAttachment = 0;
-    this.sheetActorOwner = -1;
-    this.sheetActors = [];
-  }
-
-  private syncOverlayChrome(): void {
-    if (!this.presentationIsCurrent()) return;
-    const identity = this.mountedIdentity;
-    const generation = this.presentationGeneration;
-    const requestGeneration = ++this.overlayChromeRequestGeneration;
-    // sheet -> confirmation is one visible overlay transition. Read final
-    // state after synchronous Watch callbacks, without exposing App chrome.
-    void Promise.resolve().then((): void => {
-      if (!this.presentationIsCurrent(generation) || this.mountedIdentity !== identity ||
-        requestGeneration !== this.overlayChromeRequestGeneration) return;
-      if (this.sheetExitPending && this.sheet.length === 0 && this.confirmation.length === 0) return;
-      if (this.sheet.length > 0 || this.confirmation.length > 0) {
-        ReaderWindowCoordinator.requestOverlayChrome(this.overlayWindowChrome());
-        this.overlayChromeClaimed = true;
-      } else if (this.overlayChromeClaimed) {
-        ReaderWindowCoordinator.requestAppChrome();
-        this.overlayChromeClaimed = false;
-      }
-    });
-  }
-
-  private overlayWindowChrome(): ReaderWindowChromeStyle {
-    const scheme = this.appThemeScheme;
-    const hasSheet = this.sheet.length > 0;
-    const operationsSheet = this.isOperationsSheet();
-    const sheetVisible = hasSheet && (!operationsSheet || this.confirmation.length === 0);
-    const scrim = resolveReaderModalScrimSpec(this.appearancePreferences, scheme,
-      hasSheet ? this.sheetScrimColor() : downloadVisualColor('scrim', scheme),
-      hasSheet && this.operationsSheetUsesNativeMaterial()).scrimColor;
-    const pageInk = downloadVisualColor('ink', scheme);
-    const statusPaper = readerScrimmedOpaqueColor(downloadVisualColor('paper', scheme), scrim);
-    const statusInk = readerScrimmedOpaqueColor(pageInk, scrim);
-    let navigationPaper = statusPaper;
-    let navigationInk = statusInk;
-    if (sheetVisible) {
-      const drawer = resolveDrawerSpec('reader-action-sheet');
-      const operationsRole = isReaderRealtimeBlurEnabled(this.appearancePreferences) ? drawer.surfaceRole : 'TOK_SURFACE_SOLID';
-      navigationPaper = readerAppColor(operationsSheet ? operationsRole : 'app.surface.menuSolid', scheme);
-      navigationInk = operationsSheet ? readerAppColor(drawer.inkRole, scheme) : pageInk;
-    }
-    const style = new ReaderWindowChromeStyle(statusPaper, scheme === 'night' ? 'light' : 'dark', statusInk);
-    style.navigationUnderlayColor = navigationPaper;
-    style.navigationContentColor = navigationInk;
-    return style;
-  }
-
   private onPresentationIdentityChanged(): void {
-    this.cancelListScrollRestore();
-    this.cancelChapterScrollRestore();
+    this.bookList.cancelListScrollRestore();
+    this.chapterList.cancelChapterScrollRestore();
     if (!this.mounted || this.presentationIdentity === this.mountedIdentity) return;
     this.presentationGeneration += 1;
-    this.cancelManagingScroll();
-    this.overlayChromeRequestGeneration += 1;
-    this.retireSheetActors();
+    this.bookList.cancelManagingScroll();
+    this.sheets.retireAttachment();
     this.focusGeneration += 1;
-    this.readingReturnFocus = undefined;
-    this.sheetMaskReady = false;
-    this.sheetExitPending = false;
-    this.closeSelectionAfterRemoval = false;
-    this.chapterLayoutReady = false;
-    this.chapterScrollRestorePending = false;
-    this.chapterScrollRestoreScheduled = false;
-    if (this.overlayChromeClaimed) ReaderWindowCoordinator.requestAppChrome();
-    this.overlayChromeClaimed = false;
+    this.chapterList.retireReadingReturnFocus();
+    this.sheets.resetExitPaint(false);
+    this.bookList.resetRemovalClosure();
+    this.chapterList.discardMeasuredPosition();
+    this.chapterList.releaseOldFontFrame();
+    this.sheets.releaseReplacedChrome();
   }
 
-  /** Retained SDK observers resolve their DTO when they execute. A removed
-   * identity may finish its last paint, but cannot deliver an event. */
-  private bookGetter(snapshot: DownloadBookView): () => DownloadBookView {
-    return (): DownloadBookView => this.currentBook(snapshot);
-  }
-  private currentBook(snapshot: DownloadBookView): DownloadBookView {
-    return this.findCurrentBook(snapshot) ?? snapshot;
-  }
-  private findCurrentBook(snapshot: DownloadBookView): DownloadBookView | undefined {
-    return this.books.find((current: DownloadBookView): boolean => current.key === snapshot.key &&
-      current.sourceId === snapshot.sourceId && current.bookId === snapshot.bookId);
-  }
-  private chapterGetter(book: () => DownloadBookView, snapshot: DownloadChapterView): () => DownloadChapterView {
-    return (): DownloadChapterView => this.currentChapterView(book(), snapshot);
-  }
-  private currentChapterView(book: DownloadBookView, snapshot: DownloadChapterView): DownloadChapterView {
-    return this.findCurrentBook(book)?.chapters.find((current: DownloadChapterView): boolean =>
-      current.key === snapshot.key && current.chapterId === snapshot.chapterId) ?? snapshot;
-  }
-  private eventBook(book: () => DownloadBookView, generation: number = this.presentationGeneration): DownloadBookView | undefined {
-    return this.uiInputIsCurrent(generation) && !this.modalBlocking() ? this.findCurrentBook(book()) : undefined;
-  }
-  private eventChapter(book: () => DownloadBookView, chapter: () => DownloadChapterView,
-    generation: number = this.presentationGeneration): DownloadChapterView | undefined {
-    const currentBook = this.eventBook(book, generation);
-    if (currentBook === undefined || currentBook.key !== this.detailKey) return undefined;
-    const expected = chapter();
-    return currentBook.chapters.find((current: DownloadChapterView): boolean =>
-      current.key === expected.key && current.chapterId === expected.chapterId);
-  }
-
-  private clearFilters(ownerGeneration: number = this.presentationGeneration): void {
-    if (!this.uiInputIsCurrent(ownerGeneration) || this.modalBlocking()) return;
-    this.cancelListScrollRestore();
-    this.cancelChapterScrollRestore();
-    this.cancelManagingScroll();
-    this.query = ''; this.bookType = 'all'; this.stateFilter = 'all'; this.sourceFilter = 'all';
-    this.listScroller.scrollTo({ xOffset: 0, yOffset: 0 });
-    this.publishViewState();
-  }
-
-  private filters(): SharedDownloadFilters {
-    return { query: this.query, type: this.bookType as 'all' | 'novel' | 'manga',
-      state: this.stateFilter as 'all' | 'downloading' | 'downloaded' | 'none', sourceId: this.sourceFilter,
-      sort: this.sortField as 'recent' | 'title' | 'progress' | 'size', direction: this.sortDirection as 'asc' | 'desc' };
-  }
-  private visibleBooks(): DownloadBookView[] { return filterDownloadBooks(this.books, this.filters()); }
-  private detail(): DownloadBookView | undefined { return this.books.find((book: DownloadBookView): boolean => book.key === this.detailKey); }
-  private actionBooks(): DownloadBookView[] {
-    if (!this.managing || this.detailKey.length > 0)
-      return this.books.filter((book: DownloadBookView): boolean => this.actionBookKeys.includes(book.key));
-    const books = this.visibleSelectedBooks().filter((book: DownloadBookView): boolean => this.actionBookKeys.includes(book.key));
-    return books.length === this.actionBookKeys.length ? books : [];
-  }
-
-  private visibleSelectedBooks(): DownloadBookView[] {
-    const selected = new Set<string>(this.selectedBookKeys);
-    return this.visibleBooks().filter((book: DownloadBookView): boolean => selected.has(book.key));
-  }
-
-  private downloadTasksEmpty(): boolean {
-    return !this.loading && this.error.length === 0 && downloadsProvenEmpty(this.books);
-  }
-
-  private retireEmptyBookSelection(): void {
-    if (!this.closeSelectionAfterRemoval || !this.managing || this.detailKey.length > 0 ||
-      !this.downloadTasksEmpty() || this.modalBlocking()) return;
-    this.setManaging(false);
-    if (!this.managing) this.closeSelectionAfterRemoval = false;
-  }
-  private unit(book: DownloadBookView | undefined): string {
-    return book?.contentKind === 'novel' ? '章' : book?.contentKind === 'manga' ? '个条目' : '';
-  }
-  private authorSource(book: DownloadBookView): string {
-    return [book.author, book.sourceLabel].filter((value: string): boolean => value.trim().length > 0).join(' · ');
-  }
-  private downloadCount(book: DownloadBookView, secondary: boolean): string {
-    if (book.downloadedChapters === undefined) return '';
-    if (secondary || book.totalChapters === undefined) return `已下载 ${book.downloadedChapters}${this.unit(book)}`;
-    return `已下载 ${book.downloadedChapters} / ${book.totalChapters} ${this.unit(book)}`;
-  }
-  private totalBytesLabel(): string {
-    const known = this.books.filter((book: DownloadBookView): boolean => book.bytes !== undefined);
-    if (known.length !== this.books.length) return '已下载内容';
-    const bytes = known.reduce((sum: number, book: DownloadBookView): number => sum + (book.bytes ?? 0), 0);
-    if (bytes >= 1024 * 1024 * 1024) return `已下载 ${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-    return `已下载 ${Math.round(bytes / (1024 * 1024))} MB`;
-  }
-  private sortLabel(): string { return this.sortChoices().find((choice: DownloadChoice): boolean => choice.id === this.sortField)?.label ?? '最近阅读'; }
-  private filterLabel(): string {
-    const count = Number(this.stateFilter !== 'all') + Number(this.sourceFilter !== 'all'); return count > 0 ? `筛选 · ${count}` : '筛选';
-  }
-  private stateChoices(): DownloadChoice[] {
-    return [{ id: 'all', label: '全部状态' }, { id: 'downloading', label: '下载中' }, { id: 'downloaded', label: '已下载' }, { id: 'none', label: '未下载' }];
-  }
-  private sortChoices(): DownloadChoice[] {
-    return [{ id: 'recent', label: '最近阅读' }, { id: 'title', label: '书名' }, { id: 'progress', label: '下载比例' }, { id: 'size', label: '下载大小' }];
-  }
-  private sourceFilterLabel(): string {
-    return this.filterSourceOptions.find((choice: DownloadChoice): boolean => choice.id === this.sourceFilter)?.label ?? '全部书源';
-  }
-  private sourceChoices(): DownloadChoice[] {
-    const names = new Map<string, string>();
-    for (const book of this.books) {
-      if (book.sourceId !== 'all' && !names.has(book.sourceId)) names.set(book.sourceId, book.sourceLabel || book.sourceId);
-    }
-    // ReaderInlineSelect reports the displayed value. Keep it unique for
-    // this opening even when sources have identical user-facing names.
-    const choices: DownloadChoice[] = [{ id: 'all', label: '全部书源' }];
-    const assigned = new Set<string>(['全部书源']);
-    const reserved = new Set<string>(names.values());
-    names.forEach((name: string, id: string): void => {
-      let label = name;
-      let ordinal = 2;
-      if (assigned.has(label)) {
-        do {
-          label = `${name} (${ordinal})`;
-          ordinal += 1;
-        } while (assigned.has(label) || reserved.has(label));
-      }
-      assigned.add(label);
-      choices.push({ id, label });
-    });
-    return choices;
-  }
-  private chapterIsRunning(chapter: DownloadChapterView): boolean {
-    return !chapter.localComplete && (chapter.queueState === 'inProgress' || chapter.queueState === 'queued');
-  }
-  private chapterButtonLabel(chapter: DownloadChapterView): string {
-    if (chapter.localComplete) return '阅读';
-    if (this.chapterIsRunning(chapter)) return '暂停';
-    if (chapter.queueState === 'failed') return '重试';
-    if (chapter.queueState === 'paused') return '继续';
-    return chapter.queueState === 'unknown' ? '' : '下载';
-  }
-  private statusActionLabel(book: DownloadBookView): string {
-    const action = book.statusAction;
-    return action === 'pause' ? '暂停' : action === 'retry' ? '重试' : book.stateLabel;
-  }
-  private statusActionAccessibility(book: DownloadBookView): string {
-    const actionLabel = this.statusActionLabel(book);
-    const status = book.stateLabel === actionLabel ? actionLabel : `${book.stateLabel}，${actionLabel}`;
-    return `${book.title}，${status}`;
-  }
-  private statusIcon(book: DownloadBookView): Resource {
-    const action = book.statusAction;
-    if (action === 'completed') return this.visualIcon('check');
-    if (action === 'pause' || action === 'retry') return this.visualIcon(action);
-    if (book.chapters.some((chapter: DownloadChapterView): boolean => chapter.queueState === 'paused' && !chapter.localComplete)) return this.visualIcon('play');
-    return this.visualIcon('download');
-  }
-  private visualIcon(name: string): Resource {
-    if (name === 'filter') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_filter_theme_night') : $r('app.media.download_visual_filter');
-    if (name === 'storage') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_storage_theme_night') : $r('app.media.download_visual_storage');
-    if (name === 'trash') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_trash_theme_night') : $r('app.media.download_visual_trash');
-    if (name === 'trash_disabled') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_trash_disabled_theme_night') : $r('app.media.download_visual_trash_disabled');
-    if (name === 'more') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_more_theme_night') : $r('app.media.download_visual_more');
-    if (name === 'close') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_close_theme_night') : $r('app.media.download_visual_close');
-    if (name === 'download') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_download_theme_night') : $r('app.media.download_visual_download');
-    if (name === 'pause') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_pause_theme_night') : $r('app.media.download_visual_pause');
-    if (name === 'play') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_play_theme_night') : $r('app.media.download_visual_play');
-    if (name === 'retry') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_retry_theme_night') : $r('app.media.download_visual_retry');
-    if (name === 'check') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_check_theme_night') : $r('app.media.download_visual_check');
-    if (name === 'chevron') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_chevron_theme_night') : $r('app.media.download_visual_chevron');
-    if (name === 'empty') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_empty_theme_night') : $r('app.media.download_visual_empty');
-    if (name === 'sort_asc') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_sort_asc_theme_night') : $r('app.media.download_visual_sort_asc');
-    if (name === 'sort_desc') return this.appThemeScheme === 'night' ? $r('app.media.download_visual_sort_desc_theme_night') : $r('app.media.download_visual_sort_desc');
-    return this.appThemeScheme === 'night' ? $r('app.media.download_visual_more_theme_night') : $r('app.media.download_visual_more');
-  }
   private openBook(snapshot: DownloadBookView, generation: number = this.presentationGeneration): void {
-    const book = this.eventBook(this.bookGetter(snapshot), generation);
+    const book = this.bookList.eventBook(this.bookList.bookGetter(snapshot), generation);
     if (book === undefined) return;
-    this.cancelListScrollRestore();
-    this.cancelChapterScrollRestore();
-    if (this.managing) { this.toggleBook(book.key, !this.selectedBookKeys.includes(book.key)); return; }
-    this.captureListOffset();
-    this.cancelManagingScroll();
-    this.chapterOffset = 0; this.chapterLayoutReady = false; this.chapterScrollRestorePending = false;
-    this.detailKey = book.key; this.selectedChapters = new Map<number, string>(); this.onOpenBook(book);
+    this.bookList.cancelListScrollRestore();
+    this.chapterList.cancelChapterScrollRestore();
+    if (this.managing) { this.bookList.toggleBookSelection(book.key); return; }
+    this.bookList.captureListOffset();
+    this.bookList.cancelManagingScroll();
+    this.chapterList.initializePosition(0);
+    this.detailKey = book.key; this.chapterList.resetSelection(); this.onOpenBook(book);
   }
+
   private back(): void {
     if (!this.uiInputIsCurrent()) return;
     this.onBack();
   }
+
   private consumeBack(): boolean {
     if (!this.presentationIsCurrent()) return false;
-    this.readingReturnFocus = undefined;
+    this.chapterList.retireReadingReturnFocus();
     const generation = this.presentationGeneration;
     if (consumeReaderControlKeyboardBack(this.currentMetrics(), {
       hideTextInput: (): Promise<void> => inputMethod.getController().hideTextInput(),
@@ -2255,68 +618,49 @@ export struct SharedDownloadPage {
     })) return true;
     if (this.confirmation.length > 0) { this.confirmation = ''; return true; }
     if (this.sheet.length > 0) { this.sheet = ''; return true; }
-    if (this.sheetExitPending) return true;
+    if (this.sheetsPaint.sheetExitPending) return true;
     if (this.managing) { this.setManaging(false); return true; }
     if (this.detailKey.length > 0) {
       const trigger = 'book-title:' + this.detailKey;
-      const offset = this.listOffset;
-      this.cancelManagingScroll();
-      this.cancelChapterScrollRestore();
-      this.chapterLayoutReady = false; this.chapterScrollRestorePending = false;
-      this.detailKey = ''; this.selectedChapters = new Map<number, string>();
-      this.restoreListOffset(offset, trigger);
+      const offset = this.bookList.listOffset;
+      this.bookList.cancelManagingScroll();
+      this.chapterList.cancelChapterScrollRestore();
+      this.chapterList.discardMeasuredPosition();
+      this.detailKey = ''; this.chapterList.resetSelection();
+      this.bookList.restoreListOffset(offset, trigger);
       return true;
     }
     this.publishViewState();
     return false;
   }
-  private toggleBook(key: string, selected: boolean): void {
-    if (!this.visibleBooks().some((book: DownloadBookView): boolean => book.key === key)) return;
-    this.selectedBookKeys = selected ? this.selectedBookKeys.concat([key]).filter((value: string, index: number, all: string[]): boolean => all.indexOf(value) === index)
-      : this.selectedBookKeys.filter((value: string): boolean => value !== key);
-  }
+
   private canEnterManaging(): boolean {
-    const book = this.detail();
+    const book = this.bookList.detail();
     return book === undefined ? this.books.length > 0 :
       book.projectionStatus === 'ready' && book.chapters.some((chapter: DownloadChapterView): boolean =>
         chapter.navigable && chapter.chapterId.length > 0);
   }
+
   private setManaging(managing: boolean, triggerKey: string = 'manage'): void {
-    if (this.managing === managing || !this.presentationIsCurrent() || !this.fontsReady || this.modalBlocking() ||
+    if (this.managing === managing || !this.presentationIsCurrent() || !this.fontsReady || this.sheets.modalBlocking() ||
       (managing && !this.canEnterManaging())) return;
-    this.cancelListScrollRestore();
-    this.cancelChapterScrollRestore();
-    const retained = this.managingScrollAnchor ?? this.browseScrollBeforeManaging;
-    const offset = retained !== undefined && this.managingScrollIsCurrent(retained) ? retained.offset :
-      this.detailKey.length > 0 ? this.captureChapterOffset() : this.captureListOffset();
-    this.cancelManagingScroll();
-    this.searchInputRevision += 1;
-    this.invalidateReadingHandoff();
+    this.bookList.cancelListScrollRestore();
+    this.chapterList.cancelChapterScrollRestore();
+    const offset = this.bookList.captureManagingOffset();
+    this.bookList.cancelManagingScroll();
+    this.bookList.retireSearchInput();
+    this.chapterList.invalidateReadingHandoff();
     this.managementGeneration += 1;
     this.managing = managing;
-    this.closeSelectionAfterRemoval = false;
+    this.bookList.resetRemovalClosure();
     if (managing) {
       this.managingTriggerKey = triggerKey;
       if (triggerKey === 'manage') this.focusGeneration += 1;
       else this.syncOverlayFocus('select-all', managing);
     }
-    this.selectedBookKeys = [];
-    this.selectedChapters = new Map<number, string>();
-    // An unbound controller has no proven position. Do not invent a zero
-    // anchor and scroll a newly attached List to it later.
-    if (offset !== undefined) {
-      const anchor: SharedDownloadScrollAnchor = { detailKey: this.detailKey, offset, managing,
-        identity: this.mountedIdentity, presentation: this.presentationGeneration,
-        fonts: this.fontPreparationGeneration, windowRevision: this.readerWindowMetricsRevision,
-        viewportWidth: this.pageViewportWidth(), viewportHeight: this.availableHeight() };
-      // The management List can be shorter and clamp this offset. Keep the
-      // browsing position until real scrolling or a new view invalidates it.
-      if (managing) this.browseScrollBeforeManaging = anchor;
-      this.managingScrollAnchor = anchor;
-      this.managingScrollRestore = anchor;
-      this.managingDockMeasured = false;
-      this.restoreManagingScroll();
-    }
+    this.bookList.resetSelection();
+    this.chapterList.resetSelection();
+    this.bookList.restoreManagementPosition(offset, managing);
     if (!managing) {
       const returnFocus = this.managingTriggerKey;
       this.managingTriggerKey = 'manage';
@@ -2324,565 +668,82 @@ export struct SharedDownloadPage {
     }
   }
 
-  private managingScrollIsCurrent(anchor: SharedDownloadScrollAnchor): boolean {
-    return this.presentationIsCurrent(anchor.presentation) && this.fontsReady &&
-      this.mountedIdentity === anchor.identity && this.fontPreparationGeneration === anchor.fonts &&
-      this.readerWindowMetricsRevision === anchor.windowRevision && this.pageViewportWidth() === anchor.viewportWidth &&
-      this.availableHeight() === anchor.viewportHeight && this.managing === anchor.managing &&
-      this.detailKey === anchor.detailKey && (anchor.detailKey.length === 0 || this.detail() !== undefined);
-  }
-
-  private restoreManagingScroll(): void {
-    const pending = this.managingScrollRestore;
-    if (pending === undefined) return;
-    if (!this.managingScrollIsCurrent(pending)) { this.cancelManagingScroll(); return; }
-    this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame(this.getUIContext(), (): void => {
-      if (this.managingScrollRestore !== pending) return;
-      if (!this.managingScrollIsCurrent(pending)) { this.cancelManagingScroll(); return; }
-      try {
-        const scroller = pending.detailKey.length > 0 ? this.chapterScroller : this.listScroller;
-        scroller.scrollTo({ xOffset: 0, yOffset: pending.offset });
-      } catch (_error) {
-        this.cancelManagingScroll();
-        return;
-      }
-      this.managingScrollRestore = undefined;
-      if (this.managingDockMeasured || !this.fixedSelectionDockVisible()) this.managingScrollAnchor = undefined;
-    }));
-  }
-
-  private cancelManagingScroll(retireBrowseAnchor: boolean = true): void {
-    this.managingScrollRestore = undefined;
-    this.managingScrollAnchor = undefined;
-    if (retireBrowseAnchor) this.browseScrollBeforeManaging = undefined;
-  }
-
-  private onListWillScroll(offset: number, source: ScrollSource, presentation: number, detailKey: string): void {
-    if (!Number.isFinite(offset) || offset === 0 || !this.presentationIsCurrent(presentation) ||
-      this.detailKey !== detailKey) return;
-    if (source === ScrollSource.DRAG || source === ScrollSource.FLING || source === ScrollSource.OTHER_USER_INPUT ||
-      source === ScrollSource.SCROLL_BAR || source === ScrollSource.SCROLL_BAR_FLING) this.cancelManagingScroll();
-  }
-
-  private onListTouch(event: TouchEvent): void {
-    if (event.type === TouchType.Down) {
-      this.cancelListScrollRestore();
-      this.cancelManagingScroll(false);
-      this.cancelChapterScrollRestore();
-      this.readingReturnFocus = undefined;
-    }
-  }
-
-  private onListFilterChanged(): void {
-    // Keyboard edits and overlay selections do not necessarily touch the
-    // List. Their new content owns the viewport just like a direct gesture.
-    this.cancelListScrollRestore();
-    this.cancelChapterScrollRestore();
-    this.cancelManagingScroll();
-    this.publishViewState();
-  }
-
-  private captureChapterOffset(): number | undefined {
-    if (this.chapterScrollRestorePending) return undefined;
-    try {
-      const offset = this.chapterScroller.currentOffset();
-      if (offset !== undefined && Number.isFinite(offset.yOffset)) {
-        this.chapterOffset = offset.yOffset;
-        return offset.yOffset;
-      }
-    } catch (_error) {
-      // The controller can detach while this page changes its content branch.
-    }
-    return undefined;
-  }
-  private chapterSelected(chapter: DownloadChapterView): boolean {
-    return this.selectedChapters.get(chapter.index) === chapter.chapterId;
-  }
-  private toggleChapter(chapter: DownloadChapterView, selected: boolean): void {
-    if (chapter.chapterId.length === 0 || this.chapterSelected(chapter) === selected) return;
-    const next = new Map<number, string>(this.selectedChapters);
-    if (selected) next.set(chapter.index, chapter.chapterId);
-    else next.delete(chapter.index);
-    this.selectedChapters = next;
-  }
-  private selectChapters(chapters: DownloadChapterView[], keepExisting: boolean = false): void {
-    const next = keepExisting ? new Map<number, string>(this.selectedChapters) : new Map<number, string>();
-    for (const chapter of chapters) {
-      if (chapter.navigable && chapter.chapterId.length > 0) next.set(chapter.index, chapter.chapterId);
-    }
-    this.selectedChapters = next;
-  }
-  private groupChapters(book: DownloadBookView, group: DownloadChapterView): DownloadChapterView[] {
-    const offset = book.chapters.findIndex((chapter: DownloadChapterView): boolean => chapter.key === group.key);
-    const chapters: DownloadChapterView[] = [];
-    for (let index = offset + 1; index < book.chapters.length; index += 1) {
-      const chapter = book.chapters[index];
-      if (!chapter.navigable && (chapter.level ?? 0) <= (group.level ?? 0)) break;
-      if (chapter.navigable) chapters.push(chapter);
-    }
-    return chapters;
-  }
-  private currentChapter(): DownloadChapterView | undefined {
-    const book = this.detail(); if (book === undefined) return undefined;
-    return this.currentChapterForBook(book);
-  }
-  private currentChapterForBook(book: DownloadBookView): DownloadChapterView | undefined {
-    const index = currentDownloadReadingChapterIndex(book);
-    return index === undefined ? undefined : book.chapters.find((chapter: DownloadChapterView): boolean => chapter.navigable && chapter.index === index);
-  }
-  private locateCurrent(): void {
-    const chapter = this.currentChapter(); const book = this.detail(); if (chapter === undefined || book === undefined) return;
-    const index = book.chapters.findIndex((item: DownloadChapterView): boolean => item.key === chapter.key);
-    if (index < 0) return;
-    this.cancelChapterScrollRestore();
-    this.cancelManagingScroll();
-    // The embedded page puts its heading outside the native list.
-    this.chapterScroller.scrollToIndex((this.embeddedWide ? 2 : 3) + index, !this.reduceMotion, ScrollAlign.CENTER);
-  }
   private allSelected(): boolean {
-    const book = this.detail();
+    const book = this.bookList.detail();
     if (book === undefined) {
-      const visible = this.visibleBooks().length;
-      return visible > 0 && this.visibleSelectedBooks().length === visible;
+      const visible = this.bookList.visibleBooks().length;
+      return visible > 0 && this.bookList.visibleSelectedBooks().length === visible;
     }
     const chapters = book.chapters.filter((chapter: DownloadChapterView): boolean => chapter.navigable && chapter.chapterId.length > 0);
-    return chapters.length > 0 && chapters.every((chapter: DownloadChapterView): boolean => this.chapterSelected(chapter));
+    return chapters.length > 0 && chapters.every((chapter: DownloadChapterView): boolean => this.chapterList.chapterSelected(chapter));
   }
+
   private manageSelectAllAction(management: number): () => void {
     const presentation = this.presentationGeneration;
     const bookKey = this.detailKey;
     return (): void => {
       if (!this.uiInputIsCurrent(presentation) || !this.managing || management !== this.managementGeneration ||
-        bookKey !== this.detailKey || this.modalBlocking()) return;
+        bookKey !== this.detailKey || this.sheets.modalBlocking()) return;
       this.toggleAll();
     };
   }
 
   private toggleAll(): void {
-    const book = this.detail();
-    if (book !== undefined) this.selectChapters(this.allSelected() ? [] : book.chapters);
-    else {
-      const visible = this.visibleBooks().map((item: DownloadBookView): string => item.key);
-      const matching = new Set<string>(visible);
-      const hidden = this.selectedBookKeys.filter((key: string): boolean => !matching.has(key));
-      this.selectedBookKeys = this.allSelected() ? hidden : hidden.concat(visible);
-    }
+    const book = this.bookList.detail();
+    if (book !== undefined) this.chapterList.selectChapters(this.allSelected() ? [] : book.chapters);
+    else this.bookList.toggleVisibleSelection(this.allSelected());
   }
+
   private selectionLabel(): string {
-    const book = this.detail();
-    if (book !== undefined) return this.managing ? `已选 ${this.selectedChapters.size}${this.unit(book)}` : this.downloadCount(book, false);
-    return `已选 ${this.visibleSelectedBooks().length} / ${this.visibleBooks().length} 本书`;
-  }
-  private captureSelection(chapters: boolean = false): boolean {
-    const book = this.detail();
-    const visible = chapters ? [] : this.visibleSelectedBooks().map((entry: DownloadBookView): string => entry.key);
-    if (chapters ? book === undefined || this.selectedChapters.size === 0 : this.detailKey.length > 0 || visible.length === 0) return false;
-    this.actionBookKeys = book === undefined ? visible : [book.key];
-    this.actionChapters = chapters ? this.selectedChapterProofs() : [];
-    return true;
-  }
-
-  private selectedQueueTargets(resume: boolean): SharedDownloadUiBookTarget[] {
-    const targets: SharedDownloadUiBookTarget[] = [];
-    for (const book of this.visibleSelectedBooks()) {
-      if (book.projectionStatus !== 'ready') continue;
-      const chapters = book.chapters.filter((chapter: DownloadChapterView): boolean =>
-        chapter.navigable && chapter.chapterId.length > 0 && !chapter.localComplete &&
-        (resume ? chapter.queueState === 'paused' || chapter.queueState === 'failed' : this.chapterIsRunning(chapter)));
-      if (chapters.length === 0) continue;
-      targets.push({ sourceId: book.sourceId, bookId: book.bookId,
-        chapterIndices: chapters.map((chapter: DownloadChapterView): number => chapter.index),
-        expectedChapters: chapters.map((chapter: DownloadChapterView): SharedDownloadExpectedChapter => this.chapterProof(chapter)) });
-    }
-    return targets;
-  }
-
-  private selectedBooksCanBeRemoved(): boolean {
-    const books = this.visibleSelectedBooks();
-    return this.actionAvailable('cancel', books, []) || this.actionAvailable('deleteLocal', books, []);
-  }
-
-  private removalActionBooks(action: 'cancel' | 'deleteLocal'): DownloadBookView[] {
-    const books = this.actionBooks().filter((book: DownloadBookView): boolean =>
-      action !== 'deleteLocal' || book.sourceId !== 'local');
-    if (!this.managing || this.detailKey.length > 0) return books;
-    return books.filter((book: DownloadBookView): boolean => this.actionAvailable(action, [book], []));
-  }
-
-  private sendSelectedQueueAction(resume: boolean): void {
-    if (!this.uiInputIsCurrent() || !this.managing || this.detailKey.length > 0 || this.modalBlocking()) return;
-    const books = this.selectedQueueTargets(resume);
-    if (books.length > 0) this.onIntent({ action: resume ? 'download' : 'pause', scope: 'books', books });
-  }
-  private selectedChapterProofs(): SharedDownloadExpectedChapter[] {
-    const proofs: SharedDownloadExpectedChapter[] = [];
-    this.selectedChapters.forEach((chapterId: string, chapterIndex: number): void => {
-      proofs.push({ chapterIndex, chapterId });
-    });
-    return proofs;
-  }
-  private selectedChapterActionAvailable(action: SharedDownloadUiAction): boolean {
-    const book = this.detail();
-    return book !== undefined && this.selectedChapters.size > 0 &&
-      this.actionAvailable(action, [book], this.selectedChapterProofs());
-  }
-  private chapterProof(chapter: DownloadChapterView): SharedDownloadExpectedChapter {
-    return { chapterIndex: chapter.index, chapterId: chapter.chapterId };
-  }
-  private actionChapterRows(book: DownloadBookView, proofs: SharedDownloadExpectedChapter[] = this.actionChapters): DownloadChapterView[] {
-    const expected = new Map<number, string>();
-    proofs.forEach((chapter: SharedDownloadExpectedChapter): void => {
-      if (chapter.chapterId.length > 0) expected.set(chapter.chapterIndex, chapter.chapterId);
-    });
-    return book.chapters.filter((chapter: DownloadChapterView): boolean => chapter.navigable &&
-      (proofs.length === 0 || expected.get(chapter.index) === chapter.chapterId));
-  }
-  private selectedIsRunning(): boolean {
-    return this.actionBooks().some((book: DownloadBookView): boolean =>
-      this.actionChapterRows(book).some((chapter: DownloadChapterView): boolean => this.chapterIsRunning(chapter)));
-  }
-  private actionAvailable(action: SharedDownloadUiAction, books: DownloadBookView[] = this.actionBooks(),
-    proofs: SharedDownloadExpectedChapter[] = this.actionChapters): boolean {
-    return books.some((book: DownloadBookView): boolean => {
-      if (book.projectionStatus !== 'ready' || (action === 'deleteLocal' && book.sourceId === 'local')) return false;
-      const chapters = this.actionChapterRows(book, proofs);
-      if (proofs.length > 0 && chapters.length !== proofs.length) return false;
-      if (action === 'download') return chapters.some((chapter: DownloadChapterView): boolean => !chapter.localComplete && chapter.queueState !== 'unknown');
-      if (action === 'pause') return chapters.some((chapter: DownloadChapterView): boolean => this.chapterIsRunning(chapter));
-      if (action === 'cancel') return chapters.some((chapter: DownloadChapterView): boolean => this.chapterIsRunning(chapter) || chapter.queueState === 'paused' || chapter.queueState === 'failed');
-      return chapters.some((chapter: DownloadChapterView): boolean => chapter.localComplete || (chapter.cachedBytes ?? 0) > 0);
-    });
-  }
-  private sheetTitle(): string {
-    if (this.sheet === 'filter') return '筛选'; if (this.sheet === 'sort') return '排序';
-    if (this.sheet === 'settings') return '存储管理'; if (this.sheet === 'range') return '下载范围';
-    return this.sheet === 'chapter-actions' ? `章节操作 · 已选 ${this.actionChapters.length}${this.unit(this.actionBooks()[0])}`
-      : this.actionBooks().length === 1 ? this.actionBooks()[0].title : `书籍操作 · 已选 ${this.actionBooks().length} 本`;
-  }
-  private showReadTarget(snapshot: DownloadBookView, chapterSnapshot?: DownloadChapterView,
-    generation: number = this.presentationGeneration, control: SharedDownloadReadingControl = 'title'): void {
-    const book = this.eventBook(this.bookGetter(snapshot), generation);
-    if (book === undefined || this.detailKey !== book.key || this.managing || this.covered || !this.appForeground) return;
-    const chapter = chapterSnapshot === undefined ? undefined : book.chapters.find((current: DownloadChapterView): boolean =>
-      current.key === chapterSnapshot.key && current.chapterId === chapterSnapshot.chapterId);
-    if (chapterSnapshot !== undefined && chapter === undefined) return;
-    const target = describeDownloadReadingTarget(book, chapter);
-    const revision = ++this.readingHandoffRevision;
-    this.publishViewState();
-    this.onReadTarget(target, (): boolean => this.presentationIsCurrent(generation) &&
-      revision === this.readingHandoffRevision && this.detailKey === book.key &&
-      !this.managing && !this.modalBlocking() && !this.covered && this.appForeground &&
-      this.findCurrentBook(book)?.chapters.some((row: DownloadChapterView): boolean =>
-        row.navigable && row.index === target.chapterIndex && row.chapterId === (target.chapterId ?? '')) === true, control);
-  }
-
-  private invalidateReadingHandoff(): void {
-    this.readingHandoffRevision += 1;
-    this.readingReturnFocus = undefined;
+    const book = this.bookList.detail();
+    if (book !== undefined) return this.managing ? `已选 ${this.chapterList.selectedCount()}${sharedDownloadChapterUnit(book)}` : this.bookList.downloadCount(book, false);
+    return `已选 ${this.bookList.visibleSelectedBooks().length} / ${this.bookList.visibleBooks().length} 本书`;
   }
 
   private onInputEligibilityChanged(): void {
-    this.cancelListScrollRestore();
-    this.cancelChapterScrollRestore();
-    this.searchInputRevision += 1;
-    this.invalidateReadingHandoff();
+    this.bookList.cancelListScrollRestore();
+    this.chapterList.cancelChapterScrollRestore();
+    this.bookList.retireSearchInput();
+    this.chapterList.invalidateReadingHandoff();
     if (!this.appForeground || this.covered) this.focusGeneration += 1;
   }
 
   private onDetailChanged(): void {
-    this.cancelListScrollRestore();
-    this.cancelChapterScrollRestore();
-    this.searchInputRevision += 1;
-    this.invalidateReadingHandoff();
+    this.bookList.cancelListScrollRestore();
+    this.chapterList.cancelChapterScrollRestore();
+    this.bookList.retireSearchInput();
+    this.chapterList.invalidateReadingHandoff();
     this.publishViewState();
   }
-  private prepareRange(bookKey: string): void {
-    const books = this.actionBooks();
-    const titleCounts = new Map<string, number>();
-    for (const book of books) titleCounts.set(book.title, (titleCounts.get(book.title) ?? 0) + 1);
-    const reserved = new Set<string>(books.map((book: DownloadBookView): string => book.title));
-    // Freeze labels for this opening so a live list reorder or removal never
-    // turns a previously displayed option into another book.
-    this.rangeBookOptions = books.map((book: DownloadBookView): DownloadChoice => {
-      if (titleCounts.get(book.title) === 1) return { id: book.key, label: book.title };
-      const base = `${book.title} · ${book.sourceLabel.trim() || '同名书籍'}`;
-      let label = base;
-      let ordinal = 2;
-      while (reserved.has(label)) {
-        label = `${base} (${ordinal})`;
-        ordinal += 1;
-      }
-      reserved.add(label);
-      return { id: book.key, label };
-    });
-    this.rangeChoice = 'all';
-    this.resetRangeDraft(bookKey);
-  }
-  private availableRangeBooks(): DownloadChoice[] {
-    const currentKeys = new Set<string>(this.actionBooks().map((book: DownloadBookView): string => book.key));
-    return this.rangeBookOptions.filter((choice: DownloadChoice): boolean => currentKeys.has(choice.id));
-  }
-  private resetRangeDraft(bookKey: string): void {
-    this.rangeBookKey = bookKey;
-    this.rangeStart = '';
-    this.rangeEnd = '';
-    this.rangeCatalog = undefined;
-    this.rangeCatalogChanged = false;
-    this.rangeDraftRevision += 1;
-    this.syncRangeCatalog();
-  }
-  private selectRangeChoice(choice: string): void {
-    if (choice === this.rangeChoice) return;
-    this.rangeChoice = choice;
-    this.rangeDraftRevision += 1;
-    this.syncRangeCatalog();
-  }
-  private updateRangeBound(value: string, start: boolean, opening: number, revision: number): void {
-    if (!this.sheetOpeningIsCurrent(opening) || this.sheet !== 'range' ||
-      this.rangeChoice !== 'custom' || revision !== this.rangeDraftRevision ||
-      this.rangeCatalog === undefined || this.rangeCatalogChanged) return;
-    if (start) this.rangeStart = value;
-    else this.rangeEnd = value;
-  }
-  private rangeBook(): DownloadBookView | undefined {
-    return this.actionBooks().find((book: DownloadBookView): boolean => book.key === this.rangeBookKey);
-  }
-  private matchesRangeCatalog(book: DownloadBookView, catalog: SharedDownloadExpectedChapter[]): boolean {
-    let ordinal = 0;
-    for (const chapter of book.chapters) {
-      if (!chapter.navigable) continue;
-      const expected = catalog[ordinal++];
-      if (expected === undefined || chapter.index !== expected.chapterIndex || chapter.chapterId !== expected.chapterId)
-        return false;
-    }
-    return ordinal === catalog.length;
-  }
-  private syncRangeCatalog(): void {
-    if (!this.presentationIsCurrent() || this.sheet !== 'range' || this.rangeCatalogChanged) return;
-    const book = this.rangeBook();
-    if (book?.projectionStatus !== 'ready') return;
-    const catalog = this.rangeCatalog;
-    if (catalog !== undefined && this.matchesRangeCatalog(book, catalog)) return;
-    if (this.rangeStart.length > 0 || this.rangeEnd.length > 0) {
-      this.rangeCatalogChanged = true;
-    } else if (this.rangeChoice === 'custom') {
-      this.rangeCatalog = book.chapters.filter((chapter: DownloadChapterView): boolean => chapter.navigable)
-        .map((chapter: DownloadChapterView): SharedDownloadExpectedChapter => this.chapterProof(chapter));
-    }
-  }
-  private rangeEligible(): boolean {
-    if (this.actionBooks().length === 0) return false;
-    if (this.rangeChoice === 'all') return this.actionAvailable('download');
-    const book = this.rangeBook();
-    if (book === undefined) return false;
-    if (this.rangeChoice === 'forward') return this.currentChapterForBook(book) !== undefined;
-    const catalog = this.rangeCatalog;
-    if (book.projectionStatus !== 'ready' || catalog === undefined || this.rangeCatalogChanged) return false;
-    const start = Number(this.rangeStart); const end = Number(this.rangeEnd);
-    return this.rangeStart.length > 0 && this.rangeEnd.length > 0 && Number.isInteger(start) && Number.isInteger(end) &&
-      start >= 1 && end >= start && end <= catalog.length && this.matchesRangeCatalog(book, catalog);
-  }
-  private sendRange(): void {
-    if (!this.uiInputIsCurrent() || !this.rangeEligible()) return;
-    const rangedBooks = this.rangeChoice === 'all' ? this.actionBooks() : this.actionBooks().filter((book: DownloadBookView): boolean => book.key === this.rangeBookKey);
-    const targets: SharedDownloadUiBookTarget[] = rangedBooks.map((book: DownloadBookView): SharedDownloadUiBookTarget => {
-      const chapters = book.chapters.filter((chapter: DownloadChapterView): boolean => chapter.navigable);
-      if (this.rangeChoice === 'all') return { sourceId: book.sourceId, bookId: book.bookId };
-      let selected: DownloadChapterView[];
-      if (this.rangeChoice === 'forward') {
-        const current = this.currentChapterForBook(book)?.index;
-        selected = chapters.filter((chapter: DownloadChapterView): boolean => current !== undefined && chapter.index >= current);
-      } else selected = chapters.slice(Number(this.rangeStart) - 1, Number(this.rangeEnd));
-      return { sourceId: book.sourceId, bookId: book.bookId,
-        chapterIndices: selected.map((chapter: DownloadChapterView): number => chapter.index),
-        expectedChapters: selected.map((chapter: DownloadChapterView): SharedDownloadExpectedChapter => this.chapterProof(chapter)) };
-    });
-    this.sheet = ''; this.onIntent({ action: 'download', scope: 'books', books: targets });
-  }
-  private sendAction(action: 'download' | 'pause' | 'cancel' | 'deleteLocal' | 'cleanup'): void {
-    if (!this.uiInputIsCurrent()) return;
-    const storage = action === 'cleanup';
-    const scoped = !storage && this.actionChapters.length > 0;
-    if (scoped && !this.actionAvailable(action)) return;
-    const books = storage ? [] : (action === 'cancel' || action === 'deleteLocal') ?
-      this.removalActionBooks(action) : this.actionBooks();
-    const targets = books.map((book: DownloadBookView): SharedDownloadUiBookTarget => ({
-      sourceId: book.sourceId, bookId: book.bookId,
-      chapterIndices: scoped ? this.actionChapters.map((chapter: SharedDownloadExpectedChapter): number => chapter.chapterIndex) : undefined,
-      expectedChapters: scoped ? this.actionChapters.slice() : undefined,
-    }));
-    if (!storage && targets.length === 0) return;
-    if (this.managing && this.detailKey.length === 0 && (action === 'cancel' || action === 'deleteLocal'))
-      this.closeSelectionAfterRemoval = true;
-    this.sheet = '';
-    this.onIntent({ action, scope: storage ? 'storage' : scoped ? 'chapters' : 'books', books: targets });
-  }
-  private quickSelectChapters(index: number): void {
-    const book = this.detail(); if (book === undefined || index === 0) return;
-    const current = this.currentChapter();
-    if (index === 1) this.selectChapters(current === undefined ? [] : [current]);
-    else if (index === 2) this.selectChapters(current === undefined ? [] : book.chapters
-      .filter((chapter: DownloadChapterView): boolean => chapter.index >= current.index));
-    else if (index === 3) this.selectChapters(book.chapters);
-  }
-  private limitChoices(): number[] {
-    const capacity = this.storagePolicy?.capacityBytes;
-    if (capacity === undefined) return [];
-    const current = capacity / (1024 * 1024);
-    const choices = [512, 1024, 2048, 4096];
-    if (!choices.includes(current)) choices.push(current);
-    return choices;
-  }
-  private limitLabels(): string[] {
-    const labels = this.limitChoices().map((limit: number): string => formatDownloadStorageBytes(limit * 1024 * 1024));
-    const last = labels.length - 1;
-    if (last >= 0 && labels.indexOf(labels[last]) !== last) labels[last] += '（当前）';
-    return labels;
-  }
-  private dayChoices(): number[] {
-    const current = this.storagePolicy?.expiryDays;
-    if (current === undefined) return [];
-    const choices = [3, 7, 14, 30];
-    if (!choices.includes(current)) choices.push(current);
-    return choices;
-  }
-  private dayLabels(): string[] { return this.dayChoices().map((days: number): string => `${days} 天`); }
-  private limitIndex(): number { return this.limitChoices().indexOf((this.storagePolicy?.capacityBytes ?? -1) / (1024 * 1024)); }
-  private daysIndex(): number { return this.dayChoices().indexOf(this.storagePolicy?.expiryDays ?? -1); }
-  private changeStoragePolicy(opening: number, kind: 'capacity' | 'expiry', value: string): void {
-    if (!this.sheetOpeningIsCurrent(opening) || this.sheet !== 'settings' || this.storagePolicy === undefined || this.storagePolicyBusy) return;
-    if (kind === 'capacity') {
-      const limit = this.limitChoices()[this.limitLabels().indexOf(value)];
-      if (limit !== undefined && limit * 1024 * 1024 !== this.storagePolicy.capacityBytes)
-        this.onIntent({ action: 'configureStorage', scope: 'storage', books: [], cacheLimitMb: limit });
-    } else {
-      const days = this.dayChoices()[this.dayLabels().indexOf(value)];
-      if (days !== undefined && days !== this.storagePolicy.expiryDays)
-        this.onIntent({ action: 'configureStorage', scope: 'storage', books: [], cleanupAfterDays: days });
-    }
-  }
+
   private publishViewState(): void {
     if (!this.mounted) return;
-    if (this.detailKey.length === 0) this.captureListOffset();
-    else if (this.chapterLayoutReady) this.captureChapterOffset();
+    if (this.detailKey.length === 0) this.bookList.captureListOffset();
+    else this.chapterList.captureVisiblePosition();
     this.onViewStateChanged({ query: this.query, type: this.bookType as 'all' | 'novel' | 'manga',
       state: this.stateFilter as 'all' | 'downloading' | 'downloaded' | 'none', sourceId: this.sourceFilter,
       sort: this.sortField as 'recent' | 'title' | 'progress' | 'size', direction: this.sortDirection as 'asc' | 'desc',
-      listScroll: this.listOffset, chapterScroll: this.chapterOffset, detailKey: this.detailKey });
-  }
-  private captureListOffset(): number | undefined {
-    // @Watch runs synchronously before the main List is reattached when
-    // returning from chapters. The platform may have no current offset then;
-    // retain the last proven position instead of dereferencing an empty result.
-    try {
-      const offset = this.listScroller.currentOffset();
-      if (offset !== undefined && Number.isFinite(offset.yOffset)) {
-        this.listOffset = offset.yOffset;
-        return offset.yOffset;
-      }
-    } catch (_error) {
-      // A retired/unbound native controller cannot replace a saved position.
-    }
-    return undefined;
-  }
-  private restoreListOffset(offset: number = this.listOffset, focusTarget: string = ''): void {
-    if (!this.presentationIsCurrent() || !this.fontsReady || this.detailKey.length > 0) return;
-    this.cancelListScrollRestore();
-    const focusGeneration = focusTarget.length > 0 ? ++this.focusGeneration : this.focusGeneration;
-    const pending: SharedDownloadListRestore = { epoch: this.listScrollRestoreEpoch, offset,
-      identity: this.mountedIdentity, presentation: this.presentationGeneration, fonts: this.fontPreparationGeneration,
-      windowRevision: this.readerWindowMetricsRevision, viewportWidth: this.pageViewportWidth(),
-      viewportHeight: this.availableHeight(), fontScale: this.fontScale(), managing: this.managing };
-    this.listScrollRestorePending = pending;
-    try {
-      this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame(this.getUIContext(), (): void => {
-        if (this.listScrollRestorePending !== pending || this.listScrollRestoreEpoch !== pending.epoch) return;
-        if (!this.presentationIsCurrent(pending.presentation) || !this.fontsReady || this.mountedIdentity !== pending.identity ||
-          this.fontPreparationGeneration !== pending.fonts || this.detailKey.length > 0 || this.managing !== pending.managing ||
-          this.readerWindowMetricsRevision !== pending.windowRevision || this.pageViewportWidth() !== pending.viewportWidth ||
-          this.availableHeight() !== pending.viewportHeight || this.fontScale() !== pending.fontScale ||
-          (focusTarget.length > 0 && focusGeneration !== this.focusGeneration)) {
-          this.cancelListScrollRestore(); return;
-        }
-        this.listScrollRestorePending = undefined;
-        try { this.listScroller.scrollTo({ xOffset: 0, yOffset: pending.offset }); } catch (_unboundList) { return; }
-        if (focusTarget.length > 0 && !this.modalBlocking() && !this.managing) this.syncOverlayFocus(focusTarget);
-      }));
-    } catch (_unmounted) { this.cancelListScrollRestore(); }
-  }
-  private cancelListScrollRestore(): void {
-    this.listScrollRestoreEpoch += 1;
-    this.listScrollRestorePending = undefined;
-  }
-  private onListGeometryChanged(): void {
-    const pending = this.listScrollRestorePending;
-    if (pending !== undefined && (this.readerWindowMetricsRevision !== pending.windowRevision ||
-      this.pageViewportWidth() !== pending.viewportWidth || this.availableHeight() !== pending.viewportHeight ||
-      this.fontScale() !== pending.fontScale)) this.cancelListScrollRestore();
-  }
-  private cancelChapterScrollRestore(): void {
-    this.chapterScrollRestoreEpoch += 1;
-    this.chapterScrollRestorePending = false;
-    this.chapterScrollRestoreScheduled = false;
+      listScroll: this.bookList.listOffset, chapterScroll: this.chapterList.chapterOffset, detailKey: this.detailKey });
   }
 
-  private restoreChapterOffset(): void {
-    if (!this.mounted || !this.fontsReady || !this.chapterScrollRestorePending || this.chapterScrollRestoreScheduled) return;
-    if (this.detail()?.projectionStatus !== 'ready') {
-      if (!this.loading && this.readingReturnFocus !== undefined)
-        this.syncOverlayFocus('', false, this.readingReturnFocus);
-      return;
-    }
-    if (!this.chapterLayoutReady) return;
-    const identity = this.mountedIdentity;
-    const generation = this.fontPreparationGeneration;
-    const presentation = this.presentationGeneration;
-    const detailKey = this.detailKey;
-    const offset = this.chapterOffset;
-    const epoch = this.chapterScrollRestoreEpoch;
-    const windowRevision = this.readerWindowMetricsRevision;
-    const viewportWidth = this.pageViewportWidth();
-    const viewportHeight = this.availableHeight();
-    const fontScale = this.fontScale();
-    const managing = this.managing;
-    this.chapterScrollRestoreScheduled = true;
-    this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame(this.getUIContext(), (): void => {
-      if (epoch !== this.chapterScrollRestoreEpoch || !this.presentationIsCurrent(presentation) || this.mountedIdentity !== identity ||
-        generation !== this.fontPreparationGeneration) return;
-      this.chapterScrollRestoreScheduled = false;
-      if (windowRevision !== this.readerWindowMetricsRevision || viewportWidth !== this.pageViewportWidth() ||
-        viewportHeight !== this.availableHeight() || fontScale !== this.fontScale() || managing !== this.managing) {
-        this.cancelChapterScrollRestore(); return;
-      }
-      if (!this.fontsReady || !this.chapterLayoutReady || !this.chapterScrollRestorePending ||
-        this.detailKey !== detailKey || this.detail()?.projectionStatus !== 'ready') return;
-      try {
-        this.chapterScroller.scrollTo({ xOffset: 0, yOffset: offset });
-        this.chapterScrollRestorePending = false;
-        if (this.readingReturnFocus !== undefined) this.syncOverlayFocus('', false, this.readingReturnFocus);
-      } catch (_) {
-        // A not-yet-attached native List retains the pending position until
-        // its next measured layout or book projection becomes available.
-      }
-    }));
-  }
   private prepareFonts(): void {
-    this.cancelListScrollRestore();
+    this.bookList.cancelListScrollRestore();
     const identity = this.mountedIdentity;
     const generation = ++this.fontPreparationGeneration;
-    this.chapterScrollRestoreScheduled = false;
+    this.chapterList.releaseOldFontFrame();
     this.fontsFailed = false;
     prepareSharedDownloadFonts().then((ready: boolean): void => {
       if (!this.mounted || this.mountedIdentity !== identity || generation !== this.fontPreparationGeneration) return;
       this.fontsReady = ready; this.fontsFailed = !ready;
       if (ready) {
-        if (this.detailKey.length > 0) this.restoreChapterOffset();
-        else this.restoreListOffset();
+        if (this.detailKey.length > 0) this.chapterList.restoreChapterOffset();
+        else this.bookList.restoreListOffset();
       }
     }).catch((_error: Error): void => {
       if (this.mounted && this.mountedIdentity === identity && generation === this.fontPreparationGeneration) this.fontsFailed = true;
     });
   }
+
   private frameStyle(): ReaderFrameStyle {
     const pageBackground = readerAppColor('TOK_PAPER', this.appThemeScheme);
     return readerFrameStyle({ backgroundColor: pageBackground, headerBackground: pageBackground,
@@ -2895,59 +756,33 @@ export struct SharedDownloadPage {
     void this.readerWindowMetricsRevision;
     return ReaderWindowCoordinator.metrics();
   }
-  private fontScale(): number {
-    const scale = this.currentMetrics().systemFontScale;
-    return Number.isFinite(scale) && scale > 0 ? scale : 1;
-  }
-  private selectClosedWidth(value: string, options: string[], maximum: number, rowLabel: string, quick: boolean = false): number {
-    const context = this.getUIContext();
-    const measure = context.getMeasureUtils();
-    // ReaderInlineSelect uses ReaderSelect's default trigger, including its
-    // 12fp face and 20vp padding + 8vp gap + 12vp chevron + 2vp border.
-    const style = TYPE_SELECT_DEFAULT_VALUE;
-    const measured = measure.measureText({ textContent: value, fontSize: style.fontSizeFp,
-      fontFamily: style.fontFamily, fontWeight: style.fontWeight });
-    const valuePx = Number.isFinite(measured) && measured > 0 ? measured : 0;
-    const labelStyle = quick ? TYPE_DOWNLOAD_BOOK_TITLE : TYPE_DOWNLOAD_BODY;
-    const labelPx = measure.measureText({ textContent: rowLabel, fontSize: labelStyle.fontSizeFp,
-      fontFamily: labelStyle.fontFamily, fontWeight: labelStyle.fontWeight });
-    const metrics = this.currentMetrics();
-    const side = quick ? this.contentLeftInset() + this.contentRightInset() : DOWNLOAD_VISUAL.sheetBodySide * 2;
-    const gap = quick ? DOWNLOAD_VISUAL.chapterToolbarGap : DOWNLOAD_VISUAL.settingsGap;
-    const available = Math.max(0, metrics.windowRect.width - side - gap - Math.max(0, context.px2vp(labelPx)));
-    const desired = Math.ceil(context.px2vp(valuePx)) + 42;
-    return Math.min(maximum, available, desired);
-  }
-  private textControlHeight(minimum: number, lineHeight: number, paddingY: number): number {
-    return Math.max(minimum, lineHeight * this.fontScale() + paddingY);
-  }
-  private storageSelectWidth(): number {
-    const available = Math.max(0, this.currentMetrics().windowRect.width - DOWNLOAD_VISUAL.sheetBodySide * 2 - DOWNLOAD_VISUAL.storageSettingsGap);
-    return Math.min(DOWNLOAD_VISUAL.storageSelectWidth * this.fontScale(), available / 2);
-  }
+
   private headerTop(): number {
     // Index already applies readerContentSafeTop to App routes. Add only the
     // approved gap inside that content frame; never count the status bar twice.
     return this.embeddedWide ? this.pageGeometry().header.top : DOWNLOAD_VISUAL.headerTopGap;
   }
+
   private resolvedHeaderHeight(): number {
     return this.measurements.readForGeneration('download:header', this.measurementGeneration(), DOWNLOAD_HEADER_HEIGHT);
   }
+
   private resolvedDockHeight(): number {
-    return this.measurements.readForGeneration(this.raisedDockShapeIdentity(this.managing || this.detail() !== undefined),
+    return this.measurements.readForGeneration(this.raisedDockShapeIdentity(this.managing || this.bookList.detail() !== undefined),
       this.measurementGeneration(), this.dockFallbackHeight());
   }
+
   private dockFallbackHeight(): number {
-    if (!this.managing && this.detail() === undefined)
+    if (!this.managing && this.bookList.detail() === undefined)
       return DOWNLOAD_VISUAL.dockPaddingY * 2 + DOWNLOAD_VISUAL.headerIconHeight + DOWNLOAD_VISUAL.borderWidth * 2;
-    const scale = this.fontScale();
+    const scale = this.frameView.fontScale();
     // Both summary text and its management controls may occupy their own line.
     // The actual inner dock Area replaces this conservative first-frame budget.
     const summaryText = (TYPE_DOWNLOAD_CONTROL.lineHeightFp as number) * scale * 2;
-    const summaryControls = this.managing ? this.textControlHeight(DOWNLOAD_VISUAL.touchTarget,
+    const summaryControls = this.managing ? sharedDownloadControlHeight(this.frameView.fontScale(), DOWNLOAD_VISUAL.touchTarget,
       (TYPE_DOWNLOAD_CONTROL.lineHeightFp as number), DOWNLOAD_VISUAL.textActionPaddingY * 2) : 0;
     const summary = summaryText + summaryControls;
-    const actions = this.textControlHeight(DOWNLOAD_VISUAL.buttonHeight,
+    const actions = sharedDownloadControlHeight(this.frameView.fontScale(), DOWNLOAD_VISUAL.buttonHeight,
       DOWNLOAD_VISUAL.controlLineHeight, DOWNLOAD_VISUAL.buttonPaddingY * 2);
     return DOWNLOAD_VISUAL.selectionPadding * 2 + summary + DOWNLOAD_VISUAL.selectionSummaryBottom +
       actions + DOWNLOAD_VISUAL.borderWidth * 2;
@@ -2956,13 +791,16 @@ export struct SharedDownloadPage {
   private headerContentGap(): number {
     return DOWNLOAD_VISUAL.contentTop - DOWNLOAD_VISUAL.headerTopGap - DOWNLOAD_HEADER_HEIGHT;
   }
+
   private contentTop(): number {
     return readerPresentedHeaderBottom(this.headerTop(),
       Math.max(DOWNLOAD_HEADER_HEIGHT, this.resolvedHeaderHeight())) + this.headerContentGap();
   }
+
   private contentBottom(minimum: number): number {
     return Math.max(minimum, this.resolvedDockHeight() + this.bottomInset() + DOWNLOAD_VISUAL.dockBottom);
   }
+
   private scrollLayout(): ReaderScrollLayout {
     return readerScrollLayout(this.pageGeometry(), { mode: 'contentOffset' });
   }
@@ -2990,27 +828,31 @@ export struct SharedDownloadPage {
     input.contentEndInset = fixedDock ? this.contentBottom(0) : 0;
     return resolveReaderPageGeometry(input);
   }
-  // Approved 2026-10-20 amendment: header frames the 18vp body rail;
-  // lightweight docks sit 12vp inside it. Keep generated baseline values intact.
+
   private safeLeft(): number { return readerPageSafeLeft(this.currentMetrics(), this.embeddedWide ? this.pageOriginX : undefined); }
+
   private safeRight(): number {
     return readerPageSafeRight(this.currentMetrics(), this.embeddedWide ? this.pageOriginX : undefined, this.pageWidth);
   }
-  private sheetSafeLeft(): number { return readerPageSafeLeft(this.currentMetrics(), this.pageOriginX, true); }
-  private sheetSafeRight(): number {
-    return readerPageSafeRight(this.currentMetrics(), this.pageOriginX, this.pageViewportWidth(), true);
-  }
+
   private leftInset(): number { return Math.max(8, this.safeLeft()); }
+
   private rightInset(): number { return Math.max(8, this.safeRight()); }
+
   private dockLeftInset(): number { return Math.max(30, this.safeLeft()); }
+
   private dockRightInset(): number { return Math.max(30, this.safeRight()); }
+
   private contentLeftInset(): number {
     return sharedDownloadContentInsets(this.safeLeft(), this.safeRight()).left;
   }
+
   private contentRightInset(): number {
     return sharedDownloadContentInsets(this.safeLeft(), this.safeRight()).right;
   }
+
   private bottomInset(): number { return Math.max(DOWNLOAD_VISUAL.dockBottom, readerStableInteractiveSafeBottom(this.currentMetrics())); }
+
   private pageViewportWidth(): number {
     return this.pageWidth > 0 ? this.pageWidth : this.currentMetrics().windowRect.width;
   }
@@ -3020,20 +862,10 @@ export struct SharedDownloadPage {
     // reflects any platform resize; never subtract keyboardInsets a second time.
     return readerAvailableWindowHeight(this.currentMetrics(), this.pageHeight);
   }
-  private sheetMaxHeight(): number { return sharedDownloadSheetMaxHeight(this.availableHeight(), 0, 0); }
-  private sheetHasFooter(): boolean { return ['filter', 'sort', 'range', 'settings'].includes(this.sheet); }
-  private sheetFooterBottomInset(): number {
-    return Math.max(this.sheet === 'settings' ? DOWNLOAD_VISUAL.storageFooterBottom : DOWNLOAD_VISUAL.sheetFooterBottom,
-      readerStableInteractiveSafeBottom(this.currentMetrics()));
-  }
-  private sheetBodyBottomInset(): number {
-    if (this.sheet === 'settings') return 0;
-    return this.sheetHasFooter() ? DOWNLOAD_VISUAL.sheetBodyBottom :
-      Math.max(DOWNLOAD_VISUAL.sheetBodyBottom, readerStableInteractiveSafeBottom(this.currentMetrics()));
-  }
+
   private selectionDockMinimumContentHeight(): number {
-    const scale = this.fontScale();
-    if (this.detail() !== undefined) {
+    const scale = this.frameView.fontScale();
+    if (this.bookList.detail() !== undefined) {
       return Math.max(DOWNLOAD_VISUAL.chapterHeight,
         Math.max(DOWNLOAD_VISUAL.touchTarget, (TYPE_DOWNLOAD_CHAPTER_TITLE.lineHeightFp as number) * scale) +
         (TYPE_DOWNLOAD_TAG.lineHeightFp as number) * scale + DOWNLOAD_VISUAL.sourceLineHeight * scale +
@@ -3046,47 +878,16 @@ export struct SharedDownloadPage {
     return Math.max(DOWNLOAD_VISUAL.coverHeight, DOWNLOAD_VISUAL.bookMinHeight, copy) +
       DOWNLOAD_VISUAL.bookPaddingY * 2 + DOWNLOAD_VISUAL.borderWidth;
   }
+
   private fixedSelectionDockVisible(): boolean {
     return this.fontsReady && this.managing &&
       this.contentBottom(0) + this.selectionDockMinimumContentHeight() <= this.availableHeight();
   }
-  private sheetChromeHeight(): number {
-    const grip = DOWNLOAD_VISUAL.gripTop + DOWNLOAD_VISUAL.gripHeight + DOWNLOAD_VISUAL.gripBottom;
-    const title = Math.max(DOWNLOAD_VISUAL.sheetTitleHeight, this.sheetTitleMeasuredHeight);
-    const footer = this.sheetHasFooter() ? Math.max(this.sheetFooterMeasuredHeight,
-      this.textControlHeight(DOWNLOAD_VISUAL.buttonHeight, DOWNLOAD_VISUAL.controlLineHeight,
-        DOWNLOAD_VISUAL.buttonPaddingY * 2) + (this.sheet === 'settings' ? DOWNLOAD_VISUAL.storageFooterTop : DOWNLOAD_VISUAL.sheetFooterTop) +
-          this.sheetFooterBottomInset() + (this.sheet === 'settings' ? 0 : DOWNLOAD_VISUAL.borderWidth)) : 0;
-    return grip + title + footer;
-  }
-  private sheetChromeOverflow(): boolean { return this.sheetChromeHeight() >= this.sheetMaxHeight(); }
-  private sheetBodyMaxHeight(): number { return readerSurfaceMaxHeight(this.sheetMaxHeight(), this.sheetChromeHeight()); }
-  private dialogChromeHeight(): number {
-    const button = Math.max(this.dialogActionsMeasuredHeight,
-      this.textControlHeight(DOWNLOAD_VISUAL.buttonHeight, DOWNLOAD_VISUAL.controlLineHeight, DOWNLOAD_VISUAL.buttonPaddingY * 2));
-    const spec = resolveDialogSpec('download-confirmation');
-    return 2 * (spec.padding + (spec.hasBorder ? 1 : 0)) + Math.max(spec.actionHeight, button);
-  }
-  private confirmationHost(): ReaderRectVp | undefined {
-    return this.pageWidth > 0 && this.pageHeight > 0 ?
-      new ReaderRectVp(this.pageOriginX, this.pageOriginY, this.pageWidth, this.pageHeight) : undefined;
-  }
-  private bookHeight(key: string): number { return Math.max(DOWNLOAD_VISUAL.coverHeight, this.bookCopyHeights.get(key) ?? DOWNLOAD_VISUAL.coverHeight); }
-  private bookProgressSpacer(key: string): number {
-    return Math.max(0, DOWNLOAD_VISUAL.bookMinHeight - (this.bookContentHeights.get(key) ??
-      DOWNLOAD_VISUAL.bookTopHeight + DOWNLOAD_VISUAL.sourceLineHeight + DOWNLOAD_VISUAL.sourceTop + DOWNLOAD_VISUAL.statusHeight + DOWNLOAD_VISUAL.progressTop) - DOWNLOAD_VISUAL.progressHeight);
-  }
-  private recordBookHeight(key: string, height: number): void {
-    if (!Number.isFinite(height) || height <= 0 || Math.abs(height - (this.bookCopyHeights.get(key) ?? 0)) < 0.5) return;
-    const values = new Map(this.bookCopyHeights); values.set(key, height); this.bookCopyHeights = values;
-  }
-  private recordBookContentHeight(key: string, height: number): void {
-    if (!Number.isFinite(height) || height <= 0 || Math.abs(height - (this.bookContentHeights.get(key) ?? 0)) < 0.5) return;
-    const values = new Map(this.bookContentHeights); values.set(key, height); this.bookContentHeights = values;
-  }
+
   private measurementGeneration(): number {
     return Math.max(0, this.readerWindowMetricsRevision);
   }
+
   private headerHeightChangeHandler(): (height: number) => void {
     const presentation = this.presentationGeneration;
     const layout = this.measurementGeneration();
@@ -3098,56 +899,18 @@ export struct SharedDownloadPage {
       this.recordHeaderHeight(height);
     };
   }
+
   private recordHeaderHeight(height: number): void {
     if (!Number.isFinite(height) || height <= 0) return;
     if (this.measurements.record('download:header', height, this.measurementGeneration(), 0.5))
       this.measurementRevision += 1;
   }
-  private recordDockHeight(height: number, identity: string = this.raisedDockShapeIdentity(this.managing || this.detail() !== undefined)): void {
-    if (!this.presentationIsCurrent() || identity !== this.raisedDockShapeIdentity(this.managing || this.detail() !== undefined) ||
+
+  private recordDockHeight(height: number, identity: string = this.raisedDockShapeIdentity(this.managing || this.bookList.detail() !== undefined)): void {
+    if (!this.presentationIsCurrent() || identity !== this.raisedDockShapeIdentity(this.managing || this.bookList.detail() !== undefined) ||
       !Number.isFinite(height) || height <= 0) return;
     if (this.measurements.record(identity, height, this.measurementGeneration(), 0.5))
       this.measurementRevision += 1;
-    const anchor = this.managingScrollAnchor;
-    if (anchor === undefined) return;
-    if (!this.managingScrollIsCurrent(anchor)) { this.cancelManagingScroll(); return; }
-    if (!this.fixedSelectionDockVisible()) return;
-    // The dock may report its final size after the first frame restored the
-    // List. Repeat once with the same proven offset, then retire the anchor.
-    this.managingDockMeasured = true;
-    if (this.managingScrollRestore === undefined) {
-      this.managingScrollRestore = anchor;
-      this.restoreManagingScroll();
-    }
-  }
-  private recordSheetTitleHeight(height: number): void {
-    if (Number.isFinite(height) && height > 0 && Math.abs(height - this.sheetTitleMeasuredHeight) > 0.5) this.sheetTitleMeasuredHeight = height;
-  }
-  private sheetAreaHandler(slot: 'title' | 'footer' | 'operations-header', opening: number): (_old: Area, area: Area) => void {
-    const presentation = this.presentationGeneration, layout = this.measurementGeneration(), sheet = this.sheet;
-    return (_old: Area, area: Area): void => {
-      if (!this.presentationIsCurrent(presentation) || opening !== this.sheetOpeningGeneration ||
-        layout !== this.measurementGeneration() || sheet.length === 0 || sheet !== this.sheet) return;
-      const height = readerPageAreaLength(area.height);
-      if (slot === 'title') this.recordSheetTitleHeight(height);
-      else if (slot === 'footer') this.recordSheetFooterHeight(height);
-      else if (Number.isFinite(height) && height > 0) {
-        if (slot === 'operations-header' && Math.abs(height - this.operationsHeaderMeasuredHeight) > .5)
-          this.operationsHeaderMeasuredHeight = height;
-      }
-    };
-  }
-  private confirmationAreaHandler(opening: number, presentation: number): (_old: Area, area: Area) => void {
-    const layout = this.measurementGeneration(), confirmation = this.confirmation;
-    return (_old: Area, area: Area): void => {
-      if (!this.presentationIsCurrent(presentation) || opening !== this.confirmationGeneration ||
-        layout !== this.measurementGeneration() || confirmation.length === 0 || confirmation !== this.confirmation) return;
-      const height = readerPageAreaLength(area.height);
-      if (Number.isFinite(height) && height > 0 && Math.abs(height - this.dialogActionsMeasuredHeight) > 0.5)
-        this.dialogActionsMeasuredHeight = height;
-    };
-  }
-  private recordSheetFooterHeight(height: number): void {
-    if (Number.isFinite(height) && height > 0 && Math.abs(height - this.sheetFooterMeasuredHeight) > 0.5) this.sheetFooterMeasuredHeight = height;
+    this.bookList.onManagementDockMeasured();
   }
 }

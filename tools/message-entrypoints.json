@@ -482,10 +482,10 @@
       "status": "retained-disabled"
     },
     {
-      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets#SharedDownloadPage.bookPage::shared.page-state",
-      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-      "owner": "SharedDownloadPage",
-      "member": "bookPage",
+      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadBookList.ets#<module>.SharedDownloadBookList::shared.page-state",
+      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadBookList.ets",
+      "owner": "<module>",
+      "member": "SharedDownloadBookList",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
       "effectiveHost": "已挂载下载页 mountedIdentity/presentationIdentity、presentationGeneration 和 presentationIsCurrent；确认框使用当前 confirming/generation。",
@@ -493,10 +493,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets#SharedDownloadPage.chapterPage::shared.page-state",
-      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-      "owner": "SharedDownloadPage",
-      "member": "chapterPage",
+      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadChapterList.ets#<module>.SharedDownloadChapterList::shared.page-state",
+      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadChapterList.ets",
+      "owner": "<module>",
+      "member": "SharedDownloadChapterList",
       "family": "shared.page-state",
       "category": "页面或局部内容的加载/空态/无内容失败",
       "effectiveHost": "已挂载下载页 mountedIdentity/presentationIdentity、presentationGeneration 和 presentationIsCurrent；确认框使用当前 confirming/generation。",
@@ -504,10 +504,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets#SharedDownloadPage.confirmationOverlay::shared.dialog-surface",
-      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-      "owner": "SharedDownloadPage",
-      "member": "confirmationOverlay",
+      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadSheets.ets#<module>.DownloadConfirmationSurface::shared.dialog-surface",
+      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadSheets.ets",
+      "owner": "<module>",
+      "member": "DownloadConfirmationSurface",
       "family": "shared.dialog-surface",
       "category": "自绘确认/输入的公共有限外框",
       "effectiveHost": "已挂载下载页 mountedIdentity/presentationIdentity、presentationGeneration 和 presentationIsCurrent；确认框使用当前 confirming/generation。",
@@ -548,10 +548,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets#SharedDownloadPage.pageOverlays::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-      "owner": "SharedDownloadPage",
-      "member": "pageOverlays",
+      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadSheets.ets#<module>.SharedDownloadSheets::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadSheets.ets",
+      "owner": "<module>",
+      "member": "SharedDownloadSheets",
       "family": "shared.recovery-notice",
       "category": "下载批操作结果未确认的持续提示",
       "effectiveHost": "当前 Runtime 的下载展示层投影批操作回执。页面覆盖时隐藏持续提示，刷新列表为只读。",
@@ -559,10 +559,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets#SharedDownloadPage.rangeSheet::shared.page-state",
-      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets",
-      "owner": "SharedDownloadPage",
-      "member": "rangeSheet",
+      "id": "entry/src/main/ets/features/downloads/ui/SharedDownloadSheets.ets#<module>.DownloadRangeSheet::shared.page-state",
+      "file": "entry/src/main/ets/features/downloads/ui/SharedDownloadSheets.ets",
+      "owner": "<module>",
+      "member": "DownloadRangeSheet",
       "family": "shared.page-state",
       "category": "当前下载范围草稿的目录版本失效",
       "effectiveHost": "当前range sheet/opening、rangeBookKey、rangeDraftRevision和rangeCatalogChanged，展示本地字段/目录校验事实，复用PageState局部反馈。",
