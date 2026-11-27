@@ -75,9 +75,18 @@ function buttonLabels(node) {
 
 function matchingNodes(root, selector) {
   const scopes = [selector.within].flat().filter(scope => scope !== undefined);
-  return nativeNodes(root).filter(node => matchesAttributes(node.attrs, selector,
+  const nodes = nativeNodes(root);
+  const scopeChecks = scopes.map(scope => {
+    if (scope.nearestContaining === undefined) {
+      return node => node.parents.some(parent => matchesAttributes(parent, scope));
+    }
+    const anchors = nodes.filter(node => matchesAttributes(node.attrs, scope.nearestContaining));
+    const ancestor = anchors.length === 1 ? anchors[0].parents.findLast(parent => matchesAttributes(parent, scope)) : undefined;
+    return node => ancestor !== undefined && node.parents.includes(ancestor);
+  });
+  return nodes.filter(node => matchesAttributes(node.attrs, selector,
     selector.label === undefined ? [] : buttonLabels(node.node)) &&
-    scopes.every(scope => node.parents.some(parent => matchesAttributes(parent, scope))));
+    scopeChecks.every(check => check(node)));
 }
 
 function actor(root, selector) {

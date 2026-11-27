@@ -105,7 +105,7 @@ export class AppReadingDetailMotion {
       motion.phase === 'retired') return;
     const target = motion.phase === 'pop' ? 0 : 1;
     const distance = Math.abs(target - motion.coverage);
-    if (motion.phase !== 'push') this.observe(motion.phase, distance < .001);
+    if (motion.phase === 'cancel') this.observe('cancel', distance < .001);
     const current = (): boolean => this.transition.snapshot()?.generation === motion.generation;
     const finish = (): void => {
       if (!current()) return;
@@ -114,7 +114,11 @@ export class AppReadingDetailMotion {
     };
     const id = this.ports.reduceMotion() ? 'app.motion.reduced.fade' :
       motion.phase === 'pop' ? 'app.navigation.pop' : 'app.navigation.push';
-    if (distance < .001 || !this.ports.foreground()) { finish(); return; }
+    if (distance < .001 || !this.ports.foreground()) {
+      if (motion.phase === 'pop') this.observe('pop', distance < .001);
+      finish();
+      return;
+    }
     const duration = Math.max(1, Math.round((motionSpecGet(id)?.durationMs ?? 200) * distance));
     const context = this.ports.ui();
     const reduced = this.ports.reduceMotion();
@@ -140,6 +144,8 @@ export class AppReadingDetailMotion {
         animator.onFinish = (): void => {
           if (this.animator === animator) finish();
         };
+        // Queue the first detail sample before native playback queues movement.
+        if (motion.phase === 'pop') this.observe('pop');
         animator.play();
       } catch (_error) { finish(); }
     };

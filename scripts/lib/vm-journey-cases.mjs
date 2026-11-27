@@ -246,16 +246,14 @@ const capsuleState = (service, running) => {
   }];
 };
 
-async function setCapsulePlayback(ui, serviceLabel, mode, running) {
-  const state = steadyReader(mode);
-  await ui.tap(`${running ? '继续' : '暂停'}${serviceLabel}`, capsuleToggle(!running), {
-    ...state, all: [...state.all, ...capsuleState(serviceLabel, running)], none: [capsuleToggle(!running)],
-  });
-}
-
 async function togglePlayback(ui, serviceLabel, mode) {
-  await setCapsulePlayback(ui, serviceLabel, mode, false);
-  await setCapsulePlayback(ui, serviceLabel, mode, true);
+  const state = steadyReader(mode);
+  await ui.tap(`暂停${serviceLabel}`, capsuleToggle(true), {
+    ...state, all: [...state.all, ...capsuleState(serviceLabel, false)], none: [capsuleToggle(true)],
+  });
+  await ui.tap(`继续${serviceLabel}`, capsuleToggle(false), {
+    ...state, all: [...state.all, ...capsuleState(serviceLabel, true)], none: [capsuleToggle(false)],
+  });
 }
 
 function waitAutoPageCountdown(ui, mode, seconds, description) {
@@ -777,9 +775,6 @@ export const journeys = {
     await togglePlayback(ui, '自动翻页', mode);
     await waitAutoPageCountdown(ui, mode, 1, '核对继续自动翻页后的倒计时');
     await waitAutoPageCountdown(ui, mode, 2, '核对继续自动翻页后进入下一轮倒计时');
-    // Keep the capsule in the same reader stage, with the timer paused while
-    // the normal center tap and native T3 handoff are sampled.
-    await setCapsulePlayback(ui, '自动翻页', mode, false);
     await returnFromPlaybackCapsule(ui, mode, 'autoPage', '自动翻页', toggle);
     await ui.tap('从自动翻页模块切换下一章并检查保留帧', next, {
       route: 'reading', all: [auto, previous, stop], transition: chapterAdvance('reader-chapter-local'), filmstrip: true,
@@ -976,7 +971,10 @@ export const journeys = {
       route: 'source', all: [source, more, sourceName, text(importedSource)], none: [imports],
       transition: routeMotion('pop', 'source-import'), filmstrip: true,
     });
-    const check = action(new RegExp(`^${importedSource}，检测，`, 'u'));
+    const switchSource = { type: 'Toggle', enabled: 'true',
+      id: /^reader-toggle:source-back:\d+:https:\/\/v9-import\.reader-journeys\.invalid:\d+$/u };
+    const check = { type: 'Button', enabled: 'true', clickable: 'true',
+      within: { type: 'Row', nearestContaining: switchSource } };
     await ui.tap('打开新导入书源的检测', check, {
       route: 'source', all: [text('书源检测报告'), text(importedSource)], requiredRules: ['R9', 'R10'],
     });
@@ -989,7 +987,6 @@ export const journeys = {
       ui.defer('触发新源的可用性检测', '当前检测面板未暴露启用的开始检测按钮');
     }
     await ui.key('关闭检测面板，保留导入源', 'Back', { route: 'source', all: [source, text(importedSource)] });
-    const switchSource = { type: 'Toggle', label: `${importedSource}，启用书源`, enabled: 'true' };
     const original = ui.value(switchSource, 'checked') ?? ui.value(switchSource, 'selected');
     const state = ui.value(switchSource, 'checked') === undefined ? 'selected' : 'checked';
     if (!['true', 'false'].includes(String(original))) ui.block('导入源未提供可验证的原生启用状态');

@@ -1591,6 +1591,8 @@ export function ReaderMountedReadingScene($$: ReaderMountedReadingSceneInput) {
           onToggle: (): void => $$.actors.capsule.toggleSessionCapsule(),
         }).id('reader-session-launch-fade-owner')
           .opacity($$.overlay.sessionLaunch.sourceTransfer === 'presenting' ? $$.overlay.sessionLaunchStageOpacity : 0).zIndex(8)
+          // Pass uncovered touches to the page. The capsule button consumes its own pointer stream.
+          .hitTestBehavior(HitTestMode.Transparent)
           .visibility($$.view.sourceSwitchVisible() || $$.view.controlObscured() ? Visibility.Hidden : Visibility.Visible)
           .transition($$.view.reduceMotion() ? TransitionEffect.asymmetric(
             TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()), TransitionEffect.IDENTITY) :
