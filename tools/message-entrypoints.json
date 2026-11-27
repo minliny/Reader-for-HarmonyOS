@@ -2114,13 +2114,13 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.feedbackOverlays::shared.transient-presentation",
-      "file": "entry/src/main/ets/pages/Index.ets",
-      "owner": "Index",
-      "member": "feedbackOverlays",
+      "id": "entry/src/main/ets/pages/AppOverlayHost.ets#<module>.AppOverlayHost::shared.transient-presentation",
+      "file": "entry/src/main/ets/pages/AppOverlayHost.ets",
+      "owner": "<module>",
+      "member": "AppOverlayHost",
       "family": "shared.transient-presentation",
       "category": "普通短反馈公共呈现宿主",
-      "effectiveHost": "Index.pageSurfaces 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",
+      "effectiveHost": "Index.pageSurfaces 中的 AppOverlayHost 消费原展示／业务 owner 提供的事实及动作，遵守当前调用方身份和代次。",
       "retireRule": "调用方身份或原操作generation失效后由原owner拒绝动作；关闭展示按原生命周期清理。登记只确认当前源码入口，运行时退休与可达性证据另行记录。",
       "status": "registered-source-entry"
     },

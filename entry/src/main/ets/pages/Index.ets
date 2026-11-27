@@ -1,3 +1,4 @@
+import { AppOverlayHost, AppWindowOverlays } from './AppOverlayHost';
 import { sourceSwitchTriggerFocusId } from '../features/source/presentation/SourceSwitchSurfaceLifecycle';
 import type { ReaderDirectoryTargetProof } from '../features/reading/application/ReaderDirectoryTargetProof';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../ui/feedback/ReaderTransientFeedback';
@@ -9,7 +10,6 @@ import { MangaSourceLogin, type MangaSourceLoginScene } from '../features/manga/
 import { FrameCallback } from '@kit.ArkUI';
 import type { AnimatorResult } from '@ohos.animator';
 import { readerAppColor } from '../ui/foundation/ReaderThemeRegistry';
-import { BookshelfGroupDialog } from '../features/bookshelf/ui/BookshelfGroupDialog';
 import { BookshelfGroupPresentation } from '../features/bookshelf/presentation/BookshelfGroupPresentation';
 import type { SearchHost } from '../features/search/application/SearchHost';
 import { ReaderLibrarySearchSurface } from '../features/search/ui/ReaderLibrarySearchSurface';
@@ -37,8 +37,6 @@ import { BookshelfDetailScene, type BookshelfDetailScenePorts } from '../feature
 import type { BookshelfReadableAdmissionSnapshot } from '../features/bookshelf/application/BookshelfReadableAdmissionOwner';
 import type { BookshelfOperationSnapshot } from '../features/bookshelf/application/BookshelfOperationOwner';
 import { BookshelfMutationPresentation } from '../features/bookshelf/presentation/BookshelfMutationPresentation';
-import { BookshelfImportScene } from '../features/bookshelf/ui/BookshelfImportScene';
-import { BookRemovalDialogHost } from '../features/bookshelf/ui/BookRemovalDialogHost';
 import { BookRemovalDialogPresentation } from '../features/bookshelf/presentation/BookRemovalDialogPresentation';
 import { BookshelfMultiSelectPage } from '../features/bookshelf/ui/BookshelfMultiSelectPage';
 import { BookshelfManagementPresentation } from '../features/bookshelf/presentation/BookshelfManagementPresentation';
@@ -61,10 +59,8 @@ import { RetainedReaderScene, type RetainedReaderScenePorts } from '../app/compo
 import { ReaderReadingEntryActions, type ReaderReadingEntryActionPorts } from '../app/composition/ReaderReadingEntryActions';
 import { DetailDirectoryScene } from '../features/reading/ui/DetailDirectoryScene';
 import { ReaderDirectoryJourney, type ReaderDirectoryJourneyPorts, type ReaderDirectoryJourneyScope } from '../app/composition/ReaderDirectoryJourney';
-import { ReaderSourceSwitchSurfaces } from '../app/composition/ReaderSourceSwitchSurfaces';
 import { ReaderSourceSwitchJourney, type ReaderSourceSwitchJourneyPorts, type ReaderSourceSwitchScope } from '../app/composition/ReaderSourceSwitchJourney';
 import { readerSourceSwitchActions, type ReaderSourceSwitchActions } from '../app/composition/ReaderSourceSwitchActions';
-import { ReaderTransientToast } from '../ui/feedback/ReaderTransientToast';
 import type { ReaderSurfaceRect } from '../ui/layout/ReaderSurfaceRect';
 import type { ReadingBookDetail } from '../features/reading/presentation/ReadingBookDetail';
 import { ReadingEntryPresentation, type ReadingEntryPorts, type CachedChapterRecoveryPorts,
@@ -92,7 +88,6 @@ import { ReaderLibraryJourney, type ReaderLibraryJourneyPorts, type ReaderLibrar
 import { ReaderSettingsJourney, type ReaderSettingsJourneyPorts, type ReaderSettingsJourneyScope } from '../app/composition/ReaderSettingsJourney';
 import { ReaderSourceJourney, type ReaderSourceJourneyPorts, type ReaderSourceJourneyScope } from '../app/composition/ReaderSourceJourney';
 import { ReaderDownloadJourney, type ReaderDownloadJourneyPorts, type ReaderDownloadJourneyScope } from '../app/composition/ReaderDownloadJourney';
-import { ReaderJourneyRecoveryNotices } from '../app/composition/ReaderJourneyRecoveryNotices';
 import { readerLegacySnapshotRecoveryView } from '../app/ReaderRecoveryProjection';
 import { SharedDownloadScene } from '../features/downloads/ui/SharedDownloadScene';
 import { SharedDownloadPresentation, type DownloadReadingEntry } from '../features/downloads/presentation/SharedDownloadPresentation';
@@ -109,9 +104,8 @@ import { SyncPresentation } from '../features/sync/presentation/SyncPresentation
 import { SyncSurface } from '../features/sync/ui/SyncSurface';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerExpandedLayout } from '../ui/layout/ReaderLayoutCapability';
-import { ArkWebExecutionHost, type ArkWebInteractiveBounds } from '../ui/platform/ArkWebExecutionHost';
+import type { ArkWebInteractiveBounds } from '../ui/platform/ArkWebExecutionHost';
 import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
-import { JsonImportDialog } from '../app/composition/JsonImportDialog';
 import { JsonImportPresentation, type JsonImportOpening } from '../app/composition/JsonImportPresentation';
 import { isReaderProductSurfaceEnabled } from '../app/ReaderProductScope';
 import { ReaderNavigation, retainedReaderRoute, type DetailReturnRoute, type DirectoryReturnTarget,
@@ -126,7 +120,6 @@ import { ReaderBottomNavigation } from '../app/navigation/ReaderBottomNavigation
 import { readerMainNavigationMode } from '../features/shell/MainNavigationSpec';
 import { readerLayoutCarrierResponseRegion } from '../ui/layout/ReaderPageNativeAttributes';
 import { ReaderPostLayoutFrame } from '../ui/layout/ReaderPostLayoutFrame';
-import { ReaderLayoutDebugOverlay } from '../app/composition/ReaderLayoutDebugOverlay';
 import { READER_LAYOUT_DEBUG_BUILD } from '../ui/foundation/ReaderLayoutInvariantSignals';
 import { readerBeginTransition, readerRouteTransitionLaneId, readerTransitionActorX,
   readerTransitionsEnabled } from '../ui/foundation/ReaderTransitionSignals';
@@ -1199,23 +1192,17 @@ struct Index {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       this.pageSurfaces();
-      Stack({ alignContent: Alignment.TopStart }) {
-        BookRemovalDialogHost({ presentation: this.bookRemovalConfirmation });
-      }.width('100%').height('100%')
-        .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.ALL])
-        .hitTestBehavior(HitTestMode.Transparent);
-      Stack({ alignContent: Alignment.TopStart }) {
-        ArkWebExecutionHost({
-          interactiveBounds: this.wideSettingsPane() === 'source' && this.route === 'source' ? this.sourcePaneBounds : undefined,
-          onBackBridge: (handler: (() => boolean) | undefined): void => { this.arkWebBack = handler; },
-          onInputCaptureChange: (captured: boolean): void => {
-            if (this.shelfReceiptRetired || this.arkWebCapturesInput === captured) return;
-            this.arkWebCapturesInput = captured;
-            if (!captured) this.readingExitActions.navigationSettled();
-          },
-        });
-      }.width('100%').height('100%').padding({ top: this.overlaySafeTop() })
-        .hitTestBehavior(HitTestMode.Transparent);
+      AppWindowOverlays({
+        bookRemoval: this.bookRemovalConfirmation,
+        webBounds: this.wideSettingsPane() === 'source' && this.route === 'source' ? this.sourcePaneBounds : undefined,
+        topInset: this.overlaySafeTop(),
+        onWebBack: (handler: (() => boolean) | undefined): void => { this.arkWebBack = handler; },
+        onWebInputCaptured: (captured: boolean): void => {
+          if (this.shelfReceiptRetired || this.arkWebCapturesInput === captured) return;
+          this.arkWebCapturesInput = captured;
+          if (!captured) this.readingExitActions.navigationSettled();
+        },
+      });
     }
       .width('100%')
       .height(LayoutPolicy.matchParent)
@@ -1410,82 +1397,41 @@ struct Index {
 
   @Builder
   private pageOverlays() {
-    // Both the pushed detail and the retained reader can occupy zIndex 1.
-    Stack({ alignContent: Alignment.TopStart }) {
-      Stack({ alignContent: Alignment.TopStart }) {
-        ReaderSourceSwitchSurfaces({
-          reading: this.readingEntry, source: this.sourceSwitchPresentation, manga: this.mangaSourceSwitch,
-          entryPickerAllowed: this.route === 'detail' || this.route === 'bookshelf' || this.isDetailDirectoryRoute(),
-          interactive: this.searchAppForeground && !this.arkWebCapturesInput,
-          reduceMotion: this.appReduceMotion, consumeTopInset: this.readerOwnsWindowEdges(),
-          actions: this.sourceSwitchActions,
-        });
-      }.width('100%').height('100%').padding({ top: this.overlaySafeTop() })
-        .hitTestBehavior(HitTestMode.Transparent);
-      this.modalOverlays();
-      this.feedbackOverlays();
-    }.width('100%').height('100%').zIndex(2).hitTestBehavior(HitTestMode.Transparent);
-  }
-
-  @Builder
-  private modalOverlays() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      if (this.route === 'bookshelf' || this.route === 'detail') {
-        BookshelfGroupDialog({ presentation: this.shelfGroupPresentation,
-          isInputAllowed: (): boolean => this.searchAppForeground && !this.arkWebCapturesInput &&
-            (this.route === 'bookshelf' || this.route === 'detail'),
-        });
-      }
-      if (this.route === 'bookshelf') {
-        BookshelfImportScene({ presentation: this.shelfMutations, navigation: this.navigationGeneration,
-          reduceMotion: this.appReduceMotion,
-          canRestoreFocus: (): boolean => this.isInteractiveBookshelfPresentation(
-            this.navigationGeneration, this.mountedRuntimeOwner, this.detailShelfAdmissionMount) &&
-            !this.bookRemovalConfirmation.isOpen() && this.jsonImportPresentation.opening === undefined &&
-            !this.sourceSwitchPresentation.isSurfacePresented() && !this.mangaSourceSwitch.selectionVisible,
-        });
-      }
-      if (this.jsonImportPresentation.opening !== undefined) {
-        this.jsonImportContent();
-      }
-    }.width('100%').height('100%')
-      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.ALL])
-      .hitTestBehavior(HitTestMode.Transparent);
-  }
-
-  @Builder
-  private feedbackOverlays() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      ReaderJourneyRecoveryNotices({
-        reading: this.readingEntry, detail: this.detailShelf, topInset: this.messageSafeTop(),
-        startupRecoveryVisible: this.bookshelfContentAcceptsInput(),
-        startupRecovery: readerLegacySnapshotRecoveryView(this.mountedRuntimeOwner?.legacySnapshotMigrationRecovery()),
-        interactive: this.journeyRecoveryInputAllowed(),
-        canInteract: (): boolean => this.journeyRecoveryInputAllowed(),
-        mangaRecoveryVisible: this.canPresentMangaRecovery(),
-        mangaRecovery: this.sourceSwitchPresentation.mangaRecovery,
-        mangaRecoveryActionLabel: this.sourceSwitchPresentation.mangaRecoveryActionLabel,
-        mangaRecoveryBusy: this.sourceSwitchPresentation.mangaRecoveryBusy,
-        onMangaRecovery: (generation: number): void => {
-          if (this.canPresentMangaRecovery()) this.sourceSwitchPresentation.retryMangaRecovery(generation);
-        },
-      });
-      // Runtime geometry guide is last so it can outline every mounted page
-      // surface without intercepting input.
-      if (typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD) {
-        ReaderLayoutDebugOverlay({ route: this.route, requiresHeader: this.route !== 'reading',
-          requiresControl: this.route === 'bookshelf' || this.route === 'detail',
-          requiresFirstContent: this.route === 'bookshelf' && this.shelfRead.snapshot.visualAdmitted && !this.shelfRead.headerScrolled,
-          mainInputEnabled: !this.arkWebCapturesInput && (this.route === 'bookshelf' ? this.bookshelfContentAcceptsInput() :
-            this.route === 'detail' ? this.detailContentIsForeground() :
-            !this.sourceSwitchPresentation.isSurfacePresented() && !this.mangaSourceSwitch.selectionVisible) });
-      }
-      // One app-owned short-feedback host sits above every route. Domain
-      // owners publish only AppStorage facts through ReaderTransientFeedback.
-      ReaderTransientToast()
-    }
-    .width('100%').height('100%').padding({ top: this.overlaySafeTop() })
-    .zIndex(2).hitTestBehavior(HitTestMode.Transparent);
+    AppOverlayHost({
+      route: this.route, generation: this.navigationGeneration,
+      reduceMotion: this.appReduceMotion, topInset: this.overlaySafeTop(),
+      sourceSwitch: {
+        entry: this.readingEntry, source: this.sourceSwitchPresentation, manga: this.mangaSourceSwitch,
+        entryPickerAllowed: this.route === 'detail' || this.route === 'bookshelf' || this.isDetailDirectoryRoute(),
+        interactive: this.searchAppForeground && !this.arkWebCapturesInput,
+        consumeTopInset: this.readerOwnsWindowEdges(), actions: this.sourceSwitchActions,
+      },
+      modals: {
+        groups: this.shelfGroupPresentation, imports: this.shelfMutations, json: this.jsonImportPresentation,
+        expandedLayout: this.expandedLayout(),
+        groupInput: (): boolean => this.searchAppForeground && !this.arkWebCapturesInput &&
+          (this.route === 'bookshelf' || this.route === 'detail'),
+        canRestoreImportFocus: (): boolean => this.isInteractiveBookshelfPresentation(
+          this.navigationGeneration, this.mountedRuntimeOwner, this.detailShelfAdmissionMount) &&
+          !this.bookRemovalConfirmation.isOpen() && this.jsonImportPresentation.opening === undefined &&
+          !this.sourceSwitchPresentation.isSurfacePresented() && !this.mangaSourceSwitch.selectionVisible,
+        canUseJson: (): boolean => this.canUseJsonImport(),
+        canRestoreJsonFocus: (opening: JsonImportOpening): boolean => this.canUseJsonImport() &&
+          (opening.context === 'bookSource' && this.route === 'source' ||
+            opening.context === 'ruleBundle' && this.route === 'rulesManagement'),
+      },
+      feedback: {
+        detail: this.detailShelf, messageTopInset: this.messageSafeTop(),
+        startupVisible: this.bookshelfContentAcceptsInput(),
+        startup: readerLegacySnapshotRecoveryView(this.mountedRuntimeOwner?.legacySnapshotMigrationRecovery()),
+        interactive: this.journeyRecoveryInputAllowed(), canInteract: (): boolean => this.journeyRecoveryInputAllowed(),
+        mangaVisible: this.canPresentMangaRecovery(), canRetryManga: (): boolean => this.canPresentMangaRecovery(),
+        firstContentRequired: this.route === 'bookshelf' && this.shelfRead.snapshot.visualAdmitted && !this.shelfRead.headerScrolled,
+        pageInputEnabled: !this.arkWebCapturesInput && (this.route === 'bookshelf' ? this.bookshelfContentAcceptsInput() :
+          this.route === 'detail' ? this.detailContentIsForeground() :
+          !this.sourceSwitchPresentation.isSurfacePresented() && !this.mangaSourceSwitch.selectionVisible),
+      },
+    });
   }
 
   @Builder
@@ -1912,31 +1858,8 @@ struct Index {
       });
   }
 
-  @Builder
-  private jsonImportContent() {
-    if (this.jsonImportPresentation.opening !== undefined) {
-      ForEach([this.jsonImportPresentation.opening], (opening: JsonImportOpening): void => {
-        JsonImportDialog({
-          title: opening.title, description: opening.description, expandedLayout: this.expandedLayout(),
-          openingId: opening.id,
-          captureFocusReturn: () => this.jsonImportPresentation.captureFocusReturn(opening.id, (): boolean =>
-            !this.shelfReceiptRetired && this.searchAppForeground && !this.arkWebCapturesInput &&
-            (opening.context === 'bookSource' && this.route === 'source' ||
-              opening.context === 'ruleBundle' && this.route === 'rulesManagement')),
-          isInputAllowed: (): boolean => !this.shelfReceiptRetired && this.searchAppForeground && !this.arkWebCapturesInput &&
-            this.jsonImportPresentation.isOpeningCurrent(opening.id),
-          onDismiss: (): void => this.jsonImportPresentation.dismiss(opening.id),
-          onSelectLocal: (): void => {
-            if (!this.shelfReceiptRetired && this.searchAppForeground && !this.arkWebCapturesInput &&
-              this.jsonImportPresentation.opening?.id === opening.id) this.jsonImportPresentation.submit(opening.id);
-          },
-          onImportOnline: (url: string): void => {
-            if (!this.shelfReceiptRetired && this.searchAppForeground && !this.arkWebCapturesInput &&
-              this.jsonImportPresentation.opening?.id === opening.id) this.jsonImportPresentation.submit(opening.id, url);
-          },
-        });
-      }, (opening: JsonImportOpening): string => opening.id.toString());
-    }
+  private canUseJsonImport(): boolean {
+    return !this.shelfReceiptRetired && this.searchAppForeground && !this.arkWebCapturesInput;
   }
 
   private dismissJsonImport(): void { this.jsonImportPresentation.dismiss(); }
