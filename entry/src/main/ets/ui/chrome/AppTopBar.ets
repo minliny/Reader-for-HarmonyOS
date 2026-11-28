@@ -26,12 +26,12 @@ import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSu
 // 故 RssPage 保留页私有实现 (见该页注释)。
 @Component
 export struct AppTopBar {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences')
   private navigationAppearance: ReaderNavigationPreferences = defaultNavigationPreferences();
 
-  @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop title: string = '';
   /** Visible boundary for a fixed header, requested by the bookshelf review. */
   divider: boolean = false;

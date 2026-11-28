@@ -51,7 +51,7 @@ interface ReaderRouteAnimation {
 /** Renders the admitted app route in a native stack. Index owns all Back decisions. */
 @Component
 export struct ReaderRouteStackSurface {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
   @Prop @Watch('onRouteChanged') route: ReaderRouteSurfaceKey = 'settings';
   @Prop surfaceId: string = '';
   // The outer route owns its own insets. Nested settings stacks are already inside that content.

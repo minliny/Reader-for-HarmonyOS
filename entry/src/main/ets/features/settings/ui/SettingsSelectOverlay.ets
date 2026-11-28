@@ -41,12 +41,12 @@ const PHONE_SHEET_CORNERS: OutlineRadiuses = { topLeft: 24, topRight: 24 };
  */
 @Component
 export struct SettingsSelectOverlay {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   @Prop visible: boolean = true;
   @Prop expandedLayout: boolean = false;

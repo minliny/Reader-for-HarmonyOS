@@ -215,10 +215,6 @@ export const TOK_READ_IMMERSIVE_META_NIGHT = readerThemeDefinition('paperNight')
 export const TOK_SS_WINDOW_BG = readerAppColor('TOK_SS_WINDOW_BG', 'day');
 // Figma: source-switch window border rgba(155,132,102,0.24)
 export const TOK_SS_WINDOW_BORDER = readerAppColor('TOK_SS_WINDOW_BORDER', 'day');
-// Figma: source-switch muted text  排序/关闭字形次级文字
-export const TOK_SS_MUTED = readerAppColor('TOK_SS_MUTED', 'day');
-// Figma: source-switch footer count text  底部书源计数
-export const TOK_SS_FOOTER_TEXT = readerAppColor('TOK_SS_FOOTER_TEXT', 'day');
 // Figma: source-switch close button pill rgba(238,230,219,0.42)
 export const TOK_SS_CLOSE_BG = readerAppColor('TOK_SS_CLOSE_BG', 'day');
 // Figma: source-switch sort pill rgba(155,132,102,0.10)

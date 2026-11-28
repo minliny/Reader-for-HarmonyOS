@@ -42,9 +42,9 @@ import {
 export struct SyncPage {
   @Prop embeddedWide: boolean = false;
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: SyncSnapshot = DEFAULT_SYNC_SNAPSHOT;
   @Prop expandedLayout: boolean;
   isOpeningCurrent: () => boolean = (): boolean => true;

@@ -70,8 +70,8 @@ export function readerTtsSectionHeader(header: ReaderTtsSectionHeader, appScheme
 
 @Component
 export struct ReaderControlTtsConfigSection {
-  @StorageLink('readerAppScheme') private appScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   @Prop section: 'detail' | 'system' = 'detail';
   @Prop displayedFacts: ReaderTtsMinimumFacts | undefined = undefined;
@@ -373,7 +373,7 @@ export struct ReaderControlTtsConfigSection {
 
 @Component
 export struct ReaderControlTtsTimerCard {
-  @StorageLink('readerAppScheme') private appScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appScheme: string = 'day';
 
   @Prop textMinimum: ReaderTtsTextMinimum | undefined = undefined;
   @Prop timerCardLayout: ReaderTtsTimerCardLayout = readerTtsTimerCardLayout(44, 36, 48);

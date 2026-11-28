@@ -11,7 +11,7 @@ type ReaderIconSelectionState = 'none' | 'active' | 'selected';
 // business action. Native ArkUI owns press/release/cancel and focus dispatch.
 @Component
 export struct ReaderIconButton {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @Prop icon: Resource;
   @Prop specId: ReaderIconButtonSpecId = 'toolbar-standard';

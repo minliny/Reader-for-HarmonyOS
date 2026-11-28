@@ -4,8 +4,8 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
  * The platform owns the ring geometry and animation timing. */
 @Component
 export struct SourceSwitchSpinner {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private foreground: boolean = true;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') private foreground: boolean = true;
   @Prop active: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop diameter: number = 18;

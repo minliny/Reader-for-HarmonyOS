@@ -17,8 +17,8 @@ import type { MangaDownloadAction, MangaDownloadActionId } from '../application/
  * and all download mutations; the existing panel owns loading/error/actions. */
 @Component
 export struct ReaderMangaDownloadPopup {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @State private anchor: ReaderRectVp | undefined = undefined;
   @Prop specId: 'manga-download' = 'manga-download';
   @Prop visible: boolean = false;

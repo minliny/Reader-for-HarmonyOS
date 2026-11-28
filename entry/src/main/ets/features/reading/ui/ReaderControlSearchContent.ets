@@ -61,8 +61,8 @@ class ReaderSearchMeasuredMessageFrame implements AttributeModifier<TextAttribut
 @Component
 export struct ReaderControlSearchContent {
   editingHost: ReaderEditingVisibility | undefined = undefined;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') @Watch('publishMinimumMeasurer') private minimumMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') @Watch('publishMinimumMeasurer') private minimumMetricsRevision: number = 0;
   @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
   @Prop preparedMinimumRequired: boolean = false;
   onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts) => void =

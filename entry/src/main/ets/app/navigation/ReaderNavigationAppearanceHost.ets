@@ -11,9 +11,9 @@ import {
 export struct ReaderNavigationAppearanceHost {
   @StorageLink('readerNavigationAppearancePreferences') @Watch('refreshAppearance')
   private preferences: ReaderNavigationPreferences = defaultNavigationPreferences();
-  @StorageLink('readerAppScheme') @Watch('refreshAppearance') private appScheme: string = 'day';
-  @StorageLink('readerSystemScheme') @Watch('refreshAppearance') private systemScheme: string = 'day';
-  @StorageLink('readerAppForeground') @Watch('refreshAppearance') private foreground: boolean = true;
+  @StorageProp('readerAppScheme') @Watch('refreshAppearance') private appScheme: string = 'day';
+  @StorageProp('readerSystemScheme') @Watch('refreshAppearance') private systemScheme: string = 'day';
+  @StorageProp('readerAppForeground') @Watch('refreshAppearance') private foreground: boolean = true;
   @Prop @Watch('refreshAppearance') inputEnabled: boolean = true;
   @Prop bottomInset: number = 0;
   @Prop translateX: number = 0;

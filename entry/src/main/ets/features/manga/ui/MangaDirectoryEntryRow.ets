@@ -21,8 +21,8 @@ export struct MangaDirectoryEntryRow {
   @Prop @Watch('clearPress') row: MangaDirectoryLayoutRow = { kind: 'row', columns: 1, startIndex: 0, entries: [], labels: [] };
   @Prop presentation: Map<number, MangaDirectoryRowPresentation> = new Map<number, MangaDirectoryRowPresentation>();
   @Prop scheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @Prop currentChapterIndex: number = -1;
   @Prop collapsedBranches: number[] = [];
   @Prop query: string = '';

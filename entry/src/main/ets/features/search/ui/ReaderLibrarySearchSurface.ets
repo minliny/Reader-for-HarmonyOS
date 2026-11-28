@@ -90,11 +90,11 @@ export struct ReaderLibrarySearchSurface {
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding('reader-library-search-surface');
   private readonly editingScroller: Scroller = new Scroller();
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
-  @StorageLink('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
   @ObjectLink @Watch('historyChanged') model: ReaderLibrarySearchModel;
   @Prop @Watch('modeChanged') mode: LibrarySearchMode = 'idle';
   /** Restoring a retained query is a stable frame, not a new shelf opening. */

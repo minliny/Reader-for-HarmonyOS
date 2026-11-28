@@ -49,7 +49,7 @@ interface SourceJourneyPaneMotion {
 export struct SourceJourneySurface {
   @StorageProp('readerNavigationAppearancePreferences')
   private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
   @Prop expandedLayout: boolean = false;
   @Prop embeddedWide: boolean = false;
   @Prop reduceMotion: boolean = false;

@@ -45,10 +45,10 @@ const RSS_DETAIL_ACTION_AREA_HEIGHT = 62;
  */
 @Component
 export struct RssEntryDetailPage {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
   @Prop subscription: RssSubscription | undefined = undefined;
   @Prop item: RssItem | undefined = undefined;
   @Prop archivedFavorite: RssFavorite | undefined = undefined;

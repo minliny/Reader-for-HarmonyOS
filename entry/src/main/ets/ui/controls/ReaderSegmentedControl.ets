@@ -45,8 +45,8 @@ function resolveReaderSegmentSpec(id: ReaderSegmentSpecId): ReaderSegmentSpec {
 /** Controlled short enum. Native choice controls render only the owner's accepted projection. */
 @Component
 export struct ReaderSegmentedControl {
-  @StorageLink('readerAppScheme') @Watch('syncNativeThemeItems') private appThemeScheme: string = 'day';
-  @StorageLink('readerUiConfigurationRevision') @Watch('refreshThemeFontPolicy')
+  @StorageProp('readerAppScheme') @Watch('syncNativeThemeItems') private appThemeScheme: string = 'day';
+  @StorageProp('readerUiConfigurationRevision') @Watch('refreshThemeFontPolicy')
   private uiConfigurationRevision: number = 0;
   @State private themeFontPolicyReady: boolean = false;
   @State private themeMaxFontScale: number = 1;

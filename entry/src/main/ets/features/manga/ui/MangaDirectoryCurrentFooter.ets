@@ -7,7 +7,7 @@ import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectorySc
 /** Shared current-position surface; only its title may be ellipsized. */
 @Component
 export struct MangaDirectoryCurrentFooter {
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop title: string = '';
   @Prop pagePosition: string = '';
   @Prop scheme: string = 'day';

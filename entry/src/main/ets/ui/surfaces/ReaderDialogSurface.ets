@@ -72,8 +72,8 @@ export class DialogActionView {
  */
 @Component
 export struct ReaderDialogSurface {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop specId: DialogSpecId = 'book-removal';
   @Prop title: string = '';
   /** Available width after the parent pane has applied its window insets. */

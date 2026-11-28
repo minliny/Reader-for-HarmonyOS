@@ -74,11 +74,11 @@ let fullDirectoryBackGeneration = 0;
 @Component
 export struct ReaderFullDirectory {
   @Prop reduceMotion: boolean = false;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowChromeUnderlayColor') private chromeUnderlayColor: string =
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowChromeUnderlayColor') private chromeUnderlayColor: string =
     readerAppColor('app.window.background', 'day');
 
-  @StorageLink('readerWindowMetricsRevision') @Watch('onWindowMetricsChanged') readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') @Watch('onWindowMetricsChanged') readerWindowMetricsRevision: number = 0;
   navigationPortFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
   @Prop bookTitle: string = '';
   @Prop @Watch('retireDirectoryRules') bookId: string = '';

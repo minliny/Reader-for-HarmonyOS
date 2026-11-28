@@ -69,9 +69,9 @@ export struct SettingsPage {
   @Prop embeddedWide: boolean = false;
   @Prop wideWindow: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private appForeground: boolean = true;
-  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') private appForeground: boolean = true;
+  @StorageProp('readerReduceMotion') private appReduceMotion: boolean = false;
   @StorageProp('readerSystemReduceMotion') private systemReduceMotion: boolean = false;
   @StorageProp('readerBookshelfViewMode') private bookshelfViewMode: BookshelfViewMode = DEFAULT_BOOKSHELF_VIEW;
   @StorageProp('readerNavigationAppearancePreferences')
@@ -99,9 +99,9 @@ export struct SettingsPage {
   onRetryAccepted: (generation: number) => void = (_generation: number): void => {};
   onReconcileCache: (generation: number) => void = (_generation: number): void => {};
   onContinueCache: (generation: number) => void = (_generation: number): void => {};
-  @StorageLink('readerAppThemeMode') private appThemeMode: string = 'system';
-  @StorageLink('readerControlAlignment') private controlAlignment: string = 'center';
-  @StorageLink('readerControlPlacementPendingGeneration') private controlPlacementPending: number = 0;
+  @StorageProp('readerAppThemeMode') private appThemeMode: string = 'system';
+  @StorageProp('readerControlAlignment') private controlAlignment: string = 'center';
+  @StorageProp('readerControlPlacementPendingGeneration') private controlPlacementPending: number = 0;
   @State private controlPlacementSaving: boolean = false;
   @State private languageValue: string = '简体中文';
   @State private startupValue: string = '书架';

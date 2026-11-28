@@ -93,13 +93,13 @@ class DetailDirectoryFocusFrame extends FrameCallback {
 @Component
 export struct LocalBookDetail {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
-  @StorageLink('readerAppForeground') @Watch('onShareForegroundChanged') private appForeground: boolean = true;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerAppForeground') @Watch('onShareForegroundChanged') private appForeground: boolean = true;
   @StorageProp('readerReduceMotion') private appReduceMotion: boolean = false;
   @StorageProp('readerNavigationAppearancePreferences') private navigationAppearance: ReaderNavigationPreferences =
     defaultNavigationPreferences();
-  @StorageLink('readerWindowMetricsRevision') @Watch('onMangaGeometryChanged') readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') @Watch('onMangaGeometryChanged') readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onBookChanged') book: ReadingBookDetail;
   @Prop @Watch('onTocChanged') toc: LocalReadingTocEntry[] = [];
   @Prop sourceSwitchEnabled: boolean = false;

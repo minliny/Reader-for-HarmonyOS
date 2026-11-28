@@ -130,8 +130,8 @@ class ReaderLabeledIconHitModifier implements AttributeModifier<ButtonAttribute>
  * Domain callbacks and presentation admission stay at each actual owner. */
 @Component
 export struct ReaderLabeledIconAction {
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
   @Prop scheme: string = 'day';
   @Prop specId: ReaderLabeledIconActionSpecId = 'rss-feed';
   @Prop label: string = '';

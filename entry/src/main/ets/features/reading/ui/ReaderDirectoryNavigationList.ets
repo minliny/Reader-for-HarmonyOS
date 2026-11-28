@@ -282,7 +282,7 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
 /** Only the pressed text target repaints. Selection still belongs to the list. */
 @Component
 struct ReaderDirectoryTreeTitle {
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @Prop title: string = '';
   @Prop label: string = '';
   @Prop focusId: string = '';
@@ -327,9 +327,9 @@ struct ReaderDirectoryTreeTitle {
 /** Virtual, Core-paged display rows. Its placeholders never claim a chapter identity. */
 @Component
 export struct ReaderDirectoryNavigationList {
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
   @Prop @Watch('onViewChanged') view: ReaderDirectoryNavigationReady;
   @Prop bookId: string = '';
   @Prop sourceId: string = 'local';

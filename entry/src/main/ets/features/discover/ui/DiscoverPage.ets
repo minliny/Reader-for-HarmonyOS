@@ -50,11 +50,11 @@ import {
 @Component
 export struct DiscoverPage {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
-  @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
+  @StorageProp('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerMainViewportRevision') private mainViewportRevision: number = 0;
+  @StorageProp('readerWideNavigationRail') private wideNavigationRail: boolean = false;
   @State private measurementRevision: number = 0;
   @State private measurementKey: number = 0;
   private headerInputs: string = '';

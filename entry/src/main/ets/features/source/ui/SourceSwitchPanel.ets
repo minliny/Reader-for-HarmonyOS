@@ -24,11 +24,11 @@ class SourceSwitchSurfaceFrame extends FrameCallback {
 /** Shared modal carrier for the detail and retained reader source picker. */
 @Component
 export struct SourceSwitchPanel {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
-  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  @StorageProp('readerAppForeground') private appForeground: boolean = true;
   @Prop @Watch('surfaceChanged') scopeId: number = 0;
   @Prop @Watch('surfaceChanged') showing: boolean = true;
   surface: SourceSwitchPresentation | undefined = undefined;

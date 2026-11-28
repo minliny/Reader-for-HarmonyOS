@@ -12,7 +12,7 @@ export interface SourceV9SegmentChoice {
 
 @Component
 export struct SourceV9TypeSeal {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
   @Prop category: string = 'novel';
   @Prop paintSurface: boolean = true;
 
@@ -30,7 +30,7 @@ export struct SourceV9TypeSeal {
 
 @Component
 export struct SourceV9CircleCheck {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
   @Prop selected: boolean = false;
   @Prop actionEnabled: boolean = true;
   @Prop interactive: boolean = true;
@@ -73,8 +73,8 @@ export struct SourceV9CircleCheck {
 
 @Component
 export struct SourceV9SegmentedTrack {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @Prop choices: SourceV9SegmentChoice[] = [];
   @Prop selected: string = '';
   @Prop idPrefix: string = '';
@@ -108,8 +108,8 @@ export struct SourceV9SegmentedTrack {
 
 @Component
 export struct SourceV9DetectButton {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @Prop tone: SourceV9ReportTone = 'unverified';
   @Prop checking: boolean = false;
   @Prop actionEnabled: boolean = true;
@@ -149,7 +149,7 @@ export struct SourceV9DetectButton {
 
 @Component
 export struct SourceV9AddAction {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
   @Prop selected: boolean = false;
   @Prop label: string = '新建';
   @Prop actionEnabled: boolean = true;

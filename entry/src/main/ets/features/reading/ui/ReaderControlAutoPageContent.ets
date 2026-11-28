@@ -58,8 +58,8 @@ type ReaderAutoPageIslandTransport = 'previous' | 'next' | 'stop' | 'toggle';
  * wheel and native range-input business commands are supplied by the owner. */
 @Component
 export struct ReaderControlAutoPageContent {
-  @StorageLink('readerAppScheme') @Watch('reportMorphActor') private appScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') @Watch('reportMorphActor') private appScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @StorageProp('readerAppForeground') @Watch('syncRunningPulse') private foreground: boolean = true;
   @StorageProp('readerReduceMotion') @Watch('syncRunningPulse') private reducedMotion: boolean = false;
 

@@ -37,8 +37,8 @@ export type ReaderSelectVariant =
 
 @Component
 export struct ReaderSelect {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   @Prop value: string = '';
   @Prop options: string[] = [];

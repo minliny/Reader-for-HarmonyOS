@@ -23,8 +23,8 @@ import { MangaBookPresentation } from '../../manga/presentation/MangaBookPresent
 
 @Component
 export struct BookshelfContinueCard {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   @Prop continueReading: ShelfBook | undefined = undefined;
   @Prop expandedLayout: boolean = false;

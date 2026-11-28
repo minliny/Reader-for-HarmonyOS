@@ -186,13 +186,14 @@ export class ReaderControlDirectorySession {
 
 @Component
 export struct ReaderControlDirectoryHost {
-  owner!: ReaderControlDirectorySession;
-  onIntent!: ReaderControlIntentHandler;
+  owner: ReaderControlDirectorySession | undefined = undefined;
+  onIntent: ReaderControlIntentHandler = defaultReaderControlIntent;
   @ObjectLink frame: ReaderControlPanelFrame;
   @State @Watch('onNativeControlSessionChanged') private controlSession: ReaderControlSessionState = createReaderControlSessionState();
   private detach: (() => void) | undefined = undefined;
 
   aboutToAppear(): void {
+    if (this.owner === undefined) return;
     this.controlSession = this.owner.read();
     this.detach = this.owner.connect((session: ReaderControlSessionState): void => { this.controlSession = session; });
   }
@@ -203,7 +204,7 @@ export struct ReaderControlDirectoryHost {
   }
 
   private onNativeControlSessionChanged(): void {
-    if (this.detach !== undefined) this.owner.admit(this.controlSession);
+    if (this.detach !== undefined && this.owner !== undefined) this.owner.admit(this.controlSession);
   }
 
   build() {

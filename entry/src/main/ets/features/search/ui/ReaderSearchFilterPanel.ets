@@ -17,8 +17,8 @@ import type { SearchContentType } from '../presentation/SearchViewState';
 /** Bounded search filter content. SearchPage owns the current presentation and input. */
 @Component
 export struct ReaderSearchFilterPanel {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
   @Prop expanded: boolean = false;
   @Prop presentationIdentity: string = '';
   @Prop surfaceWidth: number = 0;

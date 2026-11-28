@@ -32,12 +32,12 @@ const DOWNLOAD_HEADER_RADIUS = 18;
 // 曾被 Settings/SourceManagement/Sync/Rss/LocalBookDetail 各自复制实现。
 @Component
 export struct PageBackBar {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences')
   private navigationAppearance: ReaderNavigationPreferences = defaultNavigationPreferences();
 
-  @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop title: string = '';
   @Prop trailingWidthVp: number = 44;
   @Prop leadingActionLabel: string = '';

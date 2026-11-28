@@ -86,10 +86,10 @@ struct Index {
     publish: (snapshot: ReaderNavigationSnapshot): void => this.publishNavigation(snapshot),
   });
 
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerReduceMotion') @Watch('onReaderParentMotionPolicyChanged') private appReduceMotion: boolean = false;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerReduceMotion') @Watch('onReaderParentMotionPolicyChanged') private appReduceMotion: boolean = false;
 
-  @StorageLink('readerWindowMetricsRevision') @Watch('onReaderParentWindowChanged') readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') @Watch('onReaderParentWindowChanged') readerWindowMetricsRevision: number = 0;
 
   // Keep the original observed presentations subscribed to this root's render cycle.
   @State private shelfMutations: BookshelfMutationPresentation = this.journeys.shelfMutations;
@@ -107,8 +107,8 @@ struct Index {
   @State private navigationGeneration: number = this.navigationOwner.snapshot().generation;
   @State private directoryReturnTarget: DirectoryReturnTarget = this.navigationOwner.snapshot().directoryReturnTarget;
   @State private settingsSection: SettingsSection = this.navigationOwner.snapshot().settingsSection;
-  @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
-  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
+  @StorageProp('readerWideNavigationRail') private wideNavigationRail: boolean = false;
+  @StorageProp('readerMainViewportRevision') private mainViewportRevision: number = 0;
   @State private primaryTabFooterHeight: number = 0;
   @State private settingsHomeScrollTopRequest: number = 0;
   @State private wideSettingsCollapsed: boolean = false;
@@ -259,7 +259,7 @@ struct Index {
       this.shelfGroupPresentation.identity.length === 0;
   }
 
-  @StorageLink('readerAppForeground') @Watch('onSearchVisibilityChanged') private searchAppForeground: boolean = true;
+  @StorageProp('readerAppForeground') @Watch('onSearchVisibilityChanged') private searchAppForeground: boolean = true;
   @State private jsonImportPresentation: JsonImportPresentation = this.journeys.jsonImportPresentation;
   @State private readingEntryActions: ReaderReadingEntryActions = this.journeys.readingEntryActions;
 

@@ -12,7 +12,7 @@ import type { ReaderRecoveryView } from '../../ui/feedback/ReaderRecoveryView';
 /** Presents each current recovery view in the shared nonmodal root slot. */
 @Component
 export struct ReaderJourneyRecoveryNotices {
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @State private hostWidth: number = 0;
   @State private hostHeight: number = 0;
   @State private hostY: number = 0;

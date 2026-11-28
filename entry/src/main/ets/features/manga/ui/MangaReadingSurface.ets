@@ -60,8 +60,8 @@ export struct MangaReadingSurface {
   private readonly viewport: MangaReadingViewportHost = new MangaReadingViewportHost(this.mounts.viewport, (): MangaViewportRenderState => this.viewportState);
   @State private boundaryState: MangaBoundaryRenderState = new MangaBoundaryRenderState();
   private readonly boundary: MangaChapterBoundaryHost = new MangaChapterBoundaryHost(this.mounts.boundary, (): MangaBoundaryRenderState => this.boundaryState, this.transientFeedback);
-  @StorageLink('readerWindowMetricsRevision') @Watch('onDirectoryMetricsChanged') private windowMetricsRevision: number = 0;
-  @StorageLink('readerAppForeground') @Watch('onPanelForegroundChanged') private appForeground: boolean = true;
+  @StorageProp('readerWindowMetricsRevision') @Watch('onDirectoryMetricsChanged') private windowMetricsRevision: number = 0;
+  @StorageProp('readerAppForeground') @Watch('onPanelForegroundChanged') private appForeground: boolean = true;
   @StorageLink('readerSmartGestureSettings') @Watch('syncSmartGestureMonitor')
   private smartGestureSettings: ReaderSmartGestureSettings = DEFAULT_READER_SMART_GESTURES;
   private readonly smartGestureHost: HarmonySmartGestureHost = new HarmonySmartGestureHost();
@@ -138,7 +138,7 @@ export struct MangaReadingSurface {
   private exiting: boolean = false;
   private navigationExitRequested: boolean = false;
   @StorageProp('readerAppScheme') @Watch('synchronizePaper') private appThemeScheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
   @State @Watch('onWindowChromeChanged') private controlsVisible: boolean = false;

@@ -115,7 +115,7 @@ class SourceSwitchCandidateDataSource implements IDataSource {
 /** Shared successful-result row using the selected drawer visual. */
 @Component
 struct SourceSwitchNovelRow {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @ObjectLink @Watch('rowChanged') row: SourceSwitchCandidateRow;
   @State private candidate: SourceSwitchCandidate = this.row.candidate;
   @Prop @Watch('pressAdmissionChanged') rowEnabled: boolean = true;
@@ -219,9 +219,9 @@ struct SourceSwitchNovelRow {
  * during input and retains the list through the real switch transaction. */
 @Component
 export struct SourceSwitchWindow {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerAppForeground') @Watch('foregroundChanged') private foreground: boolean = true;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppForeground') @Watch('foregroundChanged') private foreground: boolean = true;
   @Prop @Watch('acceptState') state: SourceSwitchPanelState;
   @Prop currentSourceId: string = '';
   @Prop bookTitle: string = '';

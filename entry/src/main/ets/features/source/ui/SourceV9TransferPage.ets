@@ -106,10 +106,10 @@ const KEYWORDS: string[] = ['我的', '斗破', '海贼'];
 export struct SourceV9TransferPage {
   @StorageProp('readerNavigationAppearancePreferences')
   private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
-  @StorageLink('readerAppForeground') @Watch('retireClipboardPaste') private foreground: boolean = true;
-  @StorageLink('readerWindowMetricsRevision') @Watch('refreshLayout') private windowRevision: number = 0;
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerAppForeground') @Watch('retireClipboardPaste') private foreground: boolean = true;
+  @StorageProp('readerWindowMetricsRevision') @Watch('refreshLayout') private windowRevision: number = 0;
   @Prop @Watch('changePane') pane: SourceV9TransferPane = 'import';
   @Prop initialUrl: string = '';
   @Prop initialJson: string = '';

@@ -51,7 +51,7 @@ export type { ReaderControlPage } from './ReaderControlRouting';
 
 @Component
 export struct ReaderControlPanel {
-  @ObjectLink @Watch('onPanelFrameChanged') panelFrame!: ReaderControlPanelFrame;
+  @ObjectLink @Watch('onPanelFrameChanged') panelFrame: ReaderControlPanelFrame;
   onIntent: ReaderControlIntentHandler = defaultReaderControlIntent;
   private deliveredFrame: ReaderControlPanelFrame | undefined = undefined;
   private readonly factDelivery = createReaderControlFactDelivery();
@@ -290,17 +290,17 @@ export struct ReaderControlPanel {
     });
   }
 
-  @StorageLink('readerControlAlignment') @Watch('refreshDockPlacement')
+  @StorageProp('readerControlAlignment') @Watch('refreshDockPlacement')
   private manualControlAlignment: string = 'center';
-  @StorageLink('readerAppForeground') @Watch('refreshDockPlacement')
+  @StorageProp('readerAppForeground') @Watch('refreshDockPlacement')
   private gripForeground: boolean = true;
-  @StorageLink('readerWindowMetricsRevision') @Watch('onEditingWindowChanged') private editingMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') @Watch('onEditingWindowChanged') private editingMetricsRevision: number = 0;
   @State @Watch('onEditingOffsetChanged') private editingOffsetY: number = 0;
   private refreshDockPlacement(): void { this.motion.refreshDockPlacement(); }
   private onEditingWindowChanged(): void { this.motion.onEditingWindowChanged(); }
   private onEditingOffsetChanged(): void { this.motion.onEditingOffsetChanged(); }
-  @StorageLink('readerAppScheme') private appScheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
   @Link @Watch('onControlSessionChanged') controlSession: ReaderControlSessionState;

@@ -7,7 +7,7 @@ import { TYPE_APP_INHERITED_BODY, TYPE_SHELF_FILTER_LABEL } from '../../../ui/fo
 
 @Component
 export struct BookshelfFilterContent {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop navigation: number = 0;
   @Prop contentFilter: string = 'all';

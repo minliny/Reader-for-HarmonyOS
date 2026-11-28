@@ -44,11 +44,11 @@ export struct JsonImportDialog {
   private readonly editingScroller: Scroller = new Scroller();
   private readonly draftPaste: ReaderClipboardDraftPaste = new ReaderClipboardDraftPaste();
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
-  @StorageLink('readerAppForeground') @Watch('retireClipboardPaste') private foreground: boolean = true;
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerAppForeground') @Watch('retireClipboardPaste') private foreground: boolean = true;
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
 
   title: string = '导入 JSON';
   description: string = '支持选择本地 JSON 文件，或从在线链接下载后导入。';

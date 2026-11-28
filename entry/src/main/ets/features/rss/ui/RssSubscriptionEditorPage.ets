@@ -26,7 +26,7 @@ import {
 @Component
 export struct RssSubscriptionEditorPage {
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop snapshot: RssSubscriptionEditorSnapshot = EMPTY_RSS_EDITOR_SNAPSHOT;
   onBack: () => void = (): void => {};

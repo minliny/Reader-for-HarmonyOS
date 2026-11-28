@@ -9,8 +9,8 @@ import type { MangaDownloadAction, MangaDownloadActionId } from '../application/
 /** Content reused inside the existing manga operation sheet/catalog popup. */
 @Component
 export struct MangaDownloadOperationsPanel {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private foreground: boolean = true;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') private foreground: boolean = true;
   @Prop reduceMotion: boolean = false;
   @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   @Prop recoveryActive: boolean = true;

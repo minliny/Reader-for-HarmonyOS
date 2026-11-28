@@ -47,9 +47,9 @@ const QUICK_WORDS: string[] = ['我的', '斗破', '海贼'];
 export struct SourceV9CheckDialog {
   @StorageProp('readerNavigationAppearancePreferences')
   private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
-  @StorageLink('readerWindowMetricsRevision') private windowRevision: number = 0;
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerWindowMetricsRevision') private windowRevision: number = 0;
   @Prop sources: BookSource[] = [];
   @Prop title: string = '批量检测';
   @Prop batch: boolean = false;
@@ -379,7 +379,7 @@ export struct SourceV9CheckDialog {
 
 @Component
 export struct SourceV9ReportSteps {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
   @Prop report: SourceCheckReport | undefined = undefined;
   @Prop currentFailure: string | undefined = undefined;
   @Prop activeStage: string = '';

@@ -38,7 +38,7 @@ const SETTINGS_TIMEOUT_OPTIONS: string[] = ['system', 'oneMinute', 'fiveMinutes'
  * page swap, dropdown substitution or text scaling. State stays with the Host. */
 @Component
 export struct ReaderControlSettingsContent {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop fixedIsland: boolean = false;
   @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;

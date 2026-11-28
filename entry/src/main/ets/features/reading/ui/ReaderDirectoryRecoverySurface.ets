@@ -13,7 +13,7 @@ import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView
 export struct ReaderDirectoryRecoverySurface {
   private feedbackMounted: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop grouped: boolean = false;
   @Prop @Watch('notifyReadbackFailures') recovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   @Prop @Watch('notifyReadbackFailures') presentationActive: boolean = true;

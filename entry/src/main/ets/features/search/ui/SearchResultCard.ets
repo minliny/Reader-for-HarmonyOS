@@ -32,7 +32,7 @@ export interface SearchResultDisplayFacts {
 /** A stable lazy row observes enrichment without remounting the whole result. */
 @Component
 export struct SearchResultCard {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
   @ObjectLink @Watch('acceptDisplayFacts') group: SearchBookGroup;
   viewState: SearchViewState = new SearchViewState();

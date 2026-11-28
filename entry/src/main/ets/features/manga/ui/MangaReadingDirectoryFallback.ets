@@ -19,7 +19,7 @@ import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/Read
 @Component
 export struct MangaReadingDirectoryFallback {
   inputCurrent: (() => boolean) | undefined = undefined;
-  @StorageLink('readerWindowMetricsRevision') @Watch('onLayoutInputsChanged') private windowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') @Watch('onLayoutInputsChanged') private windowMetricsRevision: number = 0;
   @Prop @Watch('onIdentityChanged') sourceId: string = '';
   @Prop @Watch('onIdentityChanged') bookId: string = '';
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];

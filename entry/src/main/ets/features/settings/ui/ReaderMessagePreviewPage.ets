@@ -40,10 +40,10 @@ function previewImportBatch(partial: boolean): LocalImportBatch {
 export struct ReaderMessagePreviewPage {
   @Prop embeddedWide: boolean = false;
   @Prop @Watch('admissionChanged') previewEnabled: boolean = false;
-  @StorageLink('readerAppForeground') @Watch('admissionChanged') private foreground: boolean = true;
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppForeground') @Watch('admissionChanged') private foreground: boolean = true;
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @State private hostRect: ReaderRectVp = new ReaderRectVp();
   @State private scene: MessagePreviewScene = 'none';
   @State private generation: number = 0;

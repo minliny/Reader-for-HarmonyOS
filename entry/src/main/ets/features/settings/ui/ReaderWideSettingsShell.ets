@@ -14,9 +14,9 @@ import { TOK_BORDER_W, TOK_SPACE_SM } from '../../../ui/foundation/ReaderTokens'
 
 @Component
 export struct ReaderWideSettingsShell {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop pane: SettingsPane = 'general';
   @Prop collapsed: boolean = false;
   @Prop interactive: boolean = false;

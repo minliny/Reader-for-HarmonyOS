@@ -49,8 +49,8 @@ export class ReaderBoundedTitleModifier implements AttributeModifier<TextAttribu
  * bounded surfaces. The optional source sort control is a business slot. */
 @Component
 export struct ReaderBoundedSurfaceHeader {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop specId: ReaderBoundedSurfaceId = 'source-switch-window';
   @Prop title: string = '';
   // Reading replacement and TTS overlays can provide a precomputed header budget.

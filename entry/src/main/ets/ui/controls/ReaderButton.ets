@@ -165,7 +165,7 @@ class ReaderButtonSelectionModifier implements AttributeModifier<CommonAttribute
 }
 @Component
 export struct ReaderButton {
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @Prop scheme: string = 'day';
   @Prop specId: ReaderButtonSpecId = 'source-action';

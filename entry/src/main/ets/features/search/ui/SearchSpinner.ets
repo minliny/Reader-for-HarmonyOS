@@ -5,8 +5,8 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
  * animation enablement changes with visibility, foreground and reduced motion. */
 @Component
 export struct SearchSpinner {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private foreground: boolean = true;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') private foreground: boolean = true;
   @Prop active: boolean = false;
   @Prop runKey: number = 0;
   @Prop reduceMotion: boolean = false;

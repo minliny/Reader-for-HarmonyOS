@@ -20,8 +20,8 @@ type BookshelfSectionAction = 'bookshelf_grid' | 'bookshelf_list' | 'bookshelf_f
  * populated shelf owns the view-mode and filter actions. */
 @Component
 export struct BookshelfSectionHeader {
-  @StorageLink('readerWindowMetricsRevision') private windowRevision: number = 0;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private windowRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageProp('readerReduceMotion') @Watch('syncViewModePill') private reduceMotion: boolean = false;
   @Prop contentWidth: number = 0;
   @Prop titleOpacity: number = 1;

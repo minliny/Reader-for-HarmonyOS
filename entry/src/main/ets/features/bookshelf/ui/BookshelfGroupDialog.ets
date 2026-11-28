@@ -27,12 +27,12 @@ class BookshelfGroupFocusFrame extends FrameCallback {
 
 @Component
 export struct BookshelfGroupDialog {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
-  @StorageLink('readerAppForeground') private foreground: boolean = true;
-  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerAppForeground') private foreground: boolean = true;
+  @StorageProp('readerReduceMotion') private appReduceMotion: boolean = false;
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @ObjectLink presentation: BookshelfGroupPresentation;
   @Prop recoveryTop: number = 0;
   isInputAllowed: (() => boolean) | undefined = undefined;

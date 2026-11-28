@@ -9,8 +9,8 @@ import { ReaderSystemNavigationBar } from '../../app/navigation/ReaderSystemNavi
  * rail placement is active; this component only owns position and dispatch. */
 @Component
 export struct MainNavigationRail {
-  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerMainViewportRevision') private mainViewportRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop activeTab: string = 'bookshelf';
   @Prop navigationGeneration: number = 0;
   onSelect: (key: string, generation: number) => void = (_key: string, _generation: number): void => {};

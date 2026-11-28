@@ -7,7 +7,7 @@ import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResourc
 /** Content and presentation token for the bookshelf More actions. */
 @Component
 export struct BookshelfMoreActionSheet {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop presentationId: string = '';
   @Prop canBatchManage: boolean = false;
   @Prop canCheckUpdates: boolean = false;

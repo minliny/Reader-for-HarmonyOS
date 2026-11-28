@@ -32,10 +32,10 @@ export struct ReaderBottomTabBar {
   onCurrentTap: (key: string) => void = (_key: string): void => {};
   onGeometryTrace: (width: number, paintReady: boolean) => void =
     (_width: number, _paintReady: boolean): void => {};
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @StorageProp('readerNavigationAppearancePreferences')
   private navigationPreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerReduceMotion') @Watch('motionPreferenceChanged') private reduceMotion: boolean = false;
   @State private paintedTab: number = -1;
   @State private pillOpacity: number = 1;

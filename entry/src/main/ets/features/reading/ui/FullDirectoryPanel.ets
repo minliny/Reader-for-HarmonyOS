@@ -105,8 +105,8 @@ export struct FullDirectoryPanel {
     const listMinimum = flowFooter ? Math.min(available / 2, minimumRowHeight) : minimumRowHeight;
     return Math.min(this.standaloneEditorNaturalHeight(), Math.max(editorMinimum, available - listMinimum));
   }
-  @StorageLink('readerWindowMetricsRevision') @Watch('onMotionProgressChanged') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') @Watch('onMotionProgressChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   private toolbarInputWidthKey: string = '';
   private toolbarInputWidthCached: number = 0;
 

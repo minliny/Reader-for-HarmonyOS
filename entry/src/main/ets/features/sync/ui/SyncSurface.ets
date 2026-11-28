@@ -8,7 +8,7 @@ import { TYPE_APP_ROW_DETAIL } from '../../../ui/foundation/ReaderTypography';
 
 @Component
 export struct SyncSurface {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
   @ObjectLink presentation: SyncPresentation;
   @Prop expandedLayout: boolean = false;
   @Prop embeddedWide: boolean = false;

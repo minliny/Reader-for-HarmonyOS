@@ -34,14 +34,14 @@ import { measureReaderPageChromeText, readerPageChromeTextMeasurements,
  */
 @Component
 export struct ReaderPageChrome {
-  @StorageLink('readerSessionChromeOverlayActive') private sessionOverlayActive: boolean = false;
+  @StorageProp('readerSessionChromeOverlayActive') private sessionOverlayActive: boolean = false;
   @Prop isSessionOverlay: boolean = false;
   @Prop incomingOpacity: number = 1;
   @Prop footerOpacity: number = 1;
   @Prop footerTranslateX: number = 0;
   @Prop sessionExitProgress: number = 0;
 
-  @StorageLink('readerTopInfoSuppressed') private topInfoSuppressed: boolean = false;
+  @StorageProp('readerTopInfoSuppressed') private topInfoSuppressed: boolean = false;
   @Prop topStartText: string = '';
   @Prop topEndText: string = '';
   @Prop topTranslateY: number = 0;

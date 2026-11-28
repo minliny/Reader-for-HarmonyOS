@@ -13,7 +13,7 @@ export struct ReaderRaisedSurface {
   @Prop @Watch('onDrawingInputChanged') surfaceHeight: number = 0;
   @Prop @Watch('onDrawingInputChanged') cornerRadius: number = 0;
   @Prop @Watch('onDrawingInputChanged') scheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') @Watch('onDrawingInputChanged') private metricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') @Watch('onDrawingInputChanged') private metricsRevision: number = 0;
   private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(new RenderingContextSettings(true));
   private ready: boolean = false;
 

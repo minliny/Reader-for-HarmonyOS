@@ -21,7 +21,7 @@ import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../application/B
 @Component
 export struct BookshelfSettingsPage {
   @Prop embeddedWide: boolean = false;
-  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  @StorageProp('readerAppForeground') private appForeground: boolean = true;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
 
   @StorageLink('readerBookshelfViewMode') private mode: string = DEFAULT_BOOKSHELF_VIEW;

@@ -22,10 +22,10 @@ export type MainTabHeaderKind = 'standard' | 'home' | 'floating' | 'mangaDirecto
 // 与安全区仍由 Index 根 Stack 统一处理，避免双 padding。
 @Component
 export struct MainTabShell {
-  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
-  @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
+  @StorageProp('readerMainViewportRevision') private mainViewportRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWideNavigationRail') private wideNavigationRail: boolean = false;
   @Prop activeTab: string = 'bookshelf';
   @Prop standardScroll: boolean = false;
   @Prop standardPageVariant: ReaderStandardPageVariant = 'settingsHome';

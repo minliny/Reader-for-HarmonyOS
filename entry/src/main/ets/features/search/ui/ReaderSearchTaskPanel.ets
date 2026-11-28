@@ -12,8 +12,8 @@ import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 /** Bounded search task content. SearchPage owns the current presentation and input. */
 @Component
 export struct ReaderSearchTaskPanel {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
   @Prop expanded: boolean = false;
   @Prop presentationIdentity: string = '';
   @Prop progressText: string = '';
