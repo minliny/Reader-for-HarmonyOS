@@ -5,6 +5,7 @@ import { ReaderReadingFailureSurface, type ReaderSourceSwitchRecoveryTarget } fr
 import { SourceSwitchProgress } from '../../source/ui/SourceSwitchProgress';
 import { ReaderPageChrome } from './ReaderPageChrome';
 import { ReaderStatusBarPaper } from './ReaderStatusBarPaper';
+import { readerBookmarkWellOpacity, readerBookmarkWellTint } from '../presentation/ReaderBookmarkWellPaint';
 import { ReaderChapterLoadingState } from './ReaderChapterLoadingState';
 import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_READING_PAPER } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import { readerVisualSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft,
@@ -917,6 +918,10 @@ export function ReaderPagedReadingPaint($$: ReaderPagedReadingPaintFacts) {
       paperTop: $$.actors.bookmark.pullPaperTop(), offset: $$.actors.bookmark.pullOffset(),
       paperColor: readerThemeDefinition($$.appearance.activeTheme).paperStart,
       day: readerThemeDefinition($$.appearance.activeTheme).scheme === 'day',
+      theme: $$.appearance.activeTheme,
+      viewportWidth: $$.layout.viewportWidth,
+      viewportHeight: $$.layout.viewportHeight,
+      expanded: $$.layout.widthClass === 'expanded',
     });
     ReaderBookmarkCornerFeedback({
       host: $$.actors.bookmark, paperWell: true, visible: $$.showCornerFeedback,
@@ -1638,6 +1643,9 @@ export function ReaderMountedReadingScene($$: ReaderMountedReadingSceneInput) {
           viewportHeight: $$.actors.viewport.readingLayout().viewportHeight,
           statusRect: readingStageWindowMetrics($$.view.windowMetricsRevision()).statusBarRect,
           expanded: $$.actors.viewport.readingLayout().widthClass === 'expanded',
+          overlayTintColor: readerBookmarkWellTint(readerThemeDefinition($$.chrome.appearanceSnapshot.activeTheme).scheme === 'day'),
+          overlayOpacity: !$$.chrome.windowControlsPresented ?
+            readerBookmarkWellOpacity($$.actors.bookmark.pullOffset()) : 0,
         }).id('reader-status-bar-underlay').zIndex(10).hitTestBehavior(HitTestMode.None);
       }
       if ($$.actors.chapterPresentation.shouldShowChapterLoading()) {

@@ -11,6 +11,8 @@ export struct ReaderStatusBarPaper {
   @Prop viewportHeight: number = 0;
   @Prop statusRect: ReaderRectVp = new ReaderRectVp();
   @Prop expanded: boolean = false;
+  @Prop overlayTintColor: string = '';
+  @Prop overlayOpacity: number = 0;
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -21,6 +23,14 @@ export struct ReaderStatusBarPaper {
         })
           .width(this.viewportWidth).height(this.viewportHeight)
           .position({ x: -this.statusRect.left, y: -this.statusRect.top });
+      }
+      if (this.overlayOpacity > 0 && this.overlayTintColor.length > 0) {
+        Stack()
+          .width('100%').height('100%')
+          .backgroundColor(this.overlayTintColor)
+          .opacity(this.overlayOpacity)
+          .hitTestBehavior(HitTestMode.None)
+          .accessibilityLevel('no');
       }
     }
     .width(this.statusRect.width).height(this.statusRect.height)

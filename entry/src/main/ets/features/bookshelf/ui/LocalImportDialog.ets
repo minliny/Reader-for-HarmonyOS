@@ -46,6 +46,7 @@ import {
 } from '../../../ui/foundation/ReaderTokens';
 
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
+import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
 
 export type { LocalImportDialogState } from '../presentation/LocalImportPresentationOwner';
 
@@ -460,6 +461,8 @@ export struct LocalImportDialog {
         Column({ space: 4 }) {
           Text(item().fileName).width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
             .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+            .ellipsisMode(readerHarmonyApi24() ? EllipsisMode.MULTILINE_CENTER : EllipsisMode.END)
             .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme));
           Text(item().state === 'success' ? (item().disposition === 'created' ? '新增成功' :
             item().disposition === 'existing' ? '已在书架' : '成功') :
