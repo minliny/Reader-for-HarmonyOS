@@ -172,6 +172,16 @@ import {
 import { ReaderControlLayoutSnapshot, ReaderReadingLayoutSnapshot } from './ReaderLayoutGeometry';
 import { ReadingRecordGateway } from '../application/ReadingRecordGateway';
 import { type ReaderNavigationMode, type ReaderSettingsSnapshot } from '../application/ReaderSettingsState';
+import {
+  buildAuxiliarySessionPorts,
+  buildContentAndSurfacePorts,
+  buildDirectoryAndFirstPagePorts,
+  buildReadingAcquisitionPorts,
+  buildReadingMeasurementPorts,
+  buildReadingPreferencePorts,
+  buildSpeechAndProgressPorts,
+  type ReadingExperiencePortHost,
+} from './LocalReadingExperiencePorts';
 export { ReaderRetainedPresentation } from '../presentation/ReaderPagePresentationModels';
 export { readerEntryPresentation } from '../presentation/ReaderRetainedPresentationHost';
 
@@ -431,6 +441,119 @@ export struct ReadingExperience {
   @Prop @Watch('onControlInputBoundaryChanged') interactionBlocked: boolean = false;
   private readonly controlVerification: ReaderControlVerificationSession = new ReaderControlVerificationSession();
   private readonly auxiliaryFlows: ReadingAuxiliaryFlowBridge = new ReadingAuxiliaryFlowBridge();
+  private readonly capsuleVerification: ReaderControlCapsuleVerification = new ReaderControlCapsuleVerification(this.controlVerification);
+  private readonly quickSearchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();
+  private readonly replaceRuntime: ReaderRuntimeOwner = ReaderRuntimeOwner.current();
+  private readonly readingRecordGateway: ReadingRecordGateway =
+    ReaderRuntimeOwner.current().getReadingRecordGateway();
+  private readonly progressProducers: ReaderProgressProducerHost = new ReaderProgressProducerHost();
+  private readonly exitProgress: ReadingExitProgressCoordinator = new ReadingExitProgressCoordinator(this.progressProducers);
+  private readonly chapterWindow: ReadingChapterWindow = new ReadingChapterWindow();
+  private readonly interactiveChapterPreparation: ReadingInteractiveChapterPreparation = new ReadingInteractiveChapterPreparation();
+  private readonly textSelectionActivity: ReaderTextSelectionActivity = new ReaderTextSelectionActivity();
+  private readonly readingRecordHost: ReaderReadingRecordHost = new ReaderReadingRecordHost(
+    this.readingRecordGateway, (): string => this.bookTitle.trim().length > 0 ? this.bookTitle.trim() : this.bookId,
+    (error: Error): void => hilog.error(0x5244, 'Reader', '%{private}s', `Reading duration: ${this.errorMessage(error)}`));
+  private readonly portHost: ReadingExperiencePortHost = {
+    sourceId: (): string => this.sourceId,
+    bookId: (): string => this.bookId,
+    bookKind: (): string | undefined => this.bookKind,
+    bookTitle: (): string => this.bookTitle,
+    localSourceId: LOCAL_READING_SOURCE_ID,
+    chapterSelectionToken: (): number => this.chapterSelectionToken,
+    advanceChapterSelectionToken: (): number => { this.chapterSelectionToken += 1; return this.chapterSelectionToken; },
+    expandedLayout: (): boolean => this.expandedLayout,
+    appForeground: (): boolean => this.appForeground,
+    windowChromeActive: (): boolean => this.windowChromeActive,
+    windowChromeOverlayActive: (): boolean => this.windowChromeOverlayActive,
+    interactionBlocked: (): boolean => this.interactionBlocked,
+    controlObscured: (): boolean => this.controlObscured,
+    reduceMotion: (): boolean => this.reduceMotion,
+    readerAppScheme: (): string => this.readerAppScheme,
+    sharedAppearanceRevision: (): number => this.sharedAppearanceRevision,
+    readerWindowMetricsRevision: (): number => this.readerWindowMetricsRevision,
+    sourceSwitchTransactionId: (): string | undefined => this.sourceSwitchTransactionId,
+    sourceSwitchFailureMessage: (): string => this.sourceSwitchFailureMessage,
+    bookmarkLoadMessage: (): string => this.bookmarkLoadMessage,
+    bookmarkRecovery: (): ReadingDirectoryRecovery => this.bookmarkRecovery,
+    parentDirectoryEntries: (): LocalReadingTocEntry[] => this.directoryEntries,
+    chromeState: (): ReadingChromeRenderSnapshot => this.chromeState,
+    pageTurnProjection: (): ReadingPageTurnRenderSnapshot => this.pageTurnProjection,
+    overlayState: (): ReadingOverlayRenderSnapshot => this.overlayState,
+    sessionStatus: (): ReadingSessionRenderSnapshot => this.sessionStatus,
+    publishChromeState: (update: ReadingChromeRenderUpdate): void => this.publishChromeState(update),
+    publishPageTurnProjection: (update: ReadingPageTurnRenderUpdate): void => this.publishPageTurnProjection(update),
+    publishOverlayState: (update: ReadingOverlayRenderUpdate): void => this.publishOverlayState(update),
+    publishSessionStatus: (update: ReadingSessionRenderUpdate): void => this.publishSessionStatus(update),
+    publishPresentationPhase: (phase: ReadingPhase): void => this.publishPresentationPhase(phase),
+    uiContext: (): UIContext => this.getUIContext(),
+    readerPreferenceModule: (): string => this.readerPreferenceModule(),
+    controlsPresentedForWindow: (): boolean => this.controlsPresentedForWindow(),
+    isReaderIdentityCurrent: (): boolean => this.isReaderIdentityCurrent?.() !== false,
+    traceInitialReadingPhase: (phase: string, lifecycle: number): void => this.traceInitialReadingPhase(phase, lifecycle),
+    sessionLaunchSpeechFacts: (launch: ReaderSessionLaunchTransaction): ReaderControlCapsuleSpeechFacts | undefined =>
+      this.sessionLaunchSpeechFacts(launch),
+    admitTocEntries: (entries: LocalReadingTocEntry[]): void => this.admitTocEntries(entries),
+    onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]): void => this.onDirectoryProjectionChanged(entries),
+    onChapterCommitted: (chapter: number, title: string): void => this.onChapterCommitted(chapter, title),
+    onLoadControlBookmarks: (sourceId: string, bookId: string, current: () => boolean): Promise<void> =>
+      this.onLoadControlBookmarks(sourceId, bookId, current),
+    onDownloadBook: (): void => this.onDownloadBook(),
+    onDownloadChapter: (chapter: number): void => this.onDownloadChapter(chapter),
+    onReadingCommitted: (commit: ReadingCommit): void => this.onReadingCommitted(commit),
+    onExit: (): void => this.onExit(),
+    lastVisibleScalar: (content: string, map: ReadingSurfaceLayoutMap): number => this.lastVisibleScalar(content, map),
+    measurementTextWidth: (): number => this.measurementTextWidth(),
+    scaledReadingImageHeight: (image: ReadingSessionImage, capacity: number): number => this.scaledReadingImageHeight(image, capacity),
+    currentChapterIndex: (): number => this.currentChapterIndex(),
+    hasPartialEntryWindow: (): boolean => this.hasPartialEntryWindow(),
+    captureControlPlaybackPresentation: (): ReaderControlPlaybackPresentation => this.captureControlPlaybackPresentation(),
+    beginTtsStartCapsule: (): boolean => this.beginTtsStartCapsule(),
+    isControlPlaybackPresentationCurrent: (presentation: ReaderControlPlaybackPresentation, module: string): boolean =>
+      this.isControlPlaybackPresentationCurrent(presentation, module),
+    captureTtsPauseWitness: (): ReaderTtsPauseWitness | undefined => this.captureTtsPauseWitness(),
+    showAcknowledgedStaticTtsCapsule: (presentation: ReaderControlPlaybackPresentation): void =>
+      this.showAcknowledgedStaticTtsCapsule(presentation),
+    ttsStartPage: (): ReaderTtsStartPage | undefined => this.ttsStartPage(),
+    onSessionLaunchTtsState: (state: ReaderTtsState): void => this.onSessionLaunchTtsState(state),
+    beginReadingRecordClock: (lifecycle: number): void => this.beginReadingRecordClock(lifecycle),
+    publishSpeechPresentation: (presentation: ReaderReadingSpeechPresentation): void => this.publishSpeechPresentation(presentation),
+    mountHost: (): ReaderReadingMountHost => this.mountHost,
+    turnRuntime: (): ReaderPageTurnRuntimeHost => this.turnRuntime,
+    measuredPage: (): ReaderMeasuredPagePublication => this.measuredPage,
+    pageChrome: (): ReaderReadingPageChromeHost => this.pageChrome,
+    surface: (): ReaderReadingSurfaceHost => this.surface,
+    preferences: (): ReaderReadingPreferencesHost => this.preferences,
+    controlDirectory: (): ReaderControlDirectorySession => this.controlDirectory,
+    controlGeometry: (): ReaderControlGeometryHost => this.controlGeometry,
+    controlInteraction: (): ReaderReadingControlInteractionHost => this.controlInteraction,
+    controlVerification: (): ReaderControlVerificationSession => this.controlVerification,
+    capsuleVerification: (): ReaderControlCapsuleVerification => this.capsuleVerification,
+    auxiliarySession: (): ReaderAuxiliarySessionHost => this.auxiliarySession,
+    replacePanel: (): ReaderControlReplacePanel => this.replacePanel,
+    quickSearchPublication: (): ReaderContentSearchPublication => this.quickSearchPublication,
+    acquisition: (): ReaderReadingChapterAcquisitionHost => this.acquisition,
+    chapterPresentation: (): ReaderReadingChapterPresentationHost => this.chapterPresentation,
+    firstPageAdmission: (): ReaderReadingMeasurementAdmissionHost => this.firstPageAdmission,
+    firstPageSurfacePublication: (): ReaderFirstPageSurfacePublication => this.firstPageSurfacePublication,
+    readingProgress: (): ReaderReadingProgressHost => this.readingProgress,
+    readingViewport: (): ReaderReadingViewportHost => this.readingViewport,
+    imageResidency: (): ReaderReadingImageResidencyHost => this.imageResidency,
+    documentIndex: (): ReaderReadingDocumentIndexHost => this.documentIndex,
+    routeSelection: (): ReaderReadingRouteSelectionHost => this.routeSelection,
+    directoryOps: (): ReaderControlDirectoryOperationsHost => this.directoryOps,
+    recovery: (): ReaderReadingRecoveryHost => this.recovery,
+    speech: (): ReaderReadingSpeechHost => this.speech,
+    playback: (): ReaderReadingPlaybackFlowHost => this.playback,
+    contentMutation: (): ReaderReadingContentMutationHost => this.contentMutation,
+    sourceSwitchOverlay: (): ReadingSourceSwitchOverlayHost => this.sourceSwitchOverlay,
+    readerBookmark: (): ReaderBookmarkInteractionHost => this.readerBookmark,
+    readingRecordHost: (): ReaderReadingRecordHost => this.readingRecordHost,
+    readingRecordGateway: (): ReadingRecordGateway => this.readingRecordGateway,
+    exitProgress: (): ReadingExitProgressCoordinator => this.exitProgress,
+    progressProducers: (): ReaderProgressProducerHost => this.progressProducers,
+    chapterWindow: (): ReadingChapterWindow => this.chapterWindow,
+  };
   private readonly playbackScene: ReaderPlaybackScene = {
     scope: (): ReaderTtsFollowScope => ({ sourceId: this.sourceId, bookId: this.bookId, lifecycleToken: this.mountHost.lifecycleToken }),
     session: (): ReadingSessionRenderSnapshot => this.sessionStatus,
@@ -495,142 +618,13 @@ export struct ReadingExperience {
   private readonly playback: ReaderReadingPlaybackFlowHost = new ReaderReadingPlaybackFlowHost(this.transientFeedback, this.auxiliaryFlows,
     this.playbackScene, this.playbackPage, this.playbackCapsule, this.playbackPrefetch, this.playbackLifetime);
 
-  private readonly capsuleVerification: ReaderControlCapsuleVerification = new ReaderControlCapsuleVerification(this.controlVerification);
-  private readonly quickSearchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();
   // One presentation transaction and immutable sample own every launch actor.
-  private readonly auxiliarySessionView: ReaderAuxiliarySessionView = {
-    read: (): ReaderSessionLaunchTransaction | undefined => this.overlayState.sessionLaunch,
-    publish: (launch: ReaderSessionLaunchTransaction | undefined): void => {
-      this.publishOverlayState(launch === undefined ? { sessionLaunch: { value: undefined },
-        sessionLaunchControlSource: { value: undefined } } : { sessionLaunch: { value: launch } });
-    },
-    publishControlSource: (source: ReaderControlLaunchSource): void =>
-      this.publishOverlayState({ sessionLaunchControlSource: { value: source } }),
-    stageOpacity: (): number => this.overlayState.sessionLaunchStageOpacity,
-    setStageOpacity: (opacity: number): void => { this.publishOverlayState({ sessionLaunchStageOpacity: opacity }); },
-    beginFooterExit: (launch: ReaderSessionLaunchTransaction): void => {
-      this.publishOverlayState({ sessionLaunchFooterExiting: true });
-      this.publishOverlayState({ sessionLaunchFooterOffset: launch.sample.footerTranslateX });
-      this.publishOverlayState({ sessionLaunchFooterOpacity: launch.sample.footerOpacity });
-      this.publishOverlayState({ sessionLaunchFooterExitProgress: 0 });
-    },
-    finalizeFooterExit: (): void => {
-      if (!this.overlayState.sessionLaunchFooterExiting) return;
-      this.publishOverlayState({ sessionLaunchFooterOffset: 0 });
-      this.publishOverlayState({ sessionLaunchFooterExitProgress: 1 });
-      this.publishOverlayState({ sessionLaunchFooterOpacity: 1 });
-    },
-    clearFooterExit: (): void => {
-      this.publishOverlayState({ sessionLaunchFooterExiting: false });
-      this.publishOverlayState({ sessionLaunchFooterExitProgress: 0 });
-    },
-    renderChanged: (): void => { this.publishPageTurnProjection({ pageTurnRenderRevision: this.pageTurnProjection.pageTurnRenderRevision + 1 }); },
-  };
-  private readonly auxiliarySessionControl: ReaderAuxiliarySessionControlSurface = {
-    layoutKey: (): string => this.auxiliarySession.sessionLaunchLayoutKey(),
-    hide: (): void => this.controlInteraction.commitSessionLaunchControlHidden(),
-    restore: (duration: number): void => this.auxiliarySession.restoreCapsuleControl(duration),
-  };
-  private readonly auxiliarySessionEnvironment: ReaderAuxiliarySessionEnvironment = {
-    ready: (): boolean => this.sessionStatus.mounted && this.appForeground && !this.sessionStatus.exitRequested,
-    mounted: (): boolean => this.sessionStatus.mounted,
-    exiting: (): boolean => this.sessionStatus.exitRequested,
-    uiContext: (): UIContext => this.getUIContext(),
-    viewportRevision: (): number => this.readerWindowMetricsRevision,
-    reducedMotion: (): boolean => this.reduceMotion,
-    observing: (): boolean => this.controlVerification.observing(),
-    drainPageTurn: (): void => this.turnRuntime.preparation.drain(),
-    updateWindow: (): void => this.preferences.applyWindowPolicyForChromeOwner(),
-    speechFacts: (launch: ReaderSessionLaunchTransaction): ReaderControlCapsuleSpeechFacts | undefined =>
-      this.sessionLaunchSpeechFacts(launch),
-    automaticStatus: (): ReaderAutoPageStatus => this.playback.automaticState().status,
-    retireBusinessStart: (type: ReaderSessionCapsuleType): void => {
-      if (type === 'tts') this.speech.cancelPending();
-      else this.playback.auto.cancelStart();
-    },
-  };
-  private readonly capsulePresentation: ReaderAuxiliaryCapsulePresentation = {
-    phase: (): ReadingPhase => this.sessionStatus.phase,
-    hasPaintedBody: (): boolean => this.measuredPage.page !== undefined && this.pageTurnProjection.visibleFragments.length > 0,
-    obscured: (): boolean => this.controlObscured,
-    blocked: (): boolean => this.interactionBlocked,
-    active: (): boolean => this.mountHost.isSessionActive(this.mountHost.lifecycleToken),
-    freeze: (): ReaderAuxiliaryCapsuleFreeze => {
-      const frozen = this.pageTurnProjection.pageTurnSessionCapsuleFrozen;
-      return { frozen, snapshot: frozen ? this.turnRuntime.input.capsule : undefined };
-    },
-    pageChromeFrozen: (): boolean => this.pageChrome.frozen(),
-    measurement: (): ReadingCapsuleMeasurement | undefined => this.chromeState.sessionCapsuleMeasurement,
-    publishMeasurement: (receipt: ReadingCapsuleMeasurement): void =>
-      this.publishChromeState({ sessionCapsuleMeasurement: { value: receipt } }),
-  };
-  private readonly capsuleControl: ReaderAuxiliaryCapsuleControl = {
-    visible: (): boolean => this.controlInteraction.controlVisible(),
-    closingForCapsule: (): boolean => this.chromeState.sessionControlClosing,
-    shellExitArmed: (): boolean => this.controlInteraction.controlShellExitArmed(),
-    currentPage: (): ReaderControlPage => this.controlInteraction.controlPage(),
-    layout: (revision: number): ReaderControlLayoutSnapshot => this.controlGeometry.layout(revision),
-    revisions: (): ReaderAuxiliaryCapsuleControlRevisions => ({
-      open: this.chromeState.controlOpenRevision, moduleVisit: this.controlDirectory.visitRevision(),
-    }),
-    playbackMinimum: (kind: 'tts' | 'autoPage', revision: number): ReaderControlPlaybackSourceMinimum =>
-      this.controlGeometry.playbackSourceMinimum(kind, revision),
-    visualSession: (): ReaderControlSessionState => this.controlDirectory.visualSession(),
-    cancelNavigation: (): void => { this.controlInteraction.cancelControlNavigationIntent(); },
-    invalidateBackdrop: (): void => this.controlGeometry.invalidateBackdrop(),
-    publishRestoredSession: (session: ReaderControlSessionState): void => {
-      this.controlDirectory.request(session);
-      this.controlDirectory.copyVisual(session);
-    },
-  };
-  private readonly capsuleChrome: ReaderAuxiliaryCapsuleChrome = {
-    continuous: (): boolean => this.chromeState.readerSettingsSnapshot.navigationMode === 'continuous',
-    continuousProgressText: (): string => this.chromeState.continuousChromeProgressText,
-    continuousChrome: (text: string): ReaderPageChromeSnapshot =>
-      this.surface.continuousPageChromeSnapshot(this.pageTurnProjection.continuousRenderRevision, text),
-    currentTurnPage: (): ReaderPageTurnRenderPage => this.pageChrome.currentPage(),
-    presentedAnchor: (): ReaderAuxiliaryCapsuleChromeAnchor => ({
-      chapterIndex: this.currentChapterIndex(), pageStart: this.measuredPage.page?.startScalar,
-      clockText: this.chromeState.pageChromeClockText, renderRevision: this.pageTurnProjection.pageTurnRenderRevision,
-    }),
-    presentedPageChrome: (): ReaderPageChromeSnapshot => this.pageChrome.currentBodyChrome(),
-  };
-  private readonly capsuleLayout: ReaderAuxiliaryCapsuleLayout = {
-    route: (): ReaderAuxiliaryCapsuleRoute => ({
-      lifecycle: this.mountHost.lifecycleToken, sourceId: this.sourceId, bookId: this.bookId,
-    }),
-    identity: (): ReaderAuxiliaryCapsuleLayoutIdentity => ({
-      width: this.chromeState.viewportWidth, height: this.chromeState.viewportHeight, scheme: this.readerAppScheme,
-      activeTheme: this.chromeState.appearanceSnapshot.activeTheme,
-    }),
-    paginationSignature: (): string => this.documentIndex.paginationLayoutSignature(),
-    readingLayout: (): ReaderReadingLayoutSnapshot => this.readingViewport.readingLayout(),
-    epoch: (): number => this.pageTurnProjection.measurementEpoch,
-    paletteRevision: (): number => this.sharedAppearanceRevision,
-    appearanceGeneration: (): number => this.preferences.appearanceMutationGeneration,
-    suspendAdjacent: (): void => this.turnRuntime.preparation.suspend(),
-    invalidateTextures: (): void => this.turnRuntime.presentation.texture.invalidate(),
-  };
-  private readonly capsuleActivity: ReaderAuxiliaryCapsuleActivity = {
-    automatic: (): Readonly<ReaderAutoPageState> => this.playback.automaticState(),
-    speech: (): ReaderTtsState => this.sessionStatus.ttsState,
-    inputCurrent: (): boolean => this.controlInteraction.readerInputIsCurrent(),
-    pageTurnIdle: (): boolean => this.turnRuntime.inputPhase() === 'idle',
-    setSpeechDesiredPlaying: (desired: boolean): void => this.speech.setDesiredPlaying(desired),
-    toggleAutoPage: (): void => this.playback.toggleAutoPage(),
-    pauseAutoPage: (): void => this.playback.pauseAutoPage('manual'),
-    toggleSpeech: (): void => this.speech.toggleTts(),
-  };
-  private readonly capsulePorts: ReaderAuxiliaryCapsulePorts = {
-    presentation: this.capsulePresentation, control: this.capsuleControl, chrome: this.capsuleChrome,
-    layout: this.capsuleLayout, activity: this.capsuleActivity,
-  };
-
+  private readonly auxiliarySessionPorts = buildAuxiliarySessionPorts(this.portHost);
   private readonly auxiliarySession: ReaderAuxiliarySessionHost = new ReaderAuxiliarySessionHost(this.capsuleVerification,
-    this.auxiliarySessionView, this.auxiliarySessionControl, this.auxiliarySessionEnvironment, this.capsulePorts);
+    this.auxiliarySessionPorts.view, this.auxiliarySessionPorts.control,
+    this.auxiliarySessionPorts.environment, this.auxiliarySessionPorts.capsule);
 
   entryPresentationProvider: () => ReaderRetainedPresentation | undefined = (): ReaderRetainedPresentation | undefined => undefined;
-  private readonly replaceRuntime: ReaderRuntimeOwner = ReaderRuntimeOwner.current();
   private readonly replacePanel: ReaderControlReplacePanel = new ReaderControlReplacePanel(
     RulesMutationOwner.forRuntime(this.replaceRuntime), new ReaderControlReplaceGateway(this.replaceRuntime), {
       readState: (): ReaderControlReplaceState => this.chromeState.controlReplaceState,
@@ -650,80 +644,10 @@ export struct ReadingExperience {
       persistPosition: (): Promise<() => boolean> => this.contentMutation.persistBeforeContentMutation(),
       reloadContent: (lifecycle: number, book: string): void => this.contentMutation.reloadCurrentPageAfterReplacePersist(lifecycle, book),
     }, (error: Error): boolean => error instanceof ReaderControlReplaceGatewayError && error.writeUncertain);
-  private readonly preferenceLifetime: ReaderReadingPreferencesLifetime = {
-    scope: (): ReaderReadingPreferenceScope => ({ lifecycleToken: this.mountHost.lifecycleToken,
-      sourceId: this.sourceId, bookId: this.bookId, chapterSelectionToken: this.chapterSelectionToken }),
-    mounted: (): boolean => this.sessionStatus.mounted,
-    mountedToken: (lifecycle: number): boolean => this.mountHost.isMountedToken(lifecycle),
-    sessionActive: (lifecycle: number): boolean => this.mountHost.isSessionActive(lifecycle),
-    readerIdentityCurrent: (): boolean => this.isReaderIdentityCurrent?.() !== false,
-    trace: (phase: 'settings-read' | 'settings-window', lifecycle: number): void => this.traceInitialReadingPhase?.(phase, lifecycle),
-  };
-  private readonly preferenceView: ReaderReadingPreferencesView = {
-    settings: (): ReaderSettingsSnapshot => this.chromeState.readerSettingsSnapshot,
-    appearance: (): ReaderAppearanceSnapshot => this.chromeState.appearanceSnapshot,
-    publishSettings: (snapshot: ReaderSettingsSnapshot): void => this.publishChromeState({ readerSettingsSnapshot: snapshot }),
-    publishEntryAppearance: (snapshot: ReaderAppearanceSnapshot): void => this.publishChromeState({ appearanceSnapshot: snapshot }),
-    admitAppearance: (snapshot: ReaderAppearanceSnapshot): void => this.readingViewport.admitAppearanceSnapshot(snapshot),
-    settingsRecovery: (): ReaderRecoveryView => this.overlayState.readerSettingsRecovery,
-    publishSettingsRecovery: (recovery: ReaderRecoveryView, busy: boolean): void => {
-      this.publishOverlayState({ readerSettingsRecovery: recovery });
-      this.publishOverlayState({ readerSettingsRecoveryBusy: busy });
-    },
-    appearanceRecovery: (): ReaderRecoveryView => this.overlayState.appearanceSaveRecovery,
-    publishAppearanceRecovery: (recovery: ReaderRecoveryView): void => this.publishOverlayState({ appearanceSaveRecovery: recovery }),
-    publishAppearanceRecoveryBusy: (busy: boolean): void => this.publishOverlayState({ appearanceSaveRecoveryBusy: busy }),
-    recoveryInputCurrent: (): boolean => this.recovery.inputCurrent(),
-    appearanceRecoveryChanged: (): void => { if (!this.recovery.hasContent()) this.recovery.retire(); },
-  };
-  private readonly preferenceWindow: ReaderReadingPreferencesWindow = {
-    uiContext: (): UIContext => this.getUIContext(),
-    foreground: (): boolean => this.appForeground,
-    chromeActive: (): boolean => this.windowChromeActive,
-    overlayActive: (): boolean => this.windowChromeOverlayActive,
-    expanded: (): boolean => this.expandedLayout,
-    controlsPresented: (): boolean => this.controlsPresentedForWindow(),
-    capsuleStageFlying: (): boolean => this.overlayState.sessionLaunch?.ownership === 'stage' && !this.overlayState.sessionLaunch.sample.finished,
-    controlInputEnabled: (): boolean => this.controlInteraction.isControlInputEnabled(),
-    publishControlsPresented: (presented: boolean): void => this.publishChromeState({ windowControlsPresented: presented }),
-    publishPolicyPending: (pending: boolean): void => this.publishChromeState({ readerWindowPolicyPending: pending }),
-    ttsWindowAwakeRequested: (): boolean => this.speech.ttsWindowAwakeRequested(),
-    stopTtsOnScreenOff: (): void => this.speech.stopTtsOnScreenOff(),
-    volumePageTurn: (direction: ReaderPageTurnDirection): void => {
-      this.playback.manualInteraction();
-      this.turnRuntime.input.request(direction);
-    },
-  };
-  private readonly preferencePage: ReaderReadingPreferencesPage = {
-    expandedLayout: (): boolean => this.readingViewport.readingLayout().widthClass === 'expanded',
-    inputCurrent: (): boolean => this.controlInteraction.readerInputIsCurrent(),
-    inputIdle: (): boolean => this.turnRuntime.inputPhase() === 'idle',
-    deferWindowSettings: (snapshot: ReaderSettingsSnapshot): void => {
-      this.turnRuntime.pageTurn.deferWindowSettings(snapshot);
-      this.turnRuntime.rollbackForDeferredMutation();
-    },
-    visibleContinuousScalar: (): number => this.surface.continuousVisibleScalar,
-    restoreFromContinuousScalar: (scalar: number): void => { this.measuredPage.desiredChapterOffset = scalar; },
-    reflowWindow: (): void => this.readingViewport.reflowAfterWindowGeometryChange(),
-    renderChanged: (): void => this.publishPageTurnProjection({ pageTurnRenderRevision: this.pageTurnProjection.pageTurnRenderRevision + 1 }),
-    resumePendingAutoPageTurn: (): void => this.playback.auto.resumePendingTurn(),
-    sampleAndCommitContinuous: (lifecycle: number): Promise<void> => {
-      this.surface.continuousAnchorSampler?.();
-      return this.readingProgress.commitContinuousProgress(lifecycle);
-    },
-    invalidatePageTurnRuntime: (): void => this.turnRuntime.invalidate(true),
-    resetBookTurnFailure: (): void => this.publishPageTurnProjection({ bookTurnRuntimeFailed: false }),
-    publishNavigationModeChange: (mode: ReaderNavigationMode): void => {
-      if (!this.routeSelection.hasCurrentMaterializedChapter()) return;
-      if (mode === 'continuous') {
-        this.surface.rebuildContinuousFragments(false, this.measuredPage.page?.startScalar ?? this.measuredPage.desiredChapterOffset);
-        this.surface.continuousProgressRevision += 1;
-      } else this.measuredPage.beginCanonicalModeMeasurement(this.surface.continuousVisibleScalar);
-    },
-    preparePageTurnIfReady: (): void => { if (this.sessionStatus.phase === 'ready') this.turnRuntime.preparation.schedule(); },
-  };
+  private readonly preferencePorts = buildReadingPreferencePorts(this.portHost);
   private readonly preferences: ReaderReadingPreferencesHost = new ReaderReadingPreferencesHost(this.replaceRuntime,
-    this.transientFeedback, this.preferenceLifetime, this.preferenceView, this.preferenceWindow, this.preferencePage);
+    this.transientFeedback, this.preferencePorts.lifetime, this.preferencePorts.view,
+    this.preferencePorts.window, this.preferencePorts.page);
   private readonly controlDirectoryLifecycle: ReaderControlDirectoryLifecycle = {
     publish: (session: ReaderControlSessionState): void => this.publishChromeState({ controlSession: session }),
     preferences: (): ReaderReadingPreferencesHost => this.preferences,
@@ -747,318 +671,28 @@ export struct ReadingExperience {
     new ReaderControlDirectorySession(this.chromeState.controlSession, this.controlDirectoryLifecycle);
 
   private readingPrefetchScreenLocked: boolean = false;
-  private readonly readingRecordGateway: ReadingRecordGateway =
-    ReaderRuntimeOwner.current().getReadingRecordGateway();
-  private readonly progressProducers: ReaderProgressProducerHost = new ReaderProgressProducerHost();
-  private readonly exitProgress: ReadingExitProgressCoordinator = new ReadingExitProgressCoordinator(this.progressProducers);
-  private readonly chapterWindow: ReadingChapterWindow = new ReadingChapterWindow();
-  private readonly interactiveChapterPreparation: ReadingInteractiveChapterPreparation = new ReadingInteractiveChapterPreparation();
-  private readonly measurementView: ReaderMeasureView = {
-    lifecycle: (): number => this.mountHost.lifecycleToken,
-    sourceId: (): string => this.sourceId,
-    bookId: (): string => this.bookId,
-    bookKind: (): string | undefined => this.bookKind,
-    sessionActive: (lifecycle: number): boolean => this.mountHost.isSessionActive(lifecycle),
-    selectionActive: (lifecycle: number, selection: number): boolean => this.mountHost.isSelectionActive(lifecycle, selection),
-    selectionCurrent: (selection: number): boolean => this.routeSelection.isSelectionCurrent(selection),
-    epoch: (): number => this.pageTurnProjection.measurementEpoch,
-    layout: (): ReaderReadingLayoutSnapshot => this.readingViewport.readingLayout(),
-    hasMeasuredViewport: (): boolean => this.readingViewport.hasMeasuredViewport(),
-    context: (): UIContext => this.getUIContext(),
-    appearance: (): ReaderAppearanceSnapshot => this.chromeState.appearanceSnapshot,
-    continuous: (): boolean => this.chromeState.readerSettingsSnapshot.navigationMode === 'continuous',
-    phase: (): ReadingPhase => this.sessionStatus.phase,
-    visibleFragments: (): ReadingSurfacePageFragment[] => this.pageTurnProjection.visibleFragments,
-    currentPaginationKey: (): ReadingPaginationKey => this.documentIndex.currentPaginationKey(),
-    layoutSignature: (): string => this.documentIndex.paginationLayoutSignature(),
-    lastVisibleScalar: (content: string, map: ReadingSurfaceLayoutMap): number => this.lastVisibleScalar(content, map),
-    preparationPending: (): boolean => this.turnRuntime.preparation.pending !== undefined,
-    noPendingSelection: (): boolean => this.turnRuntime.preparation.pending === undefined && this.directoryOps.selection.ticket === undefined,
-  };
-  private readonly measurementEffects: ReaderMeasureEffects = {
-    publishPhase: (phase: ReadingPhase): void => this.publishPresentationPhase(phase),
-    clearVisibleFragments: (): void => this.publishPageTurnProjection({ visibleFragments: [] }),
-    hideChapterTitle: (): void => this.publishChromeState({ showChapterTitle: false }),
-    invalidateHiddenMeasurementTree: (): void => this.publishPageTurnProjection({ measurementEpoch: this.pageTurnProjection.measurementEpoch + 1 }),
-    ensureReadyDeadline: (lifecycle: number, selection: number): void => this.mountHost.hydration.ensureReadyDeadline(lifecycle, selection),
-    armCompletionDeadline: (): void => this.mountHost.hydration.armCompletionDeadline(),
-    retainNativeParagraphResources: (): void => this.imageResidency.retainNativeParagraphResources(),
-    expandParagraphWindow: (request: ReaderChapterRangeAcquisition): void => this.acquisition.expandParagraphWindow(request),
-    admitVisibleChapter: (chapter: ReadingSessionChapter): void => this.mountHost.setCurrentReadingChapter(chapter),
-    completePreparedPageTurn: (page: PhysicalReadingPage, generation: number, selection: number, lifecycle: number): void =>
-      this.turnRuntime.preparation.complete(page, generation, selection, lifecycle),
-    completeFirstPage: (page: PhysicalReadingPage, generation: number, selection: number, lifecycle: number): Promise<void> =>
-      this.firstPageAdmission.completeFirstPage(page, generation, selection, lifecycle),
-    recordFirstLayout: (lifecycle: number): void => this.traceInitialReadingPhase?.('first-layout-ready', lifecycle),
-    fail: (error: Error, lifecycle: number): void => this.recovery.fail(error, lifecycle),
-  };
-  private readonly measurementImages: ReaderMeasureImages = {
-    forParagraph: (paragraph: MeasurementParagraph): ReadingSessionImage | undefined => this.imageResidency.readingImageForParagraph(paragraph),
-    scaledHeight: (image: ReadingSessionImage, capacity: number): number => this.scaledReadingImageHeight(image, capacity),
-    resolvePending: (image: ReadingSessionImage, generation: number, selection: number, lifecycle: number): void =>
-      this.imageResidency.resolvePendingReadingImage(image, generation, selection, lifecycle),
-    indexChapter: (chapter: ReadingSessionChapter): void => this.imageResidency.indexChapter(chapter),
-  };
-  private readonly reversePagePorts: ReaderReversePagePorts = {
-    window: this.chapterWindow,
-    preparation: (): ReaderPageTurnPreparationHost => this.turnRuntime.preparation,
-    settlement: (): ReaderPageTurnSettlementHost => this.turnRuntime.settlement,
-    input: (): ReaderPageTurnInputHost => this.turnRuntime.input,
-    acquisition: (): ReaderReadingChapterAcquisitionHost => this.acquisition,
-    chapterPresentation: (): ReaderReadingChapterPresentationHost => this.chapterPresentation,
-    firstPage: (): ReaderReadingMeasurementAdmissionHost => this.firstPageAdmission,
-    mounted: (): boolean => this.sessionStatus.mounted,
-    selection: (): number => this.chapterSelectionToken,
-    nextSelection: (): number => { this.chapterSelectionToken += 1; return this.chapterSelectionToken; },
-    knownChapter: (chapter: number): boolean => this.documentIndex.isKnownControlChapter(chapter),
-    adjacentChapter: (chapter: number, step: number): number | undefined => this.documentIndex.adjacentChapterIndex(chapter, step),
-    canTurn: (): boolean => this.turnRuntime.canTurnPage(),
-    inputIdle: (): boolean => this.turnRuntime.inputPhase() === 'idle',
-    stablePage: (page: PhysicalReadingPage, chapter: ReadingSessionChapter, selection: number, lifecycle: number): boolean =>
-      this.routeSelection.isStableVisiblePageOwner(page, chapter, selection, lifecycle),
-    retainWindow: (): void => this.documentIndex.retainCurrentChapterWindow(),
-    admitNeighbourVersion: (chapter: number, version: string): void => this.documentIndex.admitChapterContentVersion(chapter, version),
-    publishTurnRevision: (): void =>
-      this.publishPageTurnProjection({ pageTurnRenderRevision: this.pageTurnProjection.pageTurnRenderRevision + 1 }),
-    resolvePageImages: (chapter: ReadingSessionChapter, fragments: ReadingSurfacePageFragment[]): void =>
-      this.imageResidency.resolvePageImagePixels(chapter, fragments),
-    releaseImages: (): void => this.imageResidency.releaseUnretainedReadingImages(),
-    resumeAutomatic: (): void => this.playback.auto.resumePendingTurn(),
-    resumeSpeech: (): void => this.playback.resumeTtsFollow(),
-    scheduleTexture: (): void => this.turnRuntime.presentation.texture.schedule(),
-    clearRestoredProgress: (): void => { this.mountHost.recordRestoration(undefined); },
-  };
-
-  private readonly measuredPage: ReaderMeasuredPagePublication =
-    new ReaderMeasuredPagePublication(this.measurementView, this.measurementEffects, this.measurementImages, this.reversePagePorts);
+  private readonly measurementPorts = buildReadingMeasurementPorts(this.portHost);
+  private readonly measuredPage: ReaderMeasuredPagePublication = new ReaderMeasuredPagePublication(
+    this.measurementPorts.view, this.measurementPorts.effects,
+    this.measurementPorts.images, this.measurementPorts.reverse);
 
   private readingSessionScope(): ReaderChapterAcquisitionScope {
     return { sourceId: this.sourceId, bookId: this.bookId, lifecycleToken: this.mountHost.lifecycleToken,
       selectionToken: this.chapterSelectionToken };
   }
 
-  private readonly acquisitionSession: ReaderChapterAcquisitionSession = {
-    scope: (): ReaderChapterAcquisitionScope => this.readingSessionScope(),
-    gateway: (): ReadingSessionFlowGateway => this.mountHost.activeGateway(),
-    hasGateway: (): boolean => this.mountHost.gateway !== undefined,
-    window: (): ReadingChapterWindow => this.chapterWindow,
-    boundaryMode: (): ReadingParagraphBoundaryMode => readingParagraphBoundaryMode(this.sourceId, this.bookKind),
-    selectionActive: (lifecycle: number, selection: number): boolean => this.mountHost.isSelectionActive(lifecycle, selection),
-    active: (lifecycle: number): boolean => this.mountHost.isSessionActive(lifecycle),
-    mountedToken: (lifecycle: number): boolean => this.mountHost.isMountedToken(lifecycle),
-  };
-  private readonly acquisitionEntry: ReaderChapterAcquisitionEntry = {
-    toc: (): LocalReadingTocEntry[] => this.chromeState.tocEntries,
-    requireKnownChapter: (index: number): void => { this.mountHost.requireKnownChapter(index); },
-    catalogPending: (): boolean => this.mountHost.entryCatalogPending,
-    downloadState: (index: number, proof: ReaderDirectoryTargetProof | undefined): LocalReadingDownloadState | undefined =>
-      this.mountHost.knownChapterDownloadState(index, proof),
-    prepared: (): ReadingEntrySnapshot | undefined => this.mountHost.preparedEntry,
-    discardPrepared: (): void => this.mountHost.discardPreparedEntry(),
-    restartPrepared: (lifecycle: number, selection: number, layout: Promise<void[]>): Promise<void> =>
-      this.mountHost.restartPreparedReadingEntry(lifecycle, selection, layout),
-    restoredProgress: (): LocalReadingProgressState | undefined => this.mountHost.restoredProgress(),
-    updateRestoredProgress: (progress: LocalReadingProgressState): void => { this.mountHost.recordRestoration(progress); },
-    markRetainedBodyReady: (lifecycle: number, selection: number): void => this.chapterPresentation.markRetainedChapterBodyReady(lifecycle, selection),
-    traceChapterReady: (lifecycle: number): void => this.traceInitialReadingPhase('chapter-ready', lifecycle),
-  };
-  private readonly acquisitionPresentation: ReaderChapterAcquisitionPresentation = {
-    admitVersion: (index: number, version: string): void => this.documentIndex.admitChapterContentVersion(index, version),
-    setCurrentWindowChapter: (chapter: ReadingSessionChapter): void => this.mountHost.setCurrentReadingChapter(chapter),
-    retainWindow: (): void => this.documentIndex.retainCurrentChapterWindow(),
-    present: (admission: ReaderAcquiredChapter): void => {
-      this.measuredPage.chapter = admission.chapter;
-      this.imageResidency.indexChapter(admission.chapter);
-      this.measuredPage.materializedChapterSelectionToken = admission.selectionToken;
-      admitReaderRestoredAnchor(this.measuredPage, this.exitProgress, admission.chapter, admission.projection.map,
-        admission.isInitial ? this.mountHost.restoredProgress() : undefined, admission.requestedOffset, admission.requestedProgress);
-      this.measuredPage.nativeMeasurement.chapterRanges = admission.projection.ranges;
-      if (this.readingViewport.hasMeasuredViewport()) this.measuredPage.beginMeasurement(admission.lifecycleToken);
-    },
-    materializedSample: (): ReaderChapterMaterializedSample | undefined => {
-      const chapter = this.measuredPage.chapter;
-      const map = this.measuredPage.chapterLayoutMap;
-      return chapter === undefined || map === undefined ? undefined : { chapter, map };
-    },
-    publishMetrics: (metrics: LocalReadingContentMetrics | undefined): void =>
-      this.publishSessionStatus({ contentMetrics: { value: metrics } }),
-  };
-  private readonly acquisitionPages: ReaderChapterAcquisitionPages = {
-    visiblePage: (): PhysicalReadingPage | undefined => this.measuredPage.page,
-    chapter: (): ReadingSessionChapter | undefined => this.measuredPage.chapter,
-    hasFacingChapter: (): boolean => this.readingViewport.readingLayout().facingChapterWidth > 0,
-    stableVisibleOwner: (page: PhysicalReadingPage, chapter: ReadingSessionChapter, selection: number, lifecycle: number): boolean =>
-      this.routeSelection.isStableVisiblePageOwner(page, chapter, selection, lifecycle),
-    isReadableTarget: (index: number): boolean => this.documentIndex.isKnownControlChapter(index),
-    turnGeneration: (): number => this.turnRuntime.preparation.generation,
-    stillWantsNeighbour: (direction: ReaderPageTurnDirection): boolean =>
-      this.turnRuntime.pageTurn.direction() === direction || this.turnRuntime.input.pointerId >= 0,
-    reviseFacingSpread: (): void => {
-      if (this.turnRuntime.inputPhase() === 'idle') {
-        this.publishPageTurnProjection({ pageTurnRenderRevision: this.pageTurnProjection.pageTurnRenderRevision + 1 });
-      }
-    },
-    prepareAdjacent: (direction: ReaderPageTurnDirection): void => {
-      this.turnRuntime.preparation.enqueue(direction);
-      this.turnRuntime.preparation.drain();
-    },
-  };
-  private readonly acquisitionRecovery: ReaderChapterAcquisitionRecovery = {
-    fail: (error: Error, lifecycle: number): void => this.recovery.fail(error, lifecycle),
-    showRecovery: (message: string, label: string, refresh: () => void): void => this.recovery.show(message, label, refresh),
-    beginCacheRefresh: (index: number, lifecycle: number, context: RemoteReadingPositionContext | undefined): number => {
-      this.chapterSelectionToken += 1;
-      this.chapterPresentation.beginRetainedChapterPresentation(index, lifecycle, this.chapterSelectionToken, true, context);
-      this.acquisition.resetForChapterSelection();
-      this.publishOverlayState({ failureCode: '' });
-      this.mountHost.hydration.armReadyDeadline(lifecycle, this.chapterSelectionToken);
-      return this.chapterSelectionToken;
-    },
-    reloadBookmarks: (chapter: ReadingSessionChapter, lifecycle: number, selection: number): void =>
-      this.directoryOps.refreshBookmarks(chapter, lifecycle, selection),
-    uiContext: (): UIContext => this.getUIContext(),
-    feedbackForeground: (): boolean => this.appForeground && this.windowChromeActive,
-  };
-  private readonly acquisitionRetirement: ReaderChapterSelectionRetirement = {
-    retireOpeningRun: (): void => {
-      this.publishSessionStatus({ loadingChapterIndex: { value: undefined } });
-      this.measuredPage.measurementRun.resetSelection();
-    },
-    retireRecovery: (): void => this.recovery.show(''),
-    invalidatePageTurn: (rapid: boolean, tts: boolean): void => {
-      this.firstPageAdmission.retireOrdinaryMeasurement();
-      this.turnRuntime.invalidate(true, rapid, tts);
-    },
-    clearWorkingMeasurement: (): void => this.measuredPage.retireWorkingSelection(),
-    resetVisibleProjection: (preserveDisplay: boolean): void =>
-      this.surface.retireSelection(preserveDisplay || this.chapterPresentation.retainedChapterFrame() !== undefined),
-    clearMaterializedContent: (): void => {
-      this.imageResidency.resetChapter();
-      this.measuredPage.retireMaterializedSelection();
-      this.publishPageTurnProjection({ measurementEpoch: this.pageTurnProjection.measurementEpoch + 1 });
-      this.publishPresentationPhase('loading');
-    },
-    cancelSelectionDeadlines: (): void => {
-      this.measuredPage.measurementRun.cancelDeadline();
-      this.mountHost.hydration.cancelReadyDeadline();
-      this.mountHost.hydration.cancelCompletionDeadline();
-      this.mountHost.hydration.resetCompletionRetries();
-      this.turnRuntime.preparation.cancelRetry();
-    },
-  };
+  private readonly acquisitionPorts = buildReadingAcquisitionPorts(this.portHost);
   private readonly acquisition: ReaderReadingChapterAcquisitionHost = new ReaderReadingChapterAcquisitionHost(this.transientFeedback,
-    this.interactiveChapterPreparation, this.acquisitionSession, this.acquisitionEntry, this.acquisitionPresentation,
-    this.acquisitionPages, this.acquisitionRecovery, this.acquisitionRetirement);
+    this.interactiveChapterPreparation, this.acquisitionPorts.session, this.acquisitionPorts.entry,
+    this.acquisitionPorts.presentation, this.acquisitionPorts.pages,
+    this.acquisitionPorts.recovery, this.acquisitionPorts.retirement);
 
-  private readonly contentLifetime: ReaderReadingContentLifetime = {
-    scope: (): ReaderReadingContentScope => this.readingSessionScope(),
-    mounted: (): boolean => this.sessionStatus.mounted,
-    active: (lifecycle: number): boolean => this.mountHost.isSessionActive(lifecycle),
-    selectionActive: (lifecycle: number, selection: number): boolean => this.mountHost.isSelectionActive(lifecycle, selection),
-  };
-  private readonly conversionView: ReaderReadingConversionView = {
-    mode: (): ReaderChineseConversionMode => this.chromeState.chineseConversionMode,
-    publishMode: (mode: ReaderChineseConversionMode): void => this.publishChromeState({ chineseConversionMode: mode }),
-    operationId: (): string => this.chromeState.chineseConversionOperationId,
-    publishOperationId: (id: string): void => this.publishChromeState({ chineseConversionOperationId: id }),
-    uiContext: (): UIContext => this.getUIContext(),
-    foreground: (): boolean => this.appForeground,
-    windowChromeActive: (): boolean => this.windowChromeActive,
-  };
-  private readonly contentPosition: ReaderReadingContentPosition = {
-    gateway: (): ReadingSessionFlowGateway => this.mountHost.activeGateway(),
-    chapter: (): ReadingSessionChapter | undefined => this.measuredPage.chapter,
-    ready: (): boolean => this.sessionStatus.phase === 'ready',
-    failed: (): boolean => this.sessionStatus.phase === 'failed',
-    navigationMode: (): ReaderNavigationMode => this.chromeState.readerSettingsSnapshot.navigationMode,
-    hasVisiblePage: (): boolean => this.measuredPage.page !== undefined,
-    visiblePageStart: (): number | undefined => this.measuredPage.page?.startScalar,
-    sampleContinuousAnchor: (): void => this.surface.continuousAnchorSampler?.(),
-    continuousVisibleScalar: (): number => this.surface.continuousVisibleScalar,
-    awaitFirstPagePersistence: (): Promise<void> => this.firstPageAdmission.awaitOrdinaryFirstPagePersistence(),
-    commitContinuousProgress: (lifecycle: number): Promise<void> => this.readingProgress.commitContinuousProgress(lifecycle),
-    commitVisiblePage: (lifecycle: number): Promise<void> => this.readingProgress.commitVisiblePage(lifecycle),
-    committed: (): ReadingCommit | undefined => this.exitProgress.committed,
-    selectMappedPosition: (chapterIndex: number, offset: number, context?: RemoteReadingPositionContext): void =>
-      this.directoryOps.selectAnchor(chapterIndex, offset, false, true, undefined, -1, false, false, context),
-    retryReading: (): void => this.recovery.retryReading(),
-    showPositionRecovery: (message: string, label: string, retry: () => void): void => this.recovery.show(message, label, retry),
-  };
-  private readonly contentProjection: ReaderReadingContentProjection = {
-    settlementActive: (): boolean => this.pageTurnProjection.pageTurnSettlementActive,
-    preparationActive: (): boolean => this.turnRuntime.preparation.pending !== undefined,
-    chapterSelectionPending: (): boolean => this.directoryOps.selection.ticket !== undefined,
-    deferContentProjection: (chapterIndex: number): void => this.turnRuntime.pageTurn.deferContentProjection(chapterIndex),
-    deferReplaceReload: (): void => this.turnRuntime.pageTurn.deferReplaceReload(),
-    invalidatePageTurnRuntime: (): void => this.turnRuntime.invalidate(true),
-    clearProcessedChapters: (): void => {
-      this.acquisition.clearContentMetrics();
-      this.documentIndex.invalidateProcessedContent();
-    },
-    retireQuickSearch: (): void => {
-      this.quickSearchPublication.cancel();
-      this.controlInteraction.publishQuickSearchState({ kind: 'idle' });
-    },
-    admitToc: (entries: LocalReadingTocEntry[]): void => this.admitTocEntries(entries),
-    notifyDirectoryChanged: (entries: LocalReadingTocEntry[]): void => this.onDirectoryProjectionChanged(entries),
-  };
+  private readonly contentSurfacePorts = buildContentAndSurfacePorts(this.portHost);
   private readonly contentMutation: ReaderReadingContentMutationHost = new ReaderReadingContentMutationHost(this.replaceRuntime,
-    this.auxiliaryFlows, this.transientFeedback, this.contentLifetime, this.conversionView, this.contentPosition, this.contentProjection);
-
-  private readonly continuousSurfaceView: ReaderContinuousSurfaceView = {
-    retainedChrome: (): ReaderPageChromeSnapshot | undefined => this.chapterPresentation.retainedChapterFrame()?.continuousChrome,
-    currentChapterIndex: (): number => this.currentChapterIndex(),
-    liveChrome: (revision: number, offset: number, count: number): ReaderPageChromeSnapshot =>
-      this.pageChrome.continuousSnapshot(revision, offset, count),
-    continuous: (): boolean => this.chromeState.readerSettingsSnapshot.navigationMode === 'continuous',
-    revision: (): number => this.pageTurnProjection.continuousRenderRevision,
-    progressText: (): string => this.chromeState.continuousChromeProgressText,
-    hasPartialEntryWindow: (): boolean => this.hasPartialEntryWindow(),
-    inFlightDirection: (): ReaderPageTurnDirection | undefined => this.turnRuntime.pageTurn.inFlightDirection,
-    lifecycle: (): number => this.mountHost.lifecycleToken,
-    selection: (): number => this.chapterSelectionToken,
-    turnSerial: (): number => this.turnRuntime.input.transactionSerial,
-    mountedToken: (lifecycle: number): boolean => this.mountHost.isMountedToken(lifecycle),
-    exiting: (): boolean => this.sessionStatus.exitRequested,
-    adjacentChapterIndex: (chapterIndex: number, delta: number): number | undefined => this.documentIndex.adjacentChapterIndex(chapterIndex, delta),
-    appearance: (): ReaderAppearanceSnapshot => this.readingViewport.visibleReadingAppearance(),
-    measurementTextWidth: (): number => this.measurementTextWidth(),
-    context: (): UIContext => this.getUIContext(),
-    imageAt: (startScalar: number): ReadingSessionImage | undefined => this.imageResidency.atScalar(startScalar),
-    visibleFragments: (): ReadingSurfacePageFragment[] => this.pageTurnProjection.visibleFragments,
-    layout: (): ReaderReadingLayoutSnapshot => this.readingViewport.readingLayout(),
-    layoutSignature: (): string => this.documentIndex.paginationLayoutSignature(),
-    scaledImageHeight: (image: ReadingSessionImage, capacity: number): number => this.scaledReadingImageHeight(image, capacity),
-    ttsState: (): ReaderTtsState => this.sessionStatus.ttsState,
-    ttsFollowHighlight: (): boolean => this.sessionStatus.ttsFollowHighlight,
-    mounted: (): boolean => this.sessionStatus.mounted,
-    controlVisible: (): boolean => this.controlInteraction.controlVisible(),
-    ready: (): boolean => this.sessionStatus.phase === 'ready',
-    progressInFlight: (): boolean => this.progressProducers.continuousInFlight,
-    isUnknownCatalogEdge: (chapterIndex: number, direction: ReaderPageTurnDirection): boolean => this.turnRuntime.input.isUnknownCatalogEdge(chapterIndex, direction),
-    viewportHeight: (): number => this.chromeState.viewportHeight,
-    reducedMotion: (): boolean => this.reduceMotion,
-  };
-  private readonly continuousSurfaceEffects: ReaderContinuousSurfaceEffects = {
-    publishSelectionActive: (active: boolean): void => this.publishPageTurnProjection({ textSelectionActive: active }),
-    retirePagePointer: (): void => this.turnRuntime.input.retirePointer(),
-    retireRecovery: (): void => this.recovery.retire(),
-    manualInteraction: (): void => this.playback.manualInteraction(),
-    publishProgressText: (text: string): void => this.publishChromeState({ continuousChromeProgressText: text }),
-    resolveContinuousImage: (startScalar: number): void => this.imageResidency.resolveContinuousImage(startScalar),
-    scheduleEntryWindowHydration: (): void => this.mountHost.scheduleEntryWindowHydration(),
-    commitProgress: (lifecycle: number): Promise<void> => this.readingProgress.commitContinuousProgress(lifecycle),
-    completeRapid: (direction: ReaderPageTurnDirection): void => {
-      this.turnRuntime.pageTurn.completeRapid(direction);
-      this.turnRuntime.input.drain();
-    },
-    turnToPreviousChapter: (target: number, from: number, offset: number): boolean => this.turnRuntime.input.turnToPreviousChapter(target, from, offset),
-    openPageTurnChapter: (chapterIndex: number, offset: number): boolean => this.routeSelection.openPageTurnChapter(chapterIndex, offset),
-    bumpRevision: (): void => this.publishPageTurnProjection({ continuousRenderRevision: this.pageTurnProjection.continuousRenderRevision + 1 }),
-    requestCatalogForTurn: (): void => this.turnRuntime.input.requestCatalog(),
-  };
-  private readonly surface: ReaderReadingSurfaceHost =
-    new ReaderReadingSurfaceHost(this.measuredPage, this.continuousSurfaceView, this.continuousSurfaceEffects);
+    this.auxiliaryFlows, this.transientFeedback, this.contentSurfacePorts.contentLifetime,
+    this.contentSurfacePorts.conversionView, this.contentSurfacePorts.contentPosition, this.contentSurfacePorts.contentProjection);
+  private readonly surface: ReaderReadingSurfaceHost = new ReaderReadingSurfaceHost(
+    this.measuredPage, this.contentSurfacePorts.continuousSurfaceView, this.contentSurfacePorts.continuousSurfaceEffects);
 
   private readonly mountRoutes: ReaderReadingMountRoutes = {
     current: (): ReaderReadingMountRoute => ({
@@ -1421,174 +1055,14 @@ export struct ReadingExperience {
   /** Bumped per directory chapter selection so stale loads cannot win. */
   private chapterSelectionToken: number = 0;
   /** Prevents a late startup load from replacing a newer in-session choice. */
-  private readonly directoryData: ReaderControlDirectoryDataPort = {
-    parentEntries: (): LocalReadingTocEntry[] => this.directoryEntries,
-    publishEntriesRevision: (revision: number): void => this.publishChromeState({ controlDirectoryEntriesRevision: revision }),
-    tocEntries: (): LocalReadingTocEntry[] => this.chromeState.tocEntries,
-    catalogPending: (): boolean => this.mountHost.entryCatalogPending,
-    catalogNavigation: (): ReadingEntryNavigation | undefined => this.mountHost.entryCatalogNavigation,
-    readingToc: (): LocalReadingTocEntry[] => this.documentIndex.readingTocEntries(),
-    hydrateCatalog: (): Promise<void> => this.mountHost.hydration.hydrateCatalog(),
-    contentMetrics: (): LocalReadingContentMetrics | undefined => this.sessionStatus.contentMetrics,
-    chapterWindow: this.chapterWindow,
-    chapter: (): ReadingSessionChapter | undefined => this.measuredPage.chapter,
-    chapterMap: (): ReadingSurfaceLayoutMap | undefined => this.measuredPage.chapterLayoutMap,
-    currentChapterIndex: (): number => this.currentChapterIndex(),
-    adjacentChapter: (chapter: number, delta: number): number | undefined => this.documentIndex.adjacentChapterIndex(chapter, delta),
-    isKnownChapter: (chapter: number): boolean => this.documentIndex.isKnownControlChapter(chapter),
-  };
-  private readonly directoryScope: ReaderControlDirectoryScopePort = {
-    scope: (): ReaderChapterSelectionScope => this.readingSessionScope(),
-    nextSelection: (): number => { this.chapterSelectionToken += 1; return this.chapterSelectionToken; },
-    mounted: (): boolean => this.sessionStatus.mounted,
-    exiting: (): boolean => this.sessionStatus.exitRequested,
-    active: (lifecycle: number): boolean => this.mountHost.isSessionActive(lifecycle),
-    selectionActive: (lifecycle: number, selection: number): boolean => this.mountHost.isSelectionActive(lifecycle, selection),
-    session: (): ReaderControlSessionState => this.chromeState.controlSession,
-    visualSession: (): ReaderControlSessionState => this.controlDirectory.visualSession(),
-    controlVisible: (): boolean => this.controlInteraction.controlVisible(),
-    controlInputEnabled: (): boolean => this.controlInteraction.isControlInputEnabled(),
-    controlClosing: (): boolean => this.controlInteraction.controlShellExitArmed(),
-    openRevision: (): number => this.chromeState.controlOpenRevision,
-    moduleVisit: (): number => this.controlDirectory.visitRevision(),
-    foreground: (): boolean => this.appForeground,
-    windowChromeActive: (): boolean => this.windowChromeActive,
-    uiContext: (): UIContext => this.getUIContext(),
-    verification: (): ReaderControlVerificationSession => this.controlVerification,
-  };
-  private readonly directoryBookmarks: ReaderControlDirectoryBookmarkPort = {
-    message: (): string => this.bookmarkLoadMessage,
-    read: (sourceId: string, bookId: string, current: () => boolean): Promise<void> =>
-      this.onLoadControlBookmarks(sourceId, bookId, current),
-    publishFailed: (failed: boolean): void => this.publishChromeState({ controlBookmarkLoadFailed: failed }),
-    reconcileChangedMarkers: (): void => {
-      this.readerBookmark.onDirectoryChanged();
-      if (this.turnRuntime.usesBookTurnSimulation() && this.turnRuntime.inputPhase() === 'idle') {
-        this.turnRuntime.presentation.texture.invalidate(true); this.turnRuntime.presentation.texture.schedule();
-      }
-    },
-  };
-  private readonly directoryActions: ReaderControlDirectoryActionsPort = {
-    gateway: (): ReadingSessionFlowGateway => this.mountHost.activeGateway(),
-    yieldPrefetchForDownload: (): void => this.playback.reportPrefetch(false, true),
-    downloadBook: (): void => this.onDownloadBook(),
-    downloadChapter: (chapter: number): void => this.onDownloadChapter(chapter),
-    clearChapterEndTimer: (): void => this.speech.clearTtsChapterEndTimer(),
-    prepareSelection: (request: ReaderDeferredChapterSelection): boolean => this.routeSelection.prepareChapterSelectionRequest(request),
-    queueOnSettlement: (request: ReaderDeferredChapterSelection): boolean => this.routeSelection.queueChapterSelectionOnSettlement(request),
-    interruptPlayback: (stopTts: boolean): void => this.speech.interruptForContentChange(stopTts),
-    loadSelection: (request: ReaderDeferredChapterSelection, lifecycle: number, selection: number): void =>
-      this.routeSelection.loadAdmittedChapterSelection(request, lifecycle, selection),
-    closeControl: (): void => this.controlInteraction.hideControl(),
-    reopenRefreshed: (ticket: ReaderControlSelectionTicket, stored: ReaderControlSelectionStoredProgress,
-      context: RemoteReadingPositionContext): Promise<void> => this.acquisition.openChapter(stored.chapterIndex, false,
-      ticket.lifecycleToken, ticket.selectionToken, stored.chapterOffset, undefined, false, context),
-  };
-  private readonly directoryDisplay: ReaderControlDirectoryDisplayPort = {
-    visiblePage: (): PhysicalReadingPage | undefined => this.measuredPage.page,
-    committed: (): ReadingCommit | undefined => this.exitProgress.committed,
-    continuous: (): boolean => this.chromeState.readerSettingsSnapshot.navigationMode === 'continuous',
-    visibleScalar: (): number => this.surface.continuousVisibleScalar,
-    pageToken: (): number => this.measuredPage.selection,
-    materializedToken: (): number => this.measuredPage.materializedChapterSelectionToken,
-    materializedCurrent: (): boolean => this.routeSelection.hasCurrentMaterializedChapter(),
-    captureMaterialized: (): ReaderMaterializedChapterContext => this.measuredPage.captureMaterializedChapterContext(),
-    preparationOrigin: (): ReaderMaterializedChapterContext | undefined =>
-      this.turnRuntime.preparation.pending?.origin ?? this.measuredPage.previousChapterMeasurement?.origin,
-    preparedChapter: (): ReadingSessionChapter | undefined => this.turnRuntime.preparation.pending?.origin.chapter,
-    layoutSignature: (): string => this.documentIndex.paginationLayoutSignature(),
-    ready: (): boolean => this.sessionStatus.phase === 'ready',
-    stablePage: (page: PhysicalReadingPage, chapter: ReadingSessionChapter, selection: number, lifecycle: number): boolean =>
-      this.routeSelection.isStableVisiblePageOwner(page, chapter, selection, lifecycle),
-    chapterCommitted: (chapter: number, title: string): void => this.onChapterCommitted(chapter, title),
-    presentationReady: (chapter: ReadingSessionChapter, page: PhysicalReadingPage, selection: number, lifecycle: number): boolean =>
-      this.chapterPresentation.notifyReadingPresentationReady(chapter, page, selection, lifecycle),
-    finishTrace: (lifecycle: number): void => this.mountHost.hydration.finishTrace(lifecycle),
-    beginRetainedFailure: (ticket: ReaderControlSelectionTicket): void =>
-      this.chapterPresentation.beginRetainedChapterPresentation(ticket.targetChapterIndex, ticket.lifecycleToken, ticket.selectionToken, false, undefined, undefined, true),
-    resetAfterSelectionFailure: (): void => this.acquisition.resetForChapterSelection(),
-    invalidateUnverifiedDisplay: (): void => {
-      this.chapterPresentation.clearChapterPresentation(); this.exitProgress.clearCommitted(); this.publishPresentationPhase('failed');
-    },
-    publishFailure: (code: string, hint: (admittedCode: string) => string): void => {
-      this.publishOverlayState({ failureCode: code });
-      this.publishOverlayState({ failureHint: hint(this.overlayState.failureCode) });
-    },
-    retireFailedTurn: (): void => this.turnRuntime.finishPerformance('failed'),
-    showRecovery: (message: string, label: string, retry: () => void): void => this.recovery.show(message, label, retry),
-    restoreVerified: (display: ReaderControlSelectionDisplay, stored: ReaderControlSelectionStoredProgress): void =>
-      this.routeSelection.restoreVerifiedControlSelection(display, stored),
-    releaseImages: (): void => this.imageResidency.releaseUnretainedReadingImages(),
-  };
-  private readonly directoryOps: ReaderControlDirectoryOperationsHost = new ReaderControlDirectoryOperationsHost(this.directoryData,
-    this.directoryScope, this.directoryBookmarks, this.directoryActions, this.directoryDisplay, this.transientFeedback);
-
-  private readonly firstPageNative: ReaderMeasuredPageAdmissionNative = {
-    measurementCoordinator: this.measuredPage.measurementCoordinator,
-    isMeasurementCurrent: (generation: number, selection: number, lifecycle: number): boolean =>
-      this.measuredPage.isMeasurementCurrent(generation, selection, lifecycle),
-    layoutSignature: (): string => this.documentIndex.paginationLayoutSignature(),
-    captureMeasuredPage: (): ReaderMeasuredPageAdmissionFacts => ({
-      layout: this.documentIndex.coreLayout(), chapter: this.measuredPage.requireChapter(), scalarCount: this.measuredPage.requireChapterLayoutMap().scalarCount(),
-    }),
-    captureMaterializedChapter: (): ReaderMaterializedChapterContext => this.measuredPage.captureMaterializedChapterContext(),
-    currentPage: (): ReaderMeasuredPageVisibility => ({
-      page: this.measuredPage.page, visibleSelection: this.measuredPage.selection, chapter: this.measuredPage.chapter,
-      preparationOrigin: this.turnRuntime.preparation.pending?.origin.chapter,
-    }),
-    hasVisibleBody: (): boolean => this.pageTurnProjection.visibleFragments.length > 0,
-    publishPhysicalPage: (page: PhysicalReadingPage, chapterIndex: number, lifecycle: number, selection: number): void => {
-      this.chapterPresentation.observeRetainedChapterCommit(chapterIndex, lifecycle, selection);
-      this.measuredPage.publishFirstPage(page, lifecycle, selection, this.firstPageSurfacePublication);
-    },
-    setMeasuredPosition: (offset: number, progress: number): void => {
-      this.measuredPage.desiredChapterOffset = offset; this.measuredPage.desiredChapterProgress = progress;
-    },
-    finishMeasurement: (): void => this.measuredPage.physicalPagination.index.finishMeasurement(),
-    releaseCompleting: (): void => { this.measuredPage.measurementCompleting = false; },
-    resumeDeferredMeasurement: (lifecycle: number): void => this.measuredPage.resumeDeferredMeasurement(lifecycle),
-  };
-  private readonly firstPageView: ReaderMeasuredPageAdmissionView = {
-    bookId: (): string => this.bookId,
-    selectionToken: (): number => this.chapterSelectionToken,
-    isReaderIdentityCurrent: (): boolean => this.isReaderIdentityCurrent?.() !== false,
-    sourceSwitchRequested: (): boolean => this.sourceSwitchTransactionId !== undefined,
-    navigationMode: (): ReaderNavigationMode => this.chromeState.readerSettingsSnapshot.navigationMode,
-    canRemeasurePresentedPage: (): boolean => this.sessionStatus.phase === 'ready' && !this.sessionStatus.exitRequested,
-    publishReadyPhase: (): void => this.publishPresentationPhase('ready'),
-    publishTitleVisibility: (start: number): void => this.publishChromeState({ showChapterTitle: this.measuredPage.isChapterFirstPageStart(start) }),
-    publishTitle: (title: string): void => this.publishChromeState({ chapterTitle: title }),
-    refreshPageProvider: (): void =>
-      this.publishPageTurnProjection({ pageTurnRenderRevision: this.pageTurnProjection.pageTurnRenderRevision + 1 }),
-    fail: (error: Error, lifecycle: number): void => this.recovery.fail(error, lifecycle),
-  };
-  private readonly firstPageFlow: ReaderMeasuredPageAdmissionFlow = {
-    captureProgressIntent: (chapter: ReadingSessionChapter, anchor: LocalReadingAnchor, layout: CoreReadingLayout,
-      owner: () => boolean, current: () => boolean, publish: (stored: LocalReadingProgress) => void): ReaderProgressProducerIntent =>
-      this.readingProgress.progressProducerIntent(chapter, anchor, layout, owner, current, publish),
-    admitCommittedProgress: (stored: ReadingSessionCommittedProgress): void => this.readingProgress.admitCommittedProgress(stored),
-    directoryProof: (chapter: ReadingSessionChapter, selection: number): ReaderDirectoryTargetProof | undefined =>
-      this.acquisition.directoryProofForProgress(chapter, selection),
-    acknowledgeDirectoryProof: (selection: number, proof: ReaderDirectoryTargetProof, bookId: string, index: number): void =>
-      this.acquisition.acknowledgeDirectoryProof(selection, proof, bookId, index),
-    admitRetainedSpeechCommit: (): void => this.chapterPresentation.admitTtsCommit(),
-    beginReadingRecord: (lifecycle: number): void => this.beginReadingRecordClock(lifecycle),
-    finishPageTurnPerf: (outcome: 'presented' | 'committed'): void => this.turnRuntime.finishPerformance(outcome),
-    notifyPresentationReady: (first: ReaderMeasuredFirstPage): boolean =>
-      this.chapterPresentation.notifyReadingPresentationReady(first.chapter, first.page, first.selectionToken, first.lifecycleToken),
-    notifyControlReadingReady: (first: ReaderMeasuredFirstPage): boolean =>
-      this.directoryOps.notifyReadingReady(first.chapter.chapterIndex, first.chapter.chapterTitle, first.page, first.selectionToken, first.lifecycleToken),
-    completeControlSelection: (stored: ReadingSessionCommittedProgress, first: ReaderMeasuredFirstPage): void =>
-      this.directoryOps.completeAfterCommit(stored, first.page, first.selectionToken, first.lifecycleToken),
-    prepareNextPageTurn: (): void => this.turnRuntime.preparation.schedule(),
-    prefetchNextChapter: (first: ReaderMeasuredFirstPage): void =>
-      this.acquisition.prefetchNextChapter(first.chapter, first.lifecycleToken, first.selectionToken),
-    completeRapidTurn: (): void => this.turnRuntime.pageTurn.completeRapid(),
-    drainRapidTurn: (): void => { this.turnRuntime.input.drain(); },
-    notifyAutomaticPageCommit: (): void => this.playback.auto.pageCommitted(),
-  };
-  private readonly firstPageAdmission: ReaderReadingMeasurementAdmissionHost = new ReaderReadingMeasurementAdmissionHost(this.mountHost,
-    this.firstPageNative, this.firstPageView, this.firstPageFlow, this.directoryOps.selection, this.progressProducers);
+  private readonly directoryFirstPagePorts = buildDirectoryAndFirstPagePorts(this.portHost);
+  private readonly directoryOps: ReaderControlDirectoryOperationsHost = new ReaderControlDirectoryOperationsHost(
+    this.directoryFirstPagePorts.directoryData, this.directoryFirstPagePorts.directoryScope,
+    this.directoryFirstPagePorts.directoryBookmarks, this.directoryFirstPagePorts.directoryActions,
+    this.directoryFirstPagePorts.directoryDisplay, this.transientFeedback);
+  private readonly firstPageAdmission: ReaderReadingMeasurementAdmissionHost = new ReaderReadingMeasurementAdmissionHost(
+    this.mountHost, this.directoryFirstPagePorts.firstPageNative, this.directoryFirstPagePorts.firstPageView,
+    this.directoryFirstPagePorts.firstPageFlow, this.directoryOps.selection, this.progressProducers);
   /** Prevents a late Settings load from replacing a newer in-session choice. */
   /** The selection token that owns `chapter` and its layout map. */
   /** The selection token that owns the currently mounted hidden measurement tree. */
@@ -1660,7 +1134,6 @@ export struct ReadingExperience {
     if (this.appForeground && !this.sessionStatus.exitRequested) this.turnRuntime.preparation.drain();
   }
 
-  private readonly textSelectionActivity: ReaderTextSelectionActivity = new ReaderTextSelectionActivity();
   private quoteShareGeneration: number = 0;
   private readonly quoteCardAction: ReaderQuoteCardAction = (text: string, anchor: string, selectionCurrent: () => boolean) => {
     const generation = ++this.quoteShareGeneration;
@@ -1675,101 +1148,13 @@ export struct ReadingExperience {
       (): Promise<ReaderQuoteCardCopy | undefined> => exportReaderQuoteCard(this.getUIContext(), text, title, author, appearance, current),
       current);
   };
-  private readonly readingRecordHost: ReaderReadingRecordHost = new ReaderReadingRecordHost(
-    this.readingRecordGateway, (): string => this.bookTitle.trim().length > 0 ? this.bookTitle.trim() : this.bookId,
-    (error: Error): void => hilog.error(0x5244, 'Reader', '%{private}s', `Reading duration: ${this.errorMessage(error)}`));
   /** Layout facts admitted for the last window-metrics revision. */
 
-  private readonly speechSession: ReaderReadingSpeechSession = {
-    scope: (): ReaderTtsPlaybackScope => ({ lifecycleToken: this.mountHost.lifecycleToken, selectionToken: this.chapterSelectionToken,
-      sourceId: this.sourceId, bookId: this.bookId }),
-    uiContext: (): UIContext => this.getUIContext(),
-    mounted: (): boolean => this.sessionStatus.mounted,
-    mountedToken: (lifecycle: number): boolean => this.mountHost.isMountedToken(lifecycle),
-    active: (lifecycle: number): boolean => this.mountHost.isSessionActive(lifecycle),
-    ready: (): boolean => this.sessionStatus.phase === 'ready',
-    foreground: (): boolean => this.appForeground,
-    progressAllowed: (lifecycle: number): boolean => this.mountHost.isSessionActive(lifecycle) ||
-      (this.sessionStatus.exitRequested && this.mountHost.isMountedToken(lifecycle) && this.isReaderIdentityCurrent?.() !== false),
-  };
-  private readonly speechView: ReaderReadingSpeechView = {
-    publish: (presentation: ReaderReadingSpeechPresentation): void => this.publishSpeechPresentation(presentation),
-    applyWindowPolicy: (): Promise<void> =>
-      this.preferences.applyReaderWindowPolicy(this.chromeState.readerSettingsSnapshot, this.controlsPresentedForWindow()),
-    observePrefetch: (): void => this.playback.reportPrefetch(),
-    followPage: (state: ReaderTtsState): void => this.playback.offerTts(state),
-    retirePageFollow: (): void => this.playback.invalidateTtsFollow(),
-  };
-  private readonly speechProgress: ReaderReadingSpeechProgress = {
-    chapter: (): ReadingSessionChapter | undefined => this.measuredPage.chapter,
-    scalarCount: (): number => this.measuredPage.requireChapterLayoutMap().scalarCount(),
-    layout: (): LocalReadingLayout => this.documentIndex.coreLayout(),
-    intent: (chapter: ReadingSessionChapter, anchor: CoreReadingAnchor, layout: LocalReadingLayout,
-      current: () => boolean, publish: (stored: LocalReadingProgress) => void): ReaderProgressProducerIntent =>
-      this.readingProgress.progressProducerIntent(chapter, anchor, layout, current, current, publish),
-    commit: (intent: ReaderProgressProducerIntent): Promise<void> => this.progressProducers.commitTts(intent),
-    admit: (stored: LocalReadingProgress): void => this.readingProgress.admitCommittedProgress(stored),
-    accepted: (): ReadingCommit | undefined => this.exitProgress.committed,
-  };
-  private readonly speechChapter: ReaderReadingSpeechChapter = {
-    startPage: (): ReaderTtsStartPage | undefined => this.ttsStartPage(),
-    materializedContentVersion: (): string => this.measuredPage.materializedContentVersion,
-    hydrateEntry: (chapter: ReadingSessionChapter): Promise<void> => this.mountHost.hydration.expandWindow(chapter),
-    window: (): ReadingChapterWindow => this.chapterWindow,
-    captureAdvanceSelection: (state: ReaderTtsState): ReaderReadingSpeechAdvanceSelection => {
-      const owner = this.playback.ttsLease(state);
-      return {
-        sessionGeneration: owner.sessionGeneration, positionGeneration: owner.positionGeneration,
-        isCurrent: (): boolean => this.playback.isTtsFollowCurrent(owner),
-        select: (target: number, offset: number): void => {
-          this.directoryOps.selectAnchor(target, offset, offset === 0, false, undefined, -1, false, false, undefined, owner);
-        },
-      };
-    },
-    continuous: (): boolean => this.chromeState.readerSettingsSnapshot.navigationMode === 'continuous',
-    hydrateCatalogForNext: (chapterIndex: number): Promise<void> | undefined =>
-      this.turnRuntime.input.isUnknownCatalogEdge(chapterIndex, 'next') ? this.mountHost.hydration.hydrateCatalog() : undefined,
-    nextChapterIndex: (chapterIndex: number): number | undefined => this.documentIndex.adjacentChapterIndex(chapterIndex, 1),
-    load: (target: number, current: () => boolean): Promise<ReadingSessionChapter> =>
-      this.mountHost.activeGateway().loadChapter(this.bookId, target, current),
-    admitContentVersion: (chapter: ReadingSessionChapter): void => this.documentIndex.admitChapterContentVersion(chapter.chapterIndex, chapter.contentVersion),
-  };
-  private readonly speechControls: ReaderReadingSpeechControls = {
-    capsule: {
-    capture: (): ReaderControlPlaybackPresentation => this.captureControlPlaybackPresentation(),
-    beginForStart: (): boolean => this.beginTtsStartCapsule(),
-    beginForResume: (presentation: ReaderControlPlaybackPresentation): boolean | undefined =>
-      this.isControlPlaybackPresentationCurrent(presentation, 'tts') ? !this.auxiliarySession.beginSessionCapsuleMorph('tts') : undefined,
-    pauseWitness: (): ReaderTtsPauseWitness | undefined => this.captureTtsPauseWitness(),
-    desiredPlaying: (): boolean => this.overlayState.sessionLaunch?.geometry.type === 'tts' ? this.overlayState.sessionLaunch.desiredPlaying : true,
-    timing: (): ReaderTtsCapsuleTiming | undefined => this.capsuleVerification.ttsTiming(this.overlayState.sessionLaunch?.generation),
-    showStatic: (presentation: ReaderControlPlaybackPresentation): void => this.showAcknowledgedStaticTtsCapsule(presentation),
-    observeStart: (): void => this.onSessionLaunchTtsState(this.sessionStatus.ttsState),
-    fail: (): void => this.auxiliarySession.cancel('failure'),
-  },
-    inputAllowed: (): boolean => this.controlInteraction.readerInputIsCurrent() && !this.windowChromeOverlayActive,
-    controlVisible: (): boolean => this.controlInteraction.controlVisible(),
-    controlInputEnabled: (): boolean => this.controlInteraction.isControlInputEnabled(),
-    chromeOverlayActive: (): boolean => this.windowChromeOverlayActive,
-    preferenceModule: (): string => this.readerPreferenceModule(),
-    openTtsConfiguration: (): void => {
-      this.controlInteraction.openReaderControl();
-      this.controlInteraction.setControlPage('moduleTts');
-    },
-    onSpeechState: (state: ReaderTtsState): void => this.onSessionLaunchTtsState(state),
-    retireBlockedStarts: (): void => this.playback.retirePendingStarts(),
-    retireSpeechCapsule: (): void => {
-      this.auxiliarySession.clearStaticCapsuleOrigin('tts');
-      if (this.overlayState.sessionLaunch?.geometry.type === 'tts') this.auxiliarySession.cancel('stop');
-    },
-    autoPageActive: (): boolean => this.playback.automaticState().status !== 'stopped',
-    cancelAutoPageStart: (): void => this.playback.auto.cancelStart(),
-    pauseAutoPage: (): void => this.playback.pauseAutoPage('manual'),
-    stopAutoPage: (): void => this.playback.stopAutoPage(),
-    waitForLaunchMotion: (): Promise<void> => this.auxiliarySession.waitForLaunchMotion(),
-  };
+  private readonly speechAndProgressPorts = buildSpeechAndProgressPorts(this.portHost);
   private readonly speech: ReaderReadingSpeechHost = new ReaderReadingSpeechHost(this.transientFeedback,
-    this.speechSession, this.speechView, this.speechProgress, this.speechChapter, this.speechControls);
+    this.speechAndProgressPorts.speechSession, this.speechAndProgressPorts.speechView,
+    this.speechAndProgressPorts.speechProgress, this.speechAndProgressPorts.speechChapter,
+    this.speechAndProgressPorts.speechControls);
 
   private publishSpeechPresentation(presentation: ReaderReadingSpeechPresentation): void {
     this.publishSessionStatus({
@@ -1788,43 +1173,9 @@ export struct ReadingExperience {
     });
   }
 
-  private readonly readingProgressOwners: ReaderReadingProgressOwners = {
-    progress: this.exitProgress, mount: this.mountHost, measured: this.measuredPage, surface: this.surface,
-    speech: this.speech, turn: this.turnRuntime.settlement, turnInput: this.turnRuntime.input, bookmark: this.readerBookmark,
-    autoPage: this.playback.auto, auxiliary: this.auxiliarySession, record: this.readingRecordHost,
-    recordGateway: this.readingRecordGateway, recovery: this.recovery, controlVerification: this.controlVerification,
-  };
-  private readonly readingProgressView: ReaderReadingProgressView = {
-    identity: (): ReadingProgressIdentity => ({ sourceId: this.sourceId, bookId: this.bookId }),
-    ready: (): boolean => this.sessionStatus.phase === 'ready',
-    currentSelection: (): number => this.chapterSelectionToken,
-    continuous: (): boolean => this.chromeState.readerSettingsSnapshot.navigationMode === 'continuous',
-    layout: (): LocalReadingLayout => this.documentIndex.coreLayout(),
-    mayRenewRetainedVisit: (): boolean => this.appForeground && this.windowChromeActive && this.isReaderIdentityCurrent?.() !== false,
-    exitRequested: (): boolean => this.sessionStatus.exitRequested,
-    settlementActive: (): boolean => this.pageTurnProjection.pageTurnSettlementActive,
-    publishCommit: (commit: ReadingCommit): void => this.onReadingCommitted(commit),
-  };
-  private readonly readingExitEffects: ReaderReadingExitEffects = {
-    markRequested: (): void => { this.publishSessionStatus({ exitRequested: true }); },
-    observePrefetch: (): void => this.playback.reportPrefetch(),
-    rollbackUncommittedTurn: (): boolean => this.turnRuntime.rollbackUncommittedBookTurnSettlement(),
-    releaseTurnRecoveryInput: (): void => this.turnRuntime.releaseRecoveryInput(),
-    retireCapsuleOrigin: (): void => { this.auxiliarySession.clearStaticCapsuleOrigin(); },
-    exit: (): void => this.onExit(),
-  };
-  private readonly readingBackControls: ReaderReadingBackControls = {
-    visible: (): boolean => this.controlInteraction.controlVisible(),
-    cancelPendingNavigation: (): boolean => this.controlInteraction.cancelControlNavigationIntent(),
-    invalidateBackdrop: (): void => this.controlGeometry.invalidateBackdrop(),
-    consumeKeyboard: (): boolean => this.controlGeometry.consumeKeyboardBack(),
-    consumeTemporaryBack: (report: () => void): boolean => this.controlGeometry.consumeTemporaryBack(report),
-    visualSession: (): ReaderControlSessionState => this.controlDirectory.visualSession(),
-    timing: (): ReaderControlHostTiming => this.controlInteraction.controlTiming(),
-    requestBackSession: (session: ReaderControlSessionState): void => this.controlInteraction.requestControlSession(session, 'system-back'),
-  };
-  private readonly readingProgress: ReaderReadingProgressHost = new ReaderReadingProgressHost(this.readingProgressOwners,
-    this.readingProgressView, this.readingExitEffects, this.readingBackControls);
+  private readonly readingProgress: ReaderReadingProgressHost = new ReaderReadingProgressHost(
+    this.speechAndProgressPorts.readingProgressOwners, this.speechAndProgressPorts.readingProgressView,
+    this.speechAndProgressPorts.readingExitEffects, this.speechAndProgressPorts.readingBackControls);
 
   private readonly pageChromeDocument: ReaderPageChromeDocument = {
     measured: (): ReaderMeasuredPagePublication => this.measuredPage,
