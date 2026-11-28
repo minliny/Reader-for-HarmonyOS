@@ -42,6 +42,14 @@ const FORM_FIELD_GAP = 6;
 const STATUS_PADDING = 12;
 const FORMAT_GAP = 8;
 
+interface ReaderTtsPreviewMetrics {
+  readonly fullWidth: number;
+  readonly compact: boolean;
+  readonly width: number;
+  readonly paintHeight: number;
+  readonly height: number;
+}
+
 /** Temporary choices/forms live in the viewport, never inside a clipped 48vp row. */
 @Component
 export struct ReaderTtsConfigOverlay {
@@ -55,6 +63,8 @@ export struct ReaderTtsConfigOverlay {
 
   private panelLayoutKey: string = '';
   private cachedPanelLayout: ReaderTtsConfigPanelLayout | undefined = undefined;
+  private previewMetricsKey: string = '';
+  private cachedPreviewMetrics: ReaderTtsPreviewMetrics | undefined = undefined;
   private releaseKeyboardAvoidance: (() => void) | undefined = undefined;
   @Prop title: string = '';
   @Prop choices: ReaderTtsConfigChoice[] = [];
@@ -208,28 +218,33 @@ export struct ReaderTtsConfigOverlay {
     return Math.max(44, this.textHeight('将清除已保存密钥', TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE, width));
   }
 
-  private fullPreviewActionWidth(panelWidth: number): number {
+  private previewMetrics(panelWidth: number): ReaderTtsPreviewMetrics {
+    const borderWidth = this.surfaceSpec().borderWidth;
+    const key = `${this.metricsRevision}|${panelWidth}|${borderWidth}`;
+    if (key === this.previewMetricsKey && this.cachedPreviewMetrics !== undefined) return this.cachedPreviewMetrics;
     const label = measureReaderControlText(this.getUIContext(), '试听中', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, panelWidth);
-    return Math.max(44, Math.ceil((label?.singleLineWidthVp ?? 30 * this.fontScale()) + this.previewActionChromeWidth()));
-  }
-
-  private compactVoicePreview(panelWidth: number): boolean {
+    const chrome = this.previewActionChromeWidth();
+    const fullWidth = Math.max(44, Math.ceil((label?.singleLineWidthVp ?? 30 * this.fontScale()) + chrome));
     const glyph = Math.max(TYPE_READER_TTS_VOICE_REGULAR.fontSizeFp, TYPE_READER_TTS_VOICE_SELECTED.fontSizeFp) * this.fontScale();
-    return readerTtsConfigCompactVoicePreview(panelWidth, this.surfaceSpec().borderWidth,
-      this.fullPreviewActionWidth(panelWidth), TOK_BORDER_W, glyph);
+    const compact = readerTtsConfigCompactVoicePreview(panelWidth, borderWidth, fullWidth, TOK_BORDER_W, glyph);
+    const width = compact ? 44 : fullWidth;
+    const paintHeight = compact ? 26 :
+      Math.max(26, this.textHeight('试听中', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, width - chrome, 1) + 16);
+    const height = Math.max(44, paintHeight);
+    this.previewMetricsKey = key;
+    this.cachedPreviewMetrics = { fullWidth, compact, width, paintHeight, height };
+    return this.cachedPreviewMetrics;
   }
 
-  private previewActionWidth(panelWidth: number): number {
-    return this.compactVoicePreview(panelWidth) ? 44 : this.fullPreviewActionWidth(panelWidth);
-  }
+  private fullPreviewActionWidth(panelWidth: number): number { return this.previewMetrics(panelWidth).fullWidth; }
 
-  private previewPaintHeight(panelWidth: number): number {
-    if (this.compactVoicePreview(panelWidth)) return 26;
-    const width = this.previewActionWidth(panelWidth) - this.previewActionChromeWidth();
-    return Math.max(26, this.textHeight('试听中', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, width, 1) + 16);
-  }
+  private compactVoicePreview(panelWidth: number): boolean { return this.previewMetrics(panelWidth).compact; }
 
-  private previewActionHeight(panelWidth: number): number { return Math.max(44, this.previewPaintHeight(panelWidth)); }
+  private previewActionWidth(panelWidth: number): number { return this.previewMetrics(panelWidth).width; }
+
+  private previewPaintHeight(panelWidth: number): number { return this.previewMetrics(panelWidth).paintHeight; }
+
+  private previewActionHeight(panelWidth: number): number { return this.previewMetrics(panelWidth).height; }
   private previewActionChromeWidth(): number { return 8 + 9 + 5 + 13; }
 
   private choiceHeight(choice: ReaderTtsConfigChoice, panelWidth: number): number {
@@ -267,8 +282,12 @@ export struct ReaderTtsConfigOverlay {
     const viewport = this.viewport();
     const width = Math.min(spec.width, viewport.width);
     const status = this.statusMessage();
-    const key = JSON.stringify([this.metricsRevision, viewport, this.windowModal, this.inlineAnchor, this.manager,
-      this.title, this.voicePicker, this.choices, this.selectedId, status, this.showManage, this.errorText, spec.borderWidth]);
+    const anchor = this.inlineAnchor;
+    const anchorKey = anchor === undefined ? '' : `${anchor.left},${anchor.top},${anchor.width},${anchor.height}`;
+    const choicesKey = this.choices.map((c: ReaderTtsConfigChoice): string => `${c.id}\u0000${c.label}`).join('\u0001');
+    const key = `${this.metricsRevision}|${viewport.left},${viewport.top},${viewport.width},${viewport.height}|` +
+      `${this.windowModal}|${anchorKey}|${this.manager}|${this.title}|${this.voicePicker}|${choicesKey}|` +
+      `${this.selectedId}|${status}|${this.showManage}|${this.errorText}|${spec.borderWidth}`;
     if (key === this.panelLayoutKey && this.cachedPanelLayout !== undefined) return this.cachedPanelLayout;
     const items: number[] = [this.messageHeight(status, width)];
     if (this.manager) {

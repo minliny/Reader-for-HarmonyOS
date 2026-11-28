@@ -355,18 +355,23 @@ export struct LocalRecoveryPanel {
       onScrollDisappeared: (): void => this.dialogScrollBinding.unmount(),
       onScrollChanged: (): void => this.dialogEditing.refresh(),
       content: (widthVp: number, _heightVp: number): void => {
-        ReaderDialogSurface({ specId: 'json-import', containerWidthVp: widthVp,
-          title: this.dialogKind === 'export' ? '导出恢复包' : this.dialogKind === 'inspect' ? '导入恢复包' :
-            this.dialogKind === 'rollback' ? '回退未完成的恢复' : '恢复本地阅读库',
-          actions: [new DialogActionView('cancel', '取消', 'default', true, true),
-            new DialogActionView('confirm', this.dialogKind === 'export' ? '确认导出' :
-              this.dialogKind === 'inspect' ? '选择恢复包' : this.dialogKind === 'rollback' ? '确认回退' : '确认恢复',
-              this.dialogKind === 'apply' || this.dialogKind === 'rollback' ? 'danger' : 'primary', this.dialogReady())],
-          onAction: (id: string): void => this.chooseDialogAction(ticket, revision, id),
-          body: (): void => { this.dialogFields(ticket, revision); },
-        }).hitTestBehavior(HitTestMode.Default);
+        this.recoveryDialogSurface(widthVp, ticket, revision);
       },
     });
+  }
+
+  @Builder
+  private recoveryDialogSurface(widthVp: number, ticket: number, revision: number) {
+    ReaderDialogSurface({ specId: 'json-import', containerWidthVp: widthVp,
+      title: this.dialogKind === 'export' ? '导出恢复包' : this.dialogKind === 'inspect' ? '导入恢复包' :
+        this.dialogKind === 'rollback' ? '回退未完成的恢复' : '恢复本地阅读库',
+      actions: [new DialogActionView('cancel', '取消', 'default', true, true),
+        new DialogActionView('confirm', this.dialogKind === 'export' ? '确认导出' :
+          this.dialogKind === 'inspect' ? '选择恢复包' : this.dialogKind === 'rollback' ? '确认回退' : '确认恢复',
+          this.dialogKind === 'apply' || this.dialogKind === 'rollback' ? 'danger' : 'primary', this.dialogReady())],
+      onAction: (id: string): void => this.chooseDialogAction(ticket, revision, id),
+      body: (): void => { this.dialogFields(ticket, revision); },
+    }).hitTestBehavior(HitTestMode.Default);
   }
 
   @Builder

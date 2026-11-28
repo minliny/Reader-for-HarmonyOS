@@ -442,16 +442,19 @@ export struct SourceJourneySurface {
     ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: width,
       title: this.deleteSourceIds.length > 0 ? '删除书源' : '移动书源', actions: this.listDialogActions(),
       onAction: (action: string): void => this.chooseListDialog(generation, action),
-      body: (): void => {
-        if (this.deleteSourceIds.length > 0) {
-          this.deleteDialogBody();
-        } else {
-          ReaderPageState({ variant: 'inline', padded: false, loading: this.moveCatalogLoading,
-            loadingActive: this.inputEnabled,
-            message: this.moveCatalogLoading ? '正在读取书源分组' : '无法读取书源分组，请重试。' });
-        }
-      },
+      body: (): void => { this.listDialogBody(); },
     });
+  }
+
+  @Builder
+  private listDialogBody() {
+    if (this.deleteSourceIds.length > 0) {
+      this.deleteDialogBody();
+    } else {
+      ReaderPageState({ variant: 'inline', padded: false, loading: this.moveCatalogLoading,
+        loadingActive: this.inputEnabled,
+        message: this.moveCatalogLoading ? '正在读取书源分组' : '无法读取书源分组，请重试。' });
+    }
   }
 
   private recordPane(area: Area): void {

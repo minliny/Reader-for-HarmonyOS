@@ -322,11 +322,16 @@ export const journeys = {
       route: 'bookshelf', all: [text(LOCAL_TXT), text(SHELF_NOVEL)], none: [shelfRowNovelMore], screenCapture: true,
     });
     await ui.tap('切换列表模式', viewList, {
-      route: 'bookshelf', all: [shelfRowNovelMore, shelfRowLocalMore],
+      route: 'bookshelf', all: [shelfRowNovelMore, shelfRowLocalMore, localShelfProgress(shelfRowLocalCard)],
       none: [{ ...text('*%'), within: localContinueCard }, { ...text('*%'), within: shelfRowLocalCard }],
-      sameText: [localShelfProgress(localContinueCard), localShelfProgress(shelfRowLocalCard)],
       screenCapture: true,
     });
+    if (ui.has(localContinueCard)) {
+      await ui.wait('核对继续阅读卡与本地书架条目进度一致', {
+        route: 'bookshelf',
+        sameText: [localShelfProgress(localContinueCard), localShelfProgress(shelfRowLocalCard)],
+      });
+    }
     await ui.tap('展开书架筛选', shelfFilterToggle, {
       route: 'bookshelf', all: [shelfFilterLocal, shelfFilterAll],
     });

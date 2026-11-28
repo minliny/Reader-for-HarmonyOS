@@ -1069,6 +1069,7 @@ function SourceListSourceRow($$: SourceManagementListOwnerSlot, source: BookSour
         .onTouch((event: TouchEvent): void => $$.owner.rowPressTouch(source, 'row', event))
         .accessibilitySelected($$.owner.paint().batchSourceIds.includes(source.sourceId))
         .accessibilityText(source.name)
+        .hitTestBehavior(HitTestMode.Block)
         .onClick((): void => $$.owner.toggleBatchSource($$.owner.currentSourceRow(source),
           !$$.owner.paint().batchSourceIds.includes(source.sourceId)));
     } else {
@@ -1180,6 +1181,7 @@ function SourceListSourceInfo($$: SourceManagementListOwnerSlot, source: BookSou
   .attributeModifier(new ReaderPressFeedback(Color.Transparent, $$.owner.host.presentation.appThemeScheme(), 6, 6,
     !$$.owner.host.presentation.batchMode() && $$.owner.sourceDetectEnabled(source.sourceId), $$.owner.rowPressed(source, 'info'), false))
   .onTouch((event: TouchEvent): void => { if (!$$.owner.host.presentation.batchMode()) $$.owner.rowPressTouch(source, 'info', event); })
+  .hitTestBehavior($$.owner.host.presentation.batchMode() ? HitTestMode.None : HitTestMode.Default)
   .onClick((): void => {
     if (!$$.owner.host.presentation.batchMode()) $$.owner.sourceRowCommand(source, 'check')();
   });

@@ -368,20 +368,26 @@ export struct SettingsPage {
   private backupPage() {
     ReaderStandardPage({ floatingHeader: true, embeddedWide: this.embeddedWide, variant: 'settingsGeneral',
       editingHost: this.backupEditingHost,
-      header: (): void => {
-        PageBackBar({ floating: true, centered: true, elevation: 'floating', showBack: !this.embeddedWide,
-          title: '本地备份与恢复', onBack: (): void => { this.settingsRouteBack(); } });
-      },
-      content: (): void => {
-        LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration, editingHost: this.backupEditingHost,
-          isOpeningCurrent: (): boolean => this.activeSection === 'backup' && this.isOpeningCurrent(),
-          isInputAllowed: (): boolean => this.backupInputIsCurrent(),
-          onBusyChange: (busy: boolean): void => {
-            if (this.activeSection === 'backup') this.backupBusy = busy;
-          } });
-        this.systemMigrationCard();
-      },
+      header: (): void => { this.backupPageHeader(); },
+      content: (): void => { this.backupPageContent(); },
     });
+  }
+
+  @Builder
+  private backupPageHeader() {
+    PageBackBar({ floating: true, centered: true, elevation: 'floating', showBack: !this.embeddedWide,
+      title: '本地备份与恢复', onBack: (): void => { this.settingsRouteBack(); } });
+  }
+
+  @Builder
+  private backupPageContent() {
+    LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration, editingHost: this.backupEditingHost,
+      isOpeningCurrent: (): boolean => this.activeSection === 'backup' && this.isOpeningCurrent(),
+      isInputAllowed: (): boolean => this.backupInputIsCurrent(),
+      onBusyChange: (busy: boolean): void => {
+        if (this.activeSection === 'backup') this.backupBusy = busy;
+      } });
+    this.systemMigrationCard();
   }
 
   @Builder
@@ -1405,12 +1411,7 @@ export struct SettingsPage {
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
         .accessibilityLevel('no').onClick((): void => this.closeResetDialog(ticket));
       ReaderDialogViewport({ content: (widthVp: number, _heightVp: number): void => {
-        ReaderDialogSurface({ specId: 'book-removal', containerWidthVp: widthVp, title: '恢复界面与阅读设置',
-          actions: [new DialogActionView('cancel', '取消', 'default', true, true),
-            new DialogActionView('confirm', '恢复默认', 'danger')],
-          onAction: (action: string): void => this.chooseResetDialog(ticket, identity, action),
-          body: (): void => { this.resetDialogMessage(); },
-        }).hitTestBehavior(HitTestMode.Default).transition(this.resetDialogMotion());
+        this.resetDialogSurface(widthVp, ticket, identity);
       } });
     }.width('100%').height('100%')
       .onAppear((): void => { if (ticket === this.resetDialogTicket) this.resetFrameAttached = true; })
@@ -1421,6 +1422,16 @@ export struct SettingsPage {
         (entering: boolean): void => {
           if (!entering && ticket === this.resetDialogTicket && !this.resetDialogWanted) this.resetCoverVisible = false;
         });
+  }
+
+  @Builder
+  private resetDialogSurface(widthVp: number, ticket: number, identity: string) {
+    ReaderDialogSurface({ specId: 'book-removal', containerWidthVp: widthVp, title: '恢复界面与阅读设置',
+      actions: [new DialogActionView('cancel', '取消', 'default', true, true),
+        new DialogActionView('confirm', '恢复默认', 'danger')],
+      onAction: (action: string): void => this.chooseResetDialog(ticket, identity, action),
+      body: (): void => { this.resetDialogMessage(); },
+    }).hitTestBehavior(HitTestMode.Default).transition(this.resetDialogMotion());
   }
 
   private resetDialogMotion(): TransitionEffect {

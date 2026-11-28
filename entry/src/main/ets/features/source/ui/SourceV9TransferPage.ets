@@ -540,15 +540,18 @@ export struct SourceV9TransferPage {
       PageBackBar({ floating: true, centered: true, elevation: 'floating', title: '书源订阅',
         trailingWidthVp: TRANSFER_HEADER_ACTION_WIDTH, balancedCenteredSlots: true,
         backFocusId: 'reader-source-v9-transfer-back', onBack: (): void => this.back(),
-        trailing: (): void => {
-          SourceV9AddAction({ label: '新建', actionEnabled: this.editable(),
-            controlId: 'reader-source-v9-subscription-create', onTap: (): void => this.openForm() });
-        },
+        trailing: (): void => { this.subscriptionsCreateAction(); },
       });
     } else {
       PageBackBar({ floating: true, centered: true, elevation: 'floating', title: '导入书源',
         backFocusId: 'reader-source-v9-transfer-back', onBack: (): void => this.back() });
     }
+  }
+
+  @Builder
+  private subscriptionsCreateAction() {
+    SourceV9AddAction({ label: '新建', actionEnabled: this.editable(),
+      controlId: 'reader-source-v9-subscription-create', onTap: (): void => this.openForm() });
   }
 
   @Builder
