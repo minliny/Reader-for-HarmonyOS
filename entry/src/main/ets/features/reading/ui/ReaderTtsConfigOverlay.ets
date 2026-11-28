@@ -1,4 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import type { AnimatorResult } from '@ohos.animator';
 import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
@@ -60,6 +61,9 @@ export struct ReaderTtsConfigOverlay {
   private readonly editorScroller: Scroller = new Scroller();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
+  @State private surfaceOpacity: number = 1;
+  private mountAnimator: AnimatorResult | undefined = undefined;
 
   private panelLayoutKey: string = '';
   private cachedPanelLayout: ReaderTtsConfigPanelLayout | undefined = undefined;
@@ -120,7 +124,14 @@ export struct ReaderTtsConfigOverlay {
       if (selected !== undefined) this.beginEdit(selected);
     }
   }
+  private stopMountAnimator(): void {
+    const animator = this.mountAnimator;
+    this.mountAnimator = undefined;
+    try { animator?.cancel(); } catch (_) {}
+  }
+
   aboutToDisappear(): void {
+    this.stopMountAnimator();
     this.stopPreview();
     this.mounted = false;
     this.generation += 1;
@@ -345,8 +356,35 @@ export struct ReaderTtsConfigOverlay {
           this.layoutSurfaceHint() : undefined)
         .position({ x: this.panelLayout().rect.left - (this.windowModal ? 0 : this.inlineHost?.left ?? 0),
           y: this.panelLayout().rect.top - (this.windowModal ? 0 : this.inlineHost?.top ?? 0) })
+        .opacity(this.reduceMotion ? 1 : this.surfaceOpacity)
         .hitTestBehavior(HitTestMode.Default)
         .onAppear((): void => {
+          this.stopMountAnimator();
+          if (!this.reduceMotion) {
+            this.surfaceOpacity = 0.96;
+            try {
+              const animator = this.getUIContext().createAnimator({
+                duration: 360, easing: 'ease-out', delay: 0, fill: 'forwards',
+                direction: 'normal', iterations: 1, begin: 0.96, end: 1,
+              });
+              this.mountAnimator = animator;
+              animator.onFrame = (value: number): void => {
+                if (this.mountAnimator === animator && this.mounted) this.surfaceOpacity = value;
+              };
+              animator.onFinish = (): void => {
+                if (this.mountAnimator === animator) {
+                  this.mountAnimator = undefined;
+                  this.surfaceOpacity = 1;
+                }
+              };
+              animator.play();
+            } catch (_) {
+              this.mountAnimator = undefined;
+              this.surfaceOpacity = 1;
+            }
+          } else {
+            this.surfaceOpacity = 1;
+          }
           if (readerTransitionsEnabled()) {
             const id = this.surfaceNativeId();
             readerBeginTransition({ kind: 'surface', action: 'mount', subject: id, scope: id, nodes: [id] });

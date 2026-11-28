@@ -1,9 +1,10 @@
+import type { AnimatorResult } from '@ohos.animator';
 import { readerRebaseSettingsViewport } from './ReaderSettingsPresentationPolicy';
 import type { ReaderRoute, ReaderRouteMotionKind } from './ReaderNavigation';
 import { READER_RETAINED_DETAIL_LANE, READER_ROUTE_EDGE_BACK_COMMIT_FRACTION, READER_ROUTE_PARENT_DIM,
   readerDetailSceneOpacity, readerRouteMotionPose, type ReaderDetailSceneSnapshot } from './ReaderRouteMotionModel';
 import { ReaderPostLayoutFrame } from '../../ui/layout/ReaderPostLayoutFrame';
-import { motionAnimateParam, motionSpecGet } from '../../ui/foundation/MotionSpec';
+import { motionAnimateParam, motionSpecGet, readerMotionStandardCurve } from '../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../ui/foundation/ReaderMotionPolicy';
 import { readerMotionNowMs } from '../../ui/foundation/ReaderMotionClock';
 import { readerBeginTransition, readerRouteTransitionLaneId, readerTransitionActorX,
@@ -82,6 +83,7 @@ export struct ReaderRouteStackSurface {
   private tabGeneration: number = 0;
   private pendingTabResetFrom: string | undefined = undefined;
   private activeRouteAnimation: ReaderRouteAnimation | undefined = undefined;
+  private routeAnimator: AnimatorResult | undefined = undefined;
   private routeEndTimer: number = -1;
   private pendingPushTimer: number = -1;
   private preview: ReaderRouteBackPreview | undefined = undefined;
@@ -105,6 +107,7 @@ export struct ReaderRouteStackSurface {
     const preview = this.preview;
     if (preview?.animation !== undefined) this.settleAnimation(preview.animation, preview.result === 'commit');
     this.clearRouteDeadline();
+    this.stopRouteAnimator();
     this.animationGeneration += 1;
     this.activeRouteAnimation = undefined;
     this.pendingTabResetFrom = undefined;
@@ -260,6 +263,12 @@ export struct ReaderRouteStackSurface {
     }
   }
 
+  private stopRouteAnimator(): void {
+    const animator = this.routeAnimator;
+    this.routeAnimator = undefined;
+    try { animator?.cancel(); } catch (_) {}
+  }
+
   private clearRouteDeadline(): void {
     if (this.routeEndTimer >= 0) clearTimeout(this.routeEndTimer);
     this.routeEndTimer = -1;
@@ -290,6 +299,7 @@ export struct ReaderRouteStackSurface {
     if (!this.mounted || this.activeRouteAnimation !== animation) return;
     this.setPendingPushLane(undefined);
     this.clearRouteDeadline();
+    this.stopRouteAnimator();
     this.activeRouteAnimation = undefined;
     this.paint = undefined;
     this.progress = 1;
@@ -333,6 +343,7 @@ export struct ReaderRouteStackSurface {
           if (preview !== undefined) this.settleAnimation(animation, preview.result === 'commit');
           return;
         }
+        this.stopRouteAnimator();
         this.paint = { from: from.name ?? ROOT_LANE, to: to.name ?? ROOT_LANE, motion, fade,
           fadeOutgoing: nativePop || motion === 'pop' };
         if (motion === 'push' || motion === 'pop') {
@@ -352,13 +363,37 @@ export struct ReaderRouteStackSurface {
         const start = (): void => {
           if (!this.mounted || this.activeRouteAnimation !== animation || animation.settled) return;
           try {
-            context.animateTo(parameters, (): void => {
-              if (this.activeRouteAnimation === animation) this.progress = 1;
-            });
-            if (preview !== undefined) {
-              animation.interactiveReady = true;
-              proxy.updateTransition?.(preview.progress);
-              this.applyPreviewResult(preview);
+            if (preview === undefined && !fade && duration !== undefined && duration > 0) {
+              this.stopRouteAnimator();
+              const animator = context.createAnimator({
+                duration, easing: 'linear', delay: 0, fill: 'forwards',
+                direction: 'normal', iterations: 1, begin: 0, end: 1,
+              });
+              this.routeAnimator = animator;
+              animator.onFrame = (fraction: number): void => {
+                if (this.routeAnimator === animator && this.mounted && this.activeRouteAnimation === animation && !animation.settled) {
+                  this.progress = readerMotionStandardCurve().interpolate(fraction);
+                }
+              };
+              animator.onFinish = (): void => {
+                if (this.routeAnimator === animator) {
+                  this.routeAnimator = undefined;
+                  if (this.mounted && this.activeRouteAnimation === animation && !animation.settled) {
+                    this.progress = 1;
+                    finish();
+                  }
+                }
+              };
+              animator.play();
+            } else {
+              context.animateTo(parameters, (): void => {
+                if (this.activeRouteAnimation === animation) this.progress = 1;
+              });
+              if (preview !== undefined) {
+                animation.interactiveReady = true;
+                proxy.updateTransition?.(preview.progress);
+                this.applyPreviewResult(preview);
+              }
             }
           } catch (_) {
             if (preview !== undefined) {
