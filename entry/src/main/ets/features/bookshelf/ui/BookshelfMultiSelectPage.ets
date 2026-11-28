@@ -8,6 +8,7 @@ import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFra
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { ReaderDelayedRowPress } from '../../../ui/foundation/ReaderPressMotion';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
@@ -59,6 +60,10 @@ export struct BookshelfMultiSelectPage {
   onRemoveSelected: (keys: string[]) => void = (_keys: string[]): void => {};
   @State private viewportWidth: number = 0;
   @State private selectedKeys: string[] = [];
+  @State private pressedBookKey: string = '';
+  private readonly delayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    this.pressedBookKey = key;
+  });
   @State private failedCoverUrls: string[] = BookCoverFailureCache.snapshotUrls();
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
   @State private measurementKey: number = 0;
@@ -89,6 +94,7 @@ export struct BookshelfMultiSelectPage {
 
   aboutToDisappear(): void {
     this.mounted = false;
+    this.delayedPress.cancel();
     this.headerFontPreparationGeneration += 1;
     this.listTextFontGeneration += 1;
     this.measurements.clear();
@@ -168,7 +174,8 @@ export struct BookshelfMultiSelectPage {
     .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
     .contentEndOffset(readerScrollEndOffset(this.scrollLayout()))
     .alignListItem(ListItemAlign.Center)
-    .scrollBar(BarState.Off);
+    .scrollBar(BarState.Off)
+    .onScrollStart((): void => this.delayedPress.cancel());
     }
   }
 
@@ -325,6 +332,9 @@ export struct BookshelfMultiSelectPage {
     .height(this.cardHeight())
     .alignItems(HorizontalAlign.Start)
     .attributeModifier(this.selectionRowAction(book))
+    .onTouch((event: TouchEvent): void => {
+      this.delayedPress.observe(event, this.bookKey(book), this.selectionInputEnabled());
+    })
     .onClick((): void => this.toggleBook(book));
   }
 
@@ -488,7 +498,8 @@ export struct BookshelfMultiSelectPage {
     const selected = this.isSelected(book);
     const enabled = this.selectionInputEnabled();
     return new ReaderActionAccessibility(`${this.currentBook(book).title}，${selected ? '已选择' : '未选择'}`, enabled, selected,
-      true, new ReaderPressFeedback(surface, this.appThemeScheme, 14, 14, enabled));
+      true, new ReaderPressFeedback(surface, this.appThemeScheme, 14, 14, enabled,
+        this.pressedBookKey === this.bookKey(book), false));
   }
 
   private currentBook(snapshot: ShelfBook): ShelfBook {
@@ -555,6 +566,9 @@ export struct BookshelfMultiSelectPage {
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .alignItems(VerticalAlign.Center)
     .attributeModifier(this.selectionRowAction(book, readerAppColor('TOK_CARD_BG', this.appThemeScheme)))
+    .onTouch((event: TouchEvent): void => {
+      this.delayedPress.observe(event, this.bookKey(book), this.selectionInputEnabled());
+    })
     .onClick((): void => this.toggleBook(book));
   }
 

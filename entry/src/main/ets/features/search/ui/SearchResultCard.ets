@@ -1,5 +1,5 @@
 import { LengthMetrics } from '@kit.ArkUI';
-import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
+import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { bookAuthorLabel } from '../../../app/library/BookAuthorMetadata';
 import { SEARCH_RESULT_GEOMETRY } from './SearchResultGeometry';
 import { searchBookSnapshot } from '../presentation/SearchBookSnapshot';
@@ -40,7 +40,11 @@ export struct SearchResultCard {
   @Prop @Watch('acceptDisplayFacts') queryRevision: number = 0;
   @Prop @Watch('acceptDisplayFacts') displayIdleRevision: number = 0;
   @Prop reduceMotion: boolean = false;
-  @State private pressPointer: number = -1;
+  @State private pressed: boolean = false;
+  private readonly delayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    if (key.length === 0) this.pressed = false;
+    else readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressed = true; });
+  });
   @Prop expandedLayout: boolean = false;
   @Prop cardWidth: number = 0;
   @Prop focusId: string = '';
@@ -60,7 +64,7 @@ export struct SearchResultCard {
     this.visibilityEpoch += 1;
     this.selectionEpoch += 1;
     this.pressedSelection = undefined;
-    this.pressPointer = -1;
+    this.delayedPress.cancel();
     this.displayVisible = false;
     this.acceptDisplayFacts();
   }
@@ -73,7 +77,7 @@ export struct SearchResultCard {
     this.displayedBookInput = undefined;
     this.selectionEpoch += 1;
     this.pressedSelection = undefined;
-    this.pressPointer = -1;
+    this.delayedPress.cancel();
   }
 
   private captureDisplayFacts(): SearchResultDisplayFacts {
@@ -92,7 +96,7 @@ export struct SearchResultCard {
       this.visibilityEpoch += 1;
       this.selectionEpoch += 1;
       this.pressedSelection = undefined;
-      this.pressPointer = -1;
+      this.delayedPress.cancel();
     }
     if (!changedQuery && (this.displayVisible || !this.canRefreshDisplay())) return;
     if (!changedQuery && this.displayedBookInput === this.group.book &&
@@ -341,17 +345,16 @@ export struct SearchResultCard {
       .width(this.cardWidth)
       .padding({ top: SEARCH_RESULT_GEOMETRY.rowPadding, bottom: SEARCH_RESULT_GEOMETRY.rowPadding })
       .alignItems(VerticalAlign.Top)
-      .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
-      .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
-      .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
+      .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressed, this.reduceMotion))
+      .scale(readerPressScale(this.pressed, this.reduceMotion))
+      .opacity(readerPressOpacity(this.pressed, this.reduceMotion))
       .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('app.search.listRule', this.appThemeScheme) } });
     }
     .width(this.cardWidth).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
     .id(this.focusId)
     .onVisibleAreaChange([0], this.displayVisibilityHandler())
     .onTouch((event: TouchEvent): void => {
-      const next = readerPressPointer(event, this.pressPointer, this.mounted);
-      if (next !== this.pressPointer) readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressPointer = next; });
+      this.delayedPress.observe(event, this.focusId.length > 0 ? this.focusId : 'card', this.mounted);
       this.onCardTouch(event.type);
     })
     .onClick((event: ClickEvent): void => this.selectResult(event.source));

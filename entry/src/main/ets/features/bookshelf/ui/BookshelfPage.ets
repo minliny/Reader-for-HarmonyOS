@@ -1,6 +1,6 @@
 import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
-import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
+import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { bookCoverDisplayUrl, rememberBookCoverFailure } from '../../../app/library/BookCoverDisplay';
@@ -256,7 +256,10 @@ export struct BookshelfPage {
     (_rect: ReaderSurfaceRect | undefined, _navigation: number, _bookKey: string): void => {};
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   @State private shelfPressKey: string = '';
-  private shelfPressPointer: number = -1;
+  private readonly shelfDelayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    if (key.length === 0) this.shelfPressKey = '';
+    else readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.shelfPressKey = key; });
+  });
   onRssRequested: (navigation?: number) => void = (): void => {};
   onSettingsRequested: (navigation?: number) => void = (): void => {};
   onDiscoverRequested: (navigation?: number) => void = (): void => {};
@@ -607,16 +610,12 @@ export struct BookshelfPage {
     return Number.isFinite(scale) ? Math.max(1, scale) : 1;
   }
 
-  private resetShelfPress(): void { this.shelfPressKey = ''; this.shelfPressPointer = -1; }
+  private resetShelfPress(): void { this.shelfDelayedPress.cancel(); }
 
   private observeShelfPress(event: TouchEvent, key: string, enabled: boolean = true): void {
-    if (this.shelfPressKey.length > 0 && this.shelfPressKey !== key) return;
     const current = enabled && this.isShelfPresentationCurrent(this.navigationGeneration) &&
       this.isCurrentShelfInput(this.navigationGeneration);
-    const next = readerPressPointer(event, this.shelfPressPointer, current);
-    if (next === this.shelfPressPointer) return;
-    this.shelfPressPointer = next;
-    readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.shelfPressKey = next < 0 ? '' : key; });
+    this.shelfDelayedPress.observe(event, key, current);
   }
 
   private shelfPressed(key: string): boolean { return this.shelfPressKey === key; }
@@ -707,6 +706,7 @@ export struct BookshelfPage {
     .onScrollIndex(this.shelfScrollHandler())
     .onReachStart(this.shelfPageHandler(true))
     .onReachEnd(this.shelfPageHandler(false))
+    .onScrollStart((): void => this.resetShelfPress())
     .onDidScroll(this.shelfViewportScrollHandler())
     .onTouch((event: TouchEvent): void => { if (event.type === TouchType.Down) this.cancelBookActionFocus(); })
     .onKeyEvent((): void => this.cancelBookActionFocus())

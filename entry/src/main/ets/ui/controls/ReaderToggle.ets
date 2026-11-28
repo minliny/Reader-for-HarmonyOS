@@ -1,4 +1,5 @@
 import { ReaderPaperMaterial } from '../foundation/ReaderPaperMaterial';
+import { triggerReaderTouchHaptic } from './ReaderTouchHaptic';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 
@@ -36,6 +37,7 @@ function resolveReaderToggleSpec(id: ReaderToggleSpecId): ReaderToggleSpec {
 @Component
 export struct ReaderToggle {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerAppForeground') @Watch('onForegroundChanged') private appForeground: boolean = true;
   @Prop specId: ReaderToggleSpecId = 'standard-toggle';
   @Prop value: boolean = false;
@@ -273,6 +275,7 @@ export struct ReaderToggle {
     this.pendingFocusRevision = this.focusedRevision === revision ? revision + 1 : -1;
     this.pendingAccessibilityFocusRevision = this.accessibilityFocusedRevision === revision ? revision + 1 : -1;
     this.nativeRevision += 1;
+    triggerReaderTouchHaptic(this.reduceMotion);
     this.onToggle(next);
   }
 }

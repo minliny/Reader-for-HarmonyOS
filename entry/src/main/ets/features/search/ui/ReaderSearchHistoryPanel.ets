@@ -4,6 +4,7 @@ import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility, readerActionTouchR
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { ReaderDelayedRowPress } from '../../../ui/foundation/ReaderPressMotion';
 import {
   TYPE_SEARCH_HISTORY_EMPTY,
   TYPE_SEARCH_HISTORY_HEADING,
@@ -17,7 +18,11 @@ import { SearchHistoryGeometry, SearchHistoryPanelLayout } from './SearchHistory
 @Component
 export struct ReaderSearchHistoryPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @Prop history: string[] = [];
+  @State private pressedKey: string = '';
+  private readonly delayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    this.pressedKey = key;
+  });
+  @Prop @Watch('cancelPress') history: string[] = [];
   @Prop status: SearchHistoryStatus | undefined = undefined;
   @Prop emptyHint: string = '';
   @Prop scrollable: boolean = false;
@@ -30,6 +35,10 @@ export struct ReaderSearchHistoryPanel {
   onSelect: (keyword: string) => void = (_keyword: string): void => {};
   onDelete: (keyword: string) => void = (_keyword: string): void => {};
   onFeedbackHeight: (height: number, status: string) => void = (_height: number, _status: string): void => {};
+
+  aboutToDisappear(): void { this.cancelPress(); }
+
+  private cancelPress(): void { this.delayedPress.cancel(); }
 
   private actionsEnabled(): boolean { return this.status !== 'loading'; }
 
@@ -100,8 +109,12 @@ export struct ReaderSearchHistoryPanel {
               .id(this.observeActions ? `reader-search-history-item-${index}` : '')
               .attributeModifier(new ReaderActionAccessibility(
                 `搜索${keyword}`, this.actionsEnabled(), false, true,
-                new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 8, 8, this.actionsEnabled()), 'nativeButton'))
+                new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 8, 8, this.actionsEnabled(),
+                  this.pressedKey === `item:${index}:${keyword}`, false), 'nativeButton'))
               .opacity(this.actionsEnabled() ? 1 : .45)
+              .onTouch((event: TouchEvent): void => {
+                this.delayedPress.observe(event, `item:${index}:${keyword}`, this.actionsEnabled());
+              })
               .onClick((): void => {
                 if (this.actionsEnabled()) this.onSelect(keyword);
               });
@@ -120,8 +133,12 @@ export struct ReaderSearchHistoryPanel {
               .id(this.observeActions ? `reader-search-history-delete-${index}` : '')
               .attributeModifier(new ReaderActionAccessibility(
                 `删除搜索历史${keyword}`, this.actionsEnabled(), false, true,
-                new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 14, 14, this.actionsEnabled()), 'nativeButton'))
+                new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 14, 14, this.actionsEnabled(),
+                  this.pressedKey === `delete:${index}:${keyword}`, false), 'nativeButton'))
               .opacity(this.actionsEnabled() ? 1 : .45)
+              .onTouch((event: TouchEvent): void => {
+                this.delayedPress.observe(event, `delete:${index}:${keyword}`, this.actionsEnabled());
+              })
               .onClick((): void => {
                 if (this.actionsEnabled()) this.onDelete(keyword);
               });
@@ -178,7 +195,8 @@ export struct ReaderSearchHistoryPanel {
       if (this.scrollable) {
         Scroll() {
           this.historyRows();
-        }.width('100%').layoutWeight(1).align(Alignment.TopStart).scrollBar(BarState.Off);
+        }.width('100%').layoutWeight(1).align(Alignment.TopStart).scrollBar(BarState.Off)
+          .onScrollStart((): void => this.cancelPress());
       } else {
         this.historyRows();
       }

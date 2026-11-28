@@ -6,6 +6,7 @@ import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerPageAreaLength } from '../layout/ReaderPageShell';
 import { ReaderPostLayoutFrame } from '../layout/ReaderPostLayoutFrame';
 import { ReaderActionAccessibility } from './ReaderActionAccessibility';
+import { triggerReaderTouchHaptic } from './ReaderTouchHaptic';
 
 export interface ReaderRecessedSegmentOption {
   id: string;
@@ -225,7 +226,9 @@ export struct ReaderRecessedSegmentRail {
             'nativeButton',
           ))
           .onClick((): void => {
-            if (this.actionEnabled) this.onSelect(option.id);
+            if (!this.actionEnabled) return;
+            if (option.id !== this.selectedId) triggerReaderTouchHaptic(this.reduceMotion);
+            this.onSelect(option.id);
           });
         }, (option: ReaderRecessedSegmentOption): string => `${option.id}:${option.label}`);
       }

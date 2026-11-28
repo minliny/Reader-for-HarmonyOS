@@ -1,4 +1,4 @@
-import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
+import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderDirectoryDataPublication, sameReaderDirectoryData } from '../presentation/ReaderDirectoryDataSnapshot';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
@@ -295,11 +295,13 @@ struct ReaderDirectoryTreeTitle {
   @Prop @Watch('clearPress') viewId: string = '';
   activate: () => void = (): void => {};
   @State private pressed: boolean = false;
-  private pointer: number = -1;
+  private readonly delayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    if (key.length === 0) this.pressed = false;
+    else readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressed = true; });
+  });
 
   private clearPress(): void {
-    this.pointer = -1;
-    this.pressed = false;
+    this.delayedPress.cancel();
   }
   aboutToDisappear(): void { this.clearPress(); }
 
@@ -315,10 +317,7 @@ struct ReaderDirectoryTreeTitle {
       .accessibilityText(this.label).responseRegion(readerActionTouchRegion('100%', '100%'))
       .attributeModifier(new ReaderActionAccessibility(this.label, this.inputEnabled, false))
       .onTouch((event: TouchEvent): void => {
-        const next = readerPressPointer(event, this.pointer, this.inputEnabled);
-        if (next === this.pointer) return;
-        this.pointer = next;
-        readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressed = next >= 0; });
+        this.delayedPress.observe(event, 'title', this.inputEnabled);
       })
       .onClick((): void => { if (this.inputEnabled) this.activate(); });
   }
@@ -400,7 +399,10 @@ export struct ReaderDirectoryNavigationList {
   navigationPortFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
   private gateway: ReaderDirectoryNavigationPort | undefined = undefined;
   @State private chapterPressKey: string = '';
-  private chapterPressPointer: number = -1;
+  private readonly chapterDelayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    if (key.length === 0) this.chapterPressKey = '';
+    else readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.chapterPressKey = key; });
+  });
   private mounted: boolean = false;
   private generation: number = 0;
   private layoutReady: boolean = false;
@@ -1566,7 +1568,11 @@ export struct ReaderDirectoryNavigationList {
       .attributeModifier(new ReaderActionAccessibility(this.chapterDownloadActionsEnabled ? '管理本章下载' :
               this.mangaChapter(item)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(this.currentPaintNode(item.node)), false, true,
               new ReaderPressFeedback(Color.Transparent, this.mangaPressScheme(), 0, 0,
-                this.canDownloadTarget(this.currentPaintNode(item.node))), 'nativeButton'))
+                this.canDownloadTarget(this.currentPaintNode(item.node)),
+                this.chapterPressKey === `manga-dl:${item.key}`, false), 'nativeButton'))
+            .onTouch((event: TouchEvent): void => {
+              this.observeChapterPress(event, `manga-dl:${item.key}`, this.canDownloadTarget(this.currentPaintNode(item.node)));
+            })
             .onClick((): void => { if (item.node !== undefined) this.downloadTarget(this.currentPaintNode(item.node)); });
           }.width(44).height(Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale()))
             .focusable(false).accessibilityLevel('no').onClick((): void => {});
@@ -1582,7 +1588,11 @@ export struct ReaderDirectoryNavigationList {
             .responseRegion(readerActionTouchRegion(44, 44))
             .attributeModifier(new ReaderActionAccessibility(`${this.mangaGroupNode(item.node).expanded ? '折叠' : '展开'}${this.mangaGroupNode(item.node).title}子目录`, this.interactionEnabled && !this.mangaSearchActive, false, true,
               new ReaderPressFeedback(Color.Transparent, this.mangaPressScheme(), 0, 0,
-                this.interactionEnabled && !this.mangaSearchActive), 'nativeButton'))
+                this.interactionEnabled && !this.mangaSearchActive,
+                this.chapterPressKey === `manga-fold:${item.key}`, false), 'nativeButton'))
+            .onTouch((event: TouchEvent): void => {
+              this.observeChapterPress(event, `manga-fold:${item.key}`, this.interactionEnabled && !this.mangaSearchActive);
+            })
             .onClick((): void => this.toggleMangaRow(item));
         } else if (item.node.kind === 'target' && this.isCurrentMangaNode(item)) {
           Text('正在读').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight)
@@ -1638,16 +1648,11 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private clearChapterPress(): void {
-    this.chapterPressKey = '';
-    this.chapterPressPointer = -1;
+    this.chapterDelayedPress.cancel();
   }
 
   private observeChapterPress(event: TouchEvent, key: string, enabled: boolean): void {
-    if (this.chapterPressKey.length > 0 && this.chapterPressKey !== key) return;
-    const next = readerPressPointer(event, this.chapterPressPointer, this.mounted && enabled);
-    if (next === this.chapterPressPointer) return;
-    this.chapterPressPointer = next;
-    readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.chapterPressKey = next < 0 ? '' : key; });
+    this.chapterDelayedPress.observe(event, key, this.mounted && enabled);
   }
 
   private mangaPressScheme(): string {
@@ -1703,7 +1708,11 @@ export struct ReaderDirectoryNavigationList {
           .responseRegion(readerActionTouchRegion(44, '100%'))
           .attributeModifier(new ReaderActionAccessibility(`${node.expanded ? '折叠' : '展开'}${node.title}子目录`,
             this.interactionEnabled, false, true,
-            new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.interactionEnabled), 'nativeButton'))
+            new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.interactionEnabled,
+              this.chapterPressKey === `text-fold:${node.nodeId}`, false), 'nativeButton'))
+          .onTouch((event: TouchEvent): void => {
+            this.observeChapterPress(event, `text-fold:${node.nodeId}`, this.interactionEnabled);
+          })
           .onClick((): void => {
             if (this.view.viewId !== viewId) return;
             const current = this.dataSource.loadedItemById(node.nodeId)?.node;
@@ -1738,7 +1747,11 @@ export struct ReaderDirectoryNavigationList {
         .accessibilityText(this.downloadLabel(entry)).enabled(this.canDownloadTarget(node, entry))
         .responseRegion(readerActionTouchRegion(44, '100%'))
         .attributeModifier(new ReaderActionAccessibility(this.downloadLabel(entry), this.canDownloadTarget(node, entry), false, true,
-          new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.canDownloadTarget(node, entry)), 'nativeButton'))
+          new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.canDownloadTarget(node, entry),
+            this.chapterPressKey === `text-dl:${node.nodeId}`, false), 'nativeButton'))
+        .onTouch((event: TouchEvent): void => {
+          this.observeChapterPress(event, `text-dl:${node.nodeId}`, this.canDownloadTarget(node, entry));
+        })
         .onClick((): void => {
           if (this.view.viewId !== viewId) return;
           const current = this.dataSource.loadedItemById(node.nodeId)?.node;
@@ -1755,7 +1768,11 @@ export struct ReaderDirectoryNavigationList {
         .accessibilityText(this.bookmarkLabel(entry)).enabled(this.bookmarkActionEnabled(entry))
         .responseRegion(readerActionTouchRegion(44, '100%'))
         .attributeModifier(new ReaderActionAccessibility(this.bookmarkLabel(entry), this.bookmarkActionEnabled(entry), false, true,
-          new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.bookmarkActionEnabled(entry)), 'nativeButton'))
+          new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.bookmarkActionEnabled(entry),
+            this.chapterPressKey === `text-bm:${node.nodeId}`, false), 'nativeButton'))
+        .onTouch((event: TouchEvent): void => {
+          this.observeChapterPress(event, `text-bm:${node.nodeId}`, this.bookmarkActionEnabled(entry));
+        })
         .onClick((): void => {
           if (this.view.viewId !== viewId) return;
           const currentNode = this.dataSource.loadedItemById(node.nodeId)?.node;
@@ -1793,11 +1810,13 @@ export struct ReaderDirectoryNavigationList {
         .scrollBar(BarState.Auto).scrollBarWidth(MANGA_DIRECTORY_VISUAL.scrollbarWidth).scrollBarColor(this.mangaColor('scrollbar')).edgeEffect(this.edgeEffectMode)
         .enableScrollInteraction(this.interactionEnabled).cachedCount(4)
         .onWillStartDragging((): void => {
+          this.clearChapterPress();
           this.mangaDragging = true;
           this.initialPositionPending = false;
           this.positionPlan = undefined;
           this.onUserScrollIntent();
         })
+        .onScrollStart((): void => this.clearChapterPress())
         .onScrollIndex((start: number, _end: number): void => {
           this.observeViewport(start, _end);
           if (!this.initialPositionPending) this.captureViewportAnchor();
@@ -1849,6 +1868,7 @@ export struct ReaderDirectoryNavigationList {
     .enableScrollInteraction(this.interactionEnabled)
     .cachedCount(4)
     .onWillStartDragging((): void => {
+      this.clearChapterPress();
       if (this.prefixEverMounted && !this.mounted) return;
       this.prefixLayoutGeneration += 1;
       this.prefixChangePending = false;
@@ -1857,6 +1877,7 @@ export struct ReaderDirectoryNavigationList {
       this.positionPlan = undefined;
       this.onUserScrollIntent();
     })
+    .onScrollStart((): void => this.clearChapterPress())
     .onScrollIndex((start: number, _end: number, _center: number): void => {
       if (this.prefixEverMounted && !this.mounted) return;
       this.observeViewport(start, _end);

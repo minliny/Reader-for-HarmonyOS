@@ -7,6 +7,7 @@ import { ColorMetrics, LengthMetrics } from '@ohos.arkui.node';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerUnionTouchRegion } from './ReaderActionAccessibility';
+import { triggerReaderTouchHaptic } from './ReaderTouchHaptic';
 
 interface ReaderSegmentOpening { identity: string; ids: string[]; }
 
@@ -47,6 +48,7 @@ function resolveReaderSegmentSpec(id: ReaderSegmentSpecId): ReaderSegmentSpec {
 @Component
 export struct ReaderSegmentedControl {
   @StorageLink('readerAppScheme') @Watch('syncNativeThemeItems') private appThemeScheme: string = 'day';
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerUiConfigurationRevision') @Watch('refreshThemeFontPolicy')
   private uiConfigurationRevision: number = 0;
   @State private themeFontPolicyReady: boolean = false;
@@ -236,5 +238,10 @@ export struct ReaderSegmentedControl {
       this.optionIds.length === this.options.length && this.optionIds.indexOf(id) >= 0 &&
       this.optionIds.every((value: string, index: number): boolean => value.length > 0 && this.optionIds.indexOf(value) === index);
   }
-  private select(identity: string, id: string): void { if (this.canAct(identity, id)) this.onSelect(this.optionIds.indexOf(id)); }
+  private select(identity: string, id: string): void {
+    if (!this.canAct(identity, id)) return;
+    const nextIndex = this.optionIds.indexOf(id);
+    if (nextIndex !== this.selectedIndex) triggerReaderTouchHaptic(this.reduceMotion);
+    this.onSelect(nextIndex);
+  }
 }

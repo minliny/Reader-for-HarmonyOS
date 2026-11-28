@@ -1,4 +1,4 @@
-import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../foundation/ReaderPressMotion';
+import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressScale, readerPressSurface } from '../foundation/ReaderPressMotion';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { TYPE_APP_ROW_DETAIL, TYPE_APP_ROW_LABEL } from '../foundation/ReaderTypography';
 import { TOK_BORDER_W, TOK_SPACE_SM } from '../foundation/ReaderTokens';
@@ -9,7 +9,11 @@ type ReaderFormRowKind = 'standard' | 'compact' | 'danger';
 @Component
 export struct ReaderFormRow {
   @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
-  @State private pressPointer: number = -1;
+  @State private pressed: boolean = false;
+  private readonly delayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    if (key.length === 0) this.pressed = false;
+    else readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressed = true; });
+  });
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('refreshContentLayout') icon: Resource | undefined = undefined;
   @Prop @Watch('refreshContentLayout') label: string = '';
@@ -40,11 +44,10 @@ export struct ReaderFormRow {
   }
   aboutToDisappear(): void { this.mounted = false; this.clearPress(); }
 
-  private clearPress(): void { this.pressPointer = -1; }
+  private clearPress(): void { this.delayedPress.cancel(); }
 
   private observePress(event: TouchEvent): void {
-    const next = readerPressPointer(event, this.pressPointer, this.canAct());
-    if (next !== this.pressPointer) readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressPointer = next; });
+    this.delayedPress.observe(event, 'row', this.canAct());
   }
 
   @Builder
@@ -54,9 +57,9 @@ export struct ReaderFormRow {
     if (this.onAction !== undefined) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Stack() { this.rowContent(); }.width('100%')
-          .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
-          .borderRadius(14).scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
-          .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion));
+          .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressed, this.reduceMotion))
+          .borderRadius(14).scale(readerPressScale(this.pressed, this.reduceMotion))
+          .opacity(readerPressOpacity(this.pressed, this.reduceMotion));
       }
         .width('100%').constraintSize({ minHeight: this.secondaryText.length > 0 ? 58 : 52 }).padding(0)
         .borderRadius(0).backgroundColor(Color.Transparent)
@@ -92,9 +95,9 @@ export struct ReaderFormRow {
           // switch is exposed to keyboard and assistive technologies.
           Button({ type: ButtonType.Normal, stateEffect: false }) {
             Stack() { this.labelContent(); }.width('100%')
-              .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
-              .borderRadius(14).scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
-              .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion));
+              .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressed, this.reduceMotion))
+              .borderRadius(14).scale(readerPressScale(this.pressed, this.reduceMotion))
+              .opacity(readerPressOpacity(this.pressed, this.reduceMotion));
           }
             .layoutWeight(1).constraintSize({ minHeight: this.secondaryText.length > 0 ? 58 : 52 }).padding(0)
             .backgroundColor(Color.Transparent).enabled(this.canAct()).focusable(false)
