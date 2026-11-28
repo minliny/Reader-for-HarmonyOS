@@ -38,7 +38,7 @@ test('Settings groups preserve their order and show a single backup entry for ea
   assert.deepEqual(groups.map(group => [group.label, group.items.map(item => item.id)]), expectedL0);
   assert.deepEqual(settingsNavigationItems(), groups.flatMap(group => group.items));
   assert.equal(groups[1].items[1].label, '规则与订阅');
-  assert.equal(groups[2].items[1].label, '本地备份与恢复');
+  assert.equal(groups[2].items[1].label, '备份与恢复');
 
   const extendedGroups = settingsNavigationGroups(true);
   assert.deepEqual(extendedGroups.map(group => [group.label, group.items.map(item => item.id)]), [

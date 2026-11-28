@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   adoptReaderNavigationAppearance,
+  isReaderNativeChromeStyle,
   isReaderRealtimeBlurEnabled,
   probeHarmonyCapabilities,
   resolveReaderModalScrimSpec,
@@ -98,6 +99,7 @@ test('appearance and render mode form a two by two matrix for all surface roles'
       const quality = renderMode === 'quality';
       const native = override === 'systemNative' && quality;
       assert.equal(isReaderRealtimeBlurEnabled(preferences), quality);
+      assert.equal(isReaderNativeChromeStyle(preferences), override === 'systemNative');
       assert.equal(resolveReaderNavigationAppearance(preferences, api26Capabilities, 'day', 'day'), native ? 'immersive' : 'unified');
       for (const [role, style, interactive] of roleSpecs) {
         const material = resolveReaderSurfaceMaterial(role, preferences, api26Capabilities, 'day', 'day');

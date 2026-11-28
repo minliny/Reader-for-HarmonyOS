@@ -1073,7 +1073,7 @@ export const journeys = {
     await ui.share('打开并从原生分享面板返回详情', enabled('reader-detail-share-book'), { route: 'detail', all: [readBook] });
     await ui.key('离开详情返回书架', 'Back', bookshelfReady);
     await openSettings(ui);
-    const backup = label('本地备份与恢复');
+    const backup = label('备份与恢复');
     const exportAction = label('导出恢复包');
     const restoreAction = label('导入恢复包');
     const passphrase = { type: 'TextInput', label: '恢复包口令' };
@@ -1083,7 +1083,7 @@ export const journeys = {
     const credentials = 'ReaderPublicJourney14';
     const openBackup = { route: 'settings', all: [exportAction, restoreAction] };
     await reveal(ui, backup, settingsScroll, '设置首页');
-    await ui.tap('打开本地备份与恢复', backup, { route: 'settings', all: [exportAction, restoreAction] });
+    await ui.tap('打开备份与恢复', backup, { route: 'settings', all: [exportAction, restoreAction] });
     await ui.tap('核对加密导出要求双份口令且空口令不可提交', exportAction, {
       route: 'settings', all: [passphrase, repeated, action('取消')], none: [exportConfirm],
       requiredRules: ['R9', 'R10', 'R13'], transition: surface('dialog'), filmstrip: true,
@@ -1114,7 +1114,7 @@ export const journeys = {
     await ui.key('返回有新增样本的书架', 'Back', { ...bookshelfReady, all: [...bookshelfReady.all, text(NEW_NOVEL)] });
     await openSettings(ui);
     await reveal(ui, backup, settingsScroll, '设置首页');
-    await ui.tap('重新打开本地备份与恢复', backup, openBackup);
+    await ui.tap('重新打开备份与恢复', backup, openBackup);
     await ui.tap('重新选择同一隔离归档', restoreAction, { route: 'settings', all: [passphrase] });
     await ui.input('输入正确口令到原生密码字段', passphrase, credentials, { route: 'settings', all: [inspectConfirm] });
     await ui.tap('核对正确口令能完成真实归档检验', inspectConfirm, {

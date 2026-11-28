@@ -46,6 +46,7 @@ import { ReaderNavigationAppearancePreferences } from '../../../app/ReaderNaviga
 import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../../bookshelf/application/BookshelfViewMode';
 import { LocalRecoveryPanel } from '../../bookshelf/ui/LocalRecoveryPanel';
+import { ReaderWebDavLibraryPanel } from '../../sync/ui/ReaderWebDavLibraryPanel';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { SettingsSelectOverlay, type SettingsSelectField } from './SettingsSelectOverlay';
 import { READER_LAYOUT_DEBUG_BUILD, ReaderLayoutOverlayRoot } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
@@ -84,6 +85,8 @@ export struct SettingsPage {
   @StorageLink('readerDeveloperToolsUnlocked') private developerToolsUnlocked: boolean = false;
   @State private navigationSaving: boolean = false;
   @State private backupBusy: boolean = false;
+  @State private webdavBackupBusy: boolean = false;
+  @State private backupRestoreRevision: number = 0;
   @StorageProp('readerSystemMigrationOriginals') private systemMigrationOriginals: boolean = false;
   @StorageProp('readerSystemMigrationState') private systemMigrationState: string = 'none';
   @State private systemMigrationSaving: boolean = false;
@@ -194,7 +197,7 @@ export struct SettingsPage {
     const identity = `settings-back:${++settingsSelectionGeneration}`;
     this.temporaryBackIdentity = identity;
     this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity,
-      (): boolean => this.mounted && identity === this.temporaryBackIdentity && (this.resetDialogTicket > 0 || this.backupBusy));
+      (): boolean => this.mounted && identity === this.temporaryBackIdentity && (this.resetDialogTicket > 0 || this.anyBackupBusy()));
     const owner = this.themeOwner;
     this.appearanceSaveUnsubscribe?.();
     if (owner !== undefined) this.appearanceSaveUnsubscribe = owner.getAppearanceStore().subscribeSaveState(
@@ -225,7 +228,7 @@ export struct SettingsPage {
 
   private consumeTemporaryBack(identity: string): boolean {
     if (!this.mounted || identity !== this.temporaryBackIdentity) return false;
-    if (this.activeSection === 'backup' && this.backupBusy) return true;
+    if (this.activeSection === 'backup' && this.anyBackupBusy()) return true;
     if (this.resetDialogTicket > 0) {
       this.closeResetDialog(this.resetDialogTicket);
       return true;
@@ -268,7 +271,7 @@ export struct SettingsPage {
       route: this.settingsSubroute(), initialRoot: this.embeddedWide ? undefined : 'settings-home', routeMotion: 'push',
       surfaceId: this.settingsStackSurfaceId(),
       viewportWidth: this.paneWidth, reduceMotion: this.appReduceMotion,
-      backGestureEnabled: this.settingsInputIsCurrent() && !this.backupBusy && this.resetDialogTicket === 0 && this.openSelect === '',
+      backGestureEnabled: this.settingsInputIsCurrent() && !this.anyBackupBusy() && this.resetDialogTicket === 0 && this.openSelect === '',
       content: (route: ReaderRouteSurfaceKey): void => { this.settingsPageContent(route); },
       onBack: (): boolean => this.settingsRouteBack(),
     });
@@ -380,17 +383,29 @@ export struct SettingsPage {
   @Builder
   private backupPageHeader() {
     PageBackBar({ floating: true, centered: true, elevation: 'floating', showBack: !this.embeddedWide,
-      title: '本地备份与恢复', onBack: (): void => { this.settingsRouteBack(); } });
+      title: '备份与恢复', onBack: (): void => { this.settingsRouteBack(); } });
   }
 
   @Builder
   private backupPageContent() {
     LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration, showHeading: true, editingHost: this.backupEditingHost,
+      externalRestoreRevision: this.backupRestoreRevision,
       isOpeningCurrent: (): boolean => this.activeSection === 'backup' && this.isOpeningCurrent(),
-      isInputAllowed: (): boolean => this.backupInputIsCurrent(),
+      isInputAllowed: (): boolean => this.backupInputIsCurrent() && !this.webdavBackupBusy && !this.systemMigrationSaving,
       onBusyChange: (busy: boolean): void => {
         if (this.activeSection === 'backup') this.backupBusy = busy;
       } });
+    ReaderWebDavLibraryPanel({
+      navigationGeneration: this.navigationGeneration,
+      editingHost: this.backupEditingHost,
+      isInputAllowed: (): boolean => this.backupInputIsCurrent() && !this.backupBusy && !this.systemMigrationSaving,
+      onBusyChange: (busy: boolean): void => {
+        if (this.activeSection === 'backup') this.webdavBackupBusy = busy;
+      },
+      onRestoreStateChanged: (): void => {
+        if (this.activeSection === 'backup' && this.isOpeningCurrent()) this.backupRestoreRevision += 1;
+      },
+    });
     this.systemMigrationCard();
   }
 
@@ -400,17 +415,21 @@ export struct SettingsPage {
       ReaderFormRow({ label: '系统备份包含本地原书',
         secondaryText: this.systemMigrationState === 'interrupted' ? '迁移尚待完成，将在下次启动继续' :
           '由系统发起备份或换机。默认迁移书库资料，开启后加入保留的原书',
-        actionEnabled: this.backupInputIsCurrent() && !this.systemMigrationSaving,
+        actionEnabled: this.backupInputIsCurrent() && !this.anyBackupBusy() && !this.systemMigrationSaving,
         onLabelAction: (): void => { void this.setSystemMigrationOriginals(!this.systemMigrationOriginals); } }) {
         ReaderToggle({ value: this.systemMigrationOriginals, accessibilityLabel: '系统备份包含本地原书',
-          actionEnabled: this.backupInputIsCurrent() && !this.systemMigrationSaving,
+          actionEnabled: this.backupInputIsCurrent() && !this.anyBackupBusy() && !this.systemMigrationSaving,
           onToggle: (enabled: boolean): void => { void this.setSystemMigrationOriginals(enabled); } });
       }
     }
   }
 
+  private anyBackupBusy(): boolean {
+    return this.backupBusy || this.webdavBackupBusy;
+  }
+
   private async setSystemMigrationOriginals(enabled: boolean): Promise<void> {
-    if (this.systemMigrationSaving || !this.backupInputIsCurrent()) return;
+    if (this.systemMigrationSaving || this.anyBackupBusy() || !this.backupInputIsCurrent()) return;
     const generation = this.navigationGeneration;
     this.systemMigrationSaving = true;
     try {
@@ -591,6 +610,7 @@ export struct SettingsPage {
 
   private onActiveSectionChanged(): void {
     this.backupBusy = false;
+    this.webdavBackupBusy = false;
     this.onAppearanceSaveHostChanged();
     this.appThemeControlGeneration += 1;
     this.resetSectionRevision += 1;
