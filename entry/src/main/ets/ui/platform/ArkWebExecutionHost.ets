@@ -186,7 +186,7 @@ export struct ArkWebExecutionHost {
       this.currentSurface !== surface || !this.interactive) return;
     this.clearOutcome = undefined;
     const message = outcome.report === 'cleared' ? '已清除登录态和旧检测报告' :
-      outcome.report === 'unsupported' ? '已清除登录态，当前 Core 无法清除已保存的检测报告' :
+      outcome.report === 'unsupported' ? '已清除登录态，旧检测报告暂无法清除' :
       '已清除登录态，未能确认旧检测报告已清除';
     this.transientFeedback.show(() => this.getUIContext(), {
       message, tone: outcome.report === 'cleared' ? 'success' : 'info', key: `source-login-clear:${surface.id}`,

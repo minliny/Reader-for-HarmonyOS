@@ -177,25 +177,26 @@ export struct RulesManagementPage {
 
   @Builder
   private statusCard() {
-    Text(this.recovery().visible ? this.recovery().message : this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage :
-      '校验、CRUD、导入导出与持久化均由 Rust Core 负责')
-      .width('100%')
-      .fontFamily(TYPE_FORM_STATUS.fontFamily)
-      .fontWeight(TYPE_FORM_STATUS.fontWeight)
-      .fontSize(TYPE_FORM_STATUS.fontSizeFp)
-      .lineHeight(TYPE_FORM_STATUS.lineHeightFp as number)
-      .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
-      .padding(TOK_SPACE_SM)
-      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(8);
+    if (this.recovery().visible || this.snapshot.statusMessage.length > 0) {
+      Text(this.recovery().visible ? this.recovery().message : this.snapshot.statusMessage)
+        .width('100%')
+        .fontFamily(TYPE_FORM_STATUS.fontFamily)
+        .fontWeight(TYPE_FORM_STATUS.fontWeight)
+        .fontSize(TYPE_FORM_STATUS.fontSizeFp)
+        .lineHeight(TYPE_FORM_STATUS.lineHeightFp as number)
+        .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
+        .padding(TOK_SPACE_SM)
+        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
+        .borderRadius(8);
+    }
   }
 
   @Builder
   private bundleCard() {
     ReaderCard({ specId: 'editor-section' }) {
       this.heading((): string => '可携带规则包');
-      Text('Core schema v1 包含替换、字典、TXT 目录和规则订阅；导入默认合并且同主键覆盖。')
+      Text('包含替换、字典、TXT 目录与规则订阅；导入默认合并。')
         .width('100%').fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight)
         .fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).lineHeight(TYPE_APP_ROW_DETAIL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
@@ -248,7 +249,7 @@ export struct RulesManagementPage {
   private txtTocCard() {
     ReaderCard({ specId: 'editor-section' }) {
       this.heading((): string => `TXT 目录规则（${this.snapshot.txtTocRules.length}）`);
-      Text('启用的规则会在下一次 TXT 导入时由 Core 用于切分章节。')
+      Text('启用的规则用于后续 TXT 章节切分。')
         .width('100%').fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight)
         .fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).lineHeight(TYPE_APP_ROW_DETAIL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
@@ -287,7 +288,7 @@ export struct RulesManagementPage {
     ReaderCard({ specId: 'editor-section' }) {
       this.heading((): string => `字典规则（${this.snapshot.dictRules.length}）`);
       ForEach([this.draftKey('dict')], (draftKey: string): void => {
-        this.input((): string => this.dictName, '名称（主键）', (value: string): void => { this.dictName = value; }, draftKey);
+        this.input((): string => this.dictName, '名称', (value: string): void => { this.dictName = value; }, draftKey);
         this.input((): string => this.dictUrl, 'URL 规则，使用 {{key}}', (value: string): void => { this.dictUrl = value; }, draftKey);
         this.input((): string => this.dictShow, '展示规则（留空返回原文）', (value: string): void => { this.dictShow = value; }, draftKey);
         this.booleanField('启用', (): boolean => this.dictEnabled, (next: boolean): void => { this.dictEnabled = next; }, draftKey);
@@ -325,7 +326,7 @@ export struct RulesManagementPage {
           onSelect: (index: number): void => {
             if (this.actionAllowed(false, draftKey) && (index === 0 || index === 1 || index === 2)) this.subType = index;
           } });
-        this.booleanField('自动更新标记', (): boolean => this.subAutoUpdate, (next: boolean): void => { this.subAutoUpdate = next; }, draftKey);
+        this.booleanField('自动更新', (): boolean => this.subAutoUpdate, (next: boolean): void => { this.subAutoUpdate = next; }, draftKey);
         this.input((): string => this.subOrder, '排序', (value: string): void => { this.subOrder = value; }, draftKey);
         this.actionButton(this.subId < 0 ? '新增订阅' : '保存订阅', true, (): void => {
           const draft: RuleSubscriptionDraft = {
@@ -339,10 +340,6 @@ export struct RulesManagementPage {
           if (this.subId >= 0) draft.id = this.subId;
           this.onSaveSubscription(draft);
         }, true, false, draftKey);
-        Text('“拉取”会按类型复用书源、RSS 或替换规则的 Core 导入；自动更新仅保存标记，不启动后台调度。')
-          .width('100%').fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight)
-          .fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).lineHeight(TYPE_APP_ROW_DETAIL.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       }, (key: string): string => key);
       ForEach(this.snapshot.subscriptions, (rule: ManagedRuleSubscription) => {
         this.subscriptionRow(rule);

@@ -263,7 +263,7 @@ export class SourceV9TransferOwner {
       this.acceptedImportUrl = onlineUrl;
       this.patch({ importStep: 2, rows: buildV9ImportRows(prepared.items, prepared.failures),
         groups: catalog.groups, groupRevision: catalog.revision, knownSourceIds: catalog.memberships.map((row: SourceGroupMembership): string => row.sourceId),
-        checkIssue: this.gateway.supportsEphemeralSourceCheck() ? '' : '当前 Core 不支持导入前可用性检测，可跳过检测后导入' });
+        checkIssue: this.gateway.supportsEphemeralSourceCheck() ? '' : '暂不支持导入前检测，可直接跳过' });
     });
   }
 
@@ -305,7 +305,7 @@ export class SourceV9TransferOwner {
     accept: (item: T, report: SourceCheckOutcome) => void): Promise<void> {
     if (!this.canStart() || items.length === 0) return;
     if (!this.gateway.supportsEphemeralSourceCheck()) {
-      this.patch({ checkIssue: '当前 Core 不支持临时书源检测，可跳过检测' });
+      this.patch({ checkIssue: '暂不支持导入前检测，可直接跳过' });
       return;
     }
     const generation = this.generation;
@@ -328,7 +328,7 @@ export class SourceV9TransferOwner {
         options.mode, sourceV9Levels(options.depth), undefined, (stage: string): void => {
           if (items.length === 1 && current()) this.patch({ checkingStage: stage });
         });
-      if (reports.length !== 1) throw new Error('Core 返回的临时检测报告数量不匹配');
+      if (reports.length !== 1) throw new Error('检测报告数量不匹配');
       return reports[0];
     }, (item: T): void => {
       active.push(item);
@@ -343,7 +343,7 @@ export class SourceV9TransferOwner {
     }, (item: T): void => {
       settle(item);
       this.patch({ completedChecks: this.snapshot.completedChecks + 1, activeChecks: active.length, checkingName: activeLabel(),
-        unavailableChecks: this.snapshot.unavailableChecks + 1, checkIssue: '部分书源未取得 Core 检测报告' });
+        unavailableChecks: this.snapshot.unavailableChecks + 1, checkIssue: '部分书源未取得检测报告' });
     }, SOURCE_V9_IMPORT_CHECK_CONCURRENCY);
     if (current()) this.patch({ runningCheck: false, activeChecks: 0, checkingName: '', checkingStage: '' });
   }
@@ -832,7 +832,7 @@ export class SourceV9TransferOwner {
     if (!current() || refreshed.remoteDigest !== review.sourcePlan.remoteDigest ||
       !overwritten.every((id: string): boolean =>
         refreshed.changes.some((change: RuleSourceChange): boolean => change.sourceId === id && change.kind === 'unchanged'))) {
-      throw new Error('Core 未能确认已覆盖书源与订阅原文档一致');
+      throw new Error('未能确认覆盖结果与订阅内容一致');
     }
     // Unchanged fingerprints join the Core baseline without another source write.
     await this.rules.applySourceSubscription(refreshed, [], current);

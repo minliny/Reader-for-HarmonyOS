@@ -601,7 +601,7 @@ export const journeys = {
     await ui.tap('打开搜索以核对无结果态', searchEntry, { route: 'search', all: [searchField] });
     await ui.input('填写公开无匹配关键词', searchField, NO_MATCH, { route: 'search', all: [searchField] });
     await ui.tap('提交搜索并核对无结果态', searchSubmit, {
-      route: 'search', all: [text('没有找到相关书籍'), text(`已搜索 0 个书源,未找到「${NO_MATCH}」的相关结果`)],
+      route: 'search', all: [text('没有找到相关书籍'), text(`已搜索 0 个书源，未找到「${NO_MATCH}」的相关结果`)],
       none: [id(/^reader-search-result:/)], requiredRules: ['R7', 'R12'], screenCapture: true,
     });
     await ui.key('从无结果态返回书架并保留本地书列表项', 'Back', {

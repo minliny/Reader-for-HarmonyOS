@@ -97,13 +97,6 @@ export struct BookshelfManagementPage {
     this.groupsCard();
     this.assignmentCard();
     this.recordsCard();
-    Text('在此创建和管理分组，也可以为所选书籍设置或清除分组。')
-      .width('100%')
-      .fontFamily(TYPE_SHELF_MANAGEMENT_NOTE.fontFamily)
-      .fontWeight(TYPE_SHELF_MANAGEMENT_NOTE.fontWeight)
-      .fontSize(TYPE_SHELF_MANAGEMENT_NOTE.fontSizeFp)
-      .lineHeight(TYPE_SHELF_MANAGEMENT_NOTE.lineHeightFp as number)
-      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
   }
 
@@ -199,7 +192,7 @@ export struct BookshelfManagementPage {
   @Builder
   private groupsCard() {
     ReaderCard({ specId: 'bordered-list-section' }) {
-      this.heading((): string => 'Core 分组');
+      this.heading((): string => '分组');
       if (this.snapshot.data.groups.length === 0) {
         ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
       } else {
@@ -235,7 +228,7 @@ export struct BookshelfManagementPage {
                   .fontSize(TYPE_SHELF_MANAGEMENT_GROUP_TITLE.fontSizeFp)
                   .lineHeight(TYPE_SHELF_MANAGEMENT_GROUP_TITLE.lineHeightFp as number).width('100%')
                   .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-                Text(`id ${group.groupId} · 顺序 ${this.currentGroup(group).order} · ${this.currentGroup(group).show ? '显示' : '隐藏'}`)
+                Text(`顺序 ${this.currentGroup(group).order} · ${this.currentGroup(group).show ? '显示' : '隐藏'}`)
                   .fontFamily(TYPE_SHELF_MANAGEMENT_META.fontFamily)
                   .fontWeight(TYPE_SHELF_MANAGEMENT_META.fontWeight)
                   .fontSize(TYPE_SHELF_MANAGEMENT_META.fontSizeFp).lineHeight(TYPE_SHELF_MANAGEMENT_META.lineHeightFp as number).width('100%')
@@ -247,7 +240,7 @@ export struct BookshelfManagementPage {
             .width('100%');
             Row({ space: TOK_SPACE_XS }) {
               this.smallAction((): string => this.currentGroup(group).show ? '隐藏' : '显示', (): void => this.onToggleGroupShown(group.groupId));
-              this.smallAction((): string => '删除实体', (): void => this.onDeleteGroup(group.groupId), 'danger');
+              this.smallAction((): string => '删除', (): void => this.onDeleteGroup(group.groupId), 'danger');
             }
           }
           .width('100%').padding(TOK_SPACE_SM)
@@ -315,7 +308,7 @@ export struct BookshelfManagementPage {
   @Builder
   private recordsCard() {
     ReaderCard({ specId: 'bordered-list-section' }) {
-      this.heading((): string => 'Core 阅读记录');
+      this.heading((): string => '阅读记录');
       if (this.snapshot.data.records.length === 0) {
         ReaderPageState({ title: '暂无阅读记录' }).padding({ top: 24, bottom: 24 });
       } else {

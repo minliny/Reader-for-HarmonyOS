@@ -120,7 +120,7 @@ export class ReaderCoreGateway {
     if (isCurrent?.() === false) throw new Error('BOOKSHELF_READ_CANCELLED');
     if (params.contentKind !== undefined && params.contentKind !== 'all' &&
       this.runtimeOwner.supportsCoreCapability?.('bookshelf.contentKindFilter.v1') !== true)
-      throw new Error('漫画类型筛选需要配套的 Core 版本，请更新应用');
+      throw new Error('漫画类型筛选需要更新应用版本');
     if (params.contentKind === 'all') delete params.contentKind;
     const options = { shouldCancel: (): boolean => isCurrent?.() === false };
     const result = background ? await this.runtimeOwner.bookAcquisitions().request('bookshelf.list', params, options, 'background') :

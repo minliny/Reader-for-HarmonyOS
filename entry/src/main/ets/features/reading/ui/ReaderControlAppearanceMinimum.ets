@@ -172,8 +172,7 @@ export function measureReaderControlAppearanceMinimum(context: UIContext, widths
   const theme = measureThemeLabels(context, input.themes, Math.max(1, themeWidth - 10));
   const action = measureMany(context, input.themeActions, TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE,
     74 - TOK_BORDER_W * 2, true);
-  const layoutHeader = measureMany(context, ['排版库'], TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL, (section - 8) / 2, true);
-  const layoutMeta = measureMany(context, ['即时应用'], TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY, (section - 8) / 2, true);
+  const layoutHeader = measureMany(context, ['排版库'], TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL, section - 8, true);
   const selectLabel = measureMany(context, ['缩进', '简繁'], TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE, section - 28);
   const indent = measureMany(context, [input.indentValue], TYPE_SELECT_LIBRARY_VALUE, section - 66);
   const language = measureMany(context, [input.languageValue], TYPE_SELECT_LIBRARY_VALUE, section - 66);
@@ -184,7 +183,7 @@ export function measureReaderControlAppearanceMinimum(context: UIContext, widths
   const languageMenuHeight = measureMenu(context, input.languageOptions, input.languageValue);
   if (qHeader === undefined || qMeta === undefined || fHeader === undefined || fMeta === undefined ||
     qFontHeader === undefined || fFontHeader === undefined || fFontMeta === undefined || theme === undefined ||
-    action === undefined || layoutHeader === undefined || layoutMeta === undefined || selectLabel === undefined ||
+    action === undefined || layoutHeader === undefined || selectLabel === undefined ||
     indent === undefined || language === undefined || metricLabel === undefined || metricValue === undefined ||
     stepButton === undefined || indentMenuHeight === undefined || languageMenuHeight === undefined) return undefined;
   // Full's existing hit region is the cell itself, separated by6vp. Its
@@ -231,7 +230,7 @@ export function measureReaderControlAppearanceMinimum(context: UIContext, widths
     themeLabelHeight: Math.max(13, Math.ceil(theme.heightVp)),
     themeActionHeight: Math.max(28, Math.ceil(action.heightVp) + TOK_BORDER_W * 2),
     quickFontCellHeight: Math.max(27, fontHeight), fullFontCellHeight: Math.max(30, fontHeight),
-    layoutHeaderHeight: Math.max(17, layoutHeader.heightVp, layoutMeta.heightVp),
+    layoutHeaderHeight: Math.max(17, layoutHeader.heightVp),
     selectLabelHeight: Math.max(18, Math.ceil(selectLabel.heightVp)), selectTriggerHeight: triggerHeight,
     selectRowHeight: selectStacked ? Math.max(18, Math.ceil(selectLabel.heightVp)) + triggerHeight + 18 :
       Math.max(42, triggerHeight + 12, Math.ceil(selectLabel.heightVp) + 24),

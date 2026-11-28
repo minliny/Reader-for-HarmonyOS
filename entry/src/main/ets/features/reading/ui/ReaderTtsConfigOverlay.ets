@@ -642,7 +642,7 @@ export struct ReaderTtsConfigOverlay {
       Column({ space: FORM_FIELD_GAP }) {
         this.managerLabel('API 密钥');
         ReaderFormField({ editingHost: this.editingHost, inputIdentity: `${this.selectionId}:${this.generation}:${this.draftId}:draftApiKey`, specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftApiKey, placeholder: '填入访问密钥',
-          isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 访问密钥，不会显示或写入 Core', password: true,
+          isEditable: !this.busy, fieldAccessibilityLabel: '在线朗读访问密钥，仅保存在本机', password: true,
           onTextChange: (value: string): void => this.changeDraftText('apiKey', value) });
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Text(this.draftClearApiKey ? '将清除已保存密钥' : '清除已保存密钥')

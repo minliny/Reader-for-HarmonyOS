@@ -687,7 +687,7 @@ export struct SourceJourneySurface {
     if (!inputCurrent()) return;
     this.onShowDeleteAlert({
       title: '删除书源',
-      message: `确定删除所选 ${count} 个书源吗？相关 Host 登录会话也会清除，删除后无法恢复。`,
+      message: `确定删除所选 ${count} 个书源吗？相关登录会话也会清除，删除后无法恢复。`,
       primaryButton: { value: '取消', action: (): void => {} },
       secondaryButton: { value: '删除', fontColor: readerAppColor('app.action.nativeDestructive', this.scheme),
         action: (): void => { if (inputCurrent()) confirm(); } },

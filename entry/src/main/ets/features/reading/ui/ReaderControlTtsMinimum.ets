@@ -282,7 +282,6 @@ function measureForm(context: UIContext, width: number, full: boolean,
   const ratePreset = largest(context, ['0.50x', '0.75x', '1.00x', '1.25x', '1.50x'],
     TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE, Math.max(1, (inner - 64) / 5));
   const section = largest(context, ['播放配置', '朗读引擎'], actual(TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL), inner);
-  const sectionMeta = largest(context, ['即时生效'], actual(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META), inner);
   const tabTitle = largest(context, ['系统 TTS', '在线 TTS'], actual(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE),
     Math.max(1, (inner - 38) / 2 - 27), true);
   const tabSubtitle = largest(context, ['设备内置语音', facts.serviceDescription],
@@ -303,14 +302,14 @@ function measureForm(context: UIContext, width: number, full: boolean,
   const error = measureReaderControlText(context, facts.error, MESSAGE_BODY, inner - 32, 'wrap');
   const values: (ReaderControlTextExtent | undefined)[] = [qPlayback, qStatus, qSetting, header, playbackMeta, timerMeta,
     speedMeta, voice, stop, caption, timerPreset, custom, customMeta, digit, rate, range, ratePreset,
-    section, sectionMeta, tabTitle, tabSubtitle, labels, field, voiceBadge, toggle, manage, manageTitle, error];
+    section, tabTitle, tabSubtitle, labels, field, voiceBadge, toggle, manage, manageTitle, error];
   for (const value of values) if (value === undefined) return undefined;
   // Narrow explicitly after the complete native-read failure check.
   if (qPlayback === undefined || qStatus === undefined || qSetting === undefined || header === undefined ||
     playbackMeta === undefined || timerMeta === undefined || speedMeta === undefined || voice === undefined || stop === undefined ||
     caption === undefined || timerPreset === undefined || custom === undefined || customMeta === undefined ||
     digit === undefined || rate === undefined || range === undefined || ratePreset === undefined || section === undefined ||
-    sectionMeta === undefined || tabTitle === undefined || tabSubtitle === undefined || labels === undefined ||
+    tabTitle === undefined || tabSubtitle === undefined || labels === undefined ||
     field === undefined || fieldGlyph === undefined || voiceBadge === undefined || voiceTitle === undefined ||
     toggle === undefined || toggleLine === undefined || manage === undefined || timerUnit === undefined ||
     manageTitle === undefined || error === undefined) return undefined;
@@ -327,7 +326,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
     quickPlaybackTitle: Math.max(16, qPlayback.heightVp), quickPlaybackStatus: Math.max(13, qStatus.heightVp),
     quickSettingTitle: Math.max(18, qSetting.heightVp), header: Math.max(18, header.heightVp, playbackMeta.heightVp, timerMeta.heightVp, speedMeta.heightVp),
     playbackMetaWidth: playbackMeta.singleLineWidthVp,
-    sectionHeader: Math.max(18, section.heightVp, sectionMeta.heightVp), stopLabel: Math.max(14, stop.heightVp),
+    sectionHeader: Math.max(18, section.heightVp), stopLabel: Math.max(14, stop.heightVp),
     stopLabelWidth: Math.max(24, stop.singleLineWidthVp), timerPreset: Math.max(44, timerPreset.heightVp + 8),
     timerPresetPaint: Math.max(36, timerPreset.heightVp + 8), quickTimerPaintHeight: Math.max(30, caption.heightVp + 12),
     timerPresetsWidth: Math.max(inner - 28, 3 * Math.max(44, Math.ceil(timerPreset.singleLineWidthVp) + 12) + 16),

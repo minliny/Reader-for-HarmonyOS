@@ -834,7 +834,7 @@ export struct SourceV9TransferPage {
         }.width('100%');
       } else if (!this.state.checkSupported) {
         ReaderPageState({ variant: 'inline', padded: false, message: this.state.checkIssue ||
-          '当前 Core 不支持临时书源检测，可跳过检测' });
+          '暂不支持导入前检测，可直接跳过' });
       }
     }.width('100%').padding(12).alignItems(HorizontalAlign.Start)
       .backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
@@ -1252,7 +1252,7 @@ export struct SourceV9TransferPage {
           .textOverflow({ overflow: TextOverflow.Ellipsis }).fontSize(11)
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontColor(this.color('TOK_MUTED'));
         if (row.kind === 'conflict' && !row.selectable) {
-          this.label('当前 Core 无法按版本覆盖，保留本地', 11, 'TOK_MUTED');
+          this.label('暂不支持覆盖此版本，已保留本地', 11, 'TOK_MUTED');
         } else if (row.kind === 'conflict') {
           Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(4), cross: LengthMetrics.vp(16) } }) {
             this.action('覆盖', row.overwrite ? 'primary' : 'neutral', this.editable() && row.selectable,

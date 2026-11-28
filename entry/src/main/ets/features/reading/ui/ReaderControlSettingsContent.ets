@@ -662,7 +662,7 @@ export struct ReaderControlSettingsContent {
   private segmentAccessibilityText(group: ReaderControlSettingsGroup, option: string): string {
     const label = this.optionLabel(group, option);
     if (!this.isSegmentAvailable(group, option)) {
-      return `${label}，当前宿主能力不可用`;
+      return `${label}，当前设备不支持`;
     }
     return `${this.groupLabel(group)}，${label}`;
   }
@@ -707,7 +707,7 @@ export struct ReaderControlSettingsContent {
 
   private toggleAccessibilityText(label: string, key: ReaderSettingsToggleKey): string {
     if (!isReaderSettingsToggleAvailable(key)) {
-      return `${label}，当前宿主能力不可用，已关闭`;
+      return `${label}，当前设备不支持，已关闭`;
     }
     return `${label}，${this.toggleValue(key) ? '已开启' : '已关闭'}`;
   }
