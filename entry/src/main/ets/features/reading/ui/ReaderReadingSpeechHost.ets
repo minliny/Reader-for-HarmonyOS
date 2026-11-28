@@ -124,6 +124,7 @@ export interface ReaderReadingSpeechControls {
   readonly cancelAutoPageStart: () => void;
   readonly pauseAutoPage: () => void;
   readonly stopAutoPage: () => void;
+  readonly waitForLaunchMotion?: () => Promise<void>;
 }
 
 /** Owns one mounted reader's native speech actor, its accepted settings and
@@ -373,6 +374,7 @@ export class ReaderReadingSpeechHost {
       autoPageActive: (): boolean => this.controls.autoPageActive(),
       userPaused: (): boolean => this.ttsState.pauseReason === 'user',
       stopAutoPage: (): void => this.controls.stopAutoPage(),
+      waitForLaunchMotion: this.controls.waitForLaunchMotion,
     });
     this.requireTtsConfigurationHost();
     return {

@@ -479,7 +479,7 @@ export struct SettingsPage {
           Text(this.aboutInfo.appBuildId).width('100%').wordBreak(WordBreak.BREAK_ALL)
             .fontFamily(TYPE_APP_INHERITED_BODY.fontFamily).fontWeight(TYPE_APP_INHERITED_BODY.fontWeight)
             .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-          Text(`内容摘要：${this.aboutInfo.appContentHash}`).width('100%').wordBreak(WordBreak.BREAK_ALL)
+          Text(`内容摘要：\n${this.aboutInfo.appContentHash}`).width('100%').wordBreak(WordBreak.BREAK_ALL)
             .fontFamily(TYPE_APP_INHERITED_BODY.fontFamily).fontWeight(TYPE_APP_INHERITED_BODY.fontWeight)
             .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         }.width('100%').padding(12);

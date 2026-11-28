@@ -22,6 +22,7 @@ export interface ReaderTtsTransportHost {
   autoPageActive(): boolean;
   userPaused(): boolean;
   stopAutoPage(): void;
+  waitForLaunchMotion?: () => Promise<void>;
 }
 
 /** One mounted reader binds its original runtime, gateway and native listener.
@@ -54,6 +55,7 @@ export class ReaderTtsTransportOwner {
           if (autoPage) host.stopAutoPage();
           return true;
         },
+        waitForLaunchMotion: host.waitForLaunchMotion,
       },
     );
     this.currentGateway = gateway;

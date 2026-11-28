@@ -199,6 +199,7 @@ export class ReaderAuxiliarySessionHost {
   private flightChrome: ReaderPageChromeSnapshot = new ReaderPageChromeSnapshot('', '', '', '', true, 96, 24);
   private topExit: number = 0;
   private dockExit: number = 0;
+  private launchMotionWaiters: (() => void)[] = [];
 
   constructor(verification: ReaderControlCapsuleVerification, view: ReaderAuxiliarySessionView,
     control: ReaderAuxiliarySessionControlSurface, environment: ReaderAuxiliarySessionEnvironment,
@@ -210,7 +211,10 @@ export class ReaderAuxiliarySessionHost {
     this.capsule = capsule;
     this.effects = new ReaderSessionLaunchEffects(this.controller, verification, {
       read: (): ReaderSessionLaunchTransaction | undefined => this.view.read(),
-      publish: (launch: ReaderSessionLaunchTransaction): void => this.view.publish(launch),
+      publish: (launch: ReaderSessionLaunchTransaction): void => {
+        this.view.publish(launch);
+        this.flushLaunchMotionWaiters();
+      },
       ready: (): boolean => this.environment.ready(),
       layoutCurrent: (): boolean => this.layoutCurrent(),
       retireForLayout: (): void => this.cancel('sourceChanged'),
@@ -488,6 +492,19 @@ export class ReaderAuxiliarySessionHost {
     return launch !== undefined && launch.ownership !== 'released' && !launch.sample.settled && !launch.sample.finished;
   }
 
+  waitForLaunchMotion(): Promise<void> {
+    if (!this.sessionLaunchRenderWorkBlocked()) return Promise.resolve();
+    return new Promise<void>((resolve: () => void): void => {
+      this.launchMotionWaiters.push(resolve);
+    });
+  }
+
+  private flushLaunchMotionWaiters(): void {
+    if (this.sessionLaunchRenderWorkBlocked() || this.launchMotionWaiters.length === 0) return;
+    const waiters = this.launchMotionWaiters.splice(0, this.launchMotionWaiters.length);
+    for (const resolve of waiters) resolve();
+  }
+
   sessionLaunchAllowsControlInput(): boolean {
     const ownership = this.view.read()?.ownership;
     return ownership !== 'stage' && ownership !== 'handoffPending';
@@ -656,6 +673,7 @@ export class ReaderAuxiliarySessionHost {
     const launch = this.controller.cancel(reason);
     if (launch === undefined) return;
     this.view.publish(launch);
+    this.flushLaunchMotionWaiters();
     this.verification.ownerState('cancel-request', launch, this.environment.speechFacts(launch),
       launch.geometry.type === 'autoPage' ? this.environment.automaticStatus() : undefined);
     this.verification.finish(launch.generation, reason);
@@ -739,6 +757,7 @@ export class ReaderAuxiliarySessionHost {
     this.effects.invalidateExit();
     this.controller.dispose();
     this.view.publish(undefined);
+    this.flushLaunchMotionWaiters();
     this.flightSourceSample = undefined;
     this.minimumProfile = undefined;
     this.preparedControlSource = undefined;

@@ -1766,6 +1766,7 @@ export struct ReadingExperience {
     cancelAutoPageStart: (): void => this.playback.auto.cancelStart(),
     pauseAutoPage: (): void => this.playback.pauseAutoPage('manual'),
     stopAutoPage: (): void => this.playback.stopAutoPage(),
+    waitForLaunchMotion: (): Promise<void> => this.auxiliarySession.waitForLaunchMotion(),
   };
   private readonly speech: ReaderReadingSpeechHost = new ReaderReadingSpeechHost(this.transientFeedback,
     this.speechSession, this.speechView, this.speechProgress, this.speechChapter, this.speechControls);

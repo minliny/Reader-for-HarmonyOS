@@ -120,8 +120,9 @@ export struct SourceManagementPage {
       groupOpen: (): boolean => this.groupOpen,
       batchMode: (): boolean => this.batchMode,
       setBatchMode: (active: boolean): void => {
+        if (this.batchMode === active) return;
         this.batchMode = active;
-        this.listPaint.batchMode = active;
+        this.list.notifyBatchModeChanged();
       },
     },
     opening: {

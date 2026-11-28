@@ -46,6 +46,8 @@ export type ReaderTtsCoordinatorOptions = {
   admitHostResume?: (origin: ReaderTtsHostResumeOrigin) => boolean;
   /** Reuse the current reading owner's rate and preference transaction. */
   onMediaRate?: (rate: number) => void;
+  /** Defer native speech setup while the capsule launch animation owns frames. */
+  waitForLaunchMotion?: () => Promise<void>;
 };
 
 type StartWaiter = { generation: number; resolve: (started: boolean) => void };
@@ -250,6 +252,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
   private readonly startCallbackTimeoutMs: number;
   private readonly admitHostResume: ((origin: ReaderTtsHostResumeOrigin) => boolean) | undefined;
   private readonly onMediaRate: ((rate: number) => void) | undefined;
+  private readonly waitForLaunchMotion: (() => Promise<void>) | undefined;
   private readonly startWaiters: StartWaiter[] = [];
   private startConfirmedRequestId: string | undefined = undefined;
   private startWatchdogHandle: number = -1;
@@ -273,6 +276,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     this.startCallbackTimeoutMs = options?.startCallbackTimeoutMs ?? DEFAULT_START_CALLBACK_TIMEOUT_MS;
     this.admitHostResume = options?.admitHostResume;
     this.onMediaRate = options?.onMediaRate;
+    this.waitForLaunchMotion = options?.waitForLaunchMotion;
     this.host.setEventListener((event: ReaderTtsHostEvent): void => {
       this.routeHostEvent(event);
     }, this.ownerToken);
@@ -801,6 +805,10 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     const controlGeneration = this.controlGeneration;
     return this.enqueue(async (): Promise<void> => {
       if (!this.isSessionCurrent(identity)) return;
+      if (this.waitForLaunchMotion !== undefined) {
+        await this.waitForLaunchMotion();
+        if (!this.isSessionCurrent(identity) || this.controlGeneration !== controlGeneration) return;
+      }
       const snapshot = await this.gateway.resume(active.input.chapter);
       this.rememberCoreSnapshot(active, snapshot);
       if (!this.isSessionCurrent(identity) || this.controlGeneration !== controlGeneration) return;
@@ -1192,6 +1200,10 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       if (!this.isSessionCurrent(identity)) return;
       const active = this.active;
       if (active === undefined || !this.isSessionCurrent(identity)) return;
+      if (this.waitForLaunchMotion !== undefined) {
+        await this.waitForLaunchMotion();
+        if (!this.isSessionCurrent(identity)) return;
+      }
       active.config = await this.gateway.getConfig();
       if (!this.isSessionCurrent(identity)) return;
       await this.host.selectEngine(active.config?.engine);
