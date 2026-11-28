@@ -1571,7 +1571,8 @@ export struct ReaderDirectoryNavigationList {
                 this.canDownloadTarget(this.currentPaintNode(item.node)),
                 this.chapterPressKey === `manga-dl:${item.key}`, false), 'nativeButton'))
             .onTouch((event: TouchEvent): void => {
-              this.observeChapterPress(event, `manga-dl:${item.key}`, this.canDownloadTarget(this.currentPaintNode(item.node)));
+              this.observeChapterPress(event, `manga-dl:${item.key}`,
+                item.node !== undefined && this.canDownloadTarget(this.currentPaintNode(item.node)));
             })
             .onClick((): void => { if (item.node !== undefined) this.downloadTarget(this.currentPaintNode(item.node)); });
           }.width(44).height(Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale()))
