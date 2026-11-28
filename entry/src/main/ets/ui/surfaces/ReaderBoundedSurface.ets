@@ -126,8 +126,8 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
 
 @Component
 export struct ReaderBoundedSurface {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
   @Prop specId: ReaderBoundedSurfaceId = 'source-switch-window';

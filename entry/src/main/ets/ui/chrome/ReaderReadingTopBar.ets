@@ -80,9 +80,9 @@ export class ReaderReadingTopBarTitle implements AttributeModifier<TextAttribute
 /** Reading and its directory share a two-line chrome. The host supplies its own actions and frame bounds. */
 @Component
 export struct ReaderReadingTopBar {
-  @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
   @StorageProp('readerAppScheme') private appScheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
   @Prop variant: ReaderReadingTopBarVariant = 'reading';

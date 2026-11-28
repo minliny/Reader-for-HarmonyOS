@@ -59,11 +59,11 @@ class ReaderSelectParentFrame extends FrameCallback {
 
 @Component
 export struct ReaderSelectPanel {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
-  @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') @Watch('onGeometryChanged') private readerWindowMetricsRevision: number = 0;
 
   @Prop @Watch('onGeometryChanged') value: string = '';
   @Prop @Watch('onGeometryChanged') options: string[] = [];

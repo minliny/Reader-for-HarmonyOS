@@ -13,8 +13,8 @@ export type ReaderRecoveryBodyPresentation = 'fits' | 'collapsed' | 'expanded';
  * host places this compact surface above content, below the safe top inset. */
 @Component
 export struct ReaderRecoveryNotice {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') @Watch('remeasure') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') @Watch('remeasure') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('remeasure') view: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   @Prop @Watch('remeasure') tag: string = '待处理';
   @Prop @Watch('remeasure') actionLabel: string = '刷新列表';

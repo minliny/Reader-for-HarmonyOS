@@ -17,8 +17,8 @@ import { readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry'
 @CustomDialog
 export struct BookRemovalDialog {
   controller: CustomDialogController;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop message: string = '';
   @Prop reducedMotion: boolean = false;
   @State private contentOpacity: number = 1;

@@ -53,8 +53,8 @@ class ReaderBoundedTtsPrimaryPaint implements AttributeModifier<CommonAttribute>
  * It owns no draft, task, retry or dismissal lifecycle. */
 @Component
 export struct ReaderBoundedSurfaceActions {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop specId: ReaderBoundedActionSpecId = 'tts-manager';
   @Prop primaryLabel: string = '保存';
   @Prop primaryEnabled: boolean = true;

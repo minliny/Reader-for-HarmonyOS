@@ -20,8 +20,8 @@ const SHELF_LIST_BADGE_GAP = 4;
 
 @Component
 export struct ShelfBookListDetails {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerMangaPresentationRevision') private mangaRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerMangaPresentationRevision') private mangaRevision: number = 0;
   @Prop book: ShelfBook;
   @Prop textFrame: BookshelfListTextFrame = bookshelfListTextFrame();
   @Prop targetHeight: number = BOOKSHELF_LIST_COVER_HEIGHT;

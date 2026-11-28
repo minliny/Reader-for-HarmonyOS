@@ -32,7 +32,7 @@ import {
  */
 @Component
 export struct RssSourceFeedPage {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop subscription: RssSubscription;
   @Prop items: RssItem[];

@@ -25,7 +25,7 @@ export function noCoverGlyph(title: string | undefined): string {
  */
 @Component
 export struct NoCoverCover {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop coverWidth: number = 0;
   @Prop coverHeight: number = 0;
   @Prop glyph: string = '';

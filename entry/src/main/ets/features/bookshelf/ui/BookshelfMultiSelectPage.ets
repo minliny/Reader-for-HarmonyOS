@@ -41,14 +41,14 @@ const GRID_ROW_GAP = 12;
  */
 @Component
 export struct BookshelfMultiSelectPage {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private appForeground: boolean = true;
-  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') private appForeground: boolean = true;
+  @StorageProp('readerReduceMotion') private appReduceMotion: boolean = false;
 
-  @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerBookshelfViewMode') private storedViewMode: string = DEFAULT_BOOKSHELF_VIEW;
-  @StorageLink('readerBookshelfSourceFilter') @Watch('reconcileSelection') private sourceFilter: string = 'all';
-  @StorageLink('readerBookshelfContentFilter') @Watch('reconcileSelection') private contentFilter: string = 'all';
+  @StorageProp('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerBookshelfViewMode') private storedViewMode: string = DEFAULT_BOOKSHELF_VIEW;
+  @StorageProp('readerBookshelfSourceFilter') @Watch('reconcileSelection') private sourceFilter: string = 'all';
+  @StorageProp('readerBookshelfContentFilter') @Watch('reconcileSelection') private contentFilter: string = 'all';
   @Prop @Watch('reconcileSelection') books: ShelfBook[] = [];
   @Prop initialSelectedKey: string = '';
   @Prop busy: boolean = false;

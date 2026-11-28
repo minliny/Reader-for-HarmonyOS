@@ -23,9 +23,9 @@ let bookshelfTemporaryGeneration: number = 0;
 @Component
 export struct BookshelfShell {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') @Watch('onFooterLayoutChanged') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerMainViewportRevision') @Watch('onFooterLayoutChanged') private mainViewportRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') @Watch('onFooterLayoutChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerMainViewportRevision') @Watch('onFooterLayoutChanged') private mainViewportRevision: number = 0;
   @Prop @Watch('onRecoveryChanged') recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   @Prop recoveryBusy: boolean = false;
   @Prop @Watch('onReadRecoveryChanged') readRecovery: ReaderRecoveryView | undefined = undefined;

@@ -222,7 +222,7 @@ class ReaderChoiceLabelModifier implements AttributeModifier<TextAttribute> {
  * Caller owns choice identity/commit; the finite spec owns the whole row. */
 @Component
 export struct ReaderChoiceRow {
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop specId: ReaderChoiceSpecId = 'default-option';
   @Prop optionId: string = '';
   @Prop groupId: string = '';

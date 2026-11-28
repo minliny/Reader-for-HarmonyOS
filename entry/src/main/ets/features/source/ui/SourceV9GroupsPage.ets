@@ -83,9 +83,9 @@ class GroupSourceData implements IDataSource {
 export struct SourceV9GroupsPage {
   @StorageProp('readerNavigationAppearancePreferences')
   private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
-  @StorageLink('readerWindowMetricsRevision') private windowRevision: number = 0;
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerWindowMetricsRevision') private windowRevision: number = 0;
   @Prop @Watch('refreshGroups') catalog: SourceGroupCatalogData | undefined = undefined;
   @Prop catalogError: string = '';
   @Prop @Watch('refreshGroups') sources: BookSource[] = [];

@@ -4,9 +4,9 @@ import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 /** Presentation only. Generation and admission remain owned by the caller. */
 @Component
 export struct ReaderRecoveryAction {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private appForeground: boolean = true;
-  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') private appForeground: boolean = true;
+  @StorageProp('readerReduceMotion') private appReduceMotion: boolean = false;
   @Prop variant: 'compact' | 'rssManagement' | 'notice' | 'text' | 'readingState' = 'compact';
   @Prop label: string = '刷新列表';
   @Prop generation: number = 0;

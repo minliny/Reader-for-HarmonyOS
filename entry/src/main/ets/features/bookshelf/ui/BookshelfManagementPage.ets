@@ -41,10 +41,10 @@ export struct BookshelfManagementPage {
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private feedbackMounted: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private appForeground: boolean = true;
-  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') private appForeground: boolean = true;
+  @StorageProp('readerReduceMotion') private appReduceMotion: boolean = false;
 
   @Prop @Watch('onSnapshotChanged') snapshot: BookshelfManagementSnapshot = EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
   onReconcile: (generation: number) => void = (_generation: number): void => {};

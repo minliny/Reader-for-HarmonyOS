@@ -7,8 +7,8 @@ export type ReaderStatusBadgeStatus = 'success' | 'error' | 'pending' | 'neutral
  * native vector marks distinguish it without color or font-size dependence. */
 @Component
 export struct StatusBadge {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerUiConfigurationRevision') private configurationRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerUiConfigurationRevision') private configurationRevision: number = 0;
   @Prop status: ReaderStatusBadgeStatus = 'unknown';
   @Prop label: string = '';
   @Prop text: string = '';

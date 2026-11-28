@@ -162,12 +162,12 @@ export struct BookshelfPage {
   private headerScrollFrameQueued: string = '';
   private headerScrollPublishedNavigation: number = -1;
   private headerScrolled: boolean = false;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerMangaPresentationRevision') private mangaRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerMangaPresentationRevision') private mangaRevision: number = 0;
 
-  @StorageLink('readerMainViewportRevision') @Watch('onShelfViewportChanged') private mainViewportRevision: number = 0;
-  @StorageLink('readerWindowMetricsRevision') @Watch('onShelfViewportChanged') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
+  @StorageProp('readerMainViewportRevision') @Watch('onShelfViewportChanged') private mainViewportRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') @Watch('onShelfViewportChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWideNavigationRail') private wideNavigationRail: boolean = false;
   // The bookshelf page is rebuilt when leaving and returning from reading.
   // Keep the user's projection choice in app storage so route recreation does
   // not silently restore the cover projection.

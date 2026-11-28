@@ -49,7 +49,7 @@ export struct ReaderDirectoryRules {
   @Prop focusTargetId: string = '';
   @Prop availableWidthVp: number = -1;
   @Prop availableHeightVp: number = -1;
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
   @State private rules: DirectoryRuleDraft[] = [];
   private nextRuleId: number = 0;
   @State private message: string = '';

@@ -35,8 +35,8 @@ function resolveReaderToggleSpec(id: ReaderToggleSpecId): ReaderToggleSpec {
  * publish the accepted/draft value. Native ArkUI owns press/release/cancel. */
 @Component
 export struct ReaderToggle {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') @Watch('onForegroundChanged') private appForeground: boolean = true;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') @Watch('onForegroundChanged') private appForeground: boolean = true;
   @Prop specId: ReaderToggleSpecId = 'standard-toggle';
   @Prop value: boolean = false;
   @Prop checkedColor: string | undefined = undefined;

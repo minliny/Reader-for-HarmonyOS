@@ -9,8 +9,8 @@ import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSu
  * scroller stay mounted as siblings of this navigation-only host. */
 @Component
 export struct ReaderSystemNavigationBar {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences')
   private navigationAppearance: ReaderNavigationPreferences = defaultNavigationPreferences();
   @Prop current: string = 'bookshelf';

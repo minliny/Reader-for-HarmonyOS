@@ -212,9 +212,9 @@ export struct SourceToolsPage {
   private readonly pageScroller: Scroller = new Scroller();
   @Prop reduceMotion: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private appForeground: boolean = true;
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') private appForeground: boolean = true;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @State private sourceListWidth: number = 0;
   @State private overlayHostWidth: number = 0;
   @State private recoveryLeadingReserve: number = 0;

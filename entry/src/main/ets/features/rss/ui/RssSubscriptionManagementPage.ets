@@ -33,9 +33,9 @@ import {
  */
 @Component
 export struct RssSubscriptionManagementPage {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
 
   @Prop items: RssSubscriptionManagementItem[];
   @Prop expandedLayout: boolean;

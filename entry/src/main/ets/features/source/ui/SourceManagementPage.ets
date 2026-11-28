@@ -293,16 +293,16 @@ export struct SourceManagementPage {
 
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
 
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
 
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
 
-  @StorageLink('readerAppForeground') @Watch('onToolsFocusContextChanged') private appForeground: boolean = true;
+  @StorageProp('readerAppForeground') @Watch('onToolsFocusContextChanged') private appForeground: boolean = true;
 
-  @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
 
   @Prop @Watch('onSourcesChanged') sources: BookSource[];
 

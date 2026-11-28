@@ -23,8 +23,8 @@ type ReaderDirectoryTool = 'top' | 'bottom' | 'sort';
 export struct ReaderDirectoryToolbar {
   editingHost: ReaderEditingVisibility | undefined = undefined;
   editingCurrent: (() => boolean) | undefined = undefined;
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop text: string = '';
   @Prop placeholder: string = '搜索章节名称';
   @Prop ascending: boolean = true;

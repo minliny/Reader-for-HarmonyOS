@@ -6,8 +6,8 @@ import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback'
 
 @Component
 export struct ReaderSearchTaskTrigger {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop expanded: boolean = false;
   @Prop presentationIdentity: string = '';
   @Prop triggerFocusId: string = '';

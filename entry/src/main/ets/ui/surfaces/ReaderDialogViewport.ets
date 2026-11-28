@@ -8,7 +8,7 @@ import { readerBeginTransition, readerTransitionsEnabled } from '../foundation/R
  * The same viewport becomes scrollable when the keyboard or text size makes a dialog taller. */
 @Component
 export struct ReaderDialogViewport {
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop edgeGapY: number = 12;
   @Prop nativeId: string = '';
   @Prop transitionSubject: string = 'dialog';

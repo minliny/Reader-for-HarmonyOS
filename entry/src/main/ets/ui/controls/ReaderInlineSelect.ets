@@ -21,7 +21,7 @@ const POPUP_GAP = 4;
  */
 @Component
 export struct ReaderInlineSelect {
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop value: string = '';
   @Prop options: string[] = [];
   @Prop selectedIndex: number = 0;

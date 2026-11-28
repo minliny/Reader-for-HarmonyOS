@@ -4,7 +4,7 @@ import { readerSurfaceElevation } from './ReaderSurfaceSpecs';
 // 同规格只有一个实际外框；页面提供内容和测量宽度，外观由有限规格决定。
 @Component
 export struct ReaderCard {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop specId: ReaderCardSpecId = 'settings-category';
   @Prop cardWidth: number = 0; // 0 = 撑满父宽

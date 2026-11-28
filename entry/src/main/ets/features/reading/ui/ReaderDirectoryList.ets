@@ -58,7 +58,7 @@ class DirectoryListDataSource implements IDataSource {
  */
 @Component
 export struct ReaderDirectoryList {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   // The expanded control keeps one native List while its viewport morphs.
   // Compare chapter data at an endpoint, where the owning panel admits it.

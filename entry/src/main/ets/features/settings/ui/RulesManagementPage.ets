@@ -40,8 +40,8 @@ let nextRulesDraftOpening: number = 0;
 @Component
 export struct RulesManagementPage {
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') private appForeground: boolean = true;
   @Prop inputEnabled: boolean = true;
   @Prop embeddedWide: boolean = false;
   @Prop importFocusId: string = '';

@@ -17,8 +17,8 @@ import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderMo
  * independently timed sheet are drawn over the live page inside that cover. */
 @Component
 export struct ReaderBottomSheet {
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
   @Prop @Watch('onVisibilityChanged') visible: boolean = false;

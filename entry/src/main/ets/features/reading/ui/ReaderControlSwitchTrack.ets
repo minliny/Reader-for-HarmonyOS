@@ -6,7 +6,7 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
  */
 @Component
 export struct ReaderControlSwitchTrack {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop value: boolean = false;
   @Prop trackWidth: number = 44;

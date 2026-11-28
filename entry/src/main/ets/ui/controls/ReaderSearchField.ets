@@ -106,8 +106,8 @@ class ReaderSearchFocusFrame extends FrameCallback {
 
 @Component
 export struct ReaderSearchField {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') @Watch('editingGeometryChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') @Watch('editingGeometryChanged') private readerWindowMetricsRevision: number = 0;
 
   @Prop sourceV9Chrome: boolean = false;
   @Prop variant: ReaderSearchFieldVariant = 'bookPanel';

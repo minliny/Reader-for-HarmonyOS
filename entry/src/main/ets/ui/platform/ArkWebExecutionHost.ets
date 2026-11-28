@@ -38,9 +38,9 @@ export struct ArkWebExecutionHost {
   onBackBridge: (handler: (() => boolean) | undefined) => void = (): void => {};
   onInputCaptureChange: (captured: boolean) => void = (): void => {};
   @Prop interactiveBounds?: ArkWebInteractiveBounds = undefined;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @State private hostWidth: number = 0;
   @State private hostHeight: number = 0;
   @State private hostX: number = 0;

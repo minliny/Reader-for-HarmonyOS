@@ -6,7 +6,7 @@ type ReaderSectionHeadingVariant = 'settings-section' | 'tool-card';
 /** Settings keeps a 16vp minimum label slot. Both variants grow with their text. */
 @Component
 export struct ReaderSectionHeading {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop title: string = '';
   @Prop variant: ReaderSectionHeadingVariant = 'settings-section';

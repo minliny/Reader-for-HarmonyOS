@@ -68,12 +68,12 @@ const RSS_FLOATING_HEADER_HEIGHT = APP_HEADER_BAR_HEIGHT + SEARCH_CAPSULE_HEIGHT
  */
 @Component
 export struct RssPage {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
-  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
-  @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
+  @StorageProp('readerMainViewportRevision') private mainViewportRevision: number = 0;
+  @StorageProp('readerWideNavigationRail') private wideNavigationRail: boolean = false;
   @Prop presentation: RssPresentation;
   @Prop expandedLayout: boolean;
   @Prop activeMode: RssMode = 'sources';

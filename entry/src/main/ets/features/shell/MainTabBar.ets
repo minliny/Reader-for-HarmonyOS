@@ -28,12 +28,12 @@ import {
 // 图标、字体、选中胶囊、按压语义和无障碍角色。
 @Component
 export struct MainTabBar {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences')
   private navigationPreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop current: string = 'bookshelf';
   @Prop vertical: boolean = false;
   @State private railSurfaceWidth: number = 0;

@@ -73,7 +73,7 @@ class ReaderContentSearchNaturalFrame implements AttributeModifier<TextInputAttr
 }
 @Component
 export struct ReaderFormField {
-  @StorageLink('readerWindowMetricsRevision') @Watch('editingGeometryChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') @Watch('editingGeometryChanged') private readerWindowMetricsRevision: number = 0;
   @Prop scheme: string = 'day';
   @Prop specId: ReaderFormFieldSpecId = 'rules-input';
   @Prop text: string = '';

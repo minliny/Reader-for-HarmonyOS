@@ -48,10 +48,10 @@ type PreparedReaderRoute = 'reading' | 'directory';
 @Component
 export struct ReaderShell {
   private readonly mangaSettingsGateway: ReaderSettingsGateway = new ReaderSettingsGateway(ReaderRuntimeOwner.current());
-  @StorageLink('readerWindowChromeUnderlayColor') private chromeUnderlayColor: string =
+  @StorageProp('readerWindowChromeUnderlayColor') private chromeUnderlayColor: string =
     readerAppColor('app.window.background', 'day');
-  @StorageLink('readerWindowChromeThemeId') private chromePaperThemeId: string = '';
-  @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
+  @StorageProp('readerWindowChromeThemeId') private chromePaperThemeId: string = '';
+  @StorageProp('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
   @State private paneWidth: number = 0;
   @State private paneHeight: number = 0;
 

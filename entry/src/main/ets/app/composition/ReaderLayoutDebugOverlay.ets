@@ -116,12 +116,12 @@ let layoutInvariantSequence: number = 0;
 
 @Component
 export struct ReaderLayoutDebugOverlay {
-  @StorageLink('readerDeveloperMode') @Watch('onDeveloperModeChanged') private developerModeEnabled: boolean = false;
-  @StorageLink('readerLayoutInvariantAutomation') @Watch('onDeveloperModeChanged') private automationEnabled: boolean = false;
-  @StorageLink('readerAppForeground') @Watch('onDeveloperModeChanged') private appForeground: boolean = true;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') @Watch('scheduleInvariantScan') private metricsRevision: number = 0;
-  @StorageLink('readerLayoutInvariantRevision') @Watch('scheduleInvariantScan') private invariantRevision: number = 0;
+  @StorageProp('readerDeveloperMode') @Watch('onDeveloperModeChanged') private developerModeEnabled: boolean = false;
+  @StorageProp('readerLayoutInvariantAutomation') @Watch('onDeveloperModeChanged') private automationEnabled: boolean = false;
+  @StorageProp('readerAppForeground') @Watch('onDeveloperModeChanged') private appForeground: boolean = true;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') @Watch('scheduleInvariantScan') private metricsRevision: number = 0;
+  @StorageProp('readerLayoutInvariantRevision') @Watch('scheduleInvariantScan') private invariantRevision: number = 0;
   @Prop @Watch('routeChanged') route: string = '';
   @Prop @Watch('scheduleInvariantScan') mainInputEnabled: boolean = true;
   @Prop requiresHeader: boolean = true;

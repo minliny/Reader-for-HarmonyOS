@@ -270,15 +270,15 @@ const READER_CONTENT_SEARCH_PAGE_SIZE = 50;
 @Component
 export struct ReadingExperience {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  @StorageLink('readerAppScheme') @Watch('reconcileSessionLaunchLayout') private readerAppScheme: string = 'day';
-  @StorageLink('readerSystemScheme') private readerSystemScheme: string = 'day';
+  @StorageProp('readerAppScheme') @Watch('reconcileSessionLaunchLayout') private readerAppScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private readerSystemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private launchNavigationPreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
-  @StorageLink('readerAppearanceRevision') @Watch('onSharedAppearanceChanged') private sharedAppearanceRevision: number = 0;
-  @StorageLink('readerAppForeground') @Watch('onAppForegroundChanged') appForeground: boolean = true;
+  @StorageProp('readerAppearanceRevision') @Watch('onSharedAppearanceChanged') private sharedAppearanceRevision: number = 0;
+  @StorageProp('readerAppForeground') @Watch('onAppForegroundChanged') appForeground: boolean = true;
   @StorageLink('readerSmartGestureSettings') @Watch('syncSmartGestureMonitor')
   private smartGestureSettings: ReaderSmartGestureSettings = DEFAULT_READER_SMART_GESTURES;
-  @StorageLink('readerWindowMetricsRevision') @Watch('onWindowMetricsRevisionChanged')
+  @StorageProp('readerWindowMetricsRevision') @Watch('onWindowMetricsRevisionChanged')
   readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onReaderIdentityChanged') sourceId: string = LOCAL_READING_SOURCE_ID;
   @Prop @Watch('onReaderIdentityChanged') bookId: string;

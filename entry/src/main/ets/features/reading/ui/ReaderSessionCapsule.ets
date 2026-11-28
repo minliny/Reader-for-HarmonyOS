@@ -226,8 +226,8 @@ export function readerSessionCapsuleAccessibility(
 /** Figma `Reader/SessionCapsule` (`1164:10275`), one stable static actor tree. */
 @Component
 export struct ReaderSessionCapsule {
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
   @Prop type: ReaderSessionCapsuleType = 'autoPage';

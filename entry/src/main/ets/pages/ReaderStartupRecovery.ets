@@ -8,9 +8,9 @@ import { readerAppColor } from '../ui/foundation/ReaderThemeRegistry';
 @Entry
 @Component
 struct ReaderStartupRecovery {
-  @StorageLink('readerAppForeground') private appForeground: boolean = true;
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
+  @StorageProp('readerAppForeground') private appForeground: boolean = true;
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
   @State private state: ReaderStartupContentState = { phase: 'recovery-loading', reason: 'admission-pending', canRetry: false };
   @State private publication: number = 0;
   private owner: ReaderStartupContentOwner | undefined = undefined;

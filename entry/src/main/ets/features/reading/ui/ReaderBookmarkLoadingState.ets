@@ -7,7 +7,7 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
  */
 @Component
 export struct ReaderBookmarkLoadingState {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
   build() {
     Column() {

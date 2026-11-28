@@ -18,8 +18,8 @@ import { ReaderEditingScrollBinding } from './ReaderEditingScrollBinding';
  * header clearance and footer budget. Pages supply business builders only. */
 @Component
 export struct ReaderStandardPage {
-  @StorageLink('readerWindowMetricsRevision') @Watch('onLayoutInputsChanged') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') @Watch('onLayoutInputsChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('onLayoutInputsChanged') variant: ReaderStandardPageVariant = 'management';
   @Prop @Watch('onLayoutInputsChanged') floatingHeader: boolean = false;
   @Prop @Watch('onLayoutInputsChanged') embeddedWide: boolean = false;

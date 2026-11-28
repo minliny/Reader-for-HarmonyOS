@@ -48,7 +48,7 @@ export class SearchHistoryMeasurements {
 /** A bounded history panel with a scrollable body when expanded. */
 @Component
 export struct ReaderSearchHistoryPanel {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop history: string[] = [];
   @Prop status: SearchHistoryStatus | undefined = undefined;
   @Prop layout: SearchHistoryPanelLayout = new SearchHistoryPanelLayout(

@@ -4,7 +4,7 @@ import { READER_BOOKMARK_GLYPH_HEIGHT_VP, READER_BOOKMARK_RIBBON_HEIGHT, READER_
 
 @Component
 export struct ReaderPageBookmarkGlyph {
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop color: ResourceColor = Color.Black;
   @Prop filled: boolean = false;
   @Prop heightVp: number = READER_BOOKMARK_GLYPH_HEIGHT_VP;

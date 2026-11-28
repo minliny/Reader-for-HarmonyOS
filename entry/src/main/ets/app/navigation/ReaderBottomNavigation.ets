@@ -16,10 +16,10 @@ import { ReaderSystemNavigationBar } from './ReaderSystemNavigationBar';
 /** Admits product tabs and supplies the existing phone navigation geometry. */
 @Component
 export struct ReaderBottomNavigation {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private foreground: boolean = true;
-  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') private foreground: boolean = true;
+  @StorageProp('readerMainViewportRevision') private mainViewportRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop current: string = 'bookshelf';
   @Prop inputEnabled: boolean = true;
   @Prop actionGeneration: number = 0;

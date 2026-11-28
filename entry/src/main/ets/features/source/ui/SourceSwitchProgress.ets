@@ -12,7 +12,7 @@ import { SOURCE_SWITCH_VISUAL } from './SourceSwitchVisual';
  * admission. Its owner supplies real state; a short viewport can scroll. */
 @Component
 export struct SourceSwitchProgress {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop sourceName: string = '';
   @Prop chapterTitle: string = '';
   @Prop statusText: string = '正在准备新书源…';

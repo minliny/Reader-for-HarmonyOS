@@ -6,7 +6,7 @@ import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResourc
  * this small keyed subtree captures it for every physical callback. */
 @Component
 export struct ReaderSheetActionList {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop presentationId: string = '';
   isCurrent: (presentationId: string) => boolean = (_id: string): boolean => false;
   onMultiSelect: () => void = (): void => {};

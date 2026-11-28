@@ -10,15 +10,15 @@ type ReaderFormRowKind = 'standard' | 'compact' | 'danger';
 export struct ReaderFormRow {
   @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @State private pressPointer: number = -1;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('refreshContentLayout') icon: Resource | undefined = undefined;
   @Prop @Watch('refreshContentLayout') label: string = '';
   @Prop secondaryText: string = '';
   /** A known-width child may move below its label when the real text budget does not fit. */
   @Prop @Watch('refreshContentLayout') contentMinWidth: number = 0;
-  @StorageLink('readerUiConfigurationRevision') @Watch('refreshContentLayout')
+  @StorageProp('readerUiConfigurationRevision') @Watch('refreshContentLayout')
   private uiConfigurationRevision: number = 0;
-  @StorageLink('readerWindowMetricsRevision') @Watch('refreshContentLayout')
+  @StorageProp('readerWindowMetricsRevision') @Watch('refreshContentLayout')
   private windowMetricsRevision: number = 0;
   @State private contentAppearanceRevision: number = 0;
   @State private contentStacked: boolean = false;

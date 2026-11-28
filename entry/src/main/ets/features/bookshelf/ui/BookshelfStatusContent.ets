@@ -13,9 +13,9 @@ import { readerMainNavigationMode, readerMainRailBottomInset } from '../../shell
 
 @Component
 export struct BookshelfStatusContent {
-  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
+  @StorageProp('readerMainViewportRevision') private mainViewportRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWideNavigationRail') private wideNavigationRail: boolean = false;
   @State private viewportHeight: number = 0;
   /** Presented header bottom (top + measured height), owned by the route. */
   @Prop headerBottom: number = bookshelfHeaderSpec().frameHeight;

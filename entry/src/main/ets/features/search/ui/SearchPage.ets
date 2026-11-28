@@ -77,9 +77,9 @@ let nextSearchSurfaceOwner: number = 0;
  */
 @Component
 export struct SearchPage {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('acceptPublication') publicationRevision: number = 0;
   publication: SearchPublication = new SearchPublication();
   // @State observes the top-level reference without @Prop's recursive copy.

@@ -24,7 +24,7 @@ import { READER_LAUNCH_LEADING, READER_LAUNCH_LEADING_ICON, READER_LAUNCH_LEADIN
  */
 @Component
 export struct ReaderSessionLaunchStage {
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop @Watch('onInteractionChanged') sample: ReaderSessionLaunchSample;
   @Prop sessionState: ReaderSessionCapsuleState = 'preparing';
   @Prop desiredPlaying: boolean = true;

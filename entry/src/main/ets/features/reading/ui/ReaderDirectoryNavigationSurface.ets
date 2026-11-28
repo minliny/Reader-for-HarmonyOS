@@ -37,7 +37,7 @@ class ReaderDirectoryTraceFrame extends FrameCallback {
 export struct ReaderDirectoryNavigationSurface {
   inputCurrent: (() => boolean) | undefined = undefined;
   chapterInputCurrent: ((chapter: LocalReadingTocEntry) => boolean) | undefined = undefined;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('onIdentityChanged') bookId: string = '';
   @Prop @Watch('onIdentityChanged') sourceId: string = 'local';
   @Prop @Watch('onViewInputsChanged') query: string = '';

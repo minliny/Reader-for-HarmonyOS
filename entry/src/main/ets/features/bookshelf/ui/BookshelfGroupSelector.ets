@@ -9,8 +9,8 @@ import type { BookGroup } from '../application/BookshelfManagementGateway';
 /** V1 lightweight single-select group control; never mutates groups on open. */
 @Component
 export struct BookshelfGroupSelector {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   @Prop selectedGroup: string = '';
   @Prop groups: BookGroup[] = [];

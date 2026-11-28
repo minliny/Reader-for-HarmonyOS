@@ -25,7 +25,7 @@ export struct ReaderWebDavLibraryPanel {
   onBusyChange: (busy: boolean) => void = (_busy: boolean): void => {};
   onConfigurationChanged: () => void = (): void => {};
   onRestoreStateChanged: () => void = (): void => {};
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
   @State private url: string = '';
   @State private user: string = '';
   @State private password: string = '';

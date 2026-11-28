@@ -42,12 +42,12 @@ export struct SharedDownloadPage {
 
   @Prop embeddedWide: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  @StorageLink('readerAppScheme') @Watch('syncOverlayChrome') private appThemeScheme: string = 'day';
-  @StorageLink('readerSystemScheme') @Watch('syncOverlayChrome') private systemScheme: string = 'day';
+  @StorageProp('readerAppScheme') @Watch('syncOverlayChrome') private appThemeScheme: string = 'day';
+  @StorageProp('readerSystemScheme') @Watch('syncOverlayChrome') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') @Watch('syncOverlayChrome')
   private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
-  @StorageLink('readerAppForeground') @Watch('onInputEligibilityChanged') private appForeground: boolean = true;
-  @StorageLink('readerWindowMetricsRevision') @Watch('onListGeometryChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppForeground') @Watch('onInputEligibilityChanged') private appForeground: boolean = true;
+  @StorageProp('readerWindowMetricsRevision') @Watch('onListGeometryChanged') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onBooksChanged') books: DownloadBookView[] = [];
   @Prop storageSummary: DownloadStorageSummary = {};
   @Prop storagePolicy: DownloadStoragePolicyView | undefined = undefined;

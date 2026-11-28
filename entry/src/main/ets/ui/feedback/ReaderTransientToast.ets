@@ -34,11 +34,11 @@ export struct ReaderTransientToast {
   @Watch('toastChanged') private toast: ReaderTransientToastState = createReaderTransientToastState();
   @Prop priority: number = 0;
   @Prop bounded: boolean = false;
-  @StorageLink(READER_TRANSIENT_HOST_STORAGE_KEY) @Watch('toastChanged') private activeHost: number = 0;
+  @StorageProp(READER_TRANSIENT_HOST_STORAGE_KEY) @Watch('toastChanged') private activeHost: number = 0;
   private hostId: number = -1;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') @Watch('foregroundChanged') private foreground: boolean = true;
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') @Watch('foregroundChanged') private foreground: boolean = true;
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @State private displayed: boolean = false;
   @State private toastOpacity: number = 0;
   @State private toastOffsetY: number = 12;

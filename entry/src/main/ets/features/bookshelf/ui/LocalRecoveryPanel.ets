@@ -24,7 +24,7 @@ type LocalRecoveryAction = LocalRecoveryDialog | 'resume';
 
 @Component
 export struct LocalRecoveryPanel {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
   @StorageProp('readerAppForeground') private appForeground: boolean = true;

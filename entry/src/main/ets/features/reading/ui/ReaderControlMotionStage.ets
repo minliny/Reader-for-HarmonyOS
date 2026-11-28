@@ -54,8 +54,8 @@ interface ReaderControlTopBarFrame {
  */
 @Component
 export struct ReaderControlMotionStage {
-  @StorageLink('readerAppScheme') private appScheme: string = 'day';
-  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appScheme: string = 'day';
+  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
   /**

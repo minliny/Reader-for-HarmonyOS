@@ -13,7 +13,7 @@ import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from './Rea
 export struct ReaderDirectoryChapterRow {
   @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @State private pressPointer: number = -1;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('clearPress') entry: LocalReadingTocEntry;
   @Prop rowHeight: number = 44;
   @Prop currentChapterIndex: number = -1;

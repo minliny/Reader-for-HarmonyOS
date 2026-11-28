@@ -4,7 +4,7 @@ import type { SearchContentType } from '../presentation/SearchViewState';
 
 @Component
 export struct ReaderSearchFilterTrigger {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerAppScheme') private scheme: string = 'day';
   @Prop expanded: boolean = false;
   @Prop presentationIdentity: string = '';
   @Prop triggerFocusId: string = '';

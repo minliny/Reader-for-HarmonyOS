@@ -6,7 +6,7 @@ import { readerBookmarkEmptyCopy } from '../presentation/ReaderBookmarkProjectio
 /** Strict empty state after the Core bookmark projection has been admitted. */
 @Component
 export struct ReaderBookmarkEmptyState {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @State private viewportHeight: number = 0;
   private mounted: boolean = false;
   @Prop filtered: boolean = false;

@@ -38,7 +38,7 @@ export function measureReaderStandaloneBookmark(context: UIContext, width: numbe
  */
 @Component
 export struct ReaderBookmarkRow {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop embeddedInControl: boolean = false;
   @Prop motionProgress: number = 1;

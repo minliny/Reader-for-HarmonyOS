@@ -59,8 +59,8 @@ export struct ReaderTtsConfigOverlay {
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly editorScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   private readonly editorScroller: Scroller = new Scroller();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @State private surfaceOpacity: number = 1;
   private mountAnimator: AnimatorResult | undefined = undefined;

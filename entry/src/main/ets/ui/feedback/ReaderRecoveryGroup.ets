@@ -5,7 +5,7 @@ import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
  * The supplied children retain their own identity, generation and admission. */
 @Component
 export struct ReaderRecoveryGroup {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @BuilderParam content: () => void = this.emptyContent;
 
   @Builder private emptyContent() {}

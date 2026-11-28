@@ -100,8 +100,8 @@ let ttsConfigurationFocusSequence = 0;
  * intentionally absent here. Business commands remain supplied by the owner. */
 @Component
 export struct ReaderControlTtsContent {
-  @StorageLink('readerAppScheme') @Watch('reportMorphActor') private appScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') @Watch('onWindowMetricsChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') @Watch('reportMorphActor') private appScheme: string = 'day';
+  @StorageProp('readerWindowMetricsRevision') @Watch('onWindowMetricsChanged') private readerWindowMetricsRevision: number = 0;
 
   // Pure retained source projections have no Scroll, IDs, callbacks or modal hosts.
   @Prop fixedIsland: boolean = false;

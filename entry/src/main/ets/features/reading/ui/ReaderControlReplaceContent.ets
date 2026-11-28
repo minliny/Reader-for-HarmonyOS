@@ -53,7 +53,7 @@ export struct ReaderControlReplaceContent {
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly editorScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   private readonly editorScroller: Scroller = new Scroller();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
   @Prop preparedMinimumRequired: boolean = false;

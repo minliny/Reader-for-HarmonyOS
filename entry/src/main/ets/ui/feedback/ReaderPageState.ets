@@ -7,9 +7,9 @@ import { ReaderRecoveryAction } from './ReaderRecoveryAction';
  * facts, retry admission and the bounds of its original content region. */
 @Component
 export struct ReaderPageState {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private appForeground: boolean = true;
-  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppForeground') private appForeground: boolean = true;
+  @StorageProp('readerReduceMotion') private appReduceMotion: boolean = false;
   @Prop variant: 'default' | 'readingBookmark' | 'inline' = 'default';
   @Prop title: string = '';
   @Prop message: string = '';

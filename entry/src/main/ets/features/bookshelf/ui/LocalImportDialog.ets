@@ -73,11 +73,11 @@ export struct LocalImportDialog {
   private readonly layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('local-import');
   private readonly selectionHintTextOptions: TextOptions | undefined =
     READER_LAYOUT_DEBUG_BUILD ? { controller: new TextController() } : undefined;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
     defaultNavigationPreferences();
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onPresentationChanged') state: LocalImportDialogState;
   @Prop @Watch('onBatchChanged') batch: LocalImportBatch | undefined;
   @Prop @Watch('onPresentationChanged') reduceMotion: boolean = false;
@@ -88,7 +88,7 @@ export struct LocalImportDialog {
   @Prop originalPending: boolean = false;
   @Prop @Watch('onRecoveryChanged') recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   onReconcile: (generation: number) => void = (_generation: number): void => {};
-  @StorageLink('readerAppForeground') @Watch('onForegroundChanged') private foreground: boolean = true;
+  @StorageProp('readerAppForeground') @Watch('onForegroundChanged') private foreground: boolean = true;
   @State private previewHost: ReaderRectVp = new ReaderRectVp();
   @State private measuredResultHeight: number = 0;
   @State private shellHeight: number = 0;

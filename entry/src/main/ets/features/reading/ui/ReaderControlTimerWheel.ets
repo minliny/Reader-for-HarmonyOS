@@ -8,7 +8,7 @@ import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
  */
 @Component
 export struct ReaderControlTimerWheel {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop value: number = 0;
   @Prop minimum: number = 0;
