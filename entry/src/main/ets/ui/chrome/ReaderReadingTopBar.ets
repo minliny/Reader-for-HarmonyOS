@@ -92,6 +92,7 @@ export struct ReaderReadingTopBar {
   @Prop subtitle: string = '';
   @Prop scheme: string = 'day';
   @Prop inputEnabled: boolean = true;
+  @Prop blurEnabled: boolean = false;
   @BuilderParam leading: () => void = this.empty;
   @BuilderParam trailing: () => void = this.empty;
 
@@ -135,9 +136,9 @@ export struct ReaderReadingTopBar {
         .alignItems(VerticalAlign.Center).enabled(this.inputEnabled)
         .borderRadius(Math.max(0, this.resolvedHeight() / 2 - 1)).clip(this.variant === 'manga');
     }.width(this.barWidth).height(this.resolvedHeight())
-      .backgroundColor(!this.materialDecision().native && !isReaderRealtimeBlurEnabled(this.navigationPreferences) ?
+      .backgroundColor(!this.materialDecision().native && (!this.blurEnabled || !isReaderRealtimeBlurEnabled(this.navigationPreferences)) ?
         readerAppColor('TOK_READ_SURFACE', this.scheme) : Color.Transparent)
-      .backgroundEffect(this.materialDecision().native || !isReaderRealtimeBlurEnabled(this.navigationPreferences) ?
+      .backgroundEffect(this.materialDecision().native || !this.blurEnabled || !isReaderRealtimeBlurEnabled(this.navigationPreferences) ?
         undefined : readerHeaderVeilMaterial(true, this.scheme))
       .border(this.materialDecision().native ? { width: 0, color: Color.Transparent } :
         { width: 1, color: readerHeaderVeilBorder(this.scheme) })

@@ -40,6 +40,7 @@ export struct ReaderTtsWaveform {
   private colorScheme: string = '';
   private colorProgress: number = -1;
   private colorValue: number = 0;
+  private lastSampleAtMs: number = 0;
 
   aboutToAppear(): void {
     this.mounted = true; this.frozenFallback = readerTtsWaveformSnapshot(); this.liveSample = this.frozenFallback;
@@ -52,16 +53,28 @@ export struct ReaderTtsWaveform {
     if (!this.mounted) return;
     if (!this.playing || !this.foreground || this.frozen || !this.active || !this.visible || this.reduceMotion) {
       WAVEFORM_CLOCK.unsubscribe(this.subscription); this.subscription = -1;
+      this.lastSampleAtMs = 0;
       if (!this.frozen) this.liveSample = createReaderTtsWaveformSample();
       return;
     }
     if (this.subscription < 0) {
       this.subscription = WAVEFORM_CLOCK.subscribe(true, false,
         (sample: ReaderTtsWaveformSample): void => {
-          if (this.mounted && this.playing && this.foreground && this.active && this.visible && !this.frozen && !this.reduceMotion) this.liveSample = sample;
+          if (!this.mounted || !this.playing || !this.foreground || !this.active || !this.visible || this.frozen || this.reduceMotion) {
+            return;
+          }
+          const now = readerMotionNowMs();
+          if (now - this.lastSampleAtMs < 32) return;
+          this.lastSampleAtMs = now;
+          this.liveSample = sample;
         },
         (callback: () => void): void => this.getUIContext().postFrameCallback(new ReaderTtsWaveformFrame(callback)));
     }
+  }
+  private barScaleY(index: number): number {
+    if (this.slotHeight <= 0) return 0;
+    const h = readerTtsWaveformBarHeight(this.sample().heights[index], this.sample().scales[index], this.slotHeight);
+    return Math.max(0.05, Math.min(1, h / this.slotHeight));
   }
   private sample(): ReaderTtsWaveformSample { return this.frozen ? this.frozenSample ?? this.frozenFallback : this.liveSample; }
   private barColor(): number {
@@ -82,10 +95,12 @@ export struct ReaderTtsWaveform {
     Row() {
       ForEach(this.sample().heights, (_height: number, index: number): void => {
         Row().width(readerTtsWaveformBarWidth(this.slotWidth))
-          .height(readerTtsWaveformBarHeight(this.sample().heights[index], this.sample().scales[index], this.slotHeight)).borderRadius(2)
+          .height(this.slotHeight).borderRadius(2)
+          .scale({ y: this.barScaleY(index) })
           .backgroundColor(this.barColor()).opacity(this.sample().opacities[index]);
       }, (_height: number, index: number): string => index.toString());
     }.width(this.slotWidth).height(this.slotHeight).clip(true)
+      .renderGroup(this.playing && !this.frozen && !this.reduceMotion)
       .justifyContent(FlexAlign.SpaceBetween).alignItems(VerticalAlign.Center)
       .hitTestBehavior(HitTestMode.None).accessibilityLevel('no')
       .onVisibleAreaChange([0, 0.01, 1], (visible: boolean, ratio: number): void => {

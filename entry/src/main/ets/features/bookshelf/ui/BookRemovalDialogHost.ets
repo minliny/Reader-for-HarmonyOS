@@ -3,7 +3,7 @@ import { BookRemovalDialogPresentation, type BookRemovalDialogHandle } from '../
 import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam, readerReduceMotionFromStorage } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { defaultNavigationPreferences, readerSheetBackdropBlur } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { resolveReaderModalScrimSpec, type ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 
 /** Mounted ArkUI owner for the native dialog. The scene supplies admission
@@ -112,9 +112,7 @@ export struct BookRemovalDialogHost {
   }
 
   private backdropEffect(): BackgroundEffectOptions | undefined {
-    if (this.backdropTicket === 0) return undefined;
-    const radius = readerSheetBackdropBlur(this.appearancePreferences);
-    return radius > 0 ? { radius, color: Color.Transparent } : undefined;
+    return undefined;
   }
 
   build() {

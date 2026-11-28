@@ -8,6 +8,9 @@ import { readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeybo
 import { readerControlIslandHeight, type ReaderControlContentBudget } from './ReaderLayoutGeometry';
 import { readerTtsWaveformSnapshot } from './ReaderTtsWaveform';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
+import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
+import { readerControlNativeMotionMode, type ReaderControlNativeMotionMode } from './ReaderControlNativeMotionPolicy';
 import { readerControlIsDirectSheet } from './ReaderControlHostSession';
 import { ReaderControlMotionFrameCache } from './ReaderControlMotionGeometry';
 import { readerControlPlaybackProfileMatches, readerControlPlaybackSourceKindMatches, type ReaderControlPlaybackProfileReceipt } from './ReaderControlPlaybackProfile';
@@ -33,7 +36,9 @@ import type { ReaderControlPage } from './ReaderControlRouting';
 import type { ReaderControlBackdropRect } from './ReaderControlBackdropTouch';
 import { copyReaderControlSessionState, createReaderControlSessionState, readerControlContentLocation, readerControlTargetLocation, readerControlSessionStateEquals, sampleReaderControlSession, collapseReaderControlSession, toggleReaderControlSession,
   setReaderControlDirectoryTab, expandReaderControlSession, type ReaderControlLocation, type ReaderControlSessionState } from './ReaderControlSessionState';
-import { readerControlMotionAxis, readerControlMotionBounds, sampleReaderControlMotionComposition, type ReaderControlMotionFrame, type ReaderControlMotionBounds } from './ReaderControlMotionGeometry';
+import { READER_CONTROL_MR1_DOCK_TRANSLATE_Y, READER_CONTROL_MR1_TOP_BAR_TRANSLATE_Y,
+  readerControlMotionAxis, readerControlMotionBounds, sampleReaderControlMotionComposition,
+  type ReaderControlMotionFrame, type ReaderControlMotionBounds } from './ReaderControlMotionGeometry';
 import type { ReaderControlPanelFacts, ReaderControlIntentHandler, ReaderControlLaunchSource } from './ReaderControlPanelNativeContract';
 
 export interface ReaderControlMotionEnvironment {
@@ -105,6 +110,15 @@ export class ReaderControlPanelMotionPaint {
   @Track moduleMotionOpacity: number = 1;
   @Track visualDirectSheet: boolean = false;
   @Track directSheetClosing: boolean = false;
+  @Track controlPresented: boolean = false;
+  @Track visibilityAnimating: boolean = false;
+  @Track topBarTranslateY: number = READER_CONTROL_MR1_TOP_BAR_TRANSLATE_Y;
+  @Track topBarOpacity: number = 0;
+  @Track dockTranslateY: number = READER_CONTROL_MR1_DOCK_TRANSLATE_Y;
+  @Track dockOpacity: number = 0;
+  @Track directSheetTranslateX: number = 0;
+  @Track directSheetTranslateY: number = 0;
+  @Track directSheetScrimOpacity: number = 0;
   @Track lastVisibleContentLocation: ReaderControlLocation = {
     level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick',
   };
@@ -180,6 +194,14 @@ export class ReaderControlPanelRuntimeHost {
   private quickGeometryMode: boolean | undefined = undefined;
   private quickGeometry: ReaderControlGeometry | undefined = undefined;
   private navigationIntentPending: boolean = false;
+  private nativeMotionGeneration: number = 0;
+  private nativeMotionMode: ReaderControlNativeMotionMode | '' = '';
+  private nativeMotionTicket: number = -1;
+  private nativeMotionTimer: number = -1;
+  private nativeMotionTickMs: number = 0;
+  private prewarmTimer: number = -1;
+  private lastBackdropSentAtMs: number = 0;
+  private lastBackdropVisible: boolean = false;
 
   constructor(host: ReaderControlPanelRuntimeEnvironment) { this.host = host; }
 
@@ -196,9 +218,21 @@ export class ReaderControlPanelRuntimeHost {
     this.host.minimum.registerFonts();
     this.geo = new ReaderControlGeometry(this.isExpanded());
     this.host.minimum.warmFonts();
+    const lifecycle = this.runtimeLifecycle;
+    if (!this.host.paint().controlActorsRetained && this.host.facts().geometry.verification?.observing() !== true) {
+      this.prewarmTimer = setTimeout((): void => {
+        this.prewarmTimer = -1;
+        if (this.runtimeMounted && lifecycle === this.runtimeLifecycle && !this.host.paint().controlActorsRetained &&
+          this.host.facts().geometry.verification?.observing() !== true) {
+          this.host.paint().controlActorsRetained = true;
+        }
+      }, 280);
+    }
   }
 
   unmount(): void {
+    if (this.prewarmTimer >= 0) { clearTimeout(this.prewarmTimer); this.prewarmTimer = -1; }
+    this.cancelNativeMotion();
     this.host.quickHome.retirePress();
     this.verificationMotion?.finish('unmounted');
     this.verificationPointerFramePending = false;
@@ -341,34 +375,272 @@ export class ReaderControlPanelRuntimeHost {
     this.acceptRuntime(update);
   }
 
+  private cancelNativeMotion(): void {
+    this.nativeMotionGeneration += 1;
+    this.nativeMotionMode = '';
+    this.nativeMotionTicket = -1;
+    if (this.nativeMotionTimer >= 0) {
+      clearTimeout(this.nativeMotionTimer);
+      this.nativeMotionTimer = -1;
+    }
+    if (this.host.paint().visibilityAnimating) this.host.paint().visibilityAnimating = false;
+  }
+
+  private nativeModeFor(session: ReaderControlSessionState): ReaderControlNativeMotionMode {
+    if (!this.runtimeMounted || session.transition === undefined) return 'frameLoop';
+    const launch = this.host.facts().launch;
+    if (launch.ownsControls || launch.recovering) return 'frameLoop';
+    const target = readerControlTargetLocation(session);
+    const fromDirect = session.transition.fromLocation.level === 'secondary' &&
+      readerControlIsDirectSheet(session.transition.fromLocation.module);
+    const toDirect = target.level === 'secondary' && readerControlIsDirectSheet(target.module);
+    const direct = this.host.facts().geometry.directSheet && (fromDirect || toDirect);
+    const transitionsProbed = readerTransitionsEnabled() || this.host.facts().geometry.verification?.observing() === true;
+    return readerControlNativeMotionMode(
+      session.transition.kind,
+      this.host.facts().geometry.fixedIsland,
+      this.host.facts().geometry.directSheet && toDirect,
+      direct,
+      session.heldPointerId,
+      transitionsProbed,
+    );
+  }
+
+  private computeDirectSheetOffset(): number {
+    const layout = this.host.minimum.layout();
+    return layout.isExpanded() ? Math.max(0, layout.viewportWidth - this.dockLeft()) :
+      this.controlPanelHeight() + this.directSheetBottom();
+  }
+
+  private syncDirectSheetPose(expansionProgress: number): void {
+    const reduce = this.host.facts().geometry.reduceMotion;
+    const active = this.directSheetVisible();
+    const expanded = this.host.minimum.layout().isExpanded();
+    const translation = active && !reduce ? (1 - expansionProgress) * this.computeDirectSheetOffset() : 0;
+    this.host.paint().directSheetTranslateX = expanded ? translation : 0;
+    this.host.paint().directSheetTranslateY = expanded ? 0 : translation;
+    this.host.paint().directSheetScrimOpacity = active ? expansionProgress : 0;
+  }
+
+  private finishNativeMotion(generation: number, ticket: number, durationMs: number): void {
+    if (generation !== this.nativeMotionGeneration || !this.runtimeMounted) return;
+    const mode = this.nativeMotionMode;
+    const startMs = this.nativeMotionTickMs;
+    this.cancelNativeMotion();
+    const runtime = this.runtime;
+    if (runtime === undefined || runtime.ticket() !== ticket) return;
+    const endUpdate = runtime.frame(Math.max(readerMotionNowMs(), startMs + durationMs + 1), ticket,
+      (p: number): number => this.clockSample(p));
+    if (endUpdate !== undefined) {
+      this.acceptRuntime(endUpdate);
+    } else if (mode === 'visibility') {
+      const paint = this.host.paint();
+      paint.controlPresented = paint.visualVisibilityProgress > 0;
+      paint.visibilityAnimating = false;
+    }
+  }
+
+  private startNativeAnimate(
+    generation: number,
+    ticket: number,
+    durationMs: number,
+    deferOneFrame: boolean,
+    animateValues: () => void,
+  ): void {
+    const reduce = this.host.facts().geometry.reduceMotion;
+    const lifecycle = this.runtimeLifecycle;
+    const launch = (): void => {
+      if (!this.runtimeMounted || lifecycle !== this.runtimeLifecycle || generation !== this.nativeMotionGeneration) return;
+      this.nativeMotionTimer = setTimeout((): void => {
+        this.finishNativeMotion(generation, ticket, durationMs);
+      }, durationMs + 80);
+      this.host.context().animateTo({
+        duration: durationMs,
+        curve: reduce ? Curve.EaseOut : readerMotionStandardCurve(),
+        onFinish: (): void => this.finishNativeMotion(generation, ticket, durationMs),
+      }, animateValues);
+    };
+    if (deferOneFrame) {
+      this.host.context().postFrameCallback(new ReaderControlFrameCallback((): void => { launch(); }));
+    } else {
+      launch();
+    }
+  }
+
+  private runNativeMotion(
+    mode: ReaderControlNativeMotionMode,
+    update: ReaderControlRuntimeUpdate,
+    ticket: number,
+    wasRetained: boolean,
+    alreadyRunning: boolean,
+    sessionChanged: boolean,
+    placementInputChanged: boolean,
+  ): void {
+    const paint = this.host.paint();
+    const transition = update.session.transition!;
+    const duration = Math.max(0, transition.durationMs);
+    const reduce = this.host.facts().geometry.reduceMotion;
+    if (!alreadyRunning) {
+      this.cancelNativeMotion();
+      this.nativeMotionMode = mode;
+      this.nativeMotionTicket = ticket;
+      this.nativeMotionTickMs = readerMotionNowMs();
+      const generation = this.nativeMotionGeneration;
+      if (mode === 'visibility') {
+        const opening = transition.to.visibilityProgress > 0;
+        const target = readerControlTargetLocation(update.session);
+        const toDirect = this.host.facts().geometry.directSheet && target.level === 'secondary' &&
+          readerControlIsDirectSheet(target.module);
+        paint.visualDirectSheet = toDirect;
+        paint.directSheetClosing = false;
+        paint.visualExpansionProgress = transition.to.expansionProgress;
+        paint.visualVisibilityProgress = opening ? 1 : 0;
+        paint.visualHeldPointerId = update.session.heldPointerId;
+        paint.visualTransitionKind = transition.kind;
+        paint.motionOffsetY = 0;
+        paint.moduleMotionX = 0;
+        paint.moduleMotionY = 0;
+        paint.moduleMotionOpacity = 1;
+        paint.directSheetTranslateX = 0;
+        paint.directSheetTranslateY = 0;
+        paint.directSheetScrimOpacity = toDirect ? 1 : 0;
+        paint.controlPresented = true;
+        paint.visibilityAnimating = true;
+        if (!wasRetained && opening) {
+          paint.topBarTranslateY = reduce ? 0 : READER_CONTROL_MR1_TOP_BAR_TRANSLATE_Y;
+          paint.topBarOpacity = 0;
+          paint.dockTranslateY = reduce ? 0 : READER_CONTROL_MR1_DOCK_TRANSLATE_Y;
+          paint.dockOpacity = 0;
+        }
+        const targetTopY = opening ? 0 : (reduce ? 0 : READER_CONTROL_MR1_TOP_BAR_TRANSLATE_Y);
+        const targetTopOpacity = opening ? 1 : 0;
+        const targetDockY = opening ? 0 : (reduce ? 0 : READER_CONTROL_MR1_DOCK_TRANSLATE_Y);
+        const targetDockOpacity = opening ? 1 : 0;
+        this.startNativeAnimate(generation, ticket, duration, !wasRetained && opening, (): void => {
+          paint.topBarTranslateY = targetTopY;
+          paint.topBarOpacity = targetTopOpacity;
+          paint.dockTranslateY = targetDockY;
+          paint.dockOpacity = targetDockOpacity;
+        });
+      } else if (mode === 'directSheet') {
+        const target = readerControlTargetLocation(update.session);
+        const fromDirect = transition.fromLocation.level === 'secondary' &&
+          readerControlIsDirectSheet(transition.fromLocation.module);
+        const toDirect = target.level === 'secondary' && readerControlIsDirectSheet(target.module);
+        const openingSheet = toDirect && !fromDirect;
+        const expanded = this.host.minimum.layout().isExpanded();
+        const offscreen = this.computeDirectSheetOffset();
+        paint.visualDirectSheet = true;
+        paint.directSheetClosing = !toDirect && fromDirect && target.level === 'home';
+        paint.visualVisibilityProgress = 1;
+        paint.visualExpansionProgress = 1;
+        paint.visualHeldPointerId = update.session.heldPointerId;
+        paint.visualTransitionKind = transition.kind;
+        paint.motionOffsetY = 0;
+        paint.controlPresented = true;
+        paint.visibilityAnimating = false;
+        paint.topBarTranslateY = 0;
+        paint.topBarOpacity = 1;
+        paint.dockTranslateY = 0;
+        paint.moduleMotionX = 0;
+        paint.moduleMotionY = 0;
+        paint.moduleMotionOpacity = 1;
+        if (openingSheet) {
+          paint.directSheetTranslateX = expanded && !reduce ? offscreen : 0;
+          paint.directSheetTranslateY = !expanded && !reduce ? offscreen : 0;
+          paint.directSheetScrimOpacity = 0;
+          paint.dockOpacity = reduce ? 0 : 1;
+        }
+        const targetOffsetX = !openingSheet && expanded && !reduce ? offscreen : 0;
+        const targetOffsetY = !openingSheet && !expanded && !reduce ? offscreen : 0;
+        const targetScrimOpacity = openingSheet ? 1 : 0;
+        const targetDockOpacity = openingSheet ? 1 : (reduce ? 0 : 1);
+        this.startNativeAnimate(generation, ticket, duration, openingSheet, (): void => {
+          paint.directSheetTranslateX = targetOffsetX;
+          paint.directSheetTranslateY = targetOffsetY;
+          paint.directSheetScrimOpacity = targetScrimOpacity;
+          paint.dockOpacity = targetDockOpacity;
+        });
+      } else {
+        paint.visualVisibilityProgress = 1;
+        paint.visualExpansionProgress = transition.to.expansionProgress;
+        paint.visualHeldPointerId = update.session.heldPointerId;
+        paint.visualTransitionKind = transition.kind;
+        paint.motionOffsetY = 0;
+        paint.controlPresented = true;
+        paint.visibilityAnimating = false;
+        paint.topBarTranslateY = 0;
+        paint.topBarOpacity = 1;
+        paint.dockTranslateY = 0;
+        paint.dockOpacity = 1;
+        this.updateModuleMotion(update.session);
+        this.startNativeAnimate(generation, ticket, duration, true, (): void => {
+          paint.moduleMotionX = 0;
+          paint.moduleMotionY = 0;
+          paint.moduleMotionOpacity = 1;
+        });
+      }
+      this.host.quickHome.syncProgress();
+    }
+    const resolvedLayout = this.layoutFrame();
+    if (paint.contentMotionProgress !== resolvedLayout.progress) paint.contentMotionProgress = resolvedLayout.progress;
+    if (paint.contentMotionWidth !== resolvedLayout.content.width) paint.contentMotionWidth = resolvedLayout.content.width;
+    if (paint.contentMotionHeight !== resolvedLayout.content.height) paint.contentMotionHeight = resolvedLayout.content.height;
+    if (placementInputChanged) this.refreshDockPlacement();
+    if (sessionChanged) this.host.intent({ kind: 'visualSessionChange', state: update.session });
+    if (update.endpoint !== undefined) this.commitVisualSession(update.endpoint);
+    this.dockRect.x = this.rootScreenX + this.dockLeft();
+    this.dockRect.y = this.rootScreenY + this.presentedDockTop() + resolvedLayout.shell.y;
+    this.dockRect.width = resolvedLayout.shell.width;
+    this.dockRect.height = resolvedLayout.shell.height;
+    this.reportBackdropRegions(true);
+    this.confirmLaunchSourceReady();
+  }
+
   private acceptRuntime(update: ReaderControlRuntimeUpdate): void {
     if (!this.runtimeMounted) return;
+    const ticket = this.runtime?.ticket() ?? -1;
     const observed = this.host.facts().geometry.verification?.current(this.visualSession);
     if (this.visualSession.epoch !== update.session.epoch) {
       if (observed !== undefined) this.verificationMotion?.finish('interrupted', observed.transitionId);
       else this.verificationMotion?.finish('interrupted');
     }
+    const wasRetained = this.host.paint().controlActorsRetained;
     this.rememberVisibleContentLocation(update.session);
     const sessionChanged = !readerControlSessionStateEquals(this.visualSession, update.session);
     if (sessionChanged) {
       this.visualSession = update.session;
     }
     const visual = sampleReaderControlSession(update.session);
+    const transition = update.session.transition;
+    const targetVisibility = transition?.to.visibilityProgress ?? visual.visibilityProgress;
     const retirePlacementPointers = this.placementPointers.size > 0 && update.session.heldPointerId < 0 &&
-      visual.visibilityProgress <= 0 && (update.session.transition?.to.visibilityProgress ?? 0) <= 0;
+      visual.visibilityProgress <= 0 && targetVisibility <= 0;
     if (retirePlacementPointers) this.placementPointers.clear();
     const placementInputChanged = this.host.paint().visualHeldPointerId !== update.session.heldPointerId ||
-      this.host.paint().visualTransitionKind !== (update.session.transition?.kind ?? '') || retirePlacementPointers;
+      this.host.paint().visualTransitionKind !== (transition?.kind ?? '') || retirePlacementPointers;
     // Keep only the lightweight command owner on reading entry. Once opened,
     // retain the actor tree through every close to preserve compositor/input
     // continuity. The first open command itself admits the tree at progress 0.
-    if (visual.visibilityProgress > 0 || (update.session.transition?.to.visibilityProgress ?? 0) > 0 ||
-      update.session.heldPointerId >= 0) this.host.paint().controlActorsRetained = true;
-    if (this.host.topBar.menuVisible() && visual.visibilityProgress <= 0) this.host.topBar.dismiss();
+    if (visual.visibilityProgress > 0 || targetVisibility > 0 || update.session.heldPointerId >= 0) {
+      if (this.prewarmTimer >= 0) { clearTimeout(this.prewarmTimer); this.prewarmTimer = -1; }
+      this.host.paint().controlActorsRetained = true;
+    }
+    if (this.host.topBar.menuVisible() && targetVisibility <= 0) this.host.topBar.dismiss();
+
+    const nativeMode: ReaderControlNativeMotionMode | '' =
+      update.endpoint === undefined && transition !== undefined ? this.nativeModeFor(update.session) : '';
+    if (nativeMode === 'visibility' || nativeMode === 'directSheet' || nativeMode === 'moduleNavigate') {
+      const alreadyRunning = this.nativeMotionMode === nativeMode && this.nativeMotionTicket === ticket;
+      this.runNativeMotion(nativeMode, update, ticket, wasRetained, alreadyRunning, sessionChanged, placementInputChanged);
+      return;
+    }
+
+    this.cancelNativeMotion();
     this.host.paint().visualExpansionProgress = visual.expansionProgress;
     this.host.paint().visualVisibilityProgress = visual.visibilityProgress;
     this.host.paint().visualHeldPointerId = update.session.heldPointerId;
-    this.host.paint().visualTransitionKind = update.session.transition?.kind ?? '';
+    this.host.paint().visualTransitionKind = transition?.kind ?? '';
     this.updateModuleMotion(update.session);
     this.host.paint().motionOffsetY = update.offsetY;
     this.host.quickHome.syncProgress();
@@ -376,14 +648,22 @@ export class ReaderControlPanelRuntimeHost {
     if (sessionChanged) this.host.intent({ kind: 'visualSessionChange', state: update.session });
     if (update.endpoint !== undefined) this.commitVisualSession(update.endpoint);
     const f = this.frame();
-    if (this.host.paint().contentMotionProgress !== f.progress) this.host.paint().contentMotionProgress = f.progress;
-    if (this.host.paint().contentMotionWidth !== f.content.width) this.host.paint().contentMotionWidth = f.content.width;
-    if (this.host.paint().contentMotionHeight !== f.content.height) this.host.paint().contentMotionHeight = f.content.height;
+    const paint = this.host.paint();
+    if (paint.contentMotionProgress !== f.progress) paint.contentMotionProgress = f.progress;
+    if (paint.contentMotionWidth !== f.content.width) paint.contentMotionWidth = f.content.width;
+    if (paint.contentMotionHeight !== f.content.height) paint.contentMotionHeight = f.content.height;
+    paint.controlPresented = f.visibility > 0 || update.session.heldPointerId >= 0 || this.host.facts().launch.sample !== undefined;
+    paint.visibilityAnimating = false;
+    paint.topBarTranslateY = f.topBar.translateY;
+    paint.topBarOpacity = f.topBar.opacity;
+    paint.dockTranslateY = f.dock.translateY;
+    paint.dockOpacity = f.dock.opacity * (this.directSheetVisible() && this.host.facts().geometry.reduceMotion ? paint.visualExpansionProgress : 1);
+    this.syncDirectSheetPose(paint.visualExpansionProgress);
     this.dockRect.x = this.rootScreenX + this.dockLeft();
-    this.dockRect.y = this.rootScreenY + this.presentedDockTop() + f.shell.y + f.dock.translateY;
+    this.dockRect.y = this.rootScreenY + this.presentedDockTop() + f.shell.y + paint.dockTranslateY;
     this.dockRect.width = f.shell.width;
     this.dockRect.height = f.shell.height;
-    this.reportBackdropRegions();
+    this.reportBackdropRegions(update.endpoint !== undefined || placementInputChanged);
     this.confirmLaunchSourceReady();
     this.scheduleRuntimeFrame();
   }
@@ -435,6 +715,7 @@ export class ReaderControlPanelRuntimeHost {
   }
 
   private scheduleRuntimeFrame(): void {
+    if (this.nativeMotionMode !== '') return;
     const runtime = this.runtime;
     if (!this.runtimeMounted || runtime === undefined || !runtime.needsFrame()) return;
     const ticket = runtime.ticket();
@@ -635,6 +916,28 @@ export class ReaderControlPanelRuntimeHost {
 
   private isExpanded(): boolean { return this.host.minimum.layout().isExpanded(); }
 
+  layoutFrame(): ReaderControlMotionFrame {
+    const launch = this.host.facts().launch.sample;
+    if (launch !== undefined && (this.host.facts().launch.ownsControls || this.host.facts().launch.recovering)) {
+      return this.frame();
+    }
+    if (this.host.facts().geometry.directSheet && this.host.paint().visualDirectSheet) {
+      const layout = this.host.minimum.layout();
+      const height = this.controlPanelHeight();
+      return this.motionFrameCache.sample(1, 1, layout.fullPanelWidth, height,
+        this.directSheetBottom(), this.controlQuickHeight(), 0, this.directSheetBudget(layout, height),
+        'legacy', this.host.facts().geometry.reduceMotion);
+    }
+    if (this.nativeMotionMode !== '' || !this.host.paint().controlPresented) {
+      return this.motionFrameCache.sample(1, this.host.paint().visualExpansionProgress,
+        this.host.minimum.layout().fullPanelWidth, this.controlPanelHeight(), this.host.minimum.layout().dockBottomGap,
+        this.controlQuickHeight(), this.host.paint().motionOffsetY, this.host.minimum.layout().contentBudget,
+        this.host.facts().geometry.fixedIsland ? (this.contentLocation().level === 'secondary' ? 'module' : 'home') : 'legacy',
+        this.host.facts().geometry.reduceMotion);
+    }
+    return this.frame();
+  }
+
   frame(): ReaderControlMotionFrame {
     const launch = this.host.facts().launch.sample;
     if (launch !== undefined && (this.host.facts().launch.ownsControls || this.host.facts().launch.recovering)) {
@@ -832,12 +1135,15 @@ export class ReaderControlPanelRuntimeHost {
     return this.host.paint().lastVisibleContentLocation;
   }
 
-  reportBackdropRegions(): void {
-    const frame = this.frame();
+  reportBackdropRegions(force: boolean = false): void {
     const ready = this.dockMeasured && this.host.topBar.rectangle().width > 0 && !this.host.facts().geometry.obscured;
+    const now = readerMotionNowMs();
+    if (!force && this.lastBackdropVisible === ready && now - this.lastBackdropSentAtMs < 48) return;
+    this.lastBackdropSentAtMs = now;
+    this.lastBackdropVisible = ready;
     const topBar = this.backdropRegions[1];
     topBar.x = this.host.topBar.rectangle().x;
-    topBar.y = this.host.topBar.rectangle().y + frame.topBar.translateY;
+    topBar.y = this.host.topBar.rectangle().y + this.host.paint().topBarTranslateY;
     topBar.width = this.host.topBar.rectangle().width;
     topBar.height = this.host.topBar.rectangle().height;
     topBar.borderRadius = 24;
@@ -1033,9 +1339,10 @@ export class ReaderControlPanelRuntimeHost {
   }
 
   navigationInputEnabled(forAppearance: boolean = false): boolean {
+    const f = this.layoutFrame();
     return this.controlActionInputEnabled(true, forAppearance) && (!this.host.facts().geometry.minimum.preparedRequired || this.host.minimum.presentationAvailable()) &&
       (!this.host.facts().geometry.minimum.preparedRequired || this.host.facts().geometry.minimum.receipt?.environmentKey === this.host.facts().geometry.minimum.environmentKey) &&
-      this.frame().navigation.opacity > 0 && this.frame().navigation.height > 0;
+      f.navigation.opacity > 0 && f.navigation.height > 0;
   }
 
   activeNavigationModule(): string {

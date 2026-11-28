@@ -86,12 +86,21 @@ export interface ReaderControlTopBarView {
   readonly directSheetVisible: () => boolean;
   readonly shortHomeContentInput: () => boolean;
   readonly currentOwnerScope: () => string;
+  readonly topBarTranslateY: () => number;
+  readonly topBarOpacity: () => number;
+  readonly topBarPresented: () => boolean;
+  readonly topBarAnimating: () => boolean;
+  readonly topBarBlurEnabled: () => boolean;
   readonly guardAction: (action: () => void) => () => void;
   readonly onIntent: (intent: ReaderControlIntent) => ReaderControlIntentResult;
   readonly syncProgressInput: () => void;
   readonly refreshDockPlacement: () => void;
   readonly reportBackdropRegions: () => void;
 }
+
+const INERT_MORE_POPUP_OPTIONS: CustomPopupOptions = {
+  builder: (): void => {},
+};
 
 /** Owns one More menu shared by the regular and short-window controls.
  * Native callbacks are admitted only by their captured menu generation and
@@ -118,6 +127,11 @@ export class ReaderControlTopBarOwner {
   buildLeading(): void { this.view.buildLeading(); }
   buildTrailing(): void { this.view.buildTrailing(); }
   directSheetVisible(): boolean { return this.view.directSheetVisible(); }
+  topBarTranslateY(): number { return this.view.topBarTranslateY(); }
+  topBarOpacity(): number { return this.view.topBarOpacity(); }
+  topBarPresented(): boolean { return this.view.topBarPresented(); }
+  topBarAnimating(): boolean { return this.view.topBarAnimating(); }
+  topBarBlurEnabled(): boolean { return this.view.topBarBlurEnabled(); }
   popupMaterial(): ReaderSurfaceMaterialDecision { return this.view.popupMaterial(); }
   menuVisible(): boolean { return this.view.paint().visible; }
   topBarRect(): ReaderControlBackdropRect { return this.backdropRect; }
@@ -173,7 +187,7 @@ export class ReaderControlTopBarOwner {
 
   private setMoreMenuVisible(visible: boolean): void {
     if (this.menuVisible() === visible) return;
-    if (visible && (!this.view.runtimeMounted() || !this.facts().geometry.inputEnabled || this.facts().geometry.obscured || (this.facts().geometry.temporary.layer !== '') || this.frame().visibility <= 0)) return;
+    if (visible && (!this.view.runtimeMounted() || !this.facts().geometry.inputEnabled || this.facts().geometry.obscured || (this.facts().geometry.temporary.layer !== '') || !this.view.topBarPresented())) return;
     if (visible) {
       this.moreMenuGeneration += 1;
       this.moreMenuRecoveryIdentity = this.facts().document.recovery.identity;
@@ -235,7 +249,7 @@ export class ReaderControlTopBarOwner {
 
   performMoreAction(action: 'info' | 'refresh' | 'download' | 'recovery', generation: number = this.moreMenuGeneration): void {
     if (generation !== this.moreMenuGeneration || !this.menuVisible() || !this.view.runtimeMounted() ||
-      !this.facts().geometry.inputEnabled || this.facts().geometry.obscured || this.frame().visibility <= 0 ||
+      !this.facts().geometry.inputEnabled || this.facts().geometry.obscured || !this.view.topBarPresented() ||
       this.moreMenuOwnerScope !== this.view.currentOwnerScope()) return;
     if (action === 'refresh' && !this.facts().document.allowChapterRefresh) return;
     if (action === 'download' && !this.facts().document.download.bookEnabled) return;
@@ -319,6 +333,7 @@ export class ReaderControlTopBarOwner {
   }
 
   readerMorePopupOptions(): CustomPopupOptions {
+    if (!this.menuVisible()) return INERT_MORE_POPUP_OPTIONS;
     const generation = this.moreMenuGeneration;
     const surface = this.readerMoreSurfaceSpec();
     const density = readerWindowMetrics().densityPixels;
@@ -385,7 +400,7 @@ export class ReaderControlTopBarOwner {
 
   topBarInputEnabled(): boolean {
     return this.view.runtimeMounted() && this.facts().geometry.inputEnabled && ((this.view.onIntent({ kind: 'inputCurrent' }) as boolean | undefined) ?? true) && !this.facts().geometry.obscured &&
-      this.layout().topBarVisible && this.frame().topBar.opacity > 0;
+      this.layout().topBarVisible && this.view.topBarPresented();
   }
 
   sourceActionHeight(): number {
@@ -411,15 +426,16 @@ export function ReaderControlTopBar($$: ReaderControlTopBarSlot) {
     ReaderControlTopBarContent($$);
   }
     .id('reader-control-motion-topbar')
+    .renderGroup($$.owner.topBarAnimating())
     .width($$.owner.layout().topBarWidth).height($$.owner.layout().topBarHeight)
     .position({ x: ($$.owner.layout().viewportWidth - $$.owner.layout().topBarWidth) / 2,
       y: $$.owner.layout().topBarTop })
-    .translate({ y: $$.owner.frame().topBar.translateY })
-    .opacity($$.owner.layout().topBarVisible ? $$.owner.frame().topBar.opacity : 0)
-    .enabled(!$$.owner.directSheetVisible() && $$.owner.topBarInputEnabled() && $$.owner.frame().topBar.opacity > 0)
-    .hitTestBehavior(!$$.owner.directSheetVisible() && $$.owner.layout().topBarVisible && $$.owner.frame().topBar.opacity > 0 ?
+    .translate({ y: $$.owner.topBarTranslateY() })
+    .opacity($$.owner.layout().topBarVisible ? $$.owner.topBarOpacity() : 0)
+    .enabled(!$$.owner.directSheetVisible() && $$.owner.topBarInputEnabled() && $$.owner.topBarPresented())
+    .hitTestBehavior(!$$.owner.directSheetVisible() && $$.owner.layout().topBarVisible && $$.owner.topBarPresented() ?
       HitTestMode.Transparent : HitTestMode.None)
-    .accessibilityLevel($$.owner.layout().topBarVisible && $$.owner.frame().topBar.opacity > 0 &&
+    .accessibilityLevel($$.owner.layout().topBarVisible && $$.owner.topBarPresented() &&
       ($$.owner.facts().geometry.temporary.layer === '' || $$.owner.menuVisible()) ? 'auto' : 'no-hide-descendants')
     .onAreaChange((_previous: Area, current: Area): void => $$.owner.measureTopBar(current));
 }
@@ -443,7 +459,7 @@ export function ReaderControlMoreMenu($$: ReaderControlMoreMenuInput) {
 function ReaderControlTopBarContent($$: ReaderControlTopBarSlot) {
   ReaderReadingTopBar({ variant: 'reading', barWidth: $$.owner.layout().topBarWidth, barHeight: $$.owner.layout().topBarHeight,
     bookTitle: $$.owner.facts().document.bookTitle, subtitle: $$.owner.topBarSubtitle(), scheme: $$.owner.scheme(),
-    inputEnabled: $$.owner.facts().geometry.inputEnabled,
+    inputEnabled: $$.owner.facts().geometry.inputEnabled, blurEnabled: $$.owner.topBarBlurEnabled(),
     leading: (): void => { $$.owner.buildLeading(); },
     trailing: (): void => { $$.owner.buildTrailing(); },
   });

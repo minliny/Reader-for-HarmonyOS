@@ -4,6 +4,7 @@ import vibrator from '@ohos.vibrator';
 import type { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { motionAnimateParam, readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { readerAppColor, readerThemeDefinition, type ReaderThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
 import type { LocalReadingBookmark, LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
 import type { ReaderAppearanceTheme } from '../application/ReaderAppearanceState';
@@ -207,9 +208,19 @@ export class ReaderBookmarkInteractionHost {
     };
     if (this.ports.reduceMotion()) {
       this.ports.uiContext().animateTo(readerMotionReducedFadeParam(finish), (): void => {
-        this.ports.publishProjection({ bookmarkPageOffsetY: 0 });
-        this.ports.publishProjection({ bookmarkRibbonFrame: { value: target } });
-        this.ports.publishProjection({ bookmarkPullHintOpacity: 0 });
+        this.ports.publishProjection({
+          bookmarkPageOffsetY: 0,
+          bookmarkRibbonFrame: { value: target },
+          bookmarkPullHintOpacity: 0,
+        });
+      });
+    } else if (!readerTransitionsEnabled()) {
+      this.ports.uiContext().animateTo(motionAnimateParam('reader.bookmark.rollback', finish), (): void => {
+        this.ports.publishProjection({
+          bookmarkPageOffsetY: 0,
+          bookmarkRibbonFrame: { value: target },
+          bookmarkPullHintOpacity: 0,
+        });
       });
     } else {
       this.animateRollback(generation, finish, target);
@@ -252,12 +263,14 @@ export class ReaderBookmarkInteractionHost {
           return;
         }
         const remaining = 1 - curve.interpolate(Math.max(0, Math.min(1, fraction)));
-        this.ports.publishProjection({ bookmarkPageOffsetY: offset * remaining });
-        this.ports.publishProjection({ bookmarkRibbonFrame: { value: new ReaderBookmarkRibbonFrame(
-          target.y + (ribbon.y - target.y) * remaining,
-          target.fillHeight + (ribbon.fillHeight - target.fillHeight) * remaining,
-          target.opacity + (ribbon.opacity - target.opacity) * remaining) } });
-        this.ports.publishProjection({ bookmarkPullHintOpacity: hintOpacity * remaining });
+        this.ports.publishProjection({
+          bookmarkPageOffsetY: offset * remaining,
+          bookmarkRibbonFrame: { value: new ReaderBookmarkRibbonFrame(
+            target.y + (ribbon.y - target.y) * remaining,
+            target.fillHeight + (ribbon.fillHeight - target.fillHeight) * remaining,
+            target.opacity + (ribbon.opacity - target.opacity) * remaining) },
+          bookmarkPullHintOpacity: hintOpacity * remaining,
+        });
       };
       const complete = (): void => {
         if (this.rollbackAnimator !== animator) return;

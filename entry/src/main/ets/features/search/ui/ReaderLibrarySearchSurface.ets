@@ -9,7 +9,6 @@ import inputMethod from '@ohos.inputMethod';
 import { PathShape } from '@ohos.arkui.shape';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
-import { isReaderRealtimeBlurEnabled } from '../../../app/HarmonyCapabilityPolicy';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 import { readerVisualSafeTop, readerVisualSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReaderFixedHeaderHost } from '../../../ui/layout/ReaderFixedHeaderHost';
@@ -23,14 +22,15 @@ import { readerSearchControlHeight, readerSearchControlVisualHeight, readerSearc
 import { resolveSearchHeaderField, SearchHeaderFieldGeometry } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { readerSurfaceElevation, readerHeaderVeilMaterial, readerHeaderVeilBorder } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { readerSurfaceElevation, readerHeaderVeilBorder } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { motionSegment } from '../../../ui/foundation/MotionTimeline';
-import { motionAnimateParam, motionSpecGet, MotionSpecEntry } from '../../../ui/foundation/MotionSpec';
+import { motionAnimateParam, motionSpecGet, readerMotionStandardCurve, MotionSpecEntry } from '../../../ui/foundation/MotionSpec';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import type { ReaderSearchEditorEvent, ReaderSearchEditorObservation } from '../../../ui/controls/ReaderSearchField';
@@ -165,8 +165,13 @@ export struct ReaderLibrarySearchSurface {
   private pendingInputFocus: ((owner: number) => void) | undefined;
   @State private elapsed: number = 0;
   @State private reducedTransition: boolean = false;
+  @State private nativeSearchMotion: boolean = false;
   @State private reducedSearchOpacity: number = 1;
   @State private displayedSurfaceProgress: number = 0;
+  @State private displayedHistoryProgress: number = 0;
+  @State private displayedResultsProgress: number = 0;
+  @State private displayedScrimProgress: number = 0;
+  @State private displayedShadowStrength: number = 1;
   @State private headerBottom: number = bookshelfHeaderSpec().frameHeight;
   @State private historyHeight: number = 0;
   @State private displayedHistoryViewport: number = 0;
@@ -221,6 +226,7 @@ export struct ReaderLibrarySearchSurface {
     this.activeMounting = this.mounting;
     const token = ++this.generation;
     if (this.reduceMotion) this.beginReducedTransition(token);
+    else if (this.usesNativeTransition()) this.beginNativeTransition(token, true);
     else this.schedule(token);
   }
   aboutToDisappear(): void {
@@ -317,6 +323,7 @@ export struct ReaderLibrarySearchSurface {
     if (next !== 'input') this.fieldFocused = false;
     this.applyTargets(next);
     this.reducedTransition = false;
+    this.nativeSearchMotion = false;
     this.reducedSearchOpacity = 1;
     this.transitionKind = this.transitionFor(previous, next);
     this.transitionDurationMs = this.durationFor(this.transitionKind);
@@ -328,7 +335,44 @@ export struct ReaderLibrarySearchSurface {
     if (next !== 'idle') this.searchMounted = true;
     if (this.transitionKind === 'none' || this.transitionDurationMs <= 0) this.completeTransition(true);
     else if (this.reduceMotion) this.beginReducedTransition(token);
+    else if (this.usesNativeTransition()) this.beginNativeTransition(token, previous === 'idle');
     else this.schedule(token);
+  }
+  private usesNativeTransition(): boolean {
+    return !readerTransitionsEnabled() && this.model.verification?.enabled() !== true;
+  }
+  private beginNativeTransition(token: number, deferFirstFrame: boolean): void {
+    this.nativeSearchMotion = true;
+    this.displayedSurfaceProgress = this.fromSurface;
+    this.displayedHistoryProgress = this.fromHistory;
+    this.displayedResultsProgress = this.fromResults;
+    this.displayedScrimProgress = this.fromScrim;
+    this.displayedShadowStrength = this.fromShadowStrength;
+    const duration = Math.max(0, this.transitionDurationMs);
+    const targetShadow = this.blend(1, .55, this.toResults);
+    const current = (): boolean => this.mounted && token === this.generation && this.nativeSearchMotion;
+    const finish = (): void => { if (current()) this.completeTransition(); };
+    const run = (): void => {
+      if (!current()) return;
+      try {
+        this.getUIContext().animateTo({ duration, curve: readerMotionStandardCurve(), onFinish: finish }, (): void => {
+          this.displayedSurfaceProgress = this.toSurface;
+          this.displayedHistoryProgress = this.toHistory;
+          this.displayedResultsProgress = this.toResults;
+          this.displayedScrimProgress = this.toScrim;
+          this.displayedShadowStrength = targetShadow;
+        });
+        setTimeout((): void => { finish(); }, duration + 80);
+      } catch (_) { finish(); }
+    };
+    if (deferFirstFrame) {
+      try {
+        const context = this.getUIContext();
+        context.postFrameCallback(new ReaderPostLayoutFrame(context, run));
+      } catch (_) { run(); }
+    } else {
+      run();
+    }
   }
   private beginReducedTransition(token: number): void {
     this.reducedTransition = true;
@@ -443,11 +487,16 @@ export struct ReaderLibrarySearchSurface {
     const wasOpen = this.transitionKind === 'open';
     this.transitionKind = 'none';
     this.reducedTransition = false;
+    this.nativeSearchMotion = false;
     this.reducedSearchOpacity = 1;
     this.transitionDurationMs = 0;
     this.transitionStartedMs = 0;
     // Publish the exact painted endpoint independently of the animation clock reset.
     this.displayedSurfaceProgress = this.toSurface;
+    this.displayedHistoryProgress = this.toHistory;
+    this.displayedResultsProgress = this.toResults;
+    this.displayedScrimProgress = this.toScrim;
+    this.displayedShadowStrength = this.blend(1, .55, this.toResults);
     this.elapsed = 0;
     if (this.mode === 'idle') {
       this.searchMounted = false;
@@ -517,6 +566,7 @@ export struct ReaderLibrarySearchSurface {
   }
   private surfaceProgress(): number { return this.displayedSurfaceProgress; }
   private resultsProgress(): number {
+    if (this.nativeSearchMotion) return this.displayedResultsProgress;
     if (this.reducedTransition) return this.transitionKind === 'back' ? this.fromResults : this.toResults;
     if (this.transitionKind === 'open') {
       return this.blend(this.fromResults, this.toResults, this.segment(0, this.openSpec.durationMs, this.openSpec));
@@ -534,6 +584,7 @@ export struct ReaderLibrarySearchSurface {
     return this.toResults;
   }
   private historyProgress(): number {
+    if (this.nativeSearchMotion) return this.displayedHistoryProgress;
     if (this.reducedTransition) return this.transitionKind === 'back' ? this.fromHistory : this.toHistory;
     if (this.transitionKind === 'open') {
       return this.blend(this.fromHistory, this.toHistory, this.segment(0, this.openSpec.durationMs, this.openSpec));
@@ -551,6 +602,7 @@ export struct ReaderLibrarySearchSurface {
     return this.toHistory;
   }
   private scrimProgress(): number {
+    if (this.nativeSearchMotion) return this.displayedScrimProgress;
     if (this.reducedTransition) return this.transitionKind === 'back' ? this.fromScrim : this.toScrim;
     if (this.transitionKind === 'open') {
       return this.blend(this.fromScrim, this.toScrim, this.segment(0, this.openSpec.durationMs, this.openSpec));
@@ -568,7 +620,7 @@ export struct ReaderLibrarySearchSurface {
     return this.toScrim;
   }
   private inputInteractive(): boolean {
-    if (!this.model.interactive || this.model.panelOwnsInput || this.reducedTransition) return false;
+    if (!this.model.interactive || this.model.panelOwnsInput || this.reducedTransition || this.nativeSearchMotion) return false;
     if (this.mode === 'input') return this.surfaceProgress() >= 1 && this.historyProgress() >= 1;
     if (this.mode === 'results') return this.resultsProgress() >= 1;
     return false;
@@ -1142,12 +1194,11 @@ export struct ReaderLibrarySearchSurface {
       }.width('100%')
         .borderRadius(Math.max(0, this.headerMaterialRadius() - this.spec.borderWidth)).clip(true);
     }.width('100%').clip(false)
+      .renderGroup(this.transitionKind !== 'none')
       .padding(this.headerMaterial()?.native ? this.spec.borderWidth : 0)
-      .backgroundColor(this.headerVeil() && isReaderRealtimeBlurEnabled(this.appearancePreferences) ? Color.Transparent :
+      .backgroundColor(this.headerMaterial()?.native ? Color.Transparent :
         readerAppColor('app.search.panelSurface', this.scheme))
-      .backgroundEffect(this.headerVeil() && !this.headerMaterial()?.native &&
-        isReaderRealtimeBlurEnabled(this.appearancePreferences) ?
-        readerHeaderVeilMaterial(this.headerScrolled, this.scheme) : undefined)
+      .backgroundEffect(undefined)
       .border({ width: this.headerMaterial()?.native ? 0 : this.spec.borderWidth,
         color: this.headerMaterial()?.native ? Color.Transparent :
           this.headerVeil() ? readerHeaderVeilBorder(this.scheme) : this.panelBorderColor() })
@@ -1169,6 +1220,7 @@ export struct ReaderLibrarySearchSurface {
   }
 
   private headerShadowStrength(): number {
+    if (this.nativeSearchMotion) return this.displayedShadowStrength;
     const target = this.blend(1, .55, this.toResults);
     if (this.transitionKind === 'none') return target;
     if (this.reducedTransition) {
@@ -1188,6 +1240,7 @@ export struct ReaderLibrarySearchSurface {
       }.width('100%').height(this.mode === 'input' && this.model.sourceRecoveryVisible ?
         this.surfaceHeight() : this.resultsProgress() > 0 ?
           this.headerBottom + this.contentHeight() * this.resultsProgress() : 0)
+        .renderGroup(this.transitionKind !== 'none')
         .clipShape(this.resultClip())
         .opacity(this.reducedSearchOpacity)
         .zIndex(2)

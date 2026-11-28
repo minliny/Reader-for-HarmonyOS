@@ -191,10 +191,6 @@ export class ReaderPageTurnSettlementHost {
     this.frozenLayout = this.view.layout();
     this.pageTurn.generation = generation;
     presentation.surfaceGeneration = generation;
-    // A native frame from a previous programmatic turn can still be resident.
-    this.view.publish({ bookTurnSurfaceOpacity: simulation ?
-      (presentation.motion !== undefined ? this.view.projection().bookTurnSurfaceOpacity : 0) : 1 });
-    this.view.publish({ pageTurnSettlementActive: true });
     this.origin = origin;
     this.followLease = ttsOwner;
     const automatic: ReaderAutomaticPageStart | undefined =
@@ -205,11 +201,17 @@ export class ReaderPageTurnSettlementHost {
       } : undefined;
     this.effects.publishAutomaticStart(automatic);
     presentation.phase = 'settling';
-    this.view.publish({ pageTurnPresentationWidth: this.view.viewportWidth() });
     this.prepared.stage(prepared);
     this.pageTurn.animationFinished = noAnimation && !simulation;
-    this.view.publish({ pageTurnDirection: { value: direction } });
-    this.view.publish({ pageTurnInputOwned: true });
+    // Batch initial settlement projection fields into one update.
+    this.view.publish({
+      bookTurnSurfaceOpacity: simulation ?
+        (presentation.motion !== undefined ? this.view.projection().bookTurnSurfaceOpacity : 0) : 1,
+      pageTurnSettlementActive: true,
+      pageTurnPresentationWidth: this.view.viewportWidth(),
+      pageTurnDirection: { value: direction },
+      pageTurnInputOwned: true,
+    });
     presentation.armDeadline(generation);
 
     const targetOffset = direction === 'next' ? -this.view.viewportWidth() : this.view.viewportWidth();
@@ -370,12 +372,14 @@ export class ReaderPageTurnSettlementHost {
     this.clearOrigin();
     this.prepared.cancelDeadline();
     this.pageTurn.animationFinished = true;
-    this.view.publish({ pageTurnOffsetX: 0 });
-    this.view.publish({ pageTurnDirection: { value: undefined } });
     this.pageTurn.gesture = completeReaderPageGestureSettlement(this.pageTurn.gesture);
     const presentation = this.view.presentation();
     if (this.view.simulation() && presentation.phase !== 'released' &&
       presentation.session.retainedTerminalGeneration() === generation) {
+      this.view.publish({
+        pageTurnOffsetX: 0,
+        pageTurnDirection: { value: undefined },
+      });
       if (this.view.mounted() && !this.view.exiting() && this.view.simulation() &&
         generation === this.pageTurn.generation && generation === presentation.surfaceGeneration) {
         presentation.armDeadline(generation);
@@ -383,10 +387,14 @@ export class ReaderPageTurnSettlementHost {
       }
       return;
     }
-    this.view.publish({ pageTurnInputOwned: false });
-    this.view.publish({ pageTurnSettlementActive: false });
     this.clearLayout();
-    this.view.publish({ pageTurnPresentationWidth: 0 });
+    this.view.publish({
+      pageTurnOffsetX: 0,
+      pageTurnDirection: { value: undefined },
+      pageTurnInputOwned: false,
+      pageTurnSettlementActive: false,
+      pageTurnPresentationWidth: 0,
+    });
     this.prepared.releaseCommit();
     presentation.motion = undefined;
     presentation.awaitingSlots = false;
@@ -405,16 +413,18 @@ export class ReaderPageTurnSettlementHost {
     this.effects.finishPerformance('committed');
     this.effects.publishAutomaticStart(undefined);
     this.clearOrigin();
-    this.view.publish({ pageTurnOffsetX: 0 });
-    this.view.publish({ pageTurnDirection: { value: undefined } });
     this.prepared.releaseCommit();
-    this.view.publish({ pageTurnSettlementActive: false });
     this.prepared.cancelDeadline();
     this.clearLayout();
-    this.view.publish({ pageTurnPresentationWidth: 0 });
     const presentation = this.view.presentation();
     presentation.motion = undefined;
-    this.view.publish({ pageTurnInputOwned: false });
+    this.view.publish({
+      pageTurnOffsetX: 0,
+      pageTurnDirection: { value: undefined },
+      pageTurnSettlementActive: false,
+      pageTurnPresentationWidth: 0,
+      pageTurnInputOwned: false,
+    });
     presentation.awaitingSlots = false;
     presentation.recoverIfIdle();
     this.effects.flushDeferredChrome();

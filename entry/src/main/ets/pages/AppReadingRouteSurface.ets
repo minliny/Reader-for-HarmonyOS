@@ -11,6 +11,7 @@ import type { MangaSourceSwitchPresentation } from '../features/manga/presentati
 import type { SourceSwitchPresentation } from '../features/source/presentation/SourceSwitchPresentation';
 import { ReaderPostLayoutFrame } from '../ui/layout/ReaderPostLayoutFrame';
 import { motionSpecGet, readerMotionStandardCurve } from '../ui/foundation/MotionSpec';
+import { readerMotionReducedFadeParam } from '../ui/foundation/ReaderMotionPolicy';
 import { readerBeginTransition, readerRouteTransitionLaneId, readerTransitionActorX,
   readerTransitionsEnabled, READER_DETAIL_PRIMARY_ACTION, READER_DETAIL_TRANSITION_HEADER }
   from '../ui/foundation/ReaderTransitionSignals';
@@ -133,20 +134,30 @@ export class AppReadingDetailMotion {
           scope: 'reader-detail-anchors', nodes: [READER_DETAIL_TRANSITION_HEADER, READER_DETAIL_PRIMARY_ACTION], axis: 'x' });
       }
       try {
-        const animator = context.createAnimator({ duration, easing: reduced ? 'ease-out' : 'linear',
-          delay: 0, fill: 'forwards', direction: 'normal', iterations: 1, begin: 0, end: 1 });
-        this.animator = animator;
-        animator.onFrame = (fraction: number): void => {
-          if (this.animator !== animator || !current()) return;
-          const progress = reduced ? fraction : readerMotionStandardCurve().interpolate(fraction);
-          this.ports.publish(this.transition.sample(motion.generation, progress));
-        };
-        animator.onFinish = (): void => {
-          if (this.animator === animator) finish();
-        };
-        // Queue the first detail sample before native playback queues movement.
-        if (motion.phase === 'pop') this.observe('pop');
-        animator.play();
+        if (readerTransitionsEnabled()) {
+          const animator = context.createAnimator({ duration, easing: reduced ? 'ease-out' : 'linear',
+            delay: 0, fill: 'forwards', direction: 'normal', iterations: 1, begin: 0, end: 1 });
+          this.animator = animator;
+          animator.onFrame = (fraction: number): void => {
+            if (this.animator !== animator || !current()) return;
+            const progress = reduced ? fraction : readerMotionStandardCurve().interpolate(fraction);
+            this.ports.publish(this.transition.sample(motion.generation, progress));
+          };
+          animator.onFinish = (): void => {
+            if (this.animator === animator) finish();
+          };
+          // Queue the first detail sample before native playback queues movement.
+          if (motion.phase === 'pop') this.observe('pop');
+          animator.play();
+        } else {
+          context.animateTo({
+            duration,
+            curve: reduced ? readerMotionReducedFadeParam(finish).curve : readerMotionStandardCurve(),
+            onFinish: finish,
+          }, (): void => {
+            if (current()) this.ports.publish(this.transition.sample(motion.generation, 1));
+          });
+        }
       } catch (_error) { finish(); }
     };
     if (nativePoseReady) start();

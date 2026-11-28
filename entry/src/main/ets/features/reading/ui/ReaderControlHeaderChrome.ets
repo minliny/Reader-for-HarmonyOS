@@ -40,6 +40,11 @@ export interface ReaderControlHeaderActions {
 export class ReaderControlHeaderScene {
   private readonly facts: ReaderControlHeaderRead;
   private readonly actions: ReaderControlHeaderActions;
+  private cachedModule: string = '';
+  private cachedProgress: number = -1;
+  private cachedWidth: number = -1;
+  private cachedPaint: ReaderControlHeaderPaintProfile | undefined = undefined;
+  private cachedLayout: ReaderControlHeaderLayout | undefined = undefined;
 
   constructor(facts: ReaderControlHeaderRead, actions: ReaderControlHeaderActions) {
     this.facts = facts;
@@ -50,6 +55,23 @@ export class ReaderControlHeaderScene {
   guard(action: () => void): () => void { return this.actions.guard(action); }
   collapse(): void { this.actions.collapse(); }
   grabTouch(): (event: TouchEvent) => void { return this.actions.grabTouch(); }
+
+  paintLayout(): ReaderControlHeaderLayout {
+    const read = this.facts;
+    const module = read.location().module;
+    const progress = read.fixedIsland() ? 1 : read.frame().progress;
+    const width = read.frame().header.width;
+    const paint = read.headerPaint();
+    if (this.cachedLayout === undefined || this.cachedModule !== module ||
+      this.cachedProgress !== progress || this.cachedWidth !== width || this.cachedPaint !== paint) {
+      this.cachedModule = module;
+      this.cachedProgress = progress;
+      this.cachedWidth = width;
+      this.cachedPaint = paint;
+      this.cachedLayout = readerControlHeaderLayout(module, progress, width, paint);
+    }
+    return this.cachedLayout;
+  }
 }
 
 export interface ReaderControlHeaderInput {
@@ -65,9 +87,7 @@ class ReaderControlHeaderLineHeight implements AttributeModifier<TextAttribute> 
 }
 
 function headerPaintLayout(scene: ReaderControlHeaderScene): ReaderControlHeaderLayout {
-  const read = scene.read();
-  return readerControlHeaderLayout(read.location().module, read.fixedIsland() ? 1 : read.frame().progress,
-    read.frame().header.width, read.headerPaint());
+  return scene.paintLayout();
 }
 
 function headerRole(scene: ReaderControlHeaderScene): ReaderControlHeaderRole {

@@ -87,7 +87,11 @@ export class ReaderControlQuickHomePaint {
  * frozen until the native acknowledgement or their own abort boundary. */
 export class ReaderControlQuickHomeOwner {
   readonly host: ReaderControlQuickHomeEnvironment;
-  private progressInputScope: string = '';
+  private hasProgressInputScope: boolean = false;
+  private lastScopeLifecycle: number = -1;
+  private lastScopeOpenRevision: number = -1;
+  private lastScopeTicket: number = -1;
+  private lastScopeEnabled: boolean = false;
   private brightnessDragStartPercent: number = READER_CONTROL_BRIGHTNESS_MAX;
   private brightnessDragging: boolean = false;
   private brightnessDragCurrent: (() => boolean) | undefined = undefined;
@@ -184,10 +188,20 @@ export class ReaderControlQuickHomeOwner {
   }
 
   syncProgressInput(): void {
-    const scope = JSON.stringify([this.host.input.lifecycle(), this.host.input.openRevision(),
-      this.host.input.runtimeTicket(), this.progressInputEnabled()]);
-    if (scope === this.progressInputScope) return;
-    this.progressInputScope = scope;
+    const lifecycle = this.host.input.lifecycle();
+    const openRevision = this.host.input.openRevision();
+    const ticket = this.host.input.runtimeTicket();
+    const enabled = this.progressInputEnabled();
+    if (this.hasProgressInputScope && this.lastScopeLifecycle === lifecycle &&
+      this.lastScopeOpenRevision === openRevision && this.lastScopeTicket === ticket &&
+      this.lastScopeEnabled === enabled) {
+      return;
+    }
+    this.hasProgressInputScope = true;
+    this.lastScopeLifecycle = lifecycle;
+    this.lastScopeOpenRevision = openRevision;
+    this.lastScopeTicket = ticket;
+    this.lastScopeEnabled = enabled;
     this.invalidateProgressInput();
   }
 

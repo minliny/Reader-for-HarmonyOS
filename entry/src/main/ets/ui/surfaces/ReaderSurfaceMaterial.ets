@@ -5,11 +5,8 @@ import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_NATIVE_MATERIAL } from '../fou
 import { readerAppColor, type ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 import { readerSurfaceOutlinePaint } from './ReaderReadingPanelPaint';
 import {
-  READER_MODAL_BLUR_RADIUS_VP,
   normalizeReaderNavigationPreferences,
-  resolveReaderModalScrimSpec,
   resolveReaderSurfaceMaterial,
-  shouldBlurBackdrop,
   type ReaderImmersiveStyleName,
   type ReaderNavigationPreferences,
   type ReaderSurfaceMaterialDecision,
@@ -37,14 +34,7 @@ export class ReaderModalScrimModifier implements AttributeModifier<CommonAttribu
   }
 
   applyNormalAttribute(instance: CommonAttribute): void {
-    if (!this.allowBlur || typeof this.standardScrim !== 'string') {
-      instance.backgroundEffect(undefined).backgroundColor(this.standardScrim);
-      return;
-    }
-    const spec = resolveReaderModalScrimSpec(this.preferences, this.scheme, this.standardScrim,
-      this.overlayUsesNativeMaterial);
-    instance.backgroundEffect(spec.blurred ? { radius: spec.radiusVp, color: spec.scrimColor } : undefined)
-      .backgroundColor(spec.blurred ? Color.Transparent : spec.scrimColor);
+    instance.backgroundEffect(undefined).backgroundColor(this.standardScrim);
   }
 }
 
@@ -196,8 +186,8 @@ export function applyReaderPopupMaterial(options: CustomPopupOptions, decision: 
 }
 
 export function readerSheetBackdropBlur(
-  preferences: ReaderNavigationPreferences,
-  overlayUsesNativeMaterial: boolean = false,
+  _preferences: ReaderNavigationPreferences,
+  _overlayUsesNativeMaterial: boolean = false,
 ): number {
-  return shouldBlurBackdrop(preferences, overlayUsesNativeMaterial) ? READER_MODAL_BLUR_RADIUS_VP : 0;
+  return 0;
 }

@@ -145,16 +145,18 @@ export class ReaderReadingControlInteractionHost {
     }
     if (!this.isControlInputEnabled() || !this.isReaderPageInteractionEnabled() || turn.inputPhase() !== 'idle') return;
     turn.pageTurn.cancelRapid();
-    // The retained directory may materialize before the opening animation.
-    this.actors.directory().retainDirectory();
-    this.actors.geometry.invalidateBackdrop();
-    this.view.advanceOpenRevision();
     const duration = this.controlTiming().showDurationMs;
     const playbackOrigin = this.actors.auxiliary().consumeStaticCapsuleOrigin();
     const opened = openReaderControlSession(this.view.session(), duration);
     const shortcutTarget = shortcutModule === undefined ? undefined : readerControlTargetLocation(
       setReaderControlHostPage(opened, shortcutModule === 'search' ? 'quickSearch' : 'moduleDirectory', this.controlTiming()));
     const target = shortcutTarget ?? playbackOrigin;
+    // Only materialize the directory catalog eagerly when opening directly into directory.
+    if (shortcutModule === 'directory' || target?.module === 'directory') {
+      this.actors.directory().retainDirectory();
+    }
+    this.actors.geometry.invalidateBackdrop();
+    this.view.advanceOpenRevision();
     const nextControl = target === undefined ? opened : resumeReaderControlSessionTarget(this.view.session(), target, duration);
     if (target !== undefined && nextControl.transition !== undefined) {
       nextControl.transition.kind = 'open';
@@ -216,6 +218,7 @@ export class ReaderReadingControlInteractionHost {
   prepareControlPage(page: ReaderControlPage): void {
     const lifecycle = this.scene.scope().lifecycleToken;
     if (page === 'moduleDirectory') {
+      this.actors.directory().retainDirectory();
       const mount = this.actors.mount();
       if (mount.entryCatalogPending) mount.hydration.scheduleCatalog();
       this.actors.directory().loadBookmarks();

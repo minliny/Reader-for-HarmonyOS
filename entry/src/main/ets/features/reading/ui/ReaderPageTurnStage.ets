@@ -265,12 +265,12 @@ struct ReaderPageTurnSurface {
     // The stage moves its clip origin to the full-width paper edge. Preserve
     // the existing content coordinates inside that clip.
     .translate({ x: this.translateX, y: -(this.bookmarkPaperTop ?? 0) })
-    .shadow({
+    .shadow(this.shadowStrength > 0.001 ? {
       radius: COVER_OCCLUSION_RADIUS_VP * this.shadowStrength * readerWindowMetrics().densityPixels,
       color: this.shadowColor(),
       offsetX: COVER_OCCLUSION_OFFSET_X_VP * this.shadowStrength * readerWindowMetrics().densityPixels,
       offsetY: 0,
-    });
+    } : undefined);
   }
 
   private shadowColor(): string {

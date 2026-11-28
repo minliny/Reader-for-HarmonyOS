@@ -198,6 +198,7 @@ export struct ReaderBottomSheet {
         this.content();
       }
     }.id(this.transitionNativeId()).width(Math.min(this.surfaceWidth, this.spec().maxWidth, this.frameViewport().width))
+      .renderGroup(!this.opened || !this.visible)
       .constraintSize({ maxHeight: this.frameViewport().height })
       .backgroundEffect(undefined)
       .backgroundColor(this.frameMaterial().native ? Color.Transparent : readerAppColor(this.spec().hostBackgroundRole, this.scheme))

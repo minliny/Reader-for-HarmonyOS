@@ -361,26 +361,33 @@ export struct ReaderTtsConfigOverlay {
         .onAppear((): void => {
           this.stopMountAnimator();
           if (!this.reduceMotion) {
-            this.surfaceOpacity = 0.96;
-            try {
-              const animator = this.getUIContext().createAnimator({
-                duration: 360, easing: 'ease-out', delay: 0, fill: 'forwards',
-                direction: 'normal', iterations: 1, begin: 0.96, end: 1,
+            if (readerTransitionsEnabled()) {
+              this.surfaceOpacity = 0.96;
+              try {
+                const animator = this.getUIContext().createAnimator({
+                  duration: 360, easing: 'ease-out', delay: 0, fill: 'forwards',
+                  direction: 'normal', iterations: 1, begin: 0.96, end: 1,
+                });
+                this.mountAnimator = animator;
+                animator.onFrame = (value: number): void => {
+                  if (this.mountAnimator === animator && this.mounted) this.surfaceOpacity = value;
+                };
+                animator.onFinish = (): void => {
+                  if (this.mountAnimator === animator) {
+                    this.mountAnimator = undefined;
+                    this.surfaceOpacity = 1;
+                  }
+                };
+                animator.play();
+              } catch (_) {
+                this.mountAnimator = undefined;
+                this.surfaceOpacity = 1;
+              }
+            } else {
+              this.surfaceOpacity = 0.96;
+              this.getUIContext().animateTo({ duration: 220, curve: Curve.EaseOut }, (): void => {
+                if (this.mounted) this.surfaceOpacity = 1;
               });
-              this.mountAnimator = animator;
-              animator.onFrame = (value: number): void => {
-                if (this.mountAnimator === animator && this.mounted) this.surfaceOpacity = value;
-              };
-              animator.onFinish = (): void => {
-                if (this.mountAnimator === animator) {
-                  this.mountAnimator = undefined;
-                  this.surfaceOpacity = 1;
-                }
-              };
-              animator.play();
-            } catch (_) {
-              this.mountAnimator = undefined;
-              this.surfaceOpacity = 1;
             }
           } else {
             this.surfaceOpacity = 1;

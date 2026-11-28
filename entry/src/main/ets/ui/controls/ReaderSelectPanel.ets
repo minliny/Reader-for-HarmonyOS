@@ -26,6 +26,7 @@ import {
 } from '../foundation/ReaderTokens';
 import { motionAnimateParam, motionSpecGet } from '../foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
+import { readerTransitionsEnabled } from '../foundation/ReaderTransitionSignals';
 import type { ReaderSelectVariant } from './ReaderSelect';
 import {
   TYPE_SELECT_DEFAULT_VALUE,
@@ -603,7 +604,8 @@ export struct ReaderSelectPanel {
       }
       return;
     }
-    if (this.variant === 'appearanceLibrary' && this.animateAppearanceHeight(targetHeight, -180)) return;
+    if (readerTransitionsEnabled() && this.variant === 'appearanceLibrary' &&
+      this.animateAppearanceHeight(targetHeight, -180)) return;
     this.getUIContext().animateTo(motionAnimateParam('dropdown.menu.expand'), (): void => {
       this.expandedHeight = targetHeight;
       this.chevronAngle = -180;
@@ -648,7 +650,7 @@ export struct ReaderSelectPanel {
       this.fadePanelOut(generation, deferParent);
       return;
     }
-    if (this.variant === 'appearanceLibrary' &&
+    if (readerTransitionsEnabled() && this.variant === 'appearanceLibrary' &&
       this.animateAppearanceHeight(OPTION_H, 0, (): void => this.finishCollapse(generation))) return;
     this.getUIContext().animateTo(
       motionAnimateParam('dropdown.menu.collapse', (): void => {

@@ -55,6 +55,14 @@ export struct ReaderControlPanel {
   onIntent: ReaderControlIntentHandler = defaultReaderControlIntent;
   private deliveredFrame: ReaderControlPanelFrame | undefined = undefined;
   private readonly factDelivery = createReaderControlFactDelivery();
+  private cachedScrimKey: string = '';
+  private cachedScrimModifier: ReaderModalScrimModifier | undefined = undefined;
+  private cachedShellKey: string = '';
+  private cachedShellFrame: ReaderPanelFrame | undefined = undefined;
+  private cachedFullFillScheme: string = '';
+  private cachedFullFillFrame: ReaderPanelFrame | undefined = undefined;
+  private cachedQuickFillScheme: string = '';
+  private cachedQuickFillFrame: ReaderPanelFrame | undefined = undefined;
 
   @State private motionPaint: ReaderControlPanelMotionPaint = new ReaderControlPanelMotionPaint();
   private readonly motionEnvironment: ReaderControlPanelRuntimeEnvironment = {
@@ -132,7 +140,7 @@ export struct ReaderControlPanel {
     (): ReaderControlIntentHandler => this.onIntent,
     {
       location: (): ReaderControlLocation => this.motion.contentLocation(),
-      frame: (): ReaderControlMotionFrame => this.motion.frame(),
+      frame: (): ReaderControlMotionFrame => this.motion.layoutFrame(),
       expanded: (): boolean => this.minimumHost.currentLayout().isExpanded(),
       width: (): number => this.motionPaint.contentMotionWidth,
       height: (): number => this.motion.contentEditingHeight(),
@@ -176,7 +184,7 @@ export struct ReaderControlPanel {
     paint: (): ReaderControlTopBarPaint => this.topBarPaint,
     facts: (): ReaderControlPanelFacts => this.currentFacts(),
     layout: (): ReaderControlLayoutSnapshot => this.minimumHost.currentLayout(),
-    frame: (): ReaderControlMotionFrame => this.motion.frame(),
+    frame: (): ReaderControlMotionFrame => this.motion.layoutFrame(),
     visualSession: (): ReaderControlSessionState => this.motion.visualState(),
     runtimeMounted: (): boolean => this.motion.mounted(), scheme: (): string => this.appScheme,
     buildLeading: (): void => { this.controlTopBarLeading(); },
@@ -189,11 +197,16 @@ export struct ReaderControlPanel {
     directSheetVisible: (): boolean => this.motion.directSheetVisible(),
     shortHomeContentInput: (): boolean => this.motion.contentLocation().level === 'home' && this.motion.contentInputEnabled(),
     currentOwnerScope: (): string => this.motion.currentMoreMenuOwnerScope(),
+    topBarTranslateY: (): number => this.motionPaint.topBarTranslateY,
+    topBarOpacity: (): number => this.motionPaint.topBarOpacity,
+    topBarPresented: (): boolean => this.motionPaint.visualVisibilityProgress > 0,
+    topBarAnimating: (): boolean => this.motionPaint.visibilityAnimating,
+    topBarBlurEnabled: (): boolean => false,
     guardAction: (action: () => void): (() => void) => this.motion.controlActionHandler(action),
     onIntent: (intent: ReaderControlIntent): ReaderControlIntentResult => this.onIntent(intent),
     syncProgressInput: (): void => this.quickHome.syncProgressInput(),
     refreshDockPlacement: (): void => this.motion.refreshDockPlacement(),
-    reportBackdropRegions: (): void => this.motion.reportBackdropRegions(),
+    reportBackdropRegions: (): void => this.motion.reportBackdropRegions(true),
   };
   private readonly topBarOwner = new ReaderControlTopBarOwner(this.topBarView);
 
@@ -201,7 +214,7 @@ export struct ReaderControlPanel {
     paint: (): ReaderControlQuickHomePaint => this.quickHomePaint,
     geometry: {
       layout: (): ReaderControlLayoutSnapshot => this.minimumHost.currentLayout(),
-      frame: (): ReaderControlMotionFrame => this.motion.frame(),
+      frame: (): ReaderControlMotionFrame => this.motion.layoutFrame(),
       profile: (): ReaderControlMeasuredProfile | undefined => this.minimumHost.selectedMinimumProfile(),
       scheme: (): string => this.appScheme, reducedMotion: (): boolean => this.currentFacts().geometry.reduceMotion,
       fontScale: (): number => this.currentFacts().geometry.fontScale,
@@ -233,7 +246,7 @@ export struct ReaderControlPanel {
 
   private readonly headerScene = new ReaderControlHeaderScene({
     layout: (): ReaderControlLayoutSnapshot => this.minimumHost.currentLayout(),
-    frame: (): ReaderControlMotionFrame => this.motion.frame(),
+    frame: (): ReaderControlMotionFrame => this.motion.layoutFrame(),
     location: (): ReaderControlLocation => this.motion.contentLocation(),
     headerPaint: (): ReaderControlHeaderPaintProfile | undefined => this.minimumHost.selectedMinimumProfile()?.headerPaint,
     scheme: (): string => this.appScheme, fixedIsland: (): boolean => this.currentFacts().geometry.fixedIsland,
@@ -345,120 +358,155 @@ export struct ReaderControlPanel {
     return readerSurfaceMaterialDecision(role, this.navigationPreferences, this.appScheme, this.systemScheme);
   }
 
+  private scrimModifier(native: boolean): ReaderModalScrimModifier {
+    const key = `${this.appScheme}:${native}:${this.navigationPreferences.override}:${this.navigationPreferences.renderMode}`;
+    if (this.cachedScrimModifier === undefined || this.cachedScrimKey !== key) {
+      this.cachedScrimKey = key;
+      this.cachedScrimModifier = new ReaderModalScrimModifier(this.navigationPreferences, this.appScheme,
+        readerAppColor('app.scrim.warmModal', this.appScheme), native);
+    }
+    return this.cachedScrimModifier;
+  }
+
+  private shellFrameModifier(visible: boolean): ReaderPanelFrame {
+    const native = visible && this.surfaceMaterial('controlPanel').native;
+    const key = `${this.appScheme}:${visible}:${native}:${this.navigationPreferences.override}:${this.navigationPreferences.renderMode}`;
+    if (this.cachedShellFrame === undefined || this.cachedShellKey !== key) {
+      this.cachedShellKey = key;
+      this.cachedShellFrame = new ReaderPanelFrame('reader', this.appScheme, false, undefined,
+        visible ? this.surfaceMaterial('controlPanel') : undefined);
+    }
+    return this.cachedShellFrame;
+  }
+
+  private fullFillModifier(): ReaderPanelFrame {
+    if (this.cachedFullFillFrame === undefined || this.cachedFullFillScheme !== this.appScheme) {
+      this.cachedFullFillScheme = this.appScheme;
+      this.cachedFullFillFrame = new ReaderPanelFrame('reader-full-fill', this.appScheme);
+    }
+    return this.cachedFullFillFrame;
+  }
+
+  private quickFillModifier(): ReaderPanelFrame {
+    if (this.cachedQuickFillFrame === undefined || this.cachedQuickFillScheme !== this.appScheme) {
+      this.cachedQuickFillScheme = this.appScheme;
+      this.cachedQuickFillFrame = new ReaderPanelFrame('reader-quick-fill', this.appScheme);
+    }
+    return this.cachedQuickFillFrame;
+  }
+
   // The production component owns both the clock and every actor builder.
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.motionPaint.controlActorsRetained || this.motion.frame().visibility > 0 || this.currentFacts().launch.sample !== undefined) {
+      if (this.motionPaint.controlActorsRetained || this.motionPaint.controlPresented || this.currentFacts().launch.sample !== undefined) {
       ReaderControlTopBar({ owner: this.topBarOwner });
       if (this.motion.directSheetVisible()) {
         Stack().width('100%').height('100%').id('reader-control-direct-sheet-scrim')
-          .attributeModifier(new ReaderModalScrimModifier(this.navigationPreferences, this.appScheme,
-            readerAppColor('app.scrim.warmModal', this.appScheme), this.surfaceMaterial('controlPanel').native))
+          .attributeModifier(this.scrimModifier(this.surfaceMaterial('controlPanel').native))
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
-          .opacity(this.motionPaint.visualExpansionProgress)
+          .opacity(this.motionPaint.directSheetScrimOpacity)
           .onTouch((event: TouchEvent): void => event.stopPropagation())
           .accessibilityLevel('no').onClick((): void => this.motion.closeDirectSheet());
       }
       Stack({ alignContent: Alignment.TopStart }) {
         Stack()
           .id('reader-control-motion-shell')
-          .width(this.motion.frame().shell.width).height(this.motion.frame().shell.height)
-          .position({ x: 0, y: this.motion.frame().shell.y })
-          .attributeModifier(new ReaderPanelFrame('reader', this.appScheme, false, undefined,
-            this.motion.frame().visibility > 0 ? this.surfaceMaterial('controlPanel') : undefined))
-          .opacity(this.motion.frame().shell.opacity)
+          .width(this.motion.layoutFrame().shell.width).height(this.motion.layoutFrame().shell.height)
+          .position({ x: 0, y: this.motion.layoutFrame().shell.y })
+          .attributeModifier(this.shellFrameModifier(this.motionPaint.visualVisibilityProgress > 0))
+          .opacity(this.motion.layoutFrame().shell.opacity)
           // The shell is a visual actor only.  A full-size Block here steals
           // pointer hit testing from the mounted header/content actors below,
           // so taps such as the collapse action never reach their onClick.
           .hitTestBehavior(HitTestMode.None);
         Stack()
           .id('reader-control-full-content-surface')
-          .width(this.motion.frame().contentSurface.width).height(this.motion.frame().contentSurface.height)
-          .position({ x: this.motion.frame().contentSurface.x, y: this.motion.frame().contentSurface.y })
-          .attributeModifier(new ReaderPanelFrame('reader-full-fill', this.appScheme))
+          .width(this.motion.layoutFrame().contentSurface.width).height(this.motion.layoutFrame().contentSurface.height)
+          .position({ x: this.motion.layoutFrame().contentSurface.x, y: this.motion.layoutFrame().contentSurface.y })
+          .attributeModifier(this.fullFillModifier())
           .opacity(readerControlHasFullContentSurface(this.motion.contentLocation().module) ?
-            this.motion.frame().contentSurface.opacity : 0)
+            this.motion.layoutFrame().contentSurface.opacity : 0)
           .visibility(Visibility.Visible)
           .enabled(false).hitTestBehavior(HitTestMode.None);
         // Original Quick card (e.g. 924:69) is distinct from FullContentSurface.
         // TTS and Home own their own painted cards, so they are not doubled.
         Stack()
           .id('reader-control-quick-content-surface')
-          .width(this.motion.frame().content.width).height(this.motion.frame().content.height)
-          .position({ x: this.motion.frame().content.x, y: this.motion.frame().content.y })
-          .attributeModifier(new ReaderPanelFrame('reader-quick-fill', this.appScheme))
+          .width(this.motion.layoutFrame().content.width).height(this.motion.layoutFrame().content.height)
+          .position({ x: this.motion.layoutFrame().content.x, y: this.motion.layoutFrame().content.y })
+          .attributeModifier(this.quickFillModifier())
           .opacity(this.motion.contentLocation().level !== 'home' && readerControlHasQuickContentSurface(this.motion.contentLocation().module) ?
-            this.motion.frame().content.opacity * (1 - this.motion.frame().progress) : 0)
+            this.motion.layoutFrame().content.opacity * (1 - this.motion.layoutFrame().progress) : 0)
           .hitTestBehavior(HitTestMode.None);
         Stack({ alignContent: Alignment.TopStart }) {
           Stack({ alignContent: Alignment.TopStart }) { this.controlContent(); }
             .translate({ x: this.motionPaint.moduleMotionX, y: this.motionPaint.moduleMotionY }).opacity(this.motionPaint.moduleMotionOpacity)
-            .width(this.motion.frame().content.width).height(this.motion.frame().content.height)
+            .width(this.motion.layoutFrame().content.width).height(this.motion.layoutFrame().content.height)
             .position({ x: 0, y: 0 });
         }
-          .width(this.motion.frame().content.width).height(this.motion.frame().content.height)
-          .position({ x: this.motion.frame().content.x, y: this.motion.frame().content.y })
+          .width(this.motion.layoutFrame().content.width).height(this.motion.layoutFrame().content.height)
+          .position({ x: this.motion.layoutFrame().content.x, y: this.motion.layoutFrame().content.y })
           .id('reader-control-motion-content-clip')
-          .borderRadius(8 + 4 * this.motion.frame().progress)
-          .clip(true).opacity(this.motion.frame().content.opacity)
+          .borderRadius(8 + 4 * this.motion.layoutFrame().progress)
+          .clip(true).opacity(this.motion.layoutFrame().content.opacity)
           .enabled(this.motion.contentInputEnabled())
-          .hitTestBehavior(this.motion.frame().visibility > 0 ? HitTestMode.Default : HitTestMode.None);
+          .hitTestBehavior(this.motionPaint.visualVisibilityProgress > 0 ? HitTestMode.Default : HitTestMode.None);
         // Strokes stay above opaque scrolling rows. Each remains paired with
         // its own source surface rather than borrowing the other actor's rect.
         Stack()
           .id('reader-control-content-outline')
-          .width(this.motion.frame().content.width).height(this.motion.frame().content.height)
-          .position({ x: this.motion.frame().content.x, y: this.motion.frame().content.y })
-          .borderRadius(8 + 4 * this.motion.frame().progress)
+          .width(this.motion.layoutFrame().content.width).height(this.motion.layoutFrame().content.height)
+          .position({ x: this.motion.layoutFrame().content.x, y: this.motion.layoutFrame().content.y })
+          .borderRadius(8 + 4 * this.motion.layoutFrame().progress)
           .border({ width: TOK_BORDER_W, color: readerAppColor(this.motion.contentLocation().module === 'settings' &&
-            this.motion.frame().progress === 0 ? 'TOK_LINE_STRONG' : 'TOK_LINE', this.appScheme) })
+            this.motion.layoutFrame().progress === 0 ? 'TOK_LINE_STRONG' : 'TOK_LINE', this.appScheme) })
           .opacity(this.motion.contentLocation().level !== 'home' && readerControlHasQuickContentSurface(this.motion.contentLocation().module) ?
-            this.motion.frame().content.opacity * (1 - this.motion.frame().progress) : 0)
+            this.motion.layoutFrame().content.opacity * (1 - this.motion.layoutFrame().progress) : 0)
           .hitTestBehavior(HitTestMode.None);
         Stack()
           .id('reader-control-full-content-outline')
-          .width(this.motion.frame().contentSurface.width).height(this.motion.frame().contentSurface.height)
-          .position({ x: this.motion.frame().contentSurface.x, y: this.motion.frame().contentSurface.y })
+          .width(this.motion.layoutFrame().contentSurface.width).height(this.motion.layoutFrame().contentSurface.height)
+          .position({ x: this.motion.layoutFrame().contentSurface.x, y: this.motion.layoutFrame().contentSurface.y })
           .borderRadius(12)
           .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) })
           .opacity(readerControlHasFullContentSurface(this.motion.contentLocation().module) ?
-            this.motion.frame().contentSurface.opacity : 0)
+            this.motion.layoutFrame().contentSurface.opacity : 0)
           .hitTestBehavior(HitTestMode.None);
         Stack({ alignContent: Alignment.TopStart }) { ReaderControlHeaderChrome({ scene: this.headerScene }); }
-          .width(this.motion.frame().header.width).height(this.motion.frame().header.height)
-          .position({ x: this.motion.frame().header.x, y: this.motion.frame().header.y })
-          .opacity((this.motion.contentLocation().module === 'replace') ? 1 : this.motion.frame().header.opacity)
+          .width(this.motion.layoutFrame().header.width).height(this.motion.layoutFrame().header.height)
+          .position({ x: this.motion.layoutFrame().header.x, y: this.motion.layoutFrame().header.y })
+          .opacity((this.motion.contentLocation().module === 'replace') ? 1 : this.motion.layoutFrame().header.opacity)
           // Default admits the child collapse action and masks lower siblings.
           // Block here would skip every child, leaving a visible but dead button.
           .zIndex(2)
-          .hitTestBehavior(this.currentFacts().geometry.temporary.layer === '' && (this.motion.frame().header.opacity > 0 || this.motion.contentLocation().module === 'replace') ?
+          .hitTestBehavior(this.currentFacts().geometry.temporary.layer === '' && (this.motion.layoutFrame().header.opacity > 0 || this.motion.contentLocation().module === 'replace') ?
             HitTestMode.Default : HitTestMode.None)
-          .enabled(this.currentFacts().geometry.inputEnabled && this.motion.frame().visibility > 0 && this.motionPaint.visualHeldPointerId < 0 &&
+          .enabled(this.currentFacts().geometry.inputEnabled && this.motionPaint.visualVisibilityProgress > 0 && this.motionPaint.visualHeldPointerId < 0 &&
             (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu') &&
-            (this.motion.frame().header.opacity > 0 || this.motion.contentLocation().module === 'replace'))
+            (this.motion.layoutFrame().header.opacity > 0 || this.motion.contentLocation().module === 'replace'))
           .accessibilityLevel((this.currentFacts().geometry.temporary.layer !== '') ? 'no-hide-descendants' : 'auto');
         ReaderControlHeaderAction({ scene: this.headerScene });
         Stack({ alignContent: Alignment.TopStart }) { ReaderControlBrightnessRail({ quick: this.quickHome }); }
-          .width(this.motion.frame().brightness.width).height(this.motion.frame().brightness.height)
-          .position({ x: this.motion.frame().brightness.x, y: this.motion.frame().brightness.y })
-          .opacity(this.motion.frame().brightness.opacity)
+          .width(this.motion.layoutFrame().brightness.width).height(this.motion.layoutFrame().brightness.height)
+          .position({ x: this.motion.layoutFrame().brightness.x, y: this.motion.layoutFrame().brightness.y })
+          .opacity(this.motion.layoutFrame().brightness.opacity)
           // HitTestMode.None excludes only this container, not its children.
           // Retain the authored actors, but retire the whole faded subtree.
           .enabled(this.motion.contentInputEnabled() && (this.currentFacts().geometry.temporary.layer === '' || this.currentFacts().geometry.temporary.layer === 'moreMenu') &&
-            this.motion.frame().brightness.opacity > 0)
-          .hitTestBehavior(this.currentFacts().geometry.temporary.layer === '' && this.motion.frame().brightness.opacity > 0 ? HitTestMode.Default : HitTestMode.None)
+            this.motion.layoutFrame().brightness.opacity > 0)
+          .hitTestBehavior(this.currentFacts().geometry.temporary.layer === '' && this.motion.layoutFrame().brightness.opacity > 0 ? HitTestMode.Default : HitTestMode.None)
           .accessibilityLevel(this.motion.contentInputEnabled() && this.currentFacts().geometry.temporary.layer === '' &&
-            this.motion.frame().brightness.opacity > 0 ? 'auto' : 'no-hide-descendants');
+            this.motion.layoutFrame().brightness.opacity > 0 ? 'auto' : 'no-hide-descendants');
         Stack({ alignContent: Alignment.TopStart }) { this.moduleNavBar(); }
-          .width(this.motion.frame().navigation.width).height(this.motion.frame().navigation.height)
-          .position({ x: this.motion.frame().navigation.x, y: this.motion.frame().navigation.y })
-          .opacity(this.motion.frame().navigation.opacity)
+          .width(this.motion.layoutFrame().navigation.width).height(this.motion.layoutFrame().navigation.height)
+          .position({ x: this.motion.layoutFrame().navigation.x, y: this.motion.layoutFrame().navigation.y })
+          .opacity(this.motion.layoutFrame().navigation.opacity)
           // The modal Popup owns background input. Keep the native Button
           // paint stable while dispatch and accessibility are suspended.
           .enabled(this.motion.navigationInputEnabled(true))
           .accessibilityLevel(!this.topBarOwner.menuVisible() && !this.motion.hasCurrentModalInput() &&
-            this.motion.frame().navigation.opacity > 0 ? 'auto' : 'no-hide-descendants')
-          .hitTestBehavior(this.motion.frame().navigation.opacity > 0 ? HitTestMode.Default : HitTestMode.None);
+            this.motion.layoutFrame().navigation.opacity > 0 ? 'auto' : 'no-hide-descendants')
+          .hitTestBehavior(this.motion.layoutFrame().navigation.opacity > 0 ? HitTestMode.Default : HitTestMode.None);
         // The cap and central grabber retain their one gesture owner.
         if (!this.currentFacts().geometry.fixedIsland) {
         ReaderControlHeaderGrabCap({ scene: this.headerScene });
@@ -466,16 +514,16 @@ export struct ReaderControlPanel {
         Stack({ alignContent: Alignment.TopStart }) {
           // Paint from the same actor used by the spatial axis. Stack margin
           // alignment must not become a second source of vertical placement.
-          Row().width(this.motion.frame().grabber.width).height(this.motion.frame().grabber.height).borderRadius(2)
+          Row().width(this.motion.layoutFrame().grabber.width).height(this.motion.layoutFrame().grabber.height).borderRadius(2)
             .backgroundColor(readerAppColor('TOK_READ_HANDLE', this.appScheme))
-            .position({ x: this.motion.frame().grabber.x - (this.minimumHost.currentLayout().fullPanelWidth - 72) / 2,
-              y: this.motion.frame().grabber.y - this.motion.frame().shell.y })
-            .id('reader-control-motion-grabber-bar').opacity(this.motion.frame().grabber.opacity);
+            .position({ x: this.motion.layoutFrame().grabber.x - (this.minimumHost.currentLayout().fullPanelWidth - 72) / 2,
+              y: this.motion.layoutFrame().grabber.y - this.motion.layoutFrame().shell.y })
+            .id('reader-control-motion-grabber-bar').opacity(this.motion.layoutFrame().grabber.opacity);
         }
         .width(72).height(28)
         .id('reader-control-motion-grabber')
         .zIndex(3)
-        .position({ x: (this.minimumHost.currentLayout().fullPanelWidth - 72) / 2, y: this.motion.frame().shell.y })
+        .position({ x: (this.minimumHost.currentLayout().fullPanelWidth - 72) / 2, y: this.motion.layoutFrame().shell.y })
         .hitTestBehavior(HitTestMode.Block)
         .accessibilityText(this.motion.contentLocation().level === 'home' ?
           '控制栏拖动区域，向下关闭' : this.motion.contentLocation().form === 'full' ?
@@ -489,24 +537,24 @@ export struct ReaderControlPanel {
         .width(this.minimumHost.currentLayout().fullPanelWidth).height(this.motion.controlPanelHeight())
         .id('reader-control-motion-dock')
         .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
-          ? { role: 'modal-overlay', id: 'reading-controls', active: this.motion.frame().visibility > 0,
-            intercepts: this.currentFacts().geometry.inputEnabled && (this.motion.frame().visibility > 0 || this.motionPaint.visualHeldPointerId >= 0) } as LayoutInvariantTag : undefined)
+          ? { role: 'modal-overlay', id: 'reading-controls', active: this.motionPaint.visualVisibilityProgress > 0,
+            intercepts: this.currentFacts().geometry.inputEnabled && (this.motionPaint.visualVisibilityProgress > 0 || this.motionPaint.visualHeldPointerId >= 0) } as LayoutInvariantTag : undefined)
         .translate({ x: this.minimumHost.currentLayout().isExpanded() ? this.motion.directSheetTranslation() : 0,
-          y: this.motion.frame().dock.translateY + (this.minimumHost.currentLayout().isExpanded() ? 0 : this.motion.directSheetTranslation()) })
-        .opacity(this.motion.frame().dock.opacity * (this.motion.directSheetVisible() && this.currentFacts().geometry.reduceMotion ? this.motionPaint.visualExpansionProgress : 1))
+          y: this.motion.layoutFrame().dock.translateY + (this.minimumHost.currentLayout().isExpanded() ? 0 : this.motion.directSheetTranslation()) })
+        .opacity(this.motion.layoutFrame().dock.opacity * (this.motion.directSheetVisible() && this.currentFacts().geometry.reduceMotion ? this.motionPaint.visualExpansionProgress : 1))
         .position({ x: this.motion.dockLeft(), y: this.motion.presentedDockTop() })
         .onTouch((event: TouchEvent): void => this.motion.onDockPlacementTouch(event))
         // A held pointer may reach the hidden endpoint before UP. Retiring
         // its ancestor here loses UP/CANCEL and leaves the runtime held.
-        .enabled(this.currentFacts().geometry.inputEnabled && (this.motion.frame().visibility > 0 || this.motionPaint.visualHeldPointerId >= 0))
-          .hitTestBehavior(this.currentFacts().geometry.inputEnabled && (this.motion.frame().visibility > 0 || this.motionPaint.visualHeldPointerId >= 0) ?
+        .enabled(this.currentFacts().geometry.inputEnabled && (this.motionPaint.visualVisibilityProgress > 0 || this.motionPaint.visualHeldPointerId >= 0))
+          .hitTestBehavior(this.currentFacts().geometry.inputEnabled && (this.motionPaint.visualVisibilityProgress > 0 || this.motionPaint.visualHeldPointerId >= 0) ?
           HitTestMode.Transparent : HitTestMode.None);
       }
     }
     .visibility(this.currentFacts().geometry.obscured ? Visibility.Hidden : Visibility.Visible)
     .width(this.minimumHost.currentLayout().viewportWidth)
     .height(this.minimumHost.currentLayout().viewportHeight)
-    .accessibilityLevel(this.motion.frame().visibility > 0 || this.currentFacts().launch.sample !== undefined ? 'auto' : 'no-hide-descendants')
+    .accessibilityLevel(this.motionPaint.visualVisibilityProgress > 0 || this.currentFacts().launch.sample !== undefined ? 'auto' : 'no-hide-descendants')
     .hitTestBehavior(HitTestMode.Transparent)
     .onAreaChange((_previous: Area, current: Area): void => {
       this.motion.panelAreaChanged(current);
@@ -521,8 +569,8 @@ export struct ReaderControlPanel {
         if (this.motion.contentLocation().level === 'home') {
           Scroll() { this.homeContent(); }
             .id('reader-control-module-home')
-            .width(this.motion.frame().content.width).height(this.motion.frame().content.height).edgeEffect(EdgeEffect.None)
-            .enableScrollInteraction(!readerControlExtentFits(this.quickHome.homeContentMinimumHeight(), this.motion.frame().content.height));
+            .width(this.motion.layoutFrame().content.width).height(this.motion.layoutFrame().content.height).edgeEffect(EdgeEffect.None)
+            .enableScrollInteraction(!readerControlExtentFits(this.quickHome.homeContentMinimumHeight(), this.motion.layoutFrame().content.height));
         } else {
           // Read the observed launch publication in the render expression so the
           // live source retires with the proxy's ownership update.
@@ -531,7 +579,7 @@ export struct ReaderControlPanel {
       }
     }
     .id('reader-control-content-host')
-    .width(this.motion.frame().content.width).height(this.motion.frame().content.height);
+    .width(this.motion.layoutFrame().content.width).height(this.motion.layoutFrame().content.height);
   }
 
   @State private quickOrModulePress: string = '';
@@ -551,7 +599,7 @@ export struct ReaderControlPanel {
       ReaderControlQuickHomeActions({ quick: this.quickHome }); this.chapterProgress();
       if (!this.minimumHost.currentLayout().topBarVisible) ReaderControlShortWindowActions({ owner: this.topBarOwner });
     }
-      .width(this.motion.frame().content.width).alignItems(HorizontalAlign.Start);
+      .width(this.motion.layoutFrame().content.width).alignItems(HorizontalAlign.Start);
   }
 
   private onPageBookmarkStatusChanged(): void {

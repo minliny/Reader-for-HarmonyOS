@@ -231,17 +231,26 @@ export struct SourceJourneySurface {
           subject: `source-${motion.actor}`, scope: `source-${this.identity}`,
           nodes: [routeMotion.nodeId], staticMotion: motion.reduced });
         try {
-          const animator = context.createAnimator({ duration, easing: motion.reduced ? 'ease-out' : 'linear',
-            delay: 0, fill: 'forwards', direction: 'normal', iterations: 1, begin: 0, end: 1 });
-          this.paneAnimator = animator;
-          animator.onFrame = (fraction: number): void => {
-            if (!current() || this.paneAnimator !== animator) return;
-            const progress = motion.reduced ? fraction : readerMotionStandardCurve().interpolate(fraction);
-            this.paneMotion = { actor: motion.actor, popping, width, reduced: motion.reduced,
-              coverage: popping ? from * (1 - progress) : progress };
-          };
-          animator.onFinish = (): void => { if (this.paneAnimator === animator) finish(); };
-          animator.play();
+          if (readerTransitionsEnabled()) {
+            const animator = context.createAnimator({ duration, easing: motion.reduced ? 'ease-out' : 'linear',
+              delay: 0, fill: 'forwards', direction: 'normal', iterations: 1, begin: 0, end: 1 });
+            this.paneAnimator = animator;
+            animator.onFrame = (fraction: number): void => {
+              if (!current() || this.paneAnimator !== animator) return;
+              const progress = motion.reduced ? fraction : readerMotionStandardCurve().interpolate(fraction);
+              this.paneMotion = { actor: motion.actor, popping, width, reduced: motion.reduced,
+                coverage: popping ? from * (1 - progress) : progress };
+            };
+            animator.onFinish = (): void => { if (this.paneAnimator === animator) finish(); };
+            animator.play();
+          } else {
+            context.animateTo({ duration, curve: motion.reduced ? Curve.EaseOut : readerMotionStandardCurve(), onFinish: finish }, (): void => {
+              if (current()) {
+                this.paneMotion = { actor: motion.actor, popping, width, reduced: motion.reduced,
+                  coverage: popping ? 0 : 1 };
+              }
+            });
+          }
         } catch (_) { finish(); }
       }));
     } catch (_) { finish(); }
@@ -397,6 +406,7 @@ export struct SourceJourneySurface {
           if (opening.pane === 'groups') this.groupsPage(opening, -1);
           else this.transferPage(opening);
         }.id(readerTransitionsEnabled() ? `reader-source-v9-${opening.pane}-motion` : undefined).width('100%').height('100%')
+          .renderGroup(this.paneMotion?.actor === opening.pane)
           .translate({ x: this.paneTranslation(opening.pane) }).opacity(this.paneOpacity(opening.pane))
           .enabled(this.paneMotion?.popping !== true);
       }, (opening: SourceJourneyPaneOpening): string => `${opening.pane}:${opening.generation}`);

@@ -363,7 +363,7 @@ export struct ReaderRouteStackSurface {
         const start = (): void => {
           if (!this.mounted || this.activeRouteAnimation !== animation || animation.settled) return;
           try {
-            if (preview === undefined && !fade && duration !== undefined && duration > 0) {
+            if (readerTransitionsEnabled() && preview === undefined && !fade && duration !== undefined && duration > 0) {
               this.stopRouteAnimator();
               const animator = context.createAnimator({
                 duration, easing: 'linear', delay: 0, fill: 'forwards',

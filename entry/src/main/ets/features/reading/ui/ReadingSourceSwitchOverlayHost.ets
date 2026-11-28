@@ -4,9 +4,12 @@ import type { ReadingPageTurnRenderSnapshot } from './ReaderReadingSurfaceHost';
 import type { ReadingSurfacePageFragment } from './ReadingSurface';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import type { AnimatorResult } from '@ohos.animator';
+import curves from '@ohos.curves';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../../../ui/feedback/ReaderTransientFeedback';
+import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { ReaderSourceSwitchReveal } from '../presentation/ReaderSourceSwitchReveal';
 import { createReaderSourceSwitchWash } from './ReaderSourceSwitchWash';
+import { SOURCE_SWITCH_VISUAL } from '../../source/ui/SourceSwitchVisual';
 import type { SourceSwitchCompletionPresentation } from '../../source/presentation/SourceSwitchCompletionPresentation';
 import { SourceSwitchCompletionOverlay } from '../../source/ui/SourceSwitchCompletionOverlay';
 import type { ReaderAppearanceTheme } from '../application/ReaderAppearanceState';
@@ -204,6 +207,21 @@ export class ReadingSourceSwitchOverlayHost {
       duration: READER_FEEDBACK_EXTENDED_MS,
     }, current);
     if (scope.reducedMotion()) return;
+    if (!readerTransitionsEnabled()) {
+      const from = 1 - SOURCE_SWITCH_VISUAL.readerEnterFromOpacity;
+      scope.publishOpacity(from);
+      scope.uiContext().animateTo({
+        duration: SOURCE_SWITCH_VISUAL.readerEnterDurationMs,
+        curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1,
+          SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2),
+        onFinish: (): void => {
+          if (current()) scope.publishOpacity(0);
+        },
+      }, (): void => {
+        if (current()) scope.publishOpacity(0);
+      });
+      return;
+    }
     const animator = createReaderSourceSwitchWash(scope.uiContext, scope.publishOpacity);
     this.animator = animator;
     animator.onFrame = (opacity: number): void => {

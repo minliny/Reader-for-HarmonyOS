@@ -111,12 +111,11 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       }).clip(true);
   }
 
-  private applyMaterialFrame(instance: CommonAttribute, background: BackgroundEffectOptions,
+  private applyMaterialFrame(instance: CommonAttribute, _background: BackgroundEffectOptions,
     border: BorderOptions | undefined, outline: OutlineOptions, shadow?: ShadowOptions): void {
     const native = this.material?.native === true;
-    const solidFallback = !native && this.material?.performanceMode === true;
-    instance.backgroundEffect(native || solidFallback ? undefined : background)
-      .backgroundColor(solidFallback ? readerAppColor('TOK_SURFACE_SOLID', this.scheme) : Color.Transparent)
+    instance.backgroundEffect(undefined)
+      .backgroundColor(native ? Color.Transparent : readerAppColor('TOK_SURFACE_SOLID', this.scheme))
       .border(native ? { width: 0, color: Color.Transparent } : border)
       .shadow(native ? undefined : shadow);
     applyReaderImmersiveMaterial(instance, this.material);

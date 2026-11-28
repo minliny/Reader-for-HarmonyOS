@@ -210,7 +210,7 @@ export struct ReaderLayoutDebugOverlay {
   }
 
   private deferInvariantScanForMotion(): boolean {
-    if (!this.automationEnabled || this.developerModeEnabled || this.transitionRecorder?.isRecording() !== true) return false;
+    if (this.transitionRecorder?.isRecording() !== true) return false;
     this.invariantScanDeferred = true;
     return true;
   }
