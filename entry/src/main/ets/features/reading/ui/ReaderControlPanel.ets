@@ -51,7 +51,7 @@ export type { ReaderControlPage } from './ReaderControlRouting';
 
 @Component
 export struct ReaderControlPanel {
-  @ObjectLink @Watch('onPanelFrameChanged') panelFrame!: ReaderControlPanelFrame;
+  @ObjectLink @Watch('onPanelFrameChanged') panelFrame: ReaderControlPanelFrame;
   onIntent: ReaderControlIntentHandler = defaultReaderControlIntent;
   private deliveredFrame: ReaderControlPanelFrame | undefined = undefined;
   private readonly factDelivery = createReaderControlFactDelivery();
