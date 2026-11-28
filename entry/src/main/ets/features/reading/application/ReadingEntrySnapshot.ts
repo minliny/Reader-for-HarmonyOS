@@ -3,7 +3,7 @@ import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { completeReadingParagraphWindow, type ReadingParagraphBoundaryMode } from './ReadingParagraphProjection';
 import { readingChapterLayoutMap, sliceReadingChapterText, type ReadingDocumentRange } from './ReadingSurfaceLayoutMap';
 import type { ReadingSessionChapter } from './ReadingChapterWindow';
-import type { LocalReadingDownloadState, LocalReadingProgressState, LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import type { LocalReadingDownloadState, LocalReadingProgressState, LocalReadingTocEntry } from './LocalReadingFlowTypes';
 import { materializeReadingDocument, materializePreparedReadingDocument, type MaterializedReadingDocument } from './ReadingDocumentProjection';
 import { appendReadingSelectionContext, captureRemotePositionContext, encodeRemotePositionContext, decodeRemotePositionMigration, decodeRemotePositionScope, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 

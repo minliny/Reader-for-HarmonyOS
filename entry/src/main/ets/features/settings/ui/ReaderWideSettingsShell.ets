@@ -1,6 +1,6 @@
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { publishReaderMainViewport } from '../../shell/MainNavigationSpec';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderSectionHeading } from '../../../ui/controls/ReaderSectionHeading';

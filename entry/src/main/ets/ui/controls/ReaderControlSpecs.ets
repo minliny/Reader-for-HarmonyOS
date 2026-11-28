@@ -1,5 +1,5 @@
 import { TOK_SPACE_XS, TOK_BORDER_W, TOK_SPACE_MD, TOK_SPACE_CARD_PADDING, TOK_SPACE_SM, TOK_SPACE_LG, TOK_SPACE_CONTROL_INLINE } from '../foundation/ReaderTokens';
-import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
+import type { ReaderAppColorRole } from '../foundation/ReaderAppColors';
 import { readerIslandControlPaint } from '../foundation/ReaderIslandControlPaint';
 import { SEARCH_CONTROL_MIN_TARGET, SEARCH_HISTORY_HORIZONTAL_PADDING, SEARCH_HISTORY_VISUAL_HEIGHT } from '../foundation/ReaderSearchControlGeometry';
 import { MESSAGE_ACTION } from '../foundation/ReaderMessageStyle';

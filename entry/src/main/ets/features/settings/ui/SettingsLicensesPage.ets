@@ -3,7 +3,7 @@ import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { TYPE_APP_INHERITED_BODY } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { CategorySection } from './CategorySection';
 

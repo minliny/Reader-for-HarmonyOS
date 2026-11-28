@@ -1,6 +1,6 @@
 import { PopupSurfaceSpec, resolvePopupSpec, ActionSheetSurfaceSpec, resolveActionSheetSpec, type ActionSheetSpecId } from './ReaderSurfaceSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerOverlayListHeight, readerOverlayViewport } from '../layout/ReaderOverlayGeometry';

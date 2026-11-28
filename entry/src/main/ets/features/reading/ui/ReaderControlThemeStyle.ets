@@ -1,4 +1,4 @@
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 /**
  * Control chrome palette contract. Values intentionally reference the
  * existing Figma-backed Reader tokens; theme-specific replacements must be

@@ -4,7 +4,7 @@ import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironm
 import { readerReadableFontScale } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { LengthMetrics } from '@kit.ArkUI';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderAccessibilityActions, type ReaderAccessibleAction } from '../../../ui/controls/ReaderAccessibilityActions';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';

@@ -2,7 +2,7 @@ import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReadingEntryHandoff, registerReadingEntryMemoryRelease, estimateRetainedRemoteSessionBytes } from '../application/ReadingEntryHandoff';
 import type { ReadingSessionChapter } from '../application/ReadingChapterWindow';
 import type { ReadingEntryNavigation } from '../application/ReadingEntrySnapshot';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { ReadingCommit } from '../application/ReadingCommit';
 import { ReadingPaginationPrefix, type ReadingPaginationKey } from '../application/ReadingPaginationIndex';
 import type { RemoteReadingSession } from '../application/RemoteReadingFlowGateway';

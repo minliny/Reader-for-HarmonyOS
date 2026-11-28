@@ -1,7 +1,7 @@
 import curves from '@ohos.curves';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { readerHighlightColor } from './ReaderDynamicHighlight';
 import { ReaderTtsWaveformClock, createReaderTtsWaveformSample, readerTtsWaveformBarHeight,
   readerTtsWaveformBarWidth, type ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';

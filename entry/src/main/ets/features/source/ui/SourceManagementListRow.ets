@@ -24,7 +24,7 @@ import type { SourceManagementViewState, SourceToolsEntry } from '../presentatio
 import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { TYPE_SOURCE_MANAGEMENT_ROW_TITLE, TYPE_SOURCE_MANAGEMENT_ROW_URL } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { type BookSource } from '../application/SourceGateway';
 import type { SourceManagementStatusKind, SourceManagementProjection } from '../application/SourceOrchestrator';

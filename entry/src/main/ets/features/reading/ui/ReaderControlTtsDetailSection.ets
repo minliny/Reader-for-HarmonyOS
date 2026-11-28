@@ -1,4 +1,4 @@
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import {

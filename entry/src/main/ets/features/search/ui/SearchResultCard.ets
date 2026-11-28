@@ -4,7 +4,7 @@ import { bookAuthorLabel } from '../../../app/library/BookAuthorMetadata';
 import { SEARCH_RESULT_GEOMETRY } from './SearchResultGeometry';
 import { searchBookSnapshot } from '../presentation/SearchBookSnapshot';
 import { formatSearchSourceSummary } from '../presentation/SearchSourceDisplay';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { SearchViewState } from '../presentation/SearchViewState';
 import { bookIntroText } from '../../../app/library/BookIntroText';
 import type { SearchBook } from '../application/SearchGateway';

@@ -1,4 +1,4 @@
-import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowTypes';
 
 export interface MangaDirectoryRowPresentation {
   parentTitle?: string;

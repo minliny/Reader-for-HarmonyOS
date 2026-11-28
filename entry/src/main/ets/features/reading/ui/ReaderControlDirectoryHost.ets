@@ -2,7 +2,7 @@ import type { ReaderReadingControlInteractionHost } from './ReaderReadingControl
 import type { ReaderReadingPlaybackFlowHost } from './ReaderReadingPlaybackFlowHost';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import type { ReaderAutoPageState } from './ReaderAutoPageState';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import { formatReaderAutoPageFullTimerSummary, type ReaderAutoPageFullConfiguration } from './ReaderAutoPageFullState';
 import { createReaderTtsState, type ReaderTtsState } from '../application/ReaderTtsState';
 import type { ReaderReadingMountHost } from './ReaderReadingMountHost';

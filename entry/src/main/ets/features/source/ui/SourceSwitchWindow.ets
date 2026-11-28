@@ -6,7 +6,7 @@ import type { SourceSwitchPresentation } from '../presentation/SourceSwitchPrese
 import { ColorMetrics } from '@kit.ArkUI';
 import { SOURCE_SWITCH_VISUAL } from './SourceSwitchVisual';
 import { SourceSwitchSpinner } from './SourceSwitchSpinner';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';

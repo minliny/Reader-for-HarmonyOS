@@ -4,7 +4,7 @@ import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface'
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
 import { MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
 import { READER_ACTION_MIN_TARGET } from '../../../ui/controls/ReaderActionAccessibility';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { resolveSheetSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';

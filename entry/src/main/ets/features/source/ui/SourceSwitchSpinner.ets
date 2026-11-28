@@ -1,4 +1,4 @@
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 
 /** Native indeterminate loading with the source-switch owner's admission.
  * The platform owns the ring geometry and animation timing. */

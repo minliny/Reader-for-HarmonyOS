@@ -1,4 +1,4 @@
-import type { LocalReadingAnchor, LocalReadingLayout, LocalReadingProgress, LocalReadingProgressState } from './LocalReadingFlowGateway';
+import type { LocalReadingAnchor, LocalReadingLayout, LocalReadingProgress, LocalReadingProgressState } from './LocalReadingFlowTypes';
 import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress } from './ReaderControlSelectionTransaction.ts';
 
 export interface ReaderProgressProducerGateway {

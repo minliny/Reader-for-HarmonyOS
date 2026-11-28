@@ -1,6 +1,6 @@
 import { TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR, TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED } from '../../../ui/foundation/ReaderTypography';
 import { TYPE_READER_TIMER_RETAINED_BUILD_VALUE } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 
 /** Shared timer input surface; owners keep their existing range/commit rules.

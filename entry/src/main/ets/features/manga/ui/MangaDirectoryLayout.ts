@@ -1,4 +1,4 @@
-import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowTypes';
 import type { ReaderDirectoryNavigationNode } from '../../reading/application/ReaderDirectoryNavigation';
 import type { MangaDirectoryRowPresentation } from '../presentation/MangaDirectoryPresentation';
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryLabelsFit, mangaDirectoryColumns } from './MangaDirectoryVisual.ts';

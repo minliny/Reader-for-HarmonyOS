@@ -1,5 +1,5 @@
 import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../foundation/ReaderFontFamilies';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 import {
   coverProgressArcCommands,

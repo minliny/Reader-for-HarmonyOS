@@ -1,4 +1,4 @@
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { type ReaderControlActorFrame } from './ReaderControlActorGeometry';
 import { type ReaderControlMotionPresentation } from './ReaderControlMotionPresentation';
 

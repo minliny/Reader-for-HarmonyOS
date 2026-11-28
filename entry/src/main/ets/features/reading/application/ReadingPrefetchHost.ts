@@ -2,7 +2,7 @@ import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import { ReadingOfflineGateway } from './ReadingOfflineGateway';
 import { RemoteReadingFlowGateway, type RemoteReadingSession, type RemoteReadingTocEntry } from './RemoteReadingFlowGateway';
-import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from './LocalReadingFlowTypes';
 import type { RemoteReadingIdentity } from './RemoteReadingContract';
 import { sameRemoteSessionEvidence, canAppendRemoteReadingCatalog } from './RemoteReadingEvidence';
 import { DEEP_PREFETCH_STEP_INTERVAL_MS, deepPrefetchAllowed, hasDeepPrefetchLowWater,

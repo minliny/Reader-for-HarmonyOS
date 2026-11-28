@@ -1,4 +1,4 @@
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import { projectReaderDirectoryEntries } from '../presentation/ReaderDirectoryProjection.ts';
 import { projectReaderBookmarkRows, readerBookmarkLoadState,
   type ReaderBookIdentity, type ReaderBookmarkRowModel } from '../presentation/ReaderBookmarkProjection.ts';

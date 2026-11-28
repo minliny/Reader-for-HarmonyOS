@@ -5,6 +5,7 @@ import { chmodSync, constants, copyFileSync, cpSync, existsSync, lstatSync, mkdi
 import { homedir, tmpdir } from 'node:os';
 import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { stripVTControlCharacters } from 'node:util';
 import { Worker } from 'node:worker_threads';
 import { contentSnapshot, coreBuildSnapshot } from '../../../Reader-Core/scripts/build-input-snapshot.mjs';
 import { acquireBuildLease } from '../../../Reader-Core/scripts/lib/build-resource-lock.mjs';
@@ -20,8 +21,8 @@ import { regularInputSnapshot, sameIdentity, snapshotFileRecords as snapshottedF
   startRegularInputSnapshots, captureSealedInputSnapshot } from '../lib/regular-input-snapshot.mjs';
 import { portableSpawnSync, resolveHarmonyTool } from '../lib/harmony-toolchain.mjs';
 import { assertPrivateFilePermissions } from '../lib/private-file.cjs';
-import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, publishCoreGate,
-  publishVerifiedHapRun } from '../lib/hap-delivery-evidence.mjs';
+import { LEAN_OMITTED_FONT_FILES, leanReaderFontsSource, requiredHapResources, verifyRequiredHapResources, currentCoreGate,
+  publishCoreGate, publishVerifiedHapRun } from '../lib/hap-delivery-evidence.mjs';
 import { embeddedStorageCompatibility } from '../lib/hap-storage-admission.mjs';
 import { publishStorageDeliveryContract, storageBootstrapIdentityBytes,
   STORAGE_BOOTSTRAP_RESOURCE } from '../lib/storage-delivery-contract.mjs';
@@ -49,6 +50,19 @@ const EXPECTED_NATIVE_ENTRIES = [
 export function resolveHarmonyAbi(value = 'arm64-v8a') {
   if (value !== 'arm64-v8a' && value !== 'x86_64') fail(`unsupported Harmony ABI: ${value}`, 2);
   return value;
+}
+
+/** Return true only when Hvigor exited cleanly from an ArkTS compile error without daemon or native/packaging failure. */
+export function isCleanArkTsCompileFailure(result) {
+  if (!result || result.error !== undefined || (result.signal !== null && result.signal !== undefined)) return false;
+  if (!Number.isInteger(result.status) || result.status === 0) return false;
+  const output = stripVTControlCharacters(`${result.stdout ?? ''}\n${result.stderr ?? ''}`);
+  if (!/> hvigor ERROR: Failed :entry:default@CompileArkTS\b/.test(output)) return false;
+  if (!/COMPILE RESULT:FAIL\s*\{ERROR:\d+/.test(output)) return false;
+  if (/Server has disconnected|ABORT_WORK|Failed :entry:default@(?:BuildNative|ConfigureCmake|PackageHap|SignHap|ProcessLibs|DoNativeStrip)/i.test(output)) {
+    return false;
+  }
+  return true;
 }
 
 const LIVE_SOURCE_TIMEOUT_MS = 110_000;
@@ -237,6 +251,14 @@ export function copySourceSandbox(source, destination, sandboxRoot = tmpdir(), {
   }
   const existingDestination = existsSync(destination);
   mkdirSync(destination, { recursive: true });
+  const rootExcludes = [
+    '.github',
+    '.pytest_cache',
+    '.worktrees',
+    'docs',
+    'evidence',
+    'tests',
+  ];
   const excludes = [
     '.git',
     '.reader-artifacts',
@@ -250,7 +272,6 @@ export function copySourceSandbox(source, destination, sandboxRoot = tmpdir(), {
     'entry/.cxx',
     'node_modules',
     'oh_modules',
-    'evidence',
     '.reader-app-build.json',
     '.reader-pipeline-session.json',
   ];
@@ -259,8 +280,9 @@ export function copySourceSandbox(source, destination, sandboxRoot = tmpdir(), {
   // removing stale included entries, matching the former --delete contract.
   const excluded = path => {
     const local = relative(source, path).split(sep).join('/');
-    return excludes.some(entry => entry.includes('/') ? local === entry || local.startsWith(`${entry}/`)
-      : local.split('/').includes(entry));
+    return rootExcludes.some(entry => local === entry || local.startsWith(`${entry}/`)) ||
+      excludes.some(entry => entry.includes('/') ? local === entry || local.startsWith(`${entry}/`)
+        : local.split('/').includes(entry));
   };
   const omit = local => omitted.some(entry => local === entry || local.startsWith(`${entry}${sep}`));
   const skipCopy = path => {
@@ -528,12 +550,12 @@ export function inspectHap(hapPath, kind, publicPath = basename(hapPath), requir
 const bundledSourceEntry = 'resources/rawfile/reader-tested-book-source-collection.json';
 const storageBootstrapEntry = `resources/rawfile/${STORAGE_BOOTSTRAP_RESOURCE}`;
 
-function inspectHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources) {
+function inspectHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources, forbiddenResourceEntries = []) {
   let signature;
   const archive = readHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources, () => {
     signature = verifySignature(hapPath);
     checkExpectedSignature(hapPath, kind, signature);
-  });
+  }, forbiddenResourceEntries);
   return archive.seal(signature);
 }
 
@@ -543,10 +565,10 @@ function checkExpectedSignature(hapPath, kind, signature) {
 }
 
 /** Build-only path. One JVM may run while the already opened ZIP is inspected. */
-async function inspectBuiltHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources) {
+async function inspectBuiltHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources, forbiddenResourceEntries = []) {
   const java = resolveHarmonyTool('java');
   if (!canOverlapHapSignature(java)) return measureBuildStep('inspectHap.synchronousSigner', () =>
-    inspectHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources));
+    inspectHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources, forbiddenResourceEntries));
   const verifyRoot = mkdtempSync(join(tmpdir(), 'reader-hap-signature-'));
   let task;
   try {
@@ -554,7 +576,7 @@ async function inspectBuiltHapForSeal(hapPath, kind, publicPath, requiredResourc
     const archive = measureBuildStep('inspectHap.archive', () => readHapForSeal(
       hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources, () => {
         task = startHapSignatureProcess(java, args, REPO_ROOT);
-      }));
+      }, forbiddenResourceEntries));
     const waiting = performance.now();
     const result = await task.result;
     recordBuildElapsed('inspectHap.signToolWait', waiting);
@@ -568,7 +590,7 @@ async function inspectBuiltHapForSeal(hapPath, kind, publicPath, requiredResourc
   }
 }
 
-function readHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources, admitSignature) {
+function readHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources, admitSignature, forbiddenResourceEntries = []) {
   if (abi !== 'arm64-v8a' && abi !== 'x86_64') fail(`unsupported HAP inspection ABI: ${abi}`);
   return withHapZip(hapPath, zip => {
     const record = (path, bytes) => ({ path, bytes: bytes.length, sha256: sha256Bytes(bytes) });
@@ -589,7 +611,7 @@ function readHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expec
         const bytes = zip.read(entry);
         if (entry === storageBootstrapEntry) embeddedBootstrap = record(entry, bytes);
         return bytes;
-      }));
+      }, { forbiddenEntries: forbiddenResourceEntries }));
     if (expectedBundledSources) measureBuildStep('bundledSources', () => {
       const bundled = record(bundledSourceEntry, zip.read(bundledSourceEntry));
       if (bundled.bytes !== expectedBundledSources.bytes || bundled.sha256 !== expectedBundledSources.sha256) {
@@ -1045,13 +1067,18 @@ function admittedHvigorVersion(hvigorw, cwd, env, cache, fingerprint) {
 }
 
 function validateBuildOptions(options, root = REPO_ROOT) {
-  const allowed = ['--class', '--channel', '--abi', '--core-profile', '--incremental', '--signing', '--live-sources', '--live-source-ids', '--keep-runs', '--artifact-root', '--contracts-scope', '--core-gate-receipt', '--rationale'];
+  const allowed = ['--class', '--channel', '--abi', '--core-profile', '--incremental', '--lean-fonts', '--signing', '--live-sources', '--live-source-ids', '--keep-runs', '--artifact-root', '--contracts-scope', '--core-gate-receipt', '--rationale'];
   for (const key of options.keys()) if (!allowed.includes(key)) fail(`unknown build argument: ${key}`, 2);
   if (options.has('--channel') && !['DEV', 'RC', 'REL'].includes(requiredOption(options, '--channel'))) fail('--channel must be DEV, RC or REL', 2);
   resolveHarmonyAbi(option(options, '--abi', process.env.READER_HARMONY_ABI));
   const buildClass = option(options, '--class', 'iteration');
   if (!['iteration', 'acceptance'].includes(buildClass)) fail('--class must be iteration or acceptance', 2);
   if (buildClass === 'acceptance' && options.has('--incremental')) fail('--incremental is only supported for --class iteration', 2);
+  if (options.get('--lean-fonts') === true) {
+    if (buildClass !== 'iteration') fail('--lean-fonts is only supported for --class iteration', 2);
+    const channel = option(options, '--channel', process.env.READER_APP_CHANNEL);
+    if (channel && channel !== 'DEV') fail('--lean-fonts is only supported for DEV iteration builds', 2);
+  }
   const coreProfile = resolveCoreProfile(option(options, '--core-profile', process.env.READER_HARMONY_CORE_PROFILE));
   if (buildClass === 'acceptance' && coreProfile !== 'release') fail('acceptance requires the Core release Rust profile', 2);
   if (options.get('--live-sources') === true) fail('--live-sources no longer starts the whole collection. Use --live-source-ids with exact IDs and --rationale, or run the explicit all-source tool plan separately.', 2);
@@ -1103,6 +1130,10 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
   const abi = resolveHarmonyAbi(option(options, '--abi', process.env.READER_HARMONY_ABI));
   const coreProfile = resolveCoreProfile(option(options, '--core-profile', process.env.READER_HARMONY_CORE_PROFILE));
   const incremental = options.get('--incremental') === true;
+  const leanFonts = options.get('--lean-fonts') === true;
+  const requiredResourceProfile = leanFonts ? 'lean-iteration' : 'full';
+  const omittedLeanFontInputs = leanFonts ? LEAN_OMITTED_FONT_FILES.map(name => join('entry', 'src', 'main', 'resources', 'rawfile', name)) : [];
+  const omittedLeanFontArchiveEntries = leanFonts ? LEAN_OMITTED_FONT_FILES.map(name => `resources/rawfile/${name}`) : [];
   const nativeEnvironment = { ...process.env, READER_HARMONY_ABI: abi, READER_HARMONY_CORE_PROFILE: coreProfile };
   const { harmony: sourceGitBefore, core: coreGitBefore, source: sourceBefore, controller: harmonyGateBefore } = inputs;
   const sourceRecord = name => sourceBefore.files.find(file => file.path === name.split('/').join(sep));
@@ -1133,7 +1164,7 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
   if (buildClass === 'acceptance' && coreGateFile) currentCoreGate(coreGateFile, CORE_ROOT);
   const precomputedRecords = appContentRecords(sourceBefore, harmonyGateBefore);
   const requiredResources = measureBuildStep('requiredResourcesBefore', () =>
-    requiredHapResources(REPO_ROOT, { precomputedRecords }));
+    requiredHapResources(REPO_ROOT, { precomputedRecords, leanFonts }));
 
   const buildLease = measureBuildStep('buildWorkspace', () => acquireHapBuildWorkspace(abi, incremental));
   const sandboxRoot = buildLease.path;
@@ -1143,10 +1174,11 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
   let markerWritten = false;
   let unpublishedRunDir = null;
   let afterSnapshots;
+  let preserveIncrementalCache = false;
   try {
     const readAppIdentity = () => measureBuildStep('appIdentity', () => prepareAppIdentity(REPO_ROOT, APP_CONTENT_INPUTS, { abi,
       channel: option(options, '--channel', process.env.READER_APP_CHANNEL), buildClass, signed: signingMode === 'local',
-      precomputedRecords }));
+      requiredResourceProfile, precomputedRecords }));
     const readWorkspaceContract = () => measureBuildStep('workspaceContractBefore', () => workspaceContractSnapshot());
     const nativeArgs = measureBuildStep('nativePreflightArguments', () => [resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs'),
       ...nativeProvenanceArguments(nativeEnvironment), '--preflight', '--output', resolve(sandboxRoot, 'native-preflight.json'),
@@ -1191,7 +1223,10 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
     }
 
     const appIdentity = prepared?.appIdentity ?? readAppIdentity();
-    console.log(JSON.stringify({ stage: 'appBuildIdentity', ...appIdentity.expectedVersion }));
+    if (leanFonts && appIdentity.expectedVersion.channel !== 'DEV') {
+      fail('--lean-fonts is only supported for DEV iteration builds', 2);
+    }
+    console.log(JSON.stringify({ stage: 'appBuildIdentity', ...appIdentity.expectedVersion, requiredResourceProfile }));
     const hvigorw = resolveHarmonyTool('hvigorw', { cwd: REPO_ROOT });
     const hvigorUserHome = resolve(sandboxRoot, 'hvigor-user-home');
     let existingDaemon = incremental && existsSync(hvigorUserHome);
@@ -1214,12 +1249,21 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
     moduleProfile.buildOption.externalNativeOptions.abiFilters = [abi];
     const overrides = new Map([['entry/build-profile.json5', { bytes: Buffer.from(JSON.stringify(moduleProfile, null, 2) + '\n'),
       mode: sourceRecord('entry/build-profile.json5').mode }]]);
+    if (leanFonts) {
+      const fontRel = 'entry/src/main/ets/ui/foundation/ReaderFonts.ets';
+      const fontRecord = sourceRecord(fontRel);
+      const fontBytes = readFileSync(resolve(REPO_ROOT, fontRel));
+      if (sha256Bytes(fontBytes) !== fontRecord.sha256) {
+        fail(`Build input changed while building ${fontRel}`);
+      }
+      overrides.set(fontRel, { bytes: Buffer.from(leanReaderFontsSource(fontBytes.toString('utf8'))), mode: fontRecord.mode });
+    }
     if (signingMode === 'local') {
       overrides.set('build-profile.json5', { bytes: Buffer.from(JSON.stringify(signingProfile, null, 2) + '\n'), mode: 0o600 });
     }
     const sandboxBefore = measureBuildStep('copySourceSandbox', () =>
       copySourceSandbox(REPO_ROOT, sandboxRepo, sandboxRoot, { before: sourceBefore, incremental,
-        overrides, omitted: [join('entry', 'libs', abi === 'arm64-v8a' ? 'x86_64' : 'arm64-v8a')] }));
+        overrides, omitted: [join('entry', 'libs', abi === 'arm64-v8a' ? 'x86_64' : 'arm64-v8a'), ...omittedLeanFontInputs] }));
     const effectiveModuleProfile = fileRecord(moduleProfilePath, 'module-build-profile.json');
     const effectiveProfile = fileRecord(resolve(sandboxRepo, 'build-profile.json5'), 'build-profile.json5');
     const identityInputPath = resolve(sandboxRepo, '.reader-app-build.json');
@@ -1282,11 +1326,23 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
     const hvigorVersion = measureBuildStep('hvigorVersion', () =>
       admittedHvigorVersion(hvigorw, sandboxRepo, buildEnvironment, resolve(sandboxRoot, 'hvigor-version.json'), versionFingerprint));
     const hvigorStarted = performance.now();
-    run(hvigorw, buildArgs, {
+    const hvigorResult = run(hvigorw, buildArgs, {
       cwd: sandboxRepo,
       stdio: 'inherit',
       env: buildEnvironment,
+      allowFailure: incremental,
     });
+    if (hvigorResult.status !== 0) {
+      if (incremental && isCleanArkTsCompileFailure(hvigorResult)) {
+        for (const name of ['entry-default-signed.hap', 'entry-default-unsigned.hap']) {
+          rmSync(resolve(outputDir, name), { force: true });
+        }
+        preserveIncrementalCache = true;
+      }
+      const stderr = typeof hvigorResult.stderr === 'string' ? hvigorResult.stderr.trim() : '';
+      const stdout = typeof hvigorResult.stdout === 'string' ? hvigorResult.stdout.trim() : '';
+      fail(`${hvigorw} failed (${hvigorResult.status}): ${stderr || stdout || '<no output>'}`);
+    }
     const hvigorFinished = performance.now();
     const finishedAt = new Date().toISOString();
     afterSnapshots = measureBuildStep('startSourceSnapshotsAfter', () => startRegularInputSnapshots([
@@ -1324,7 +1380,7 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
       try {
         inspected.set(path, await inspectBuiltHapForSeal(path,
           basename(path).endsWith('-signed.hap') ? 'signed' : 'unsigned', basename(path),
-          requiredResources, abi, appIdentity.expectedVersion, expectedBundledSources));
+          requiredResources, abi, appIdentity.expectedVersion, expectedBundledSources, omittedLeanFontArchiveEntries));
       } finally { recordBuildElapsed('inspectHap', started); }
     }
     const artifacts = [...inspected.values()].map(evidence => evidence.artifact);
@@ -1339,8 +1395,9 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
     activeBuildTimings?.steps.set('sandboxAfter', sandboxSnapshotMs);
     activeBuildTimings?.steps.set('sourceAfter', sourceSnapshotMs);
     assertSnapshotUnchanged(sandboxBefore, sandboxAfter, 'isolated build inputs');
-    assertSnapshotUnchanged(sourceBefore, sourceAfter, 'source worktree build inputs');
     measureBuildStep('resolvedDependenciesAfter', () => assertResolvedCorePackage(sandboxRepo, expectedVendor));
+    if (incremental) preserveIncrementalCache = true;
+    assertSnapshotUnchanged(sourceBefore, sourceAfter, 'source worktree build inputs');
     const controllerAfter = measureBuildStep('controllerAfter', () => controllerSnapshot());
     assertSnapshotUnchanged(harmonyGateBefore, controllerAfter, 'Harmony build controller and gate inputs');
     measureBuildStep('appIdentityAfter', () => assertAppIdentityUnchanged(appIdentity, nativeEnvironment,
@@ -1398,6 +1455,8 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
       buildClass,
       incremental,
       coreProfile,
+      requiredResourceProfile,
+      ...(leanFonts ? { omittedOptionalResources: [...LEAN_OMITTED_FONT_FILES] } : {}),
       acceptanceEligible: false,
       startedAt,
       finishedAt,
@@ -1475,6 +1534,7 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
       return { ...evidence.artifact };
     }));
     if (incremental) writeSandboxFile(signingStamp, signingKey, 0o600);
+    preserveIncrementalCache = false;
     const recoveryMarkerCleanupError = measureBuildStep('publish', () => publishVerifiedHapRun(runDir, publishedRunDir, () => {
       afterSnapshots.assertUnchanged();
       for (const [artifactPath, evidence] of inspected) evidence.assertUnchanged(artifactPath);
@@ -1506,6 +1566,10 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
       await afterSnapshots?.stop();
       if (unpublishedRunDir !== null) rmSync(unpublishedRunDir, { recursive: true, force: true });
       if (markerWritten) rmSync(pipelineMarker, { force: true });
+      if (incremental && preserveIncrementalCache) {
+        try { rmSync(incompleteBuild, { force: true }); }
+        catch { /* Retain recovery marker so the next incremental build cleans the cache. */ }
+      }
     } finally { buildLease.release(); }
   }
 }

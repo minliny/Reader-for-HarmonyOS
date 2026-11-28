@@ -3,7 +3,7 @@ import { MangaSourceSwitchPresentation } from '../../features/manga/presentation
 import { readerEntryPresentation, type ReaderRetainedPresentation } from '../../features/reading/ui/LocalReadingExperience';
 import type { ReadingCommit } from '../../features/reading/application/ReadingCommit';
 import type { ReadingPrefetchActivity } from '../../features/reading/application/ReadingPrefetchHost';
-import type { LocalReadingTocEntry } from '../../features/reading/application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../../features/reading/application/LocalReadingFlowTypes';
 import type { ReaderPageBookmarkToggleRequest } from '../../features/reading/presentation/ReaderDirectoryMarkerState';
 import type { RemoteReadingFailureKind } from '../../features/reading/application/RemoteContentAdmission';
 import type { RemoteReadingSession } from '../../features/reading/application/RemoteReadingFlowGateway';

@@ -10,7 +10,7 @@ import { ReaderStandardPageVariant, readerStandardPageSpec,
 import { ReaderFrameStyle, readerFrameStyle } from './ReaderFrameStyle';
 import { ReaderPageScrollHost } from './ReaderPageScrollHost';
 import { ReaderScrollLayout, readerScrollLayout } from './ReaderScrollLayout';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { TOK_SCREEN_INSET } from '../foundation/ReaderLayoutTokens';
 import { ReaderEditingVisibility } from './ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from './ReaderEditingScrollBinding';

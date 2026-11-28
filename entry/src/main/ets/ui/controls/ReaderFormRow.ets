@@ -1,5 +1,5 @@
 import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressScale, readerPressSurface } from '../foundation/ReaderPressMotion';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { TYPE_APP_ROW_DETAIL, TYPE_APP_ROW_LABEL } from '../foundation/ReaderTypography';
 import { TOK_BORDER_W, TOK_SPACE_SM } from '../foundation/ReaderTokens';
 

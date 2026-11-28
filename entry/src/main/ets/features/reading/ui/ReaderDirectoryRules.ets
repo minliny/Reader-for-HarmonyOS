@@ -13,7 +13,7 @@ import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderDirectoryRulesGateway } from '../application/ReaderDirectoryRulesGateway';
 import type { RulesMutationSnapshot } from '../../settings/application/RulesMutationOwner';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 

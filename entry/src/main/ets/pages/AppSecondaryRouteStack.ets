@@ -14,7 +14,7 @@ import { ReaderRouteStackSurface, type ReaderRouteSurfaceKey } from '../app/navi
 import type { ReaderRoute, ReaderRouteMotionKind, SettingsSection, TemporaryBackScope } from '../app/navigation/ReaderNavigation';
 import type { AppRouteCoordinator } from '../app/AppRouteCoordinator';
 import type { ReaderNativeAlertOptions } from '../ui/platform/ReaderNativeAlertOwner';
-import { readerAppColor } from '../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../ui/foundation/ReaderAppColors';
 import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
 import type { ArkWebInteractiveBounds } from '../ui/platform/ArkWebExecutionHost';
 import type { SettingsPane } from '../features/settings/presentation/SettingsNavigationItems';

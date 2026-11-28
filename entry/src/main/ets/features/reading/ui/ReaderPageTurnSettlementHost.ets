@@ -8,7 +8,7 @@ import type { ReadingPaginationKey } from '../application/ReadingPaginationIndex
 import { ReadingPageTurnCoordinator, type ReaderPageTurnSlideHost } from '../application/ReadingPageTurnCoordinator';
 import type { ReadingSessionFlowGateway } from '../application/ReadingSessionFlowGateway';
 import { type ReadingExitProgressCoordinator, type ReadingProgressIdentity } from '../application/ReadingExitProgressCoordinator';
-import type { LocalReadingProgress } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingProgress } from '../application/LocalReadingFlowTypes';
 import { persistReaderMeasuredProgress } from '../application/ReaderFirstPageAdmission';
 import { ReaderPreparedPageSettlement, type ReaderPageTurnOriginReceipt, type ReaderPageTurnProgressGateway,
   type ReaderPageTurnProgressTarget } from '../application/ReaderPreparedPageSettlement';

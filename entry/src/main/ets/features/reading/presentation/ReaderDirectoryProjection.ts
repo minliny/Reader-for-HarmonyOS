@@ -1,4 +1,4 @@
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { ReadingEntryNavigation, ReadingEntryNavigationItem } from '../application/ReadingEntrySnapshot';
 
 export interface ReaderDirectoryProjectionBookmark {

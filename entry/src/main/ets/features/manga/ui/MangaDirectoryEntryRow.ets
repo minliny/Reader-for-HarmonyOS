@@ -4,7 +4,7 @@ import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from
 import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
-import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowTypes';
 import type { MangaDirectoryRowPresentation } from '../presentation/MangaDirectoryPresentation';
 import { mangaDirectoryDisplay } from './MangaDirectoryDisplay';
 import { mangaDirectoryDownloadStatusText } from './MangaDirectoryState';

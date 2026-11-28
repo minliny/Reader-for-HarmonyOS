@@ -89,6 +89,15 @@ try {
   const smokeAcceptance = invalidAcceptance('--core-profile', 'smoke');
   assert.equal(smokeAcceptance.status, 2);
   assert.match(smokeAcceptance.stderr, /acceptance.*release|release.*acceptance/i);
+  const leanAcceptance = invalidAcceptance('--lean-fonts');
+  assert.equal(leanAcceptance.status, 2);
+  assert.match(leanAcceptance.stderr, /--lean-fonts.*--class iteration/);
+  const leanRc = portableSpawnSync(process.execPath,
+    [pipelineEntry, 'build', '--class', 'iteration', '--channel', 'RC', '--lean-fonts'], {
+      env: { ...process.env, READER_HARMONY_ABI: 'arm64-v8a', READER_HARMONY_CORE_PROFILE: 'release' }, encoding: 'utf8',
+    });
+  assert.equal(leanRc.status, 2);
+  assert.match(leanRc.stderr, /--lean-fonts.*DEV/);
   const hapOutputs = join(root, 'hap-outputs');
   put(join(hapOutputs, 'entry-default-signed.hap'));
   put(join(hapOutputs, 'entry-default-unsigned.hap'));
@@ -104,5 +113,25 @@ try {
     const source = readFileSync(path, 'utf8').replace(/^#!.*\n/, '');
     assert.doesNotMatch(source, /\/Applications\/|\/usr\/bin\/|run\('rsync'/, path);
   }
+  const smokeScript = join(scripts, 'dev-harmony-smoke.mjs');
+  const dryDefault = portableSpawnSync(process.execPath, [smokeScript, '--dry-run'], { encoding: 'utf8' });
+  assert.equal(dryDefault.status, 0, dryDefault.stderr);
+  const dryDefaultPlan = JSON.parse(dryDefault.stdout);
+  assert.equal(dryDefaultPlan.status, 'DRY_RUN');
+  assert.equal(dryDefaultPlan.abi, 'arm64-v8a');
+  assert.deepEqual(dryDefaultPlan.steps.map(step => step.name), ['core-smoke-native', 'sync-native', 'hap-iteration-incremental']);
+  assert.ok(dryDefaultPlan.steps[0].args.includes('smoke'));
+  assert.ok(dryDefaultPlan.steps[2].args.includes('--incremental'));
+  const drySkipped = portableSpawnSync(process.execPath, [smokeScript, '--abi', 'x86_64', '--skip-core', '--timings', '--dry-run'], { encoding: 'utf8' });
+  assert.equal(drySkipped.status, 0, drySkipped.stderr);
+  const drySkippedPlan = JSON.parse(drySkipped.stdout);
+  assert.equal(drySkippedPlan.abi, 'x86_64');
+  assert.deepEqual(drySkippedPlan.steps.map(step => step.name), ['hap-iteration-incremental']);
+  assert.equal(drySkippedPlan.steps[0].env?.READER_HAP_TIMINGS, '1');
+  const dryLean = portableSpawnSync(process.execPath, [smokeScript, '--skip-core', '--lean-fonts', '--dry-run'], { encoding: 'utf8' });
+  assert.equal(dryLean.status, 0, dryLean.stderr);
+  assert.ok(JSON.parse(dryLean.stdout).steps[0].args.includes('--lean-fonts'));
+  const invalidSmoke = portableSpawnSync(process.execPath, [smokeScript, '--unknown-flag'], { encoding: 'utf8' });
+  assert.equal(invalidSmoke.status, 2);
   console.log('HarmonyOS toolchain portability: PASS (tool discovery, CLI routing, private ACL policy, acceptance arguments).');
 } finally { rmSync(root, { recursive: true, force: true }); }

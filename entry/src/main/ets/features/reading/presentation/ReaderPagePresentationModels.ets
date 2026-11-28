@@ -3,7 +3,7 @@ import type { ReadingSessionFlowGateway } from '../application/ReadingSessionFlo
 import type { ReadingSurfaceLayoutMap } from '../application/ReadingSurfaceLayoutMap';
 import type { ReadingPaginationKey, ReadingPaginationPrefix } from '../application/ReadingPaginationIndex';
 import type { ReadingEntryNavigation } from '../application/ReadingEntrySnapshot';
-import type { LocalReadingTocEntry, LocalReadingProgress } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry, LocalReadingProgress } from '../application/LocalReadingFlowTypes';
 import type { ReadingCommit } from '../application/ReadingCommit';
 import type { ParagraphRange, PhysicalReadingPage } from '../ui/ReadingMeasurementModels';
 import type { ReaderPageTurnDirection } from '../ui/ReaderPageGestureState';

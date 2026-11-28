@@ -1,4 +1,4 @@
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../foundation/ReaderFontFamilies';
 
 export type ReaderStatusBadgeStatus = 'success' | 'error' | 'pending' | 'neutral' | 'enabled' | 'paused' | 'unknown';

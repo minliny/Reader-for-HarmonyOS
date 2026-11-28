@@ -6,7 +6,7 @@ import type { SourceSwitchPresentation } from '../../source/presentation/SourceS
 import type { SourceSwitchHost } from '../../source/application/SourceSwitchHost';
 import { sourceSwitchCandidateKey, type SourceSwitchCandidate, type SourceSwitchGateway, type SourceSwitchProbeQuery } from '../../source/application/SourceSwitchGateway';
 import { RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadingSession, type RemoteReadingTocEntry } from '../../reading/application/RemoteReadingFlowGateway';
-import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowTypes';
 import { remoteReadingSeedForSession, type ReadingBookDetail } from '../../reading/presentation/ReadingBookDetail';
 import type { ReadingEntryPresentation } from '../../reading/presentation/ReadingEntryPresentation';
 import type { RemoteReadingIdentity } from '../../reading/application/RemoteReadingContract';

@@ -5,7 +5,7 @@ import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/
 import { mangaDirectoryDisplay, type MangaDirectoryDisplayProjection } from '../../manga/ui/MangaDirectoryDisplay';
 import { mangaDirectoryDownloadStatusText, mangaDirectoryDownloadStatusWidth } from '../../manga/ui/MangaDirectoryState';
 import { TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_TITLE } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
@@ -20,7 +20,7 @@ import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderDirectoryNavigationGateway, type ReaderDirectoryNavigationPort, type ReaderDirectoryNavigationPortFactory, readerDirectoryScopeKey, isReaderDirectoryViewStale, type ReaderDirectoryNavigationNode,
   type ReaderDirectoryNavigationReady, type ReaderDirectoryNavigationPage } from '../application/ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import { readerDirectoryBookmarkMarkerState, type ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
 import { LengthMetrics } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';

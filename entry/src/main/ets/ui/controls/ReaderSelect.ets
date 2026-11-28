@@ -1,6 +1,6 @@
 import type { MeasureOptions } from '@ohos.measure';
 import { KeyCode } from '@kit.InputKit';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
 import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
 import { readerCompactSearchHeight } from '../foundation/ReaderSearchControlGeometry';

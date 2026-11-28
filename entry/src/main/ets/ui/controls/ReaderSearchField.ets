@@ -5,7 +5,7 @@ import { FrameCallback } from '@kit.ArkUI';
 import inputMethod from '@ohos.inputMethod';
 import hilog from '@ohos.hilog';
 import { KeyCode } from '@kit.InputKit';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { ReaderEditingVisibility } from '../layout/ReaderEditingVisibility';

@@ -1,4 +1,4 @@
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { readerBookmarkEmptyCopy } from '../presentation/ReaderBookmarkProjection';

@@ -5,7 +5,7 @@ import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';

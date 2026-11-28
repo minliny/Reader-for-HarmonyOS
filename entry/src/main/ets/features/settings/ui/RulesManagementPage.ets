@@ -9,7 +9,7 @@ import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction'
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { TYPE_APP_ROW_DETAIL, TYPE_APP_ROW_LABEL, TYPE_FORM_STATUS, TYPE_RULES_MANAGEMENT_HEADING } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';

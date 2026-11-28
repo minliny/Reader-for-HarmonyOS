@@ -1,6 +1,6 @@
 import type { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import type { ReadingCommit } from '../application/ReadingCommit';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { RemoteReadingSession } from '../application/RemoteReadingFlowGateway';
 import type { ReadingEntryPresentation } from './ReadingEntryPresentation';
 import { sameRemoteSessionEvidence } from '../application/RemoteReadingEvidence';

@@ -9,7 +9,7 @@ import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibil
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';

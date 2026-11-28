@@ -1,7 +1,7 @@
 import { drawing } from '@kit.ArkGraphics2D';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../../../ui/foundation/ReaderPressMotion';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { readerIslandControlPaint, type ReaderIslandControlTone } from '../../../ui/foundation/ReaderIslandControlPaint';
 import { readerIslandPlaybackLayout, READER_ISLAND_TARGET_VP, READER_ISLAND_TRANSPORT_ICON_VP,
   READER_ISLAND_TRANSPORT_LABEL_GAP, READER_ISLAND_ACTION_INSET, type ReaderIslandPlaybackLayout

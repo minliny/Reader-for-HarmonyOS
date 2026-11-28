@@ -1,4 +1,4 @@
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { ReaderCardSpecId, resolveReaderCardSpec } from './ReaderCardSpecs';
 import { readerSurfaceElevation } from './ReaderSurfaceSpecs';
 // 同规格只有一个实际外框；页面提供内容和测量宽度，外观由有限规格决定。

@@ -1,5 +1,5 @@
 import { readerRaisedSurfaceSpec, ReaderShadowLayerSpec } from './ReaderSurfaceSpecs';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../layout/ReaderRaisedShape';
 
 /** Shadow-only child of the surface owner's Stack. The owner supplies measured

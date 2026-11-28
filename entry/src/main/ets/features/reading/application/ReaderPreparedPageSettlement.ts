@@ -1,4 +1,4 @@
-import type { LocalReadingProgress, LocalReadingProgressState } from './LocalReadingFlowGateway';
+import type { LocalReadingProgress, LocalReadingProgressState } from './LocalReadingFlowTypes';
 import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress } from './ReaderControlSelectionTransaction.ts';
 
 // A lost visual endpoint, slot receipt, or frame callback must leave a

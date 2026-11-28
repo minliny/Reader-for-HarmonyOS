@@ -1,7 +1,7 @@
 import { ReaderPaperMaterial } from '../foundation/ReaderPaperMaterial';
 import { triggerReaderTouchHaptic } from './ReaderTouchHaptic';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
+import type { ReaderAppColorRole } from '../foundation/ReaderAppColors';
 
 import { FrameCallback } from '@kit.ArkUI';
 import { accessibility } from '@kit.AccessibilityKit';

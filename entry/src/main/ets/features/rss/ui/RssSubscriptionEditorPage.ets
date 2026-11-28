@@ -7,7 +7,7 @@ import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { TYPE_FORM_HINT, TYPE_FORM_INPUT, TYPE_FORM_LABEL_ACTION, TYPE_FORM_NOTE, TYPE_FORM_SECTION_HEADING, TYPE_FORM_STATUS } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';

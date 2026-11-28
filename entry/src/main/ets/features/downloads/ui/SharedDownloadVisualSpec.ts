@@ -2,7 +2,7 @@
 // Storage v2 constraints come from approved storage-demo.html; each source SHA is independent.
 // Runtime colors come from Reader-UI/theme/registry.json.
 // Do not edit values. This finite adapter is not a general HTML/CSS engine.
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry.ts';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors.ts';
 export const SHARED_DOWNLOAD_DEMO_SHA256 = "e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b";
 export const SHARED_DOWNLOAD_STORAGE_DEMO_SHA256 = "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4";
 export class SharedDownloadVisualSpec {

@@ -11,7 +11,7 @@ import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { type RemoteReadingTocEntry } from '../../reading/application/RemoteReadingFlowGateway';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import { ReaderDirectoryNavigationSurface } from '../../reading/ui/ReaderDirectoryNavigationSurface';
-import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowTypes';
 import type { RemoteReadingPositionScope } from '../../reading/application/RemoteReadingPositionMigration';
 import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from './MangaLayoutPolicy';
 import { MangaBookPresentation } from '../presentation/MangaBookPresentation';

@@ -37,7 +37,7 @@ import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSu
 import { resolveDrawerSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { MangaDirectoryDrawer, MangaDirectorySheet } from './MangaDirectoryDrawer';
 import type { RemoteReadingBookSeed, RemoteReadingSession, RemoteReadingTocEntry } from '../../reading/application/RemoteReadingFlowGateway';
 import type { ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';

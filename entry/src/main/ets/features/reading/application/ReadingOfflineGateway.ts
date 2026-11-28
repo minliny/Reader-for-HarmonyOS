@@ -6,7 +6,7 @@ import type { BookAcquisitionCoordinator } from './BookAcquisitionCoordinator';
 import { MangaSessionGateway } from '../../manga/application/MangaSessionGateway';
 import type { MangaChapterResult, MangaPreparedEntry } from '../../manga/application/MangaContract';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
-import type { LocalReadingDownloadState, LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import type { LocalReadingDownloadState, LocalReadingTocEntry } from './LocalReadingFlowTypes';
 import {
   RemoteReadingFlowGateway,
   type RemoteReadingSession,

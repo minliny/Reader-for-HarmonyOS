@@ -5,7 +5,7 @@ import type { RemoteReadingPositionScope } from '../application/RemoteReadingPos
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 import type { ReaderControlVerificationOrigin, ReaderControlVerificationSession } from './ReaderControlVerificationSession';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { ReaderBookIdentity } from '../presentation/ReaderBookmarkProjection';
 import type { ReadingContentSearchResult } from '../application/ReadingSessionFlowGateway';
 import type { ReaderAutoPageStatus } from './ReaderAutoPageState';

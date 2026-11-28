@@ -11,7 +11,7 @@ import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction'
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { rssOriginalMatchesScope } from '../application/RssMutationRecoveryContract';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_SOURCE_MANAGEMENT_META, TYPE_SOURCE_MANAGEMENT_TITLE } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';

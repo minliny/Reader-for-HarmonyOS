@@ -12,7 +12,7 @@ import { ReaderReadingTopBar } from '../../../ui/chrome/ReaderReadingTopBar';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
@@ -25,11 +25,11 @@ import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { ReaderBookIdentity } from '../presentation/ReaderBookmarkProjection';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
-import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
+import { currentRuntimeRequestPort, type ReaderRuntimeRequestPort } from '../../../app/ReaderRuntimePort';
 import {
   readerInteractiveSafeBottom, readerStableInteractiveSafeBottom,
   readerVisualSafeLeft,
@@ -315,8 +315,8 @@ export struct ReaderFullDirectory {
 
   private directoryRulesAvailable(): boolean {
     if (!this.isLocalBook() || this.bookId.length === 0 || !isReaderLocalTxtFormat(this.bookKind)) return false;
-    let owner: ReaderRuntimeOwner;
-    try { owner = ReaderRuntimeOwner.current(); } catch (_) { return false; }
+    let owner: ReaderRuntimeRequestPort;
+    try { owner = currentRuntimeRequestPort(); } catch (_) { return false; }
     return owner.supportsCoreCapability('reading.directory.view.v2');
   }
 

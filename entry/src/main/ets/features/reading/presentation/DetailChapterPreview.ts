@@ -1,4 +1,4 @@
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 
 const PREVIEW_LIMIT = 6;
 

@@ -1,7 +1,7 @@
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import type { ReaderTtsConfigField } from '../presentation/ReaderTtsConfigOptions';
 import type { ReaderControlTransportKind } from './ReaderControlPlaybackGeometry';

@@ -1,6 +1,6 @@
 import { readerPaperActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { TYPE_READER_CONTROL_COLLAPSE_INTER, TYPE_READER_CONTROL_COLLAPSE_TTS, TYPE_READER_CONTROL_COLLAPSE_UI,
   TYPE_READER_CONTROL_HEADER_INTER, TYPE_READER_CONTROL_HEADER_UI, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL,

@@ -1,5 +1,5 @@
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
-import type { LocalReadingBookmark, LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingBookmark, LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 
 /**
  * Stable book identity for bookmark ownership. The legacy "bookName+bookAuthor"

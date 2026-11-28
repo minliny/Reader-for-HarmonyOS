@@ -1,4 +1,4 @@
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 
 /** One visual surface for independent original-operation notices in one host.

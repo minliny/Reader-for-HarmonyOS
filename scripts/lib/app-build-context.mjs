@@ -50,17 +50,18 @@ function committedReleaseLedger(root, parseJson5, env) {
 }
 
 export function prepareAppIdentity(root, inputs, { abi, buildMode = 'debug', product = 'default', channel,
-  buildClass = 'iteration', signed = true, env = process.env, precomputedRecords } = {}) {
+  buildClass = 'iteration', signed = true, requiredResourceProfile = 'full', env = process.env, precomputedRecords } = {}) {
   if (product !== 'default' || !['debug', 'release'].includes(buildMode)) throw new Error('Unsupported app identity product/build mode');
   const parseJson5 = appIdentityParser(root, env);
   const ledger = JSON.parse(readFileSync(resolve(root, APP_RELEASE_LEDGER), 'utf8'));
   validateReleaseLedgerAdvance(ledger, committedReleaseLedger(root, parseJson5, env));
   const files = appContentSnapshot(root, inputs, { abi, parseJson5, precomputedRecords });
-  const buildIdentityInputs = { abi, buildMode, product, toolchain: appBuildToolchain(root, env) };
+  const buildIdentityInputs = { abi, buildMode, product, toolchain: appBuildToolchain(root, env),
+    ...(requiredResourceProfile !== 'full' ? { requiredResourceProfile } : {}) };
   const expectedVersion = createAppBuildIdentity({ files, buildIdentityInputs, ledger,
     channel: channel ?? env.READER_APP_CHANNEL ?? ledger.developmentChannel, buildClass, signed });
   return { expectedVersion, contentSnapshot: { schema: expectedVersion.schema, appContentHash: expectedVersion.appContentHash,
-    buildIdentityInputs, files }, ledger, root, inputs, abi, buildMode, product, buildClass, signed };
+    buildIdentityInputs, files }, ledger, root, inputs, abi, buildMode, product, buildClass, signed, requiredResourceProfile };
 }
 
 export function assertAppIdentityUnchanged(session, env = process.env, { precomputedRecords } = {}) {

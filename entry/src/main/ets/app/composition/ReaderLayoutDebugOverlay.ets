@@ -1,4 +1,4 @@
-import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../ui/foundation/ReaderAppColors';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../ui/foundation/ReaderFontFamilies';
 import { ReaderWindowCoordinator } from '../ReaderWindowCoordinator';
 import { ReaderUIVerificationProbe } from '../diagnostics/ReaderUIVerificationProbe';

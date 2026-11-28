@@ -1,4 +1,4 @@
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 
 export interface ReaderReadingPanelPaint {
   readonly surface: string | undefined;

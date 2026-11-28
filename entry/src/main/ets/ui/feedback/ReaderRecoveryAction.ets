@@ -1,5 +1,5 @@
 import { MESSAGE_ACTION } from '../foundation/ReaderMessageStyle';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 
 /** Presentation only. Generation and admission remain owned by the caller. */
 @Component

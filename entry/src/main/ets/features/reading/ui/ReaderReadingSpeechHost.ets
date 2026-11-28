@@ -4,7 +4,7 @@ import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderTtsCredentialStore } from '../../../platform/tts/ReaderTtsCredentialStore';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
-import type { LocalReadingLayout, LocalReadingProgress } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingLayout, LocalReadingProgress } from '../application/LocalReadingFlowTypes';
 import type { ReadingAutomaticSpeech } from '../application/ReadingAuxiliaryFlowBridge';
 import type { ReadingChapterWindow, ReadingSessionChapter } from '../application/ReadingChapterWindow';
 import type { ReadingCommit } from '../application/ReadingCommit';

@@ -1,4 +1,4 @@
-import type { LocalReadingProgressState } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingProgressState } from '../application/LocalReadingFlowTypes';
 import type { ReadingSessionChapter } from '../application/ReadingChapterWindow';
 import type { RemoteReadingPositionContext } from '../application/RemoteReadingPositionMigration';
 import {

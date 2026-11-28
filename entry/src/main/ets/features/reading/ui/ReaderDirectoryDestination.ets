@@ -1,6 +1,6 @@
 import { BookDirectoryPage } from './BookDirectoryPage';
 import type { MangaDownloadAction, MangaDownloadActionId } from '../../manga/application/MangaDownloadActionsGateway';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { ReaderBookIdentity } from '../presentation/ReaderBookmarkProjection';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';

@@ -6,6 +6,51 @@ import { CORE_GATE_STAGES } from '../../../Reader-Core/scripts/lib/core-gate-sta
 
 const configPath = fileURLToPath(new URL('./hap-required-resources.json', import.meta.url));
 
+export const LEAN_OMITTED_FONT_FILES = Object.freeze([
+  'SarasaMonoSC-Regular.ttf',
+  'NotoSansSC-VF.otf',
+  'NotoSerifSC-Bold.ttf',
+  'LXGWWenKaiGBLite-Regular.ttf',
+  'LXGWWenKaiLite-Regular.ttf',
+  'ZhuqueFangsong-Regular.ttf',
+  'NotoSansSC-UIBold.otf',
+  'NotoSansSC-UIMedium.otf',
+  'ReaderMangaSans550.otf',
+  'ReaderMangaSans600.otf',
+  'ReaderMangaSans650.otf',
+]);
+
+export const LEAN_FONT_FALLBACK_MAP = Object.freeze({
+  'NotoSerifSC-Bold.ttf': 'NotoSerifSC-Regular.ttf',
+  'LXGWWenKaiLite-Regular.ttf': 'NotoSerifSC-Regular.ttf',
+  'LXGWWenKaiGBLite-Regular.ttf': 'NotoSerifSC-Regular.ttf',
+  'ZhuqueFangsong-Regular.ttf': 'NotoSerifSC-Regular.ttf',
+  'SarasaMonoSC-Regular.ttf': 'NotoSerifSC-Regular.ttf',
+  'NotoSansSC-VF.otf': 'NotoSansSC-UIRegular.otf',
+  'NotoSansSC-UIMedium.otf': 'NotoSansSC-UIRegular.otf',
+  'NotoSansSC-UIBold.otf': 'NotoSansSC-UIRegular.otf',
+  'ReaderMangaSans550.otf': 'NotoSansSC-UIRegular.otf',
+  'ReaderMangaSans600.otf': 'NotoSansSC-UIRegular.otf',
+  'ReaderMangaSans650.otf': 'NotoSansSC-UIRegular.otf',
+});
+
+export function leanReaderFontsSource(sourceText) {
+  let rewritten = String(sourceText);
+  for (const [omitted, fallback] of Object.entries(LEAN_FONT_FALLBACK_MAP)) {
+    const literal = `$rawfile('${omitted}')`;
+    if (!rewritten.includes(literal)) {
+      throw new Error(`leanReaderFontsSource expected ${literal} in ReaderFonts.ets`);
+    }
+    rewritten = rewritten.replaceAll(literal, `$rawfile('${fallback}')`);
+  }
+  for (const omitted of Object.keys(LEAN_FONT_FALLBACK_MAP)) {
+    if (rewritten.includes(`$rawfile('${omitted}')`)) {
+      throw new Error(`leanReaderFontsSource failed to replace $rawfile('${omitted}')`);
+    }
+  }
+  return rewritten;
+}
+
 export function publishVerifiedHapRun(staging, published, assertInputs, recoveryMarker) {
   assertInputs();
   renameSync(staging, published);
@@ -16,10 +61,12 @@ export function publishVerifiedHapRun(staging, published, assertInputs, recovery
   }
 }
 
-export function requiredHapResources(repo, { precomputedRecords } = {}) {
+export function requiredHapResources(repo, { precomputedRecords, leanFonts = false } = {}) {
   const config = JSON.parse(readFileSync(configPath, 'utf8'));
   if (config.schemaVersion !== 1 || !config.paths.length || new Set(config.paths).size !== config.paths.length) throw new Error('Invalid required HAP resources');
-  return config.paths.map(path => {
+  const omitted = leanFonts ? new Set(LEAN_OMITTED_FONT_FILES) : null;
+  const selected = omitted ? config.paths.filter(path => !omitted.has(path)) : config.paths;
+  return selected.map(path => {
     if (path.startsWith('/') || path.split('/').some(p => !p || p === '..' || p === '.')) throw new Error('Invalid required resource path');
     const sourcePath = `entry/src/main/resources/rawfile/${path}`, file = resolve(repo, sourcePath);
     const stat = lstatSync(file);
@@ -32,8 +79,12 @@ export function requiredHapResources(repo, { precomputedRecords } = {}) {
     return { path: `resources/rawfile/${path}`, sourcePath, bytes: bytes.length, sha256: digest(bytes) };
   });
 }
-export function verifyRequiredHapResources(records, names, readEntry) {
+export function verifyRequiredHapResources(records, names, readEntry, { forbiddenEntries = [] } = {}) {
   if (!Array.isArray(records) || !records.length || new Set(records.map(r => r.path)).size !== records.length) throw new Error('Required resource receipt is missing or duplicated');
+  const present = new Set(names);
+  for (const forbidden of forbiddenEntries) {
+    if (present.has(forbidden)) throw new Error(`Lean HAP resource must be omitted: ${forbidden}`);
+  }
   for (const expected of records) {
     if (!expected.path.startsWith('resources/rawfile/') || expected.path.split('/').some(p => p === '..' || !p) || names.filter(name => name === expected.path).length !== 1) throw new Error(`Required HAP resource missing/duplicated: ${expected.path}`);
     const bytes = readEntry(expected.path);

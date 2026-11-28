@@ -50,7 +50,7 @@ import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderActionAccessibility, readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { PathShape } from '@ohos.arkui.shape';

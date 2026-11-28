@@ -2,7 +2,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { ShelfBook } from '../ReaderCoreGateway';
 import type { ReaderRuntimeOwner } from '../ReaderRuntimeOwner';
 import type { DirectoryReturnTarget, ReaderNavigation, ReaderNavigationSnapshot } from '../navigation/ReaderNavigation';
-import type { LocalReadingTocEntry } from '../../features/reading/application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../../features/reading/application/LocalReadingFlowTypes';
 import type { ReaderDirectoryOperation } from '../../features/reading/application/ReaderDirectoryHost';
 import type { ReaderDirectoryTargetProof } from '../../features/reading/application/ReaderDirectoryTargetProof';
 import type { ReadingBookDetail } from '../../features/reading/presentation/ReadingBookDetail';

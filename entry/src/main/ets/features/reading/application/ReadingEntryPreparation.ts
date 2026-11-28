@@ -2,7 +2,7 @@ import { readerRuleMutationEffects } from '../../../app/ReaderRuleMutationEffect
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { ReadingSessionFlowGateway } from './ReadingSessionFlowGateway';
-import type { LocalReadingProgressState, LocalReadingToc } from './LocalReadingFlowGateway';
+import type { LocalReadingProgressState, LocalReadingToc } from './LocalReadingFlowTypes';
 import type { RemoteReadingBookSeed, RemoteReadingSession } from './RemoteReadingFlowGateway';
 import type { RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import { type ReadingEntryNavigation } from './ReadingEntrySnapshot';

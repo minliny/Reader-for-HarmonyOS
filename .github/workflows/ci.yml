@@ -90,11 +90,12 @@ jobs:
             if (!/^[a-f0-9]{64}$/.test(dep.coreInputFingerprint)) throw new Error("invalid coreInputFingerprint");
             if (!/^\d+\.\d+\.\d+$/.test(dep.rustToolchain)) throw new Error("invalid rustToolchain");
             if (!Array.isArray(dep.abis) || dep.abis.length !== 1 || !dep.abis[0]) throw new Error("invalid abis");
-            fs.appendFileSync(process.env.GITHUB_OUTPUT,
-              `commit=${dep.coreCommit}\n` +
-              `fingerprint=${dep.coreInputFingerprint}\n` +
-              `rust_toolchain=${dep.rustToolchain}\n` +
-              `abi=${dep.abis[0]}\n`
+            fs.appendFileSync(
+              process.env.GITHUB_OUTPUT,
+              "commit=" + dep.coreCommit + "\n" +
+                "fingerprint=" + dep.coreInputFingerprint + "\n" +
+                "rust_toolchain=" + dep.rustToolchain + "\n" +
+                "abi=" + dep.abis[0] + "\n",
             );
           '
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -153,11 +154,12 @@ jobs:
             if (!/^[a-f0-9]{64}$/.test(dep.coreInputFingerprint)) throw new Error("invalid coreInputFingerprint");
             if (!/^\d+\.\d+\.\d+$/.test(dep.rustToolchain)) throw new Error("invalid rustToolchain");
             if (!Array.isArray(dep.abis) || dep.abis.length !== 1 || !dep.abis[0]) throw new Error("invalid abis");
-            fs.appendFileSync(process.env.GITHUB_OUTPUT,
-              `commit=${dep.coreCommit}\n` +
-              `fingerprint=${dep.coreInputFingerprint}\n` +
-              `rust_toolchain=${dep.rustToolchain}\n` +
-              `abi=${dep.abis[0]}\n`
+            fs.appendFileSync(
+              process.env.GITHUB_OUTPUT,
+              "commit=" + dep.coreCommit + "\n" +
+                "fingerprint=" + dep.coreInputFingerprint + "\n" +
+                "rust_toolchain=" + dep.rustToolchain + "\n" +
+                "abi=" + dep.abis[0] + "\n",
             );
           '
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

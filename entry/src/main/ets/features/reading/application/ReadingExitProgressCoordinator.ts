@@ -2,7 +2,7 @@ import { BookRequestNotDispatchedError } from '../../../app/BookRequestScheduler
 import { ReadingCommit } from './ReadingCommit.ts';
 import { CoreReadingAnchor } from './ReadingMeasurementFacts.ts';
 import type { ReadingSessionChapter } from './ReadingChapterWindow';
-import type { LocalReadingAnchor, LocalReadingLayout, LocalReadingProgress, LocalReadingProgressState } from './LocalReadingFlowGateway';
+import type { LocalReadingAnchor, LocalReadingLayout, LocalReadingProgress, LocalReadingProgressState } from './LocalReadingFlowTypes';
 import type { ReadingSessionCommittedProgress } from './ReadingSessionFlowGateway';
 import type { ReaderTtsProgressCommit } from './ReaderTtsSessionCoordinator';
 import type { ReaderProgressProducerGateway, ReaderProgressProducerHost, ReaderProgressProducerIntent } from './ReaderProgressProducerHost';

@@ -1,7 +1,7 @@
 import { LengthMetrics } from '@kit.ArkUI';
 import type { MeasureOptions } from '@ohos.measure';
 import { MESSAGE_ACTION, MESSAGE_META, MESSAGE_NOTICE_TITLE } from '../foundation/ReaderMessageStyle';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 import { ReaderRecoveryAction } from './ReaderRecoveryAction';
 import type { ReaderRecoveryView } from './ReaderRecoveryView';

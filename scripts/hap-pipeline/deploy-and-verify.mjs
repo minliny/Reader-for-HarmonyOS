@@ -342,6 +342,17 @@ export function verifyManifestWithInspector(path, inspector) {
   if (deliveryController && loaded.manifest.deliveryEvidenceVersion !== 1) fail('Current controller requires delivery evidence version 1');
   if (loaded.manifest.deliveryEvidenceVersion === 1) {
     if (loaded.manifest.gates.requiredResourceBytes !== 'PASS') fail('Required resource evidence is missing');
+    const resourceProfile = loaded.manifest.requiredResourceProfile ?? 'full';
+    if (resourceProfile !== 'full' && resourceProfile !== 'lean-iteration') {
+      fail(`Unsupported requiredResourceProfile: ${resourceProfile}`);
+    }
+    if (resourceProfile === 'lean-iteration' && (
+      loaded.manifest.buildClass !== 'iteration' ||
+      loaded.manifest.acceptanceEligible !== false ||
+      ['RC', 'REL'].includes(loaded.manifest.expectedVersion?.channel)
+    )) {
+      fail('Lean-font HAPs are only valid for DEV iteration builds');
+    }
     if (loaded.manifest.gates.coreDevelopment?.status === 'NOT_RUN' && loaded.manifest.acceptanceEligible !== false) {
       fail('Unrun Core tests cannot claim acceptance eligibility.');
     }

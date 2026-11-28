@@ -1,7 +1,7 @@
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryFooterStacked } from './MangaDirectoryVisual';
 
 /** Shared current-position surface; only its title may be ellipsized. */

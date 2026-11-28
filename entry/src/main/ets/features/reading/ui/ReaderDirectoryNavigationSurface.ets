@@ -5,7 +5,7 @@ import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction'
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderDirectoryTrace } from './ReaderDirectoryTrace';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderScrollLayout } from '../../../ui/layout/ReaderScrollLayout';
 import { prepareMangaSheetFonts } from '../../../ui/foundation/ReaderFonts';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
@@ -20,7 +20,7 @@ import { ReaderDirectoryNavigationList, cacheReaderDirectoryNavigationPage } fro
 import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
 import { readerDirectoryObserveScrollIntent, readerDirectoryViewportAnchor } from '../presentation/ReaderDirectoryViewport';
 import { projectReaderDirectoryEntries } from '../presentation/ReaderDirectoryProjection';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 

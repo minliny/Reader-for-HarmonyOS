@@ -6,7 +6,7 @@ import type { ReadingCommit } from '../application/ReadingCommit';
 import type { ReadingChapterWindow, ReadingSessionChapter } from '../application/ReadingChapterWindow';
 import type { ReadingEntryNavigation } from '../application/ReadingEntrySnapshot';
 import type { LocalReadingBookmark, LocalReadingContentMetrics, LocalReadingProgress,
-  LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+  LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import type { ReadingContentSearchResult, ReadingSessionFlowGateway } from '../application/ReadingSessionFlowGateway';
 import type { ReadingSurfaceLayoutMap } from '../application/ReadingSurfaceLayoutMap';

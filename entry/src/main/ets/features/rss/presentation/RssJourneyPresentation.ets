@@ -5,7 +5,7 @@ import type { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import type { ReaderNativeAlertOptions } from '../../../ui/platform/ReaderNativeAlertOwner';
 import { isReaderProductSurfaceEnabled } from '../../../app/ReaderProductScope';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import type {
   RssFavorite,
   RssItem,

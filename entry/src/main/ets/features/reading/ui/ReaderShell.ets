@@ -13,7 +13,7 @@ import { MangaReadingSurface } from '../../manga/ui/MangaReadingSurface';
 import type { ActionSheetSpecId } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import type { MangaDownloadAction, MangaDownloadActionId } from '../../manga/application/MangaDownloadActionsGateway';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import type { ReaderWindowMetricsSnapshot } from '../../../ui/foundation/ReaderWindowMetrics';
@@ -25,7 +25,7 @@ import { ReaderDirectoryDestination } from './ReaderDirectoryDestination';
 import { SourceSwitchPanel } from '../../source/ui/SourceSwitchPanel';
 import type { SourceSwitchPanelState } from '../../source/presentation/SourceSwitchPresentationState';
 import type { SourceSwitchCandidate } from '../../source/application/SourceSwitchGateway';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type {
   ReaderDirectoryChapterStartBookmarkRequest,
   ReaderPageBookmarkToggleRequest,

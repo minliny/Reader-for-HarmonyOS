@@ -1,6 +1,6 @@
 import type { ReadingGatewayRuntime } from '../application/ReadingGatewayRuntime';
 import type { ReadingBookDetail } from './ReadingBookDetail';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { RemoteReadingSession } from '../application/RemoteReadingFlowGateway';
 import type { ReaderDirectoryChapterStartBookmarkRequest, ReaderPageBookmarkToggleRequest } from './ReaderDirectoryMarkerState';
 import { ReaderDirectoryHost, type ReaderDirectoryBinding, type ReaderDirectoryOperation } from '../application/ReaderDirectoryHost';

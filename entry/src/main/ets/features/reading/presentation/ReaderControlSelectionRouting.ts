@@ -2,7 +2,7 @@ import {
   readerControlSelectionOwnsReading, type ReaderControlSelectionOwner, type ReaderControlSelectionTicket,
 } from '../application/ReaderControlSelectionTransaction.ts';
 import { wholeBookAnchorForPercent } from '../application/LocalReadingWholeBookProgress.ts';
-import type { LocalReadingContentMetrics } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingContentMetrics } from '../application/LocalReadingFlowTypes';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import type { ReadingContentSearchResult } from '../application/ReadingSessionFlowGateway';
 import {

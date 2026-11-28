@@ -2,7 +2,7 @@ import {
   prepareReadingChapterMeasurement, type ReadingChapterMeasurementProjection,
 } from './ReadingChapterMeasurementPreparation.ts';
 import type { ReadingChapterWindow, ReadingSessionChapter } from './ReadingChapterWindow';
-import type { LocalReadingProgress, LocalReadingProgressState } from './LocalReadingFlowGateway';
+import type { LocalReadingProgress, LocalReadingProgressState } from './LocalReadingFlowTypes';
 import type { ReadingParagraphBoundaryMode } from './ReadingParagraphProjection';
 import type { RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import type { ReadingSurfaceLayoutMap } from './ReadingSurfaceLayoutMap';

@@ -2,7 +2,7 @@ import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutIn
 import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { readerPressOpacity, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { bookshelfHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
 import { NoCoverCover, noCoverGlyph } from '../../../ui/patterns/NoCoverCover';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';

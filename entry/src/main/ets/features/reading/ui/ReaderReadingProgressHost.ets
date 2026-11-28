@@ -1,5 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import type { LocalReadingAnchor, LocalReadingLayout, LocalReadingProgress } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingAnchor, LocalReadingLayout, LocalReadingProgress } from '../application/LocalReadingFlowTypes';
 import type { ReaderProgressProducerIntent } from '../application/ReaderProgressProducerHost';
 import type { ReaderReadingRecordHost } from '../application/ReaderReadingRecordHost';
 import type { ReaderTtsProgressCommit } from '../application/ReaderTtsSessionCoordinator';

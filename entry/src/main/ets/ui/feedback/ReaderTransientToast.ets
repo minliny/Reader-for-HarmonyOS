@@ -3,7 +3,7 @@ import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { MESSAGE_ACTION, MESSAGE_BODY, MESSAGE_TITLE } from '../foundation/ReaderMessageStyle';
 import type { ReaderTextStyle } from '../foundation/ReaderTypography';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { readerMotionAnimateParam, readerMotionReducedFadeParam, readerReduceMotionFromStorage }
   from '../foundation/ReaderMotionPolicy';
 import { ReaderPostLayoutFrame } from '../layout/ReaderPostLayoutFrame';

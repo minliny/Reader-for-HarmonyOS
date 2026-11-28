@@ -1,4 +1,4 @@
-import type { LocalReadingAnchor, LocalReadingLayout, LocalReadingProgressState } from './LocalReadingFlowGateway';
+import type { LocalReadingAnchor, LocalReadingLayout, LocalReadingProgressState } from './LocalReadingFlowTypes';
 
 export interface ReadingProgressCheckpointIntent {
   sequence: number;

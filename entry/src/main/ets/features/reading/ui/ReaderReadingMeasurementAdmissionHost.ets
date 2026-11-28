@@ -2,7 +2,7 @@ import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryT
 import type { ReaderReadingMountHost } from './ReaderReadingMountHost';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { ReadingSessionChapter } from '../application/ReadingChapterWindow';
-import type { LocalReadingAnchor, LocalReadingProgress } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingAnchor, LocalReadingProgress } from '../application/LocalReadingFlowTypes';
 import { CoreReadingAnchor, type CoreReadingLayout } from '../application/ReadingMeasurementFacts';
 import type { ReadingMeasurementCoordinator } from '../application/ReadingMeasurementCoordinator';
 import type { ReaderProgressProducerHost, ReaderProgressProducerIntent } from '../application/ReaderProgressProducerHost';

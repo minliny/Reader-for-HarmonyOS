@@ -1,7 +1,7 @@
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
 import { READER_ACTION_MIN_TARGET, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 
 @Component

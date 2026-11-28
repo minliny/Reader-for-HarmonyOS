@@ -1,4 +1,4 @@
-import type { LocalReadingDownloadState, LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
+import type { LocalReadingDownloadState, LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowTypes';
 import type { MangaDirectoryRowPresentation } from '../presentation/MangaDirectoryPresentation';
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryScale } from './MangaDirectoryVisual.ts';
 

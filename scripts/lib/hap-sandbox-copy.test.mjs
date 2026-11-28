@@ -4,8 +4,9 @@ import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, renameSync
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { copySourceSandbox, sourceSnapshot } from '../hap-pipeline.mjs';
-import { publishVerifiedHapRun } from './hap-delivery-evidence.mjs';
+import { copySourceSandbox, isCleanArkTsCompileFailure, sourceSnapshot } from '../hap-pipeline.mjs';
+import { LEAN_OMITTED_FONT_FILES, leanReaderFontsSource, publishVerifiedHapRun,
+  requiredHapResources } from './hap-delivery-evidence.mjs';
 
 const asset = 'entry/src/main/resources/base/media/font.bin';
 const profile = 'build-profile.json5';
@@ -114,4 +115,107 @@ test('a recovery marker cleanup failure leaves publication committed and require
   assert.equal(existsSync(staging), false);
   assert.equal(readFileSync(join(published, 'manifest.json'), 'utf8'), '{}');
   assert.equal(readFileSync(join(marker, 'unexpected-content'), 'utf8'), 'retain for recovery');
+});
+
+test('isCleanArkTsCompileFailure admits ArkTS compiler errors and rejects daemon or native/packaging failures', () => {
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 255,
+    signal: null,
+    stdout: '> hvigor ERROR: Failed :entry:default@CompileArkTS...\nCOMPILE RESULT:FAIL {ERROR:2 WARN:462}\n> hvigor ERROR: BUILD FAILED in 19 s 761 ms',
+    stderr: '',
+  }), true);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 255,
+    signal: null,
+    stdout: '> hvigor \x1b[91mERROR: Failed :entry:default@CompileArkTS... \x1b[39m\n\x1b[31mCOMPILE RESULT:FAIL {ERROR:2 WARN:458}\x1b[39m\n',
+    stderr: '',
+  }), true);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 0,
+    signal: null,
+    stdout: '> hvigor ERROR: Failed :entry:default@CompileArkTS...\nCOMPILE RESULT:FAIL {ERROR:1 WARN:0}',
+    stderr: '',
+  }), false);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: null,
+    signal: 'SIGKILL',
+    stdout: '> hvigor ERROR: Failed :entry:default@CompileArkTS...\nCOMPILE RESULT:FAIL {ERROR:1 WARN:0}',
+    stderr: '',
+  }), false);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 255,
+    signal: null,
+    error: new Error('ETIMEDOUT'),
+    stdout: '> hvigor ERROR: Failed :entry:default@CompileArkTS...\nCOMPILE RESULT:FAIL {ERROR:1 WARN:0}',
+    stderr: '',
+  }), false);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 255,
+    signal: null,
+    stdout: '> hvigor ERROR: Failed :entry:default@CompileArkTS...\nCOMPILE RESULT:FAIL {ERROR:1 WARN:0}\nServer has disconnected',
+    stderr: '',
+  }), false);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 255,
+    signal: null,
+    stdout: '> hvigor ERROR: Failed :entry:default@CompileArkTS...\nCOMPILE RESULT:FAIL {ERROR:1 WARN:0}\nABORT_WORK sent to workers.',
+    stderr: '',
+  }), false);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 255,
+    signal: null,
+    stdout: '> hvigor ERROR: Failed :entry:default@PackageHap...\nCOMPILE RESULT:FAIL {ERROR:1 WARN:0}',
+    stderr: '',
+  }), false);
+});
+
+test('copySourceSandbox omits docs, tests, and CI metadata directories outside BUILD_INPUTS', t => {
+  const { source, destination, cache, put } = fixture(t);
+  put(source, 'docs/guide.md', 'documentation');
+  put(source, 'tests/sample.test.ts', 'unit test');
+  put(source, '.github/workflows/ci.yml', 'workflow');
+  put(source, '.pytest_cache/README.md', 'pytest');
+  put(source, '.worktrees/wt/file.txt', 'worktree');
+  put(source, 'evidence/e.json', '{}');
+  put(source, 'entry/src/main/cpp/tests/unit.cpp', 'int test_main() { return 0; }\n');
+  const snapshot = copySourceSandbox(source, destination, cache, { incremental: false });
+  assert.deepEqual(snapshot, sourceSnapshot(destination));
+  assert.equal(existsSync(join(destination, 'entry/src/main/cpp/tests/unit.cpp')), true);
+  for (const omitted of ['docs', 'tests', '.github', '.pytest_cache', '.worktrees', 'evidence']) {
+    assert.equal(existsSync(join(destination, omitted)), false, `${omitted} should not be copied into Hvigor sandbox`);
+  }
+});
+
+test('requiredHapResources leanFonts omits extra font faces while preserving core fonts, identity, and licenses', () => {
+  const repoRoot = join(import.meta.dirname, '..', '..');
+  const full = requiredHapResources(repoRoot);
+  const lean = requiredHapResources(repoRoot, { leanFonts: true });
+  const leanPaths = new Set(lean.map(entry => entry.path));
+  assert.equal(full.length - lean.length, LEAN_OMITTED_FONT_FILES.length);
+  for (const omitted of LEAN_OMITTED_FONT_FILES) {
+    assert.equal(leanPaths.has(`resources/rawfile/${omitted}`), false, `${omitted} should be omitted in lean mode`);
+  }
+  for (const kept of [
+    'resources/rawfile/reader-core-storage-identity.v1.json',
+    'resources/rawfile/InterVariable.ttf',
+    'resources/rawfile/NotoSansSC-UIRegular.otf',
+    'resources/rawfile/NotoSerifSC-Regular.ttf',
+    'resources/rawfile/licenses/oss-reuse-NOTICE.txt',
+  ]) {
+    assert.equal(leanPaths.has(kept), true, `${kept} must stay required in lean mode`);
+  }
+});
+
+test('leanReaderFontsSource rewrites omitted font literals to retained base fonts', async () => {
+  const { readFileSync } = await import('node:fs');
+  const fontSourcePath = join(import.meta.dirname, '..', '..', 'entry', 'src', 'main', 'ets', 'ui', 'foundation', 'ReaderFonts.ets');
+  const original = readFileSync(fontSourcePath, 'utf8');
+  const rewritten = leanReaderFontsSource(original);
+  for (const omitted of LEAN_OMITTED_FONT_FILES) {
+    assert.equal(original.includes(`$rawfile('${omitted}')`), true, `${omitted} should exist in ReaderFonts.ets`);
+    assert.equal(rewritten.includes(`$rawfile('${omitted}')`), false, `${omitted} should be rewritten in lean ReaderFonts.ets`);
+  }
+  assert.equal(rewritten.includes("$rawfile('NotoSansSC-UIRegular.otf')"), true);
+  assert.equal(rewritten.includes("$rawfile('NotoSerifSC-Regular.ttf')"), true);
+  assert.equal(rewritten.includes("$rawfile('InterVariable.ttf')"), true);
 });

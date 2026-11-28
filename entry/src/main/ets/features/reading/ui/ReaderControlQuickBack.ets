@@ -1,6 +1,6 @@
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { TYPE_READER_AUTO_PAGE_RETAINED_QUICK_BACK_BACK, TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK,
   TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK, ReaderTextStyle } from '../../../ui/foundation/ReaderTypography';
 

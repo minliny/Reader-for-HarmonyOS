@@ -1,4 +1,4 @@
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { TOK_BORDER_W, TOK_SPACE_SM, TOK_SPACE_XS } from '../foundation/ReaderTokens';
 import {

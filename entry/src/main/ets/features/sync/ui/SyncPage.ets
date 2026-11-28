@@ -12,7 +12,7 @@ import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView
 import { TYPE_APP_LOADING_BODY, TYPE_APP_ROW_DETAIL, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_LABEL,
   TYPE_CARD_SECTION_HEADING, TYPE_FORM_STATUS, TYPE_SELECT_DEFAULT_VALUE, TYPE_SECTION_HEADING,
   TYPE_SYNC_CONFLICT_META, TYPE_SYNC_HISTORY_STATUS, TYPE_SYNC_INPUT, TYPE_SYNC_ROW_LABEL } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import {
   type SyncHistoryEntry,
   type SyncRestoreConflict,

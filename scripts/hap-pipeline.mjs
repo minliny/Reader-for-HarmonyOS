@@ -28,6 +28,7 @@ export {
 } from './hap-pipeline/locks-and-retention.mjs';
 export {
   resolveHarmonyAbi,
+  isCleanArkTsCompileFailure,
   run,
   prepareDuringNativePreflight,
   hapMainlineSources,
@@ -75,7 +76,7 @@ function parseOptions(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const key = argv[index];
     if (options.has(key)) fail(`duplicate argument: ${key}`, 2);
-    if (key === '--live-sources' || key === '--no-launch' || key === '--apply' || key === '--incremental') {
+    if (key === '--live-sources' || key === '--no-launch' || key === '--apply' || key === '--incremental' || key === '--lean-fonts') {
       options.set(key, true);
       continue;
     }
@@ -89,7 +90,7 @@ function parseOptions(argv) {
 function usage() {
   console.error(`Usage:
   node scripts/hap-pipeline.mjs identity [--channel DEV] [--abi arm64-v8a|x86_64] [--build-mode debug|release]
-  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--incremental] [--channel DEV|RC|REL] [--abi arm64-v8a|x86_64] [--core-profile release|smoke] [--signing auto|local|unsigned] [--live-source-ids <exact IDs> --rationale <necessity>] [--keep-runs 10] [--core-gate-receipt <receipt.json>]
+  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--incremental] [--lean-fonts] [--channel DEV|RC|REL] [--abi arm64-v8a|x86_64] [--core-profile release|smoke] [--signing auto|local|unsigned] [--live-source-ids <exact IDs> --rationale <necessity>] [--keep-runs 10] [--core-gate-receipt <receipt.json>]
   node scripts/hap-pipeline.mjs prune [--artifact-root <directory>] [--keep-runs 10] [--apply]
   node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
   node scripts/hap-pipeline.mjs sync-native [--abi arm64-v8a|x86_64] [--core-profile release|smoke] [sync-core alias]
@@ -119,6 +120,7 @@ async function main() {
   }
   const options = parseOptions(process.argv.slice(3));
   if (command !== 'build' && options.has('--incremental')) fail('--incremental applies only to build', 2);
+  if (command !== 'build' && options.has('--lean-fonts')) fail('--lean-fonts applies only to build', 2);
   if (command === 'identity') {
     const session = prepareAppIdentity(REPO_ROOT, APP_CONTENT_INPUTS, {
       abi: resolveHarmonyAbi(option(options, '--abi', process.env.READER_HARMONY_ABI)),
