@@ -73,6 +73,9 @@ export class ReaderWindowMetricsSnapshot {
   /** Last nonimmersive interactive bottom band for the current window geometry. */
   stableSafeBottom: number;
   stableVisualSafeBottom: number;
+  /** Last nonimmersive interactive top band for the current window geometry. */
+  stableSafeTop: number;
+  stableVisualSafeTop: number;
 
   constructor(
     windowRect: ReaderRectVp = new ReaderRectVp(),
@@ -95,6 +98,9 @@ export class ReaderWindowMetricsSnapshot {
     stableSafeBottom: number = Math.max(finiteInset(systemInsets.bottom), finiteInset(cutoutInsets.bottom),
       finiteInset(gestureInsets.bottom), finiteInset(navigationInsets.bottom)),
     stableVisualSafeBottom: number = Math.max(finiteInset(systemInsets.bottom), finiteInset(cutoutInsets.bottom)),
+    stableSafeTop: number = Math.max(finiteInset(systemInsets.top), finiteInset(cutoutInsets.top),
+      finiteInset(gestureInsets.top), finiteInset(navigationInsets.top)),
+    stableVisualSafeTop: number = Math.max(finiteInset(systemInsets.top), finiteInset(cutoutInsets.top)),
   ) {
     this.windowRect = windowRect;
     this.globalRect = globalRect;
@@ -115,6 +121,8 @@ export class ReaderWindowMetricsSnapshot {
     this.topRightCorner = topRightCorner;
     this.stableVisualSafeBottom = finiteInset(stableVisualSafeBottom);
     this.stableSafeBottom = Math.max(this.stableVisualSafeBottom, finiteInset(stableSafeBottom));
+    this.stableVisualSafeTop = finiteInset(stableVisualSafeTop);
+    this.stableSafeTop = Math.max(this.stableVisualSafeTop, finiteInset(stableSafeTop));
   }
 }
 
@@ -222,6 +230,20 @@ export function readerInteractiveSafeBottom(
     finiteInset(metrics.navigationInsets.bottom),
     includeKeyboard ? finiteInset(metrics.keyboardInsets.bottom) : 0,
   );
+}
+
+export function readerStableVisualSafeTop(metrics: ReaderWindowMetricsSnapshot): number {
+  return finiteInset(metrics.stableVisualSafeTop);
+}
+
+/** The ordinary page top band is available before the status bar has visibly returned. */
+export function readerStableContentSafeTop(metrics: ReaderWindowMetricsSnapshot): number {
+  return readerStableVisualSafeTop(metrics);
+}
+
+export function readerStableInteractiveSafeTop(metrics: ReaderWindowMetricsSnapshot,
+  includeKeyboard: boolean = false): number {
+  return Math.max(finiteInset(metrics.stableSafeTop), includeKeyboard ? finiteInset(metrics.keyboardInsets.top) : 0);
 }
 
 export function readerStableVisualSafeBottom(metrics: ReaderWindowMetricsSnapshot): number {

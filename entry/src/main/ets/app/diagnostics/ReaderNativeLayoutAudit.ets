@@ -3,7 +3,7 @@ import type { FrameNode } from '@ohos.arkui.node';
 import { text as graphicsText } from '@kit.ArkGraphics2D';
 import { readerOverlayViewport } from '../../ui/layout/ReaderOverlayGeometry';
 import { READER_THEME_DEFINITIONS, type ReaderThemeDefinition } from '../../ui/foundation/ReaderThemeRegistry';
-import { readerInteractiveSafeBottom, readerStableInteractiveSafeBottom, type ReaderWindowMetricsSnapshot }
+import { readerInteractiveSafeBottom, readerStableInteractiveSafeTop, readerStableInteractiveSafeBottom, type ReaderWindowMetricsSnapshot }
   from '../../ui/foundation/ReaderWindowMetrics';
 import type { LayoutInvariantNode, LayoutInvariantRect } from '../../ui/layout/LayoutInvariantEvaluator';
 import { READER_LAYOUT_CLOSE_CONTROL, READER_LAYOUT_FOOTER, READER_LAYOUT_NATIVE_MATERIAL,
@@ -440,9 +440,10 @@ export class ReaderNativeLayoutAudit {
     const viewport: LayoutInvariantRect | undefined = metrics.ready ?
       { x: 0, y: 0, width: metrics.windowRect.width, height: metrics.windowRect.height } : undefined;
     const safe = readerOverlayViewport(metrics);
+    const top = route === 'reading' ? safe.top : Math.max(safe.top, readerStableInteractiveSafeTop(metrics));
     const bottom = route === 'reading' ? readerInteractiveSafeBottom(metrics) : readerStableInteractiveSafeBottom(metrics);
-    const safeViewport: LayoutInvariantRect | undefined = metrics.ready ? { x: safe.left, y: safe.top, width: safe.width,
-      height: Math.max(0, Math.min(safe.top + safe.height, metrics.windowRect.height - bottom) - safe.top) } : undefined;
+    const safeViewport: LayoutInvariantRect | undefined = metrics.ready ? { x: safe.left, y: top, width: safe.width,
+      height: Math.max(0, Math.min(safe.top + safe.height, metrics.windowRect.height - bottom) - top) } : undefined;
     const dockBounds: LayoutInvariantRect[] = [];
     for (const item of tagged) {
       if (item.tag.role === 'primary-dock' && item.bounds !== undefined && item.opacity >= .1) dockBounds.push(item.bounds);

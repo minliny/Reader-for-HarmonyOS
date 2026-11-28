@@ -7,7 +7,7 @@ export type { MainTabDef } from '../../app/navigation/ReaderMainTabs';
 import {
   readerStableInteractiveSafeBottom,
   readerInteractiveSafeLeft,
-  readerVisualSafeTop,
+  readerStableContentSafeTop,
 } from '../../ui/foundation/ReaderWindowMetrics';
 import { readerIsExpandedWidth } from '../../ui/foundation/ReaderWidthClass';
 
@@ -32,7 +32,7 @@ export function readerMainViewport(_revision: number = 0): MainViewport {
   if (measured !== undefined) return measured;
   const metrics = ReaderWindowCoordinator.metrics();
   return { width: metrics.windowRect.width,
-    height: Math.max(0, metrics.windowRect.height - readerVisualSafeTop(metrics)) };
+    height: Math.max(0, metrics.windowRect.height - readerStableContentSafeTop(metrics)) };
 }
 
 

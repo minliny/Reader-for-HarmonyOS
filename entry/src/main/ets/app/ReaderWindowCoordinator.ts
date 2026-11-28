@@ -4,6 +4,8 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { deviceInfo, type BusinessError } from '@kit.BasicServicesKit';
 import { ReaderBrightnessWriter, type ReaderBrightnessWindow } from './ReaderBrightnessWriter';
 import { ReaderStatusBarMeasurement } from './ReaderStatusBarMeasurement';
+import { ReaderTopSafeAreaMeasurement, type ReaderTopAvoidAreas, type ReaderTopSafeAreaPhase }
+  from './ReaderTopSafeAreaMeasurement';
 import { ReaderBottomSafeAreaMeasurement, type ReaderBottomAvoidAreas, type ReaderBottomSafeAreaPhase }
   from './ReaderBottomSafeAreaMeasurement';
 import { ReaderNativeAlertWindow } from '../ui/platform/ReaderNativeAlertWindow';
@@ -158,6 +160,9 @@ export class ReaderWindowCoordinator {
   // A visibility Promise acknowledges the request, not the visible avoid area.
   // Retain this window geometry's measured band until the reveal is observed.
   private static statusBarRevealPending: boolean = false;
+  private static readonly topSafeAreaMeasurement: ReaderTopSafeAreaMeasurement = new ReaderTopSafeAreaMeasurement();
+  private static topSafeAreaRevealPending: boolean = false;
+  private static topSafeAreaAwaitingWrite: boolean = false;
   private static readonly bottomSafeAreaMeasurement: ReaderBottomSafeAreaMeasurement = new ReaderBottomSafeAreaMeasurement();
   private static navigationBarHiddenApplied: boolean = false;
   private static navigationIndicatorHiddenApplied: boolean = false;
@@ -218,6 +223,8 @@ export class ReaderWindowCoordinator {
     ReaderDocumentPickerActivity.bind(properties.id);
     ReaderDocumentPickerActivity.setForeground(AppStorage.get<boolean>('readerAppForeground') !== false);
     ReaderWindowCoordinator.desiredWindowPolicyOwner = 'app';
+    ReaderWindowCoordinator.topSafeAreaRevealPending = true;
+    ReaderWindowCoordinator.topSafeAreaAwaitingWrite = true;
     ReaderWindowCoordinator.bottomSafeAreaRevealPending = true;
     ReaderWindowCoordinator.bottomSafeAreaAwaitingWrite = true;
     ReaderWindowCoordinator.appOrientation = appOrientation ?? window.Orientation.UNSPECIFIED;
@@ -234,6 +241,7 @@ export class ReaderWindowCoordinator {
     await ReaderWindowCoordinator.attemptWindowStep('initial-system-bars',
       (): Promise<void> => win.setWindowSystemBarEnable(['status', 'navigation']), systemBarsSupported);
     if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) return false;
+    ReaderWindowCoordinator.topSafeAreaAwaitingWrite = false;
     ReaderWindowCoordinator.bottomSafeAreaAwaitingWrite = false;
     if (appOrientation !== undefined) {
       try { await ReaderWindowCoordinator.requestAppWindowPolicy(); }
@@ -260,6 +268,9 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.statusBarMeasurement = new ReaderStatusBarMeasurement();
     ReaderWindowCoordinator.statusBarHiddenApplied = false;
     ReaderWindowCoordinator.statusBarRevealPending = false;
+    ReaderWindowCoordinator.topSafeAreaMeasurement.reset();
+    ReaderWindowCoordinator.topSafeAreaRevealPending = false;
+    ReaderWindowCoordinator.topSafeAreaAwaitingWrite = false;
     ReaderWindowCoordinator.bottomSafeAreaMeasurement.reset();
     ReaderWindowCoordinator.navigationBarHiddenApplied = false;
     ReaderWindowCoordinator.navigationIndicatorHiddenApplied = false;
@@ -363,6 +374,7 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.desiredWindowPolicyOwner = 'reader';
     ReaderWindowCoordinator.desiredReaderWindowOwner = owner;
     ReaderWindowCoordinator.desiredReaderWindowPolicy = policy;
+    ReaderWindowCoordinator.beginTopSafeAreaPolicyChange(policy.hideStatusBar);
     ReaderWindowCoordinator.beginBottomSafeAreaPolicyChange(policy.hideNavigationBar);
     const revision = ReaderWindowCoordinator.nextWindowPolicyRevision();
     AppStorage.setOrCreate<string>('readerWindowOrientation', policy.orientation);
@@ -386,6 +398,7 @@ export class ReaderWindowCoordinator {
     }
     ReaderWindowCoordinator.desiredWindowPolicyOwner = 'app';
     ReaderWindowCoordinator.desiredReaderWindowOwner = undefined;
+    ReaderWindowCoordinator.beginTopSafeAreaPolicyChange(false);
     ReaderWindowCoordinator.beginBottomSafeAreaPolicyChange(false);
     const revision = ReaderWindowCoordinator.nextWindowPolicyRevision();
     AppStorage.setOrCreate<string>('readerWindowOrientation', 'app');
@@ -551,6 +564,7 @@ export class ReaderWindowCoordinator {
           // Successful siblings can change the real window even when another
           // write failed. Publish their geometry before rejecting to the caller.
           if (ReaderWindowCoordinator.windowPolicyStillCurrent(win, epoch, revision)) {
+            ReaderWindowCoordinator.topSafeAreaAwaitingWrite = false;
             ReaderWindowCoordinator.bottomSafeAreaAwaitingWrite = false;
             ReaderWindowCoordinator.refreshPolicyMetrics();
           }
@@ -569,13 +583,13 @@ export class ReaderWindowCoordinator {
       { name: 'keyboard-avoidance', write: (): void => ReaderWindowCoordinator.applyKeyboardAvoidance(win) },
       { name: 'orientation', supported: orientationAndBarsSupported,
         write: (): Promise<void> => win.setPreferredOrientation(orientation) },
-      { name: 'keep-screen-on', write: (): Promise<void> => win.setWindowKeepScreenOn(keepScreenOn) },
       { name: 'status', supported: orientationAndBarsSupported,
         write: (): Promise<void> => ReaderWindowCoordinator.applyStatusBarPolicy(win, epoch, hideStatusBar) },
       { name: 'navigation', supported: orientationAndBarsSupported,
         write: (): Promise<void> => ReaderWindowCoordinator.applyBottomBarPolicy(win, epoch, 'navigation', hideNavigationBar) },
       { name: 'navigation-indicator', supported: orientationAndBarsSupported,
         write: (): Promise<void> => ReaderWindowCoordinator.applyBottomBarPolicy(win, epoch, 'navigationIndicator', hideNavigationBar) },
+      { name: 'keep-screen-on', write: (): Promise<void> => win.setWindowKeepScreenOn(keepScreenOn) },
     ];
     let firstFailure: Error | undefined = undefined;
     let applied = true;
@@ -602,6 +616,13 @@ export class ReaderWindowCoordinator {
     }
   }
 
+  private static beginTopSafeAreaPolicyChange(hidden: boolean): void {
+    if (hidden || ReaderWindowCoordinator.statusBarHiddenApplied) {
+      ReaderWindowCoordinator.topSafeAreaRevealPending = true;
+    }
+    ReaderWindowCoordinator.topSafeAreaAwaitingWrite = ReaderWindowCoordinator.topSafeAreaRevealPending;
+  }
+
   private static beginBottomSafeAreaPolicyChange(hidden: boolean): void {
     if (hidden || ReaderWindowCoordinator.navigationBarHiddenApplied || ReaderWindowCoordinator.navigationIndicatorHiddenApplied) {
       ReaderWindowCoordinator.bottomSafeAreaRevealPending = true;
@@ -616,6 +637,14 @@ export class ReaderWindowCoordinator {
     // A superseded policy can still change the bars of this same native window.
     if (bar === 'navigation') ReaderWindowCoordinator.navigationBarHiddenApplied = hidden;
     else ReaderWindowCoordinator.navigationIndicatorHiddenApplied = hidden;
+  }
+
+  private static topSafeAreaPhase(): ReaderTopSafeAreaPhase {
+    const hidden = ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' &&
+      ReaderWindowCoordinator.desiredReaderWindowPolicy.hideStatusBar;
+    if (hidden || ReaderWindowCoordinator.statusBarHiddenApplied ||
+      ReaderWindowCoordinator.topSafeAreaAwaitingWrite) return 'hidden';
+    return ReaderWindowCoordinator.topSafeAreaRevealPending ? 'revealing' : 'stable';
   }
 
   private static bottomSafeAreaPhase(): ReaderBottomSafeAreaPhase {
@@ -721,17 +750,28 @@ export class ReaderWindowCoordinator {
       (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' &&
       ReaderWindowCoordinator.desiredReaderWindowPolicy.hideStatusBar));
     const statusBarHeight = statusBarRect.height;
+    const safeAreaKey = ReaderWindowCoordinator.windowSafeAreaKey(win, density, displayInfo, globalRectVp);
+    const landscape = displayInfo.width > displayInfo.height;
+    const topPhase = ReaderWindowCoordinator.topSafeAreaPhase();
+    const topAreas: ReaderTopAvoidAreas = { system: systemArea?.top, cutout: cutoutArea?.top,
+      gesture: gestureArea?.top, navigation: navigationArea?.top };
+    const stableTop = ReaderWindowCoordinator.topSafeAreaMeasurement.observe(
+      safeAreaKey, landscape,
+      topAreas, topPhase, topPhase === 'stable' ? undefined : ReaderWindowCoordinator.independentTopAreas(density));
+    if (topPhase === 'revealing' && stableTop.restored) ReaderWindowCoordinator.topSafeAreaRevealPending = false;
     const bottomPhase = ReaderWindowCoordinator.bottomSafeAreaPhase();
     const bottomAreas: ReaderBottomAvoidAreas = { system: systemArea?.bottom, cutout: cutoutArea?.bottom,
       gesture: gestureArea?.bottom, navigation: navigationArea?.bottom };
     const stableBottom = ReaderWindowCoordinator.bottomSafeAreaMeasurement.observe(
-      ReaderWindowCoordinator.bottomSafeAreaKey(win, density, displayInfo, globalRectVp), displayInfo.width > displayInfo.height,
+      safeAreaKey, landscape,
       bottomAreas, bottomPhase, bottomPhase === 'stable' ? undefined : ReaderWindowCoordinator.independentBottomAreas(density));
     if (bottomPhase === 'revealing' && stableBottom.restored) ReaderWindowCoordinator.bottomSafeAreaRevealPending = false;
     const statusBarCutoutRect = ReaderWindowCoordinator.topAvoidRectVp(window.AvoidAreaType.TYPE_CUTOUT, density);
     const corners = ReaderWindowCoordinator.topCornersVp(displayInfo, globalRectVp, density);
     if (previous.ready && previous.statusBarHeight === statusBarHeight && previous.stableSafeBottom === stableBottom.interactive &&
       previous.stableVisualSafeBottom === stableBottom.visual &&
+      previous.stableSafeTop === stableTop.interactive &&
+      previous.stableVisualSafeTop === stableTop.visual &&
       ReaderWindowCoordinator.sameRectVp(previous.statusBarRect, statusBarRect) &&
       ReaderWindowCoordinator.sameRectVp(previous.statusBarCutoutRect, statusBarCutoutRect) &&
       ReaderWindowCoordinator.sameCornerVp(previous.topLeftCorner, corners[0]) &&
@@ -766,6 +806,7 @@ export class ReaderWindowCoordinator {
       true,
       statusBarHeight,
       statusBarRect, statusBarCutoutRect, corners[0], corners[1], keyboardArea, stableBottom.interactive, stableBottom.visual,
+      stableTop.interactive, stableTop.visual,
     );
     AppStorage.setOrCreate<number>('readerWindowMetricsRevision', revision);
   }
@@ -777,7 +818,7 @@ export class ReaderWindowCoordinator {
     return display.getDefaultDisplaySync();
   }
 
-  private static bottomSafeAreaKey(win: window.Window, density: number, info: display.Display, bounds: ReaderRectVp): string {
+  private static windowSafeAreaKey(win: window.Window, density: number, info: display.Display, bounds: ReaderRectVp): string {
     let status = window.WindowStatusType.UNDEFINED;
     try { status = win.getWindowStatus(); } catch (_) { /* Existing window geometry remains available. */ }
     const layout = status === window.WindowStatusType.UNDEFINED ? window.WindowStatusType.FULL_SCREEN : status;
@@ -786,6 +827,14 @@ export class ReaderWindowCoordinator {
     // split window's position, however, determines whether it reaches the band.
     return status === window.WindowStatusType.FLOATING || status === window.WindowStatusType.SPLIT_SCREEN ?
       `${displayKey}:${bounds.left}:${bounds.top}:${bounds.width}:${bounds.height}` : displayKey;
+  }
+
+  private static independentTopAreas(density: number): ReaderTopAvoidAreas {
+    return {
+      system: ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_SYSTEM, density, true)?.top,
+      gesture: ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_SYSTEM_GESTURE, density, true)?.top,
+      navigation: ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR, density, true)?.top,
+    };
   }
 
   private static independentBottomAreas(density: number): ReaderBottomAvoidAreas {

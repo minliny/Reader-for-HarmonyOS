@@ -7,7 +7,7 @@ import { readerMainViewport } from '../../shell/MainNavigationSpec';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { bookshelfHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
-import { readerContentSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerStableContentSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerFloatingTabContentInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
 import { readerMainNavigationMode, readerMainRailBottomInset } from '../../shell/MainNavigationSpec';
 
@@ -65,7 +65,7 @@ export struct BookshelfStatusContent {
     if (this.viewportHeight > 0) return this.viewportHeight;
     if (this.readerWindowMetricsRevision < 0) return 0;
     const metrics = ReaderWindowCoordinator.metrics();
-    return Math.max(0, metrics.windowRect.height - readerContentSafeTop(metrics));
+    return Math.max(0, metrics.windowRect.height - readerStableContentSafeTop(metrics));
   }
 
   private bottomContentInset(): number {

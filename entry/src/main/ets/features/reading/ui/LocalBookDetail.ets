@@ -48,7 +48,7 @@ import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision, Reader
 import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
 import {
   ReaderInsetsVp, ReaderRectVp, readerVisualSafeLeft,
-  readerVisualSafeRight, readerInteractiveSafeTop, readerStableInteractiveSafeBottom,
+  readerVisualSafeRight, readerStableInteractiveSafeTop, readerStableInteractiveSafeBottom,
 } from '../../../ui/foundation/ReaderWindowMetrics';
 import {
   SurfaceHorizontalFrame,
@@ -1304,7 +1304,7 @@ export struct LocalBookDetail {
     input.viewportWidth = this.liveWidth();
     input.viewportHeight = this.viewportHeight;
     input.measurementRevision = ++this.geometryRevision;
-    const stableSafeTop = Math.max(readerInteractiveSafeTop(metrics), metrics.statusBarRect.top + metrics.statusBarHeight);
+    const stableSafeTop = readerStableInteractiveSafeTop(metrics);
     input.headerTop = this.headerSpec.headerTop(stableSafeTop);
     const minimumHeaderHeight = manga ? mangaDirectoryHeaderHeight(this.mangaFontScale()) : this.headerSpec.barHeight;
     input.headerHeight = Math.max(minimumHeaderHeight, this.measurements.readForGeneration('detail:header', this.measurementKey, minimumHeaderHeight));

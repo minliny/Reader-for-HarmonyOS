@@ -10,7 +10,7 @@ import { PathShape } from '@ohos.arkui.shape';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
-import { readerVisualSafeTop, readerVisualSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerVisualSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReaderFixedHeaderHost } from '../../../ui/layout/ReaderFixedHeaderHost';
 import { ReaderHeaderFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';

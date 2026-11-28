@@ -14,7 +14,7 @@ import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { readerSettingsPresentationPlan, type ReaderSettingsPresentationPlan } from '../app/navigation/ReaderSettingsPresentationPolicy';
 import { AppRouteCoordinator } from '../app/AppRouteCoordinator';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
-import { readerContentSafeTop, type ReaderRectVp } from '../ui/foundation/ReaderWindowMetrics';
+import { readerStableContentSafeTop, type ReaderRectVp } from '../ui/foundation/ReaderWindowMetrics';
 import { BookshelfDetailPresentation } from '../features/bookshelf/presentation/BookshelfDetailPresentation';
 import type { BookshelfDetailScenePorts } from '../features/bookshelf/ui/BookshelfDetailScene';
 import { BookshelfMutationPresentation } from '../features/bookshelf/presentation/BookshelfMutationPresentation';
@@ -706,7 +706,7 @@ struct Index {
     if (this.readerWindowMetricsRevision < 0) {
       return 0;
     }
-    return readerContentSafeTop(ReaderWindowCoordinator.metrics());
+    return readerStableContentSafeTop(ReaderWindowCoordinator.metrics());
   }
 
   private settingsPaintCurrent(route: SettingsRoute, section: SettingsSection | undefined): boolean {
@@ -724,7 +724,7 @@ struct Index {
   private messageSafeTop(): number {
     this.readerWindowMetricsRevision;
     // Ordinary App pages already inherit Index's safe-top padding.
-    return this.readerOwnsWindowEdges() ? readerContentSafeTop(ReaderWindowCoordinator.metrics()) : 0;
+    return this.readerOwnsWindowEdges() ? readerStableContentSafeTop(ReaderWindowCoordinator.metrics()) : 0;
   }
 
 }

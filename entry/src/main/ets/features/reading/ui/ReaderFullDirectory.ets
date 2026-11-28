@@ -33,6 +33,7 @@ import {
   readerVisualSafeLeft,
   readerVisualSafeRight,
   readerVisualSafeTop,
+  readerStableVisualSafeTop,
 } from '../../../ui/foundation/ReaderWindowMetrics';
 import {
   TOK_BORDER_W,
@@ -715,7 +716,7 @@ export struct ReaderFullDirectory {
     if (this.readerWindowMetricsRevision < 0) return this.catalogContext === 'detail' ? 0 : this.headerSpec.topGap;
     const metrics = readerWindowMetrics();
     if (this.catalogContext === 'detail') {
-      return Math.max(readerVisualSafeTop(metrics), metrics.statusBarRect.top + metrics.statusBarHeight);
+      return readerStableVisualSafeTop(metrics);
     }
     return Math.max(this.headerSpec.topGap, readerVisualSafeTop(metrics));
   }

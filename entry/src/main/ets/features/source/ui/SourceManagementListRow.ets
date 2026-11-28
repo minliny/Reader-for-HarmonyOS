@@ -8,7 +8,7 @@ import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapability
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
-import { readerInteractiveSafeTop, readerStableInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerStableInteractiveSafeTop, readerStableInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerStandardPageSpec } from '../../../ui/layout/ReaderPageShell';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
@@ -503,7 +503,7 @@ export class SourceManagementListOwner {
     // revision even when the parent returns to the same layout.
     return JSON.stringify([this.host.native.contentFrame().width, this.host.native.fontScale(), this.host.presentation.expandedLayout(),
       metrics.windowRect.height, metrics.densityPixels,
-      readerInteractiveSafeTop(metrics), readerStableInteractiveSafeBottom(metrics)]);
+      readerStableInteractiveSafeTop(metrics), readerStableInteractiveSafeBottom(metrics)]);
   }
 
   cancelScrollRestore(): void {

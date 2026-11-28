@@ -11,7 +11,8 @@ import { createReaderTransientToastState, READER_FEEDBACK_BRIEF_MS, READER_FEEDB
   from '../../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts';
 import { readerAvailableWindowHeight, readerDynamicSurfaceWidth, readerReadableFontScale, readerScaledBarHeight,
   readerScaledControlHeight, readerSurfaceMaxHeight } from '../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts';
-import { ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot }
+import { ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot,
+  readerStableContentSafeTop, readerStableInteractiveSafeTop }
   from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { readerAppColor } from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { readerIsExpandedWidth, readerWidthClass } from '../../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts';
@@ -57,6 +58,18 @@ test('ordinary footer coordinates and scroll tail agree on the first frame and a
     assert.equal(measuredTabs, 100);
     assert.equal(readerStandardPageContentEndInset('settingsHome', metrics), 116);
     assert.equal(readerStandardPageContentEndInset('settingsHome', metrics, measuredTabs), 116);
+  }
+});
+
+test('ordinary top coordinates and available height agree on the first frame from reading and after the status bar returns', () => {
+  const readingToBookshelf = windowMetrics(390, 844, 0, 0);
+  readingToBookshelf.stableVisualSafeTop = 42;
+  readingToBookshelf.stableSafeTop = 42;
+  const steadyBookshelf = windowMetrics(390, 844, 42, 28);
+  for (const metrics of [readingToBookshelf, steadyBookshelf]) {
+    assert.equal(readerStableContentSafeTop(metrics), 42);
+    assert.equal(readerStableInteractiveSafeTop(metrics), 42);
+    assert.equal(readerAvailableWindowHeight(metrics, 0), 802);
   }
 });
 

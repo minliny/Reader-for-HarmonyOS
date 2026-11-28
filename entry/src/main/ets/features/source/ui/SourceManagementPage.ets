@@ -3,7 +3,7 @@ import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeome
 import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
-import { readerInteractiveSafeTop, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerStableInteractiveSafeTop, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import { consumeReaderControlKeyboardBack, readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
@@ -900,7 +900,7 @@ export struct SourceManagementPage {
   private overlayTop(): number {
     // The keyboard can change while the trigger and root keep the same area.
     this.readerWindowMetricsRevision;
-    return Math.max(0, readerInteractiveSafeTop(ReaderWindowCoordinator.metrics(), true) - this.originY);
+    return Math.max(0, readerStableInteractiveSafeTop(ReaderWindowCoordinator.metrics(), true) - this.originY);
   }
 
   private overlayBottom(): number {

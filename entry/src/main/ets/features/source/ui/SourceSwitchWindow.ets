@@ -31,7 +31,7 @@ import { TYPE_SOURCE_SWITCH_NOVEL_NAME, TYPE_SOURCE_SWITCH_NOVEL_CHAPTER, TYPE_S
 import { registerReaderFonts, prepareSourceSwitchNovelFonts, sourceSwitchNovelFontsReady } from '../../../ui/foundation/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight,
-  readerVisualSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
+  readerStableVisualSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
 import { NoCoverCover } from '../../../ui/patterns/NoCoverCover';
 import { sourceSwitchCandidateKey, sourceSwitchSourceCount } from '../application/SourceSwitchGateway';
 import type { SourceSwitchCandidate, SourceSwitchSweepProgress } from '../application/SourceSwitchGateway';
@@ -590,7 +590,7 @@ export struct SourceSwitchWindow {
   }
   private safeTop(): number {
     return !this.consumeTopInset || this.readerWindowMetricsRevision < 0 ? 0 :
-      Math.max(0, readerVisualSafeTop(ReaderWindowCoordinator.metrics()) - this.containerOriginY);
+      Math.max(0, readerStableVisualSafeTop(ReaderWindowCoordinator.metrics()) - this.containerOriginY);
   }
   private safeBottom(): number {
     if (this.readerWindowMetricsRevision < 0) return 0;

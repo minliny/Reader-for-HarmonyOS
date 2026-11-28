@@ -11,7 +11,7 @@ import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import hilog from '@ohos.hilog';
 import { ReaderWindowCoordinator, ReaderWindowChromeStyle, ReaderWindowPolicy } from '../../../app/ReaderWindowCoordinator';
 import { diagnosticCodeOf } from '../../../app/LogPrivacy';
-import { readerInteractiveSafeInsets, readerStableInteractiveSafeBottom, type ReaderInsetsVp } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerInteractiveSafeInsets, readerStableInteractiveSafeTop, readerStableInteractiveSafeBottom, type ReaderInsetsVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { mangaUserError } from '../presentation/MangaUserError';
 import type { ReaderSettingsGateway } from '../../reading/application/ReaderSettingsGateway';
 import type { ReadingGatewayRuntime } from '../../reading/application/ReadingGatewayRuntime';
@@ -869,7 +869,7 @@ export struct MangaReadingSurface {
     // Native visibility can resolve before avoidAreaChange. Use the same
     // geometry's measured status band for interactive overlays, never Canvas.
     if (this.chrome.controlsPresentedForWindow() || this.chapterEnd || this.windowChromeOverlayActive) {
-      insets.top = Math.max(insets.top, metrics.statusBarRect.top + metrics.statusBarRect.height);
+      insets.top = readerStableInteractiveSafeTop(metrics);
       insets.bottom = readerStableInteractiveSafeBottom(metrics);
     }
     return insets;

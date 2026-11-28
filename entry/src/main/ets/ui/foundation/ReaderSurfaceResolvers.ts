@@ -1,6 +1,6 @@
 import {
   ReaderWindowMetricsSnapshot,
-  readerVisualSafeTop,
+  readerStableVisualSafeTop,
 } from './ReaderWindowMetrics';
 function finiteNonNegative(value: number): number {
   return Number.isFinite(value) ? Math.max(0, value) : 0;
@@ -58,7 +58,7 @@ export function readerAvailableWindowHeight(
   pageHeight: number = 0,
 ): number {
   if (Number.isFinite(pageHeight) && pageHeight > 0) return pageHeight;
-  return Math.max(0, metrics.windowRect.height - readerVisualSafeTop(metrics));
+  return Math.max(0, metrics.windowRect.height - readerStableVisualSafeTop(metrics));
 }
 
 export function readerSurfaceMaxHeight(

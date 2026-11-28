@@ -20,7 +20,7 @@ import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { registerReaderFonts, prepareMangaSheetFonts } from '../../../ui/foundation/ReaderFonts';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout } from '../../../ui/layout/ReaderScrollLayout';
-import { readerStableInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerStableInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerStableInteractiveSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../../../ui/layout/SurfaceHorizontalGeometry';
 import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
 import { projectReaderDirectoryEntries } from '../presentation/ReaderDirectoryProjection';
@@ -744,8 +744,7 @@ export struct BookDirectoryPage {
   private topInset(): number {
     if (this.readerWindowMetricsRevision < 0) return 0;
     const metrics = readerWindowMetrics();
-    const inset = readerInteractiveSafeTop(metrics);
-    return this.catalogContext === 'detail' ? Math.max(inset, metrics.statusBarRect.top + metrics.statusBarHeight) : inset;
+    return this.catalogContext === 'detail' ? readerStableInteractiveSafeTop(metrics) : readerInteractiveSafeTop(metrics);
   }
 
   private locateCurrent(): void {
