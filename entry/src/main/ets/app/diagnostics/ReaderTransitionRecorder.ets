@@ -65,11 +65,18 @@ interface TransitionFrameRecord {
 export class ReaderTransitionRecorder {
   private readonly context: () => UIContext;
   private readonly route: () => string;
+  private readonly onSamplingIdle: () => void;
   private readonly active: Map<string, TransitionRecording> = new Map<string, TransitionRecording>();
   private callbackPending: boolean = false;
   private generation: number = 0;
 
-  constructor(context: () => UIContext, route: () => string) { this.context = context; this.route = route; }
+  constructor(context: () => UIContext, route: () => string, onSamplingIdle: () => void) {
+    this.context = context;
+    this.route = route;
+    this.onSamplingIdle = onSamplingIdle;
+  }
+
+  isRecording(): boolean { return this.active.size > 0; }
 
   start(request: ReaderTransitionObservation): void {
     if (!readerTransitionsEnabled() || request.nodes.length === 0 || request.nodes.length > MAX_TARGETS) return;
@@ -85,16 +92,25 @@ export class ReaderTransitionRecorder {
       }
     }
     const sequence = ++nextSequence;
-    this.active.set(request.scope, { sequence, route: this.route(), request,
-      startMs: readerMotionNowMs(), frames: [] });
+    const recording: TransitionRecording = { sequence, route: this.route(), request,
+      startMs: readerMotionNowMs(), frames: [] };
+    // The publisher still owns the mounted native origin in this callback.
+    // The next native frame may already have applied the target body.
+    if (request.originChapterIndex !== undefined) {
+      try { recording.frames.push(this.read(this.context(), request, 0)); }
+      catch (_) { recording.frames.push({ atMs: 0, nodes: [], unreadableIds: request.nodes }); }
+    }
+    this.active.set(request.scope, recording);
     hilog.info(0x5244, 'Reader', 'READER_TRANSITION_BEGIN %{public}d', sequence);
     this.schedule();
   }
 
   retire(): void {
+    const wasRecording = this.isRecording();
     this.generation += 1;
     this.callbackPending = false;
     this.active.clear();
+    if (wasRecording) this.onSamplingIdle();
   }
 
   private schedule(): void {
@@ -114,6 +130,7 @@ export class ReaderTransitionRecorder {
       this.callbackPending = false;
       for (const recording of this.active.values()) this.finish(recording, false, 'frame-callback-unavailable');
       this.active.clear();
+      this.onSamplingIdle();
     }
   }
 
@@ -129,6 +146,7 @@ export class ReaderTransitionRecorder {
         this.finish(recording, false, elapsed < READER_TRANSITION_SAMPLE_MS ? 'frame-budget' : undefined);
       }
     }
+    if (!this.isRecording()) this.onSamplingIdle();
   }
 
   private read(context: UIContext, request: ReaderTransitionObservation, atMs: number): ReaderTransitionFrame {

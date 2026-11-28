@@ -116,6 +116,8 @@ export struct ReaderControlAutoPageContent {
   private minimumLastProgress: number = 0;
   @Prop @Watch('onSourceDetachedChanged') sourceDetached: boolean = false;
   @Prop sourceHandoffPending: boolean = false;
+  @Prop sourceTransferGeneration: number = 0;
+  onMorphActorRetired: (generation: number, actorId: string) => void = (_generation: number, _actorId: string): void => {};
   onMorphActorVisible: (kind: ReaderSessionMorphSourceKind) => void =
     (_kind: ReaderSessionMorphSourceKind): void => {};
 
@@ -572,14 +574,15 @@ export struct ReaderControlAutoPageContent {
             Row({ space: 4 }) {
               Text('每页停留').layoutWeight(1).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
                 .fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
-              this.islandStep('speed', -1, this.effectiveSpeedSeconds() > READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS);
-              Text(`${this.effectiveSpeedSeconds()} 秒`).width(52).textAlign(TextAlign.Center)
+              this.islandStep('speed', -1);
+              Text(`${this.effectiveSpeedSeconds()} 秒`).id(this.speedActorId('current')).width(52).textAlign(TextAlign.Center)
                 .fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
-              this.islandStep('speed', 1, this.effectiveSpeedSeconds() < READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS);
+              this.islandStep('speed', 1);
             }.width('100%');
             Row() {
               Slider({ value: this.effectiveSpeedSeconds(), min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
                 max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, step: 1 })
+                .id(this.speedActorId('slider'))
                 .attributeModifier(new ReaderPaperMaterial())
                 .width('100%').height(44)
                 .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
@@ -617,6 +620,10 @@ export struct ReaderControlAutoPageContent {
     Stack() { this.islandPlaybackContents(); }
       .id(this.actorId(false)).width(this.availableWidth).height(this.islandPlaybackHeight())
       .attributeModifier(new ReaderPanelFrame('reader-island-emphasis', this.appScheme))
+      .onDisAppear((): void => {
+        if (this.sourceDetached && this.sourceTransferGeneration > 0)
+          this.onMorphActorRetired(this.sourceTransferGeneration, this.actorId(false));
+      })
       .onAreaChange((_old: Area, area: Area): void => this.measureActor(false, area))
       .onVisibleAreaChange([0, .01, 1], (visible: boolean, ratio: number): void => this.reportActorVisible(false, visible, ratio));
   }
@@ -660,32 +667,43 @@ export struct ReaderControlAutoPageContent {
   private islandTransportRow(actions: ReaderAutoPageIslandTransport[]) {
     Row({ space: READER_ISLAND_PLAYBACK_ACTION_GAP }) {
       ForEach(actions, (action: ReaderAutoPageIslandTransport): void => {
-        if (action === 'previous') {
-          this.islandTransport('上一章', 'reader_tts_make_previous', this.canPreviousChapter, action, actions.length === 4);
-        } else if (action === 'next') {
-          this.islandTransport('下一章', 'reader_tts_make_next', this.canNextChapter, action, actions.length === 4);
-        } else if (action === 'stop') {
-          this.islandTransport('停止', 'reader_auto_full_stop', this.status !== 'stopped', action, actions.length === 4);
-        } else {
-          this.islandTransport(this.status === 'running' ? '暂停' : this.status === 'paused' ? '继续' : '开始',
-            this.status === 'running' ? 'reader_session_pause' : 'reader_auto_full_play', true, action, actions.length === 4);
-        }
+        this.islandTransport(action, actions.length === 4);
       }, (action: ReaderAutoPageIslandTransport): string => action);
     }.width('100%').height(this.islandPlaybackLayout().rowHeight);
   }
 
+  private islandTransportLabel(action: ReaderAutoPageIslandTransport): string {
+    if (action === 'previous') return '上一章';
+    if (action === 'next') return '下一章';
+    if (action === 'stop') return '停止';
+    return this.status === 'running' ? '暂停' : this.status === 'paused' ? '继续' : '开始';
+  }
+
+  private islandTransportAsset(action: ReaderAutoPageIslandTransport): string {
+    if (action === 'previous') return 'reader_tts_make_previous';
+    if (action === 'next') return 'reader_tts_make_next';
+    if (action === 'stop') return 'reader_auto_full_stop';
+    return this.status === 'running' ? 'reader_session_pause' : 'reader_auto_full_play';
+  }
+
+  private islandTransportAvailable(action: ReaderAutoPageIslandTransport): boolean {
+    if (action === 'previous') return this.canPreviousChapter;
+    if (action === 'next') return this.canNextChapter;
+    if (action === 'stop') return this.status !== 'stopped';
+    return true;
+  }
+
   @Builder
-  private islandTransport(label: string, asset: string, available: boolean,
-    action: ReaderAutoPageIslandTransport, emphasizeToggle: boolean) {
+  private islandTransport(action: ReaderAutoPageIslandTransport, emphasizeToggle: boolean) {
     ReaderIslandAction({
-      scheme: this.appScheme, kind: 'transport', label,
+      scheme: this.appScheme, kind: 'transport', label: this.islandTransportLabel(action),
       tone: action === 'toggle' ? 'selected' : action === 'stop' ? 'stop' : 'normal',
       nativeId: this.sourceOnly === 'none' ? 'reader-control-auto-page-transport-' + action : '',
-      icon: $r(`app.media.${asset}`),
-      actionReady: this.sourceOnly === 'none' && this.currentInputEnabled() && available,
-      visualAvailable: available,
+      icon: $r(`app.media.${this.islandTransportAsset(action)}`),
+      actionReady: this.sourceOnly === 'none' && this.currentInputEnabled() && this.islandTransportAvailable(action),
+      visualAvailable: this.islandTransportAvailable(action),
       onAction: (): void => {
-        if (this.sourceOnly !== 'none' || !this.currentInputEnabled() || !available) return;
+        if (this.sourceOnly !== 'none' || !this.currentInputEnabled() || !this.islandTransportAvailable(action)) return;
         if (action === 'previous') this.onPreviousChapter();
         else if (action === 'next') this.onNextChapter();
         else if (action === 'stop') this.onStop();
@@ -700,21 +718,30 @@ export struct ReaderControlAutoPageContent {
     Row({ space: 4 }) {
       Text(minutes ? '分钟' : '秒钟').layoutWeight(1).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
-      this.islandStep(minutes ? 'minutes' : 'seconds', -1, this.hasAdjacentTimerValue(minutes, -1));
+      this.islandStep(minutes ? 'minutes' : 'seconds', -1);
       Text(this.currentTimerValue(minutes).toString()).width(52).textAlign(TextAlign.Center)
         .fontFamily(TYPE_READER_PANEL_NUMBER.fontFamily).fontWeight(TYPE_READER_PANEL_NUMBER.fontWeight).fontSize(TYPE_READER_PANEL_NUMBER.fontSizeFp).fontFeature('"tnum" 1').fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
-      this.islandStep(minutes ? 'minutes' : 'seconds', 1, this.hasAdjacentTimerValue(minutes, 1));
+      this.islandStep(minutes ? 'minutes' : 'seconds', 1);
     }.width('100%');
   }
 
+  private islandStepAvailable(metric: 'speed' | 'minutes' | 'seconds', delta: number): boolean {
+    if (metric === 'speed') {
+      return delta < 0 ? this.effectiveSpeedSeconds() > READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS :
+        this.effectiveSpeedSeconds() < READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS;
+    }
+    return this.hasAdjacentTimerValue(metric === 'minutes', delta);
+  }
+
   @Builder
-  private islandStep(metric: 'speed' | 'minutes' | 'seconds', delta: number, available: boolean) {
+  private islandStep(metric: 'speed' | 'minutes' | 'seconds', delta: number) {
     ReaderIslandAction({
       scheme: this.appScheme, label: delta < 0 ? '−' : '+',
-      actionReady: this.currentInputEnabled() && available, visualAvailable: available,
+      actionReady: this.currentInputEnabled() && this.islandStepAvailable(metric, delta),
+      visualAvailable: this.islandStepAvailable(metric, delta),
       accessibleLabel: `${delta < 0 ? '减少' : '增加'}${metric === 'speed' ? '每页停留' : metric === 'minutes' ? '分钟' : '秒钟'}`,
       onAction: (): void => {
-        if (!this.currentInputEnabled() || !available) return;
+        if (!this.currentInputEnabled() || !this.islandStepAvailable(metric, delta)) return;
         if (metric === 'speed') this.stepIslandSpeed(delta);
         else this.commitTimerStep(metric === 'minutes', delta);
       },
@@ -1130,6 +1157,7 @@ export struct ReaderControlAutoPageContent {
         Slider({ value: this.effectiveSpeedSeconds(), min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
           max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, step: 1, style: SliderStyle.OutSet,
           direction: Axis.Horizontal, reverse: false })
+          .id(this.speedActorId('slider'))
           .attributeModifier(new ReaderPaperMaterial())
           .width(this.speedActor('slider').width).height(this.speedActor('slider').height)
           .trackThickness(4).blockSize({ width: 14, height: 14 })

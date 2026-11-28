@@ -540,15 +540,18 @@ export struct SourceV9TransferPage {
       PageBackBar({ floating: true, centered: true, elevation: 'floating', title: '书源订阅',
         trailingWidthVp: TRANSFER_HEADER_ACTION_WIDTH, balancedCenteredSlots: true,
         backFocusId: 'reader-source-v9-transfer-back', onBack: (): void => this.back(),
-        trailing: (): void => {
-          SourceV9AddAction({ label: '新建', actionEnabled: this.editable(),
-            controlId: 'reader-source-v9-subscription-create', onTap: (): void => this.openForm() });
-        },
+        trailing: (): void => { this.subscriptionsCreateAction(); },
       });
     } else {
       PageBackBar({ floating: true, centered: true, elevation: 'floating', title: '导入书源',
         backFocusId: 'reader-source-v9-transfer-back', onBack: (): void => this.back() });
     }
+  }
+
+  @Builder
+  private subscriptionsCreateAction() {
+    SourceV9AddAction({ label: '新建', actionEnabled: this.editable(),
+      controlId: 'reader-source-v9-subscription-create', onTap: (): void => this.openForm() });
   }
 
   @Builder
@@ -692,12 +695,14 @@ export struct SourceV9TransferPage {
 
   @Builder
   private importSource() {
-    this.segments(IMPORT_ORIGINS, this.origin, (id: string): void => {
-      if (id === this.origin) return;
-      this.retireClipboardPaste();
-      this.origin = id as SourceV9ImportOrigin;
-    },
-      '导入来源', 'reader-source-v9-import-origin');
+    SourceV9SegmentedTrack({ choices: IMPORT_ORIGINS, selected: this.origin,
+      idPrefix: 'reader-source-v9-import-origin', accessibilityLabel: '导入来源', actionEnabled: this.editable(),
+      onSelect: (id: string): void => {
+        if (!this.editable() || id === this.origin) return;
+        this.retireClipboardPaste();
+        this.origin = id as SourceV9ImportOrigin;
+      },
+    });
     if (this.origin === 'file') {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Column({ space: 5 }) {
@@ -1020,9 +1025,18 @@ export struct SourceV9TransferPage {
   private importFooter() {
     Row({ space: 8 }) {
       if (this.state.importStep === 1) {
-        this.action(this.state.busy ? '读取中…' : '下一步：解析书源', 'primary', this.canParse(), (): void => {
-          void this.flow?.parseImport({ origin: this.origin, url: this.url, paste: this.paste });
-        }, this.footerButtonHeight(), undefined, 1, 'reader-source-v9-import-parse');
+        Button(this.state.busy ? '读取中…' : '下一步：解析书源', { type: ButtonType.Capsule, stateEffect: false })
+          .id('reader-source-v9-import-parse').height(this.footerButtonHeight()).layoutWeight(1)
+          .padding({ left: 12, right: 12 }).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
+          .fontColor(this.toneInk('primary')).attributeModifier(new ReaderPressFeedback(this.toneSurface('primary'),
+            this.scheme, this.footerButtonHeight() / 2, this.footerButtonHeight() / 2, this.canParse()))
+          .enabled(this.canParse()).opacity(this.canParse() ? 1 : 0.45)
+          .responseRegion(this.touchRegion(this.footerButtonHeight()))
+          .onClick((): void => {
+            if (this.canParse() && this.inputCurrent()) {
+              void this.flow?.parseImport({ origin: this.origin, url: this.url, paste: this.paste });
+            }
+          });
       } else if (this.state.importStep === 2) {
         this.action((this.checkEnabled && this.state.completedChecks > 0 ? '导入已选 (' : '跳过检测并导入 (') +
           this.selectedImportCount() + ')', 'primary',

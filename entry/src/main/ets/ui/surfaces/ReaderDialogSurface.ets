@@ -82,6 +82,8 @@ export struct ReaderDialogSurface {
   @Prop primarySurfaceColor: string | undefined = undefined;
   @Prop showCloseButton: boolean = false;
   @Prop closeEnabled: boolean = true;
+  @Prop nativeId: string = '';
+  @Prop closeNativeId: string = '';
   @Prop actions: DialogActionView[] = [];
   @BuilderParam body: () => void = this.defaultBody;
   onAction: (id: string) => void = (): void => {};
@@ -115,6 +117,7 @@ export struct ReaderDialogSurface {
         this.actionsRow();
       }
     }
+    .id(this.nativeId.length > 0 ? this.nativeId : undefined)
     .width(this.frameWidth())
     .customProperty(READER_LAYOUT_SURFACE_HINT, READER_LAYOUT_DEBUG_BUILD ? NATIVE_DIALOG_SURFACE : undefined)
     .padding(this.framePadding())
@@ -141,7 +144,8 @@ export struct ReaderDialogSurface {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Image(readerPaperActionIcon('close', this.appThemeScheme)).width(15).height(15)
             .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
-        }.width(32).height(32).padding(0)
+        }.id(this.closeNativeId.length > 0 ? this.closeNativeId : undefined)
+          .width(32).height(32).padding(0)
           .customProperty(READER_LAYOUT_CLOSE_CONTROL, READER_LAYOUT_DEBUG_BUILD ? true : undefined)
           .responseRegion({ x: -12, y: -6, width: 44, height: 44 })
           .enabled(this.closeEnabled).opacity(this.closeEnabled ? 1 : 0.45)

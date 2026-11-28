@@ -152,6 +152,25 @@ test('T4 requires old-or-new live body and witnesses the requested chapter, with
     ['T4:required-actor-unobserved']);
 });
 
+test('T4 at deferred chapter submission must witness the retained origin before the requested chapter', () => {
+  const input = { ...request('chapter', 'advance', ['body', 'loading']), chapterBodyCount: 1,
+    originChapterIndex: 3, targetChapterIndex: 1 };
+  const origin = actor('body', { bodyVisible: true, bodyAnchorId: 28, bodyAnchorY: 75, chapterIndex: 3 });
+  const target = actor('body', { bodyVisible: true, bodyAnchorId: 41, bodyAnchorY: 75, chapterIndex: 1 });
+  const unrelated = actor('body', { bodyVisible: true, bodyAnchorId: 39, bodyAnchorY: 75, chapterIndex: 2 });
+  assert.deepEqual(evaluateTransitionInvariants(input, samples([origin], [target], [target])).observedRules, ['T4']);
+  assert.deepEqual(evaluateTransitionInvariants(input, samples([origin], [origin], [origin])).missing,
+    ['T4:required-actor-unobserved']);
+  assert.deepEqual(evaluateTransitionInvariants(input, samples([target], [target], [target])).missing,
+    ['T4:required-actor-unobserved']);
+  assert.deepEqual(evaluateTransitionInvariants(input, samples([target], [origin])).missing,
+    ['T4:required-actor-unobserved']);
+  assert.deepEqual(evaluateTransitionInvariants(input, samples([unrelated], [target])).missing,
+    ['T4:required-actor-unobserved']);
+  assert.equal(evaluateTransitionInvariants(input, samples([origin, actor('loading')], [target]))
+    .violations[0].code, 'cached-chapter-loading-visible');
+});
+
 test('T4 catches an admitted loading state, blank body, safe-top shift, and drift of the same paint anchor', () => {
   const input = { ...request('chapter', 'advance', ['body', 'loading']), chapterBodyCount: 1, targetChapterIndex: 7 };
   const previous = actor('body', { bodyVisible: true, bodyAnchorId: 19, bodyAnchorY: 54, chapterIndex: 6 });

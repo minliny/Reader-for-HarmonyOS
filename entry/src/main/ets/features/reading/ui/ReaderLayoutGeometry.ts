@@ -22,6 +22,7 @@ import {
 } from './ReaderControlMotionGeometry.ts';
 
 export { READER_EXPANDED_MIN_WIDTH, type ReaderWidthClass } from '../../../ui/foundation/ReaderWidthClass.ts';
+export { createReaderWindowMetricsLayoutKey } from '../application/ReadingMeasurementCoordinator.ts';
 
 export const READER_PHONE_REFERENCE_WIDTH = 390;
 export const READER_PHONE_REFERENCE_HEIGHT = 844;
@@ -204,27 +205,6 @@ export class ReaderReadingLayoutSnapshot {
     const titleTrack = measuredTitleHeight > 0 ? measuredTitleHeight + this.titleToBodySpacingVp : 0;
     return Math.max(1, this.viewportHeight - this.contentTop - this.contentBottom - titleTrack);
   }
-}
-
-export function createReaderWindowMetricsLayoutKey(
-  layout: ReaderReadingLayoutSnapshot,
-  extendIntoCutout: boolean,
-  hideNavigationBar: boolean,
-): string {
-  return [
-    layout.widthClass,
-    layout.viewportWidth,
-    layout.viewportHeight,
-    layout.contentTop,
-    layout.contentRight,
-    layout.contentBottom,
-    layout.contentLeft,
-    layout.facingChapterWidth,
-    layout.titleTrackHeightVp,
-    layout.systemFontScale,
-    extendIntoCutout,
-    hideNavigationBar === true,
-  ].join('|');
 }
 
 export type ReaderControlContentModule = 'home' | 'directory' | 'search' | 'tts' | 'autoPage' |

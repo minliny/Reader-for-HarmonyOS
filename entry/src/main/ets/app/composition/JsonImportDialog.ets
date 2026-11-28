@@ -133,14 +133,7 @@ export struct JsonImportDialog {
         onScrollAppeared: (): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.editingScroller),
         onScrollDisappeared: (): void => this.editingScroll.unmount(),
         onScrollChanged: (): void => this.editingHost.refresh(),
-        content: (widthVp: number, _heightVp: number): void => {
-          ReaderDialogSurface({ specId: 'json-import', containerWidthVp: widthVp, title: this.title, showCloseButton: true,
-            actions: [new DialogActionView('importOnline', '从在线链接导入', 'primary', true, false)],
-            onAction: (id: string): void => { if (id === 'importOnline') this.submitOnlineImport(); },
-            onClose: (): void => this.dismissIfCurrent(),
-            body: (): void => { this.formBody(); },
-          }).transition(readerImportCardTransition(this.reduceMotion)).hitTestBehavior(HitTestMode.Default);
-        },
+        content: (widthVp: number, _heightVp: number): void => { this.formCard(widthVp); },
       });
     }
     .width('100%')
@@ -150,6 +143,16 @@ export struct JsonImportDialog {
     .onDisAppear(this.restoreFocusAction())
     .transition(readerImportOverlayTransition(this.reduceMotion))
     .zIndex(200);
+  }
+
+  @Builder
+  private formCard(widthVp: number) {
+    ReaderDialogSurface({ specId: 'json-import', containerWidthVp: widthVp, title: this.title, showCloseButton: true,
+      actions: [new DialogActionView('importOnline', '从在线链接导入', 'primary', true, false)],
+      onAction: (id: string): void => { if (id === 'importOnline') this.submitOnlineImport(); },
+      onClose: (): void => this.dismissIfCurrent(),
+      body: (): void => { this.formBody(); },
+    }).transition(readerImportCardTransition(this.reduceMotion)).hitTestBehavior(HitTestMode.Default);
   }
 
   @Builder

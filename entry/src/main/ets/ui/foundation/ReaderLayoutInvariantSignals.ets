@@ -8,6 +8,7 @@ export const READER_LAYOUT_INVARIANT_PROPERTY: string = 'readerLayoutInvariant';
 export const READER_LAYOUT_SURFACE_HINT: string = 'readerLayoutSurfaceHint';
 export const READER_LAYOUT_NATIVE_MATERIAL: string = 'readerLayoutNativeMaterial';
 export const READER_LAYOUT_READING_PAPER: string = 'readerLayoutReadingPaper';
+export const READER_LAYOUT_ROTATION_ENVELOPE: string = 'readerLayoutRotationEnvelope';
 export const READER_LAYOUT_CLOSE_CONTROL: string = 'readerLayoutCloseControl';
 export const READER_LAYOUT_FOOTER: string = 'readerLayoutFooter';
 let nextModalId: number = 0;

@@ -1,3 +1,5 @@
+import { nativeBounds } from '../../tools/lib/native-ui-evidence.mjs';
+
 const SHELF_NOVEL = 'ReaderShelfNovel';
 const NEW_NOVEL = 'ReaderNewNovel';
 const COMIC = 'ReaderComic';
@@ -52,6 +54,7 @@ const moduleId = name => id('reader-control-module-' + name);
 const transport = (service, kind, active = true) => ({ id: `reader-control-${service}-transport-${kind}`, enabled: String(active) });
 const close = label('关闭');
 const appearance = moduleId('appearance');
+const appearanceFontGrid = id('reader-control-font-grid');
 const readerSettings = moduleId('settings');
 const bookshelfReady = { route: 'bookshelf', all: [searchEntry, text(LOCAL_TXT)], modalOpen: false };
 const settingsHome = { route: 'settings', all: [text('设置'), tab('settings')] };
@@ -95,10 +98,53 @@ export async function applyVmJourneyProfile(ui) {
   ui.assertProfile();
 }
 
-async function reveal(ui, selector, scroll, name, direction = 'up') {
+async function reveal(ui, selector, scroll, name, direction = 'up', swipeOptions) {
   for (let attempt = 0; attempt < 4 && !ui.has(selector); attempt += 1) {
-    await ui.swipe(`滚动${name}定位目标（${attempt + 1}）`, scroll, direction, { all: [scroll] });
+    await ui.swipe(`滚动${name}定位目标（${attempt + 1}）`, scroll, direction, { all: [scroll] }, swipeOptions);
   }
+}
+
+const BUILT_IN_FONT_SLOTS = ['system', 'serif', 'sans', 'kai', 'fangSong', 'mono', 'sourceHanSerif', 'lxgwWenKai'];
+const fontCard = slot => ({ id: `reader-control-font-${slot}`, within: [appearance, appearanceFontGrid] });
+const draggableFontCard = slot => ({ ...fontCard(slot), type: 'Button', enabled: 'true', clickable: 'true' });
+
+export function fontReorderPair(viewportBounds, cards, requiredPair) {
+  const viewport = nativeBounds(viewportBounds);
+  if (!viewport) return undefined;
+  const placed = cards.map(card => ({ ...card, frame: nativeBounds(card.origBounds), visible: nativeBounds(card.bounds) }))
+    .filter(card => card.frame && card.visible)
+    .sort((a, b) => a.frame[1] - b.frame[1] || a.frame[0] - b.frame[0]);
+  const fullyVisible = ({ frame, visible }) => frame.every((edge, index) => edge === visible[index]) &&
+    frame[2] > frame[0] && frame[3] > frame[1] &&
+    frame[0] >= viewport[0] && frame[1] >= viewport[1] && frame[2] <= viewport[2] && frame[3] <= viewport[3];
+
+  for (let index = 1; index < placed.length; index += 1) {
+    const left = placed[index - 1];
+    const right = placed[index];
+    if (left.frame[1] !== right.frame[1] || left.frame[3] !== right.frame[3] || left.frame[2] > right.frame[0]) continue;
+    if (!left.canDrag || !right.canDrag || !fullyVisible(left) || !fullyVisible(right)) continue;
+    if (requiredPair && (!requiredPair.includes(left.slot) || !requiredPair.includes(right.slot))) continue;
+    return [left.slot, right.slot];
+  }
+  return undefined;
+}
+
+async function revealFontReorderPair(ui, requiredPair) {
+  for (let attempt = 0; attempt <= 4; attempt += 1) {
+    const cards = [...BUILT_IN_FONT_SLOTS, 'custom', 'import'].map(slot => ({
+      slot, bounds: ui.value(fontCard(slot), 'bounds'), origBounds: ui.value(fontCard(slot), 'origBounds'),
+      canDrag: BUILT_IN_FONT_SLOTS.includes(slot) && ui.has(draggableFontCard(slot)),
+    }));
+    const pair = fontReorderPair(ui.value(appearance, 'bounds'), cards, requiredPair);
+    if (pair) return pair;
+    if (attempt < 4) {
+      await ui.swipe(`滚动字体列表，定位完整相邻的内置字体卡片（${attempt + 1}）`, appearance, 'up', {
+        route: 'reading', all: [appearance], modalOpen: true,
+      });
+    }
+  }
+  throw Error(requiredPair ? `重开外观后未找到原先两张完整相邻的字体卡片（${requiredPair.join('、')}）` :
+    '当前原生字体视口未找到两张完整相邻的可操作内置字体卡片');
 }
 
 async function controls(ui, name) {
@@ -106,16 +152,39 @@ async function controls(ui, name) {
   await ui.tap(`打开阅读控制模块 ${name}`, entry(name), { route: 'reading', all: [moduleId(name)], modalOpen: true });
 }
 
-async function ensureReadingMode(ui, mode = ui.profile.readingMode ?? 'paged') {
-  if (!ui.has(stageMode(mode))) {
-    await controls(ui, 'settings');
-    const option = enabled(`reader-control-settings-pageTurn-${mode === 'continuous' ? 'scroll' : 'cover'}`);
+const continuousBody = { ...stageMode('continuous'), type: 'List', enabled: 'true' };
+function nativeReadingMode(mode) {
+  const state = steadyReader(mode);
+  return mode === 'continuous' ? { ...state, all: [...state.all, continuousBody], none: [activePage] } :
+    { ...state, all: [...state.all, activePage], none: [continuousBody] };
+}
+
+async function setReadingMode(ui, mode, originalTurnOption) {
+  await controls(ui, 'settings');
+  const option = { ...enabled(originalTurnOption ??
+    `reader-control-settings-pageTurn-${mode === 'continuous' ? 'scroll' : 'cover'}`), within: readerSettings };
+  const current = { id: /^reader-control-settings-pageTurn-[A-Za-z-]+$/u,
+    selected: 'true', enabled: 'true', within: readerSettings };
+  await reveal(ui, option, readerSettings, '阅读设置');
+  await ui.wait('读回当前翻页选项', { route: 'reading', all: [current, option] });
+  const previous = ui.value(current, 'id');
+  if (!previous) ui.block('无法从原生树唯一读取当前翻页选项');
+  if (!ui.has(selected(option))) {
     await ui.tap(`设置并回读阅读方式 ${mode}`, option, { route: 'reading', all: [selected(option)] });
-    await ui.key('关闭阅读设置模块', 'Back', { route: 'reading', all: [entry('settings')] });
-    await ui.key('关闭阅读控制，确认原生正文阅读方式', 'Back', steadyReader(mode));
-  } else {
-    await ui.wait(`核对原生正文阅读方式 ${mode}`, steadyReader(mode));
   }
+  await ui.key('关闭阅读设置模块', 'Back', { route: 'reading', all: [entry('settings')] });
+  await ui.key('关闭阅读控制，确认原生正文阅读方式', 'Back', nativeReadingMode(mode));
+  ui.observedReadingMode(mode);
+  return previous;
+}
+
+async function ensureReadingMode(ui, mode = ui.profile.readingMode ?? 'paged') {
+  const outcome = nativeReadingMode(mode);
+  if (!outcome.all.every(target => ui.has(target)) || outcome.none.some(target => ui.has(target))) {
+    await setReadingMode(ui, mode);
+    return mode;
+  }
+  await ui.wait(`核对原生正文阅读方式 ${mode}`, outcome);
   ui.observedReadingMode(mode);
   return mode;
 }
@@ -132,11 +201,13 @@ async function openReadingDirectory(ui) {
 }
 
 const chapterRow = title => ({ text: title, within: [readerDirectoryContent, { type: 'ListItem' }] });
-const controlTitle = title => ({ text: `${title} · 本地书籍`, within: id('reader-control-motion-topbar') });
+const controlTopBar = id('reader-control-motion-topbar');
+const controlTitle = title => ({ text: `${title} · 本地书籍`, within: controlTopBar });
 
 async function jumpToLocalChapter(ui, target) {
   await ui.tap(`选择目录锚点 ${target}`, chapterRow(target), {
-    route: 'reading', all: [readingStage, controlTitle(target)], none: [readerDirectoryContent],
+    route: 'reading', all: [readingStage, { type: 'Text', text: target, within: readingStage }],
+    none: [readerDirectoryContent, controlTopBar], modalOpen: false,
     transition: chapterAdvance('reader-chapter-local'), filmstrip: true,
   });
 }
@@ -165,13 +236,32 @@ async function openLicenses(ui) {
   await ui.key('从关于页返回四组设置', 'Back', settingsHome);
 }
 
-const capsule = (service, running) => action(`${service}${running ? '播放中，点击暂停' : '已暂停，点击继续'}`);
+const capsuleToggle = running => ({
+  ...enabled('reader-session-launch-toggle'), type: 'Button', clickable: 'true', selected: String(running),
+});
+const capsuleState = (service, running) => {
+  const toggle = capsuleToggle(running);
+  return [toggle, { ...text(service), within: toggle }, {
+    id: `reader-session-capsule-state-${running ? 'playing' : 'paused'}`, type: 'Image', within: toggle,
+  }];
+};
 
 async function togglePlayback(ui, serviceLabel, mode) {
-  const running = capsule(serviceLabel, true);
-  const paused = capsule(serviceLabel, false);
-  await ui.tap(`暂停${serviceLabel}`, running, { ...steadyReader(mode), all: [stageMode(mode), paused], none: [running] });
-  await ui.tap(`继续${serviceLabel}`, paused, { ...steadyReader(mode), all: [stageMode(mode), running], none: [paused] });
+  const state = steadyReader(mode);
+  await ui.tap(`暂停${serviceLabel}`, capsuleToggle(true), {
+    ...state, all: [...state.all, ...capsuleState(serviceLabel, false)], none: [capsuleToggle(true)],
+  });
+  await ui.tap(`继续${serviceLabel}`, capsuleToggle(false), {
+    ...state, all: [...state.all, ...capsuleState(serviceLabel, true)], none: [capsuleToggle(false)],
+  });
+}
+
+function waitAutoPageCountdown(ui, mode, seconds, description) {
+  const state = steadyReader(mode);
+  return ui.wait(description, {
+    ...state, all: [...state.all, ...capsuleState('自动翻页', true),
+      { type: 'Text', text: String(seconds), within: [capsuleToggle(true), id('reader-session-launch-leading-icon')] }],
+  });
 }
 
 async function returnFromPlaybackCapsule(ui, mode, service, serviceLabel, toggle) {
@@ -232,11 +322,16 @@ export const journeys = {
       route: 'bookshelf', all: [text(LOCAL_TXT), text(SHELF_NOVEL)], none: [shelfRowNovelMore], screenCapture: true,
     });
     await ui.tap('切换列表模式', viewList, {
-      route: 'bookshelf', all: [shelfRowNovelMore, shelfRowLocalMore],
+      route: 'bookshelf', all: [shelfRowNovelMore, shelfRowLocalMore, localShelfProgress(shelfRowLocalCard)],
       none: [{ ...text('*%'), within: localContinueCard }, { ...text('*%'), within: shelfRowLocalCard }],
-      sameText: [localShelfProgress(localContinueCard), localShelfProgress(shelfRowLocalCard)],
       screenCapture: true,
     });
+    if (ui.has(localContinueCard)) {
+      await ui.wait('核对继续阅读卡与本地书架条目进度一致', {
+        route: 'bookshelf',
+        sameText: [localShelfProgress(localContinueCard), localShelfProgress(shelfRowLocalCard)],
+      });
+    }
     await ui.tap('展开书架筛选', shelfFilterToggle, {
       route: 'bookshelf', all: [shelfFilterLocal, shelfFilterAll],
     });
@@ -255,23 +350,27 @@ export const journeys = {
     });
     const groups = enabled(/^reader-bookshelf-book-action-.*::edit-group$/);
     const multiSelect = enabled(/^reader-bookshelf-book-action-.*::multi-select$/);
+    const groupCard = id(/^reader-shelf-group:.*:card$/);
+    const defaultGroup = { ...selected(enabled(/^reader-shelf-group:.*:default$/)), within: groupCard, type: 'Button' };
+    const groupClose = { ...enabled(/^reader-shelf-group:.*:close$/), within: groupCard, type: 'Button', clickable: 'true' };
     await ui.tap('打开公开本地书的动作', shelfRowLocalMore, { all: [groups, multiSelect], modalOpen: true });
     await ui.tap('打开编辑分组弹窗', groups, {
-      route: 'bookshelf', all: [text('编辑分组'), selected(action('默认分组')), close],
-      requiredRules: ['R9', 'R10'], screenCapture: true,
+      route: 'bookshelf', modalOpen: true, all: [{ ...text('编辑分组'), within: groupCard }, defaultGroup, groupClose],
+      requiredRules: ['R9', 'R10', 'R13'], screenCapture: true,
     });
-    await ui.tap('关闭分组编辑，保留书架条目', close, { ...bookshelfReady, all: [shelfRowLocalMore] });
+    await ui.tap('关闭分组编辑，保留书架条目', groupClose, { ...bookshelfReady, all: [shelfRowLocalMore], none: [groupCard] });
     await ui.tap('再次打开本地书动作', shelfRowLocalMore, { all: [multiSelect], modalOpen: true });
     await ui.tap('进入多选并核对被选中书目', multiSelect, {
       route: 'bookshelfMultiSelect', all: [text(LOCAL_TXT), text('已选择 1 本')], requiredRules: ['R8', 'R13'],
     });
-    const chosen = label(new RegExp(`^${LOCAL_TXT}，已选择$`, 'u'));
+    const chosen = { ...label(LOCAL_TXT), type: 'Row', selected: 'true' };
     await ui.tap('撤销对该书的选中', chosen, { route: 'bookshelfMultiSelect', all: [text('已选择 0 本')], none: [chosen] });
     await ui.key('退出多选并保留原书架', 'Back', bookshelfReady);
     await openShelfMore(ui);
     await ui.tap('打开本地导入并核对可用入口', enabled(/^reader-bookshelf-more-action-.*::import$/), {
-      route: 'bookshelf', all: [text('导入本地书籍'), action('选择文件'), action('取消')],
-      requiredRules: ['R9', 'R10'], screenCapture: true,
+      route: 'bookshelf', modalOpen: true,
+      all: [text('导入本地书籍'), action('选择文件'), action('取消'), enabled('reader-local-import-close')],
+      requiredRules: ['R9', 'R10', 'R13'], screenCapture: true,
     });
     const selectLocal = { ...action('选择文件'), first: true };
     await ui.tap('提交公开夹具的原书并核对重复导入回读', selectLocal, {
@@ -313,14 +412,16 @@ export const journeys = {
     await ui.key('返回搜索并核对新源仍对应在架书籍', 'Back', {
       route: 'search', all: [{ ...text('已在书架'), within: searchRow(SHELF_NOVEL) }],
     });
-    await ui.tap('清除当前搜索词并恢复历史', enabled('reader-book-search-clear'), {
-      route: 'search', all: [searchField, id('reader-search-history-viewport'),
-        { text: SHELF_NOVEL, within: id('reader-search-history-viewport') }],
+    const clearQuery = { type: 'Button', enabled: 'true', clickable: 'true', within: id('reader-bookshelf-search-field') };
+    const history = id('reader-search-history-viewport');
+    const searchedBook = { type: 'Text', originalText: SHELF_NOVEL, within: history };
+    await ui.tap('清除当前搜索词并恢复历史', clearQuery, {
+      route: 'search', all: [searchField, history, searchedBook],
       none: [searchRow(SHELF_NOVEL)], requiredRules: ['R12'], screenCapture: true,
     });
-    await ui.tap('清空公开夹具的搜索历史', label('清空搜索历史'), {
+    await ui.tap('清空公开夹具的搜索历史', { ...action('清空'), within: history }, {
       route: 'search', all: [text('暂无搜索历史'), searchField],
-      none: [{ text: SHELF_NOVEL, within: id('reader-search-history-viewport') }], requiredRules: ['R12'],
+      none: [searchedBook], requiredRules: ['R12'],
     });
   },
 
@@ -360,9 +461,15 @@ export const journeys = {
     const pageB = { id: 'reader-page-slot-b', enabled: 'true' };
     if (mode === 'paged') {
       const [beforeSwipe, afterSwipe] = ui.has(pageA) ? [pageA, pageB] : [pageB, pageA];
-      await ui.swipe('左滑翻页并核对绘制页面切换', readingStage, 'left', {
-        route: 'reading', all: [readingStage, afterSwipe], none: [beforeSwipe], screenCapture: true,
-      });
+      const atLastChapter = ui.has({ text: /第三十二章/u, within: beforeSwipe });
+      await ui.swipe(
+        atLastChapter ? '右滑翻页并核对绘制页面切换' : '左滑翻页并核对绘制页面切换',
+        readingStage,
+        atLastChapter ? 'right' : 'left',
+        {
+          route: 'reading', all: [readingStage, afterSwipe], none: [beforeSwipe], screenCapture: true,
+        },
+      );
     } else {
       await ui.swipe('连续正文向上滚动', stageMode(mode), 'up', { ...steadyReader(mode), screenCapture: true });
     }
@@ -559,6 +666,8 @@ export const journeys = {
     const mode = await openLocalReader(ui);
     const tts = moduleId('tts');
     const scroll = { type: 'Scroll', within: tts };
+    const revealTts = (selector, name) =>
+      reveal(ui, selector, scroll, name, 'up', { avoid: { type: 'Slider', within: tts } });
     const toggle = transport('tts', 'toggle');
     const next = transport('tts', 'next');
     const previous = transport('tts', 'previous');
@@ -566,21 +675,22 @@ export const journeys = {
     const stopDisabled = transport('tts', 'stop', false);
     const picker = id('reader-control-tts-overlay');
     const manager = id('reader-control-tts-manager-overlay');
+    const closeTtsOverlay = { ...enabled(/^reader-tts-config:\d+:close$/u), type: 'Button', clickable: 'true' };
     const choiceRow = field => enabled(new RegExp(`^reader-tts-config:\\d+:${field}$`));
     await controls(ui, 'tts');
     await ui.wait('核对停止不可用和播放可用分别呈现', {
       route: 'reading', all: [tts, toggle, stopDisabled], none: [stop],
       requiredRules: ['R13', 'R14'], features: ['tts-transport'], screenCapture: true,
     });
-    const rate = { type: 'Slider', label: '朗读语速', within: tts };
+    const rate = { ...enabled('reader-control-tts-rate-slider'), type: 'Slider', within: tts };
     const rateValue = { type: 'Text', text: /^\d\.\d\d×$/, within: tts };
-    await reveal(ui, rate, scroll, '朗读设置');
+    await revealTts(rate, '朗读设置');
     const initialRate = ui.value(rateValue);
     if (initialRate === undefined) ui.block('当前窗口未同时暴露语速滑块与唯一的数值读数');
     await ui.slideTo('调整语速并核对新读数', rate, initialRate === '2.00×' ? .25 : .95, {
       route: 'reading', all: [rate, rateValue], none: [text(initialRate)],
     });
-    await reveal(ui, action('15 分钟'), scroll, '朗读设置');
+    await revealTts(action('15 分钟'), '朗读设置');
     await ui.tap('选择 15 分钟定时停止，核对选中项', action('15 分钟'), {
       route: 'reading', all: [selected(action('15 分钟'))],
     });
@@ -589,34 +699,36 @@ export const journeys = {
     for (const [field, title] of [['voice', '音色选项'], ['engine', '语音引擎'], ['language', '朗读语言'],
       ['session', '音频会话'], ['failure', '不可用处理']]) {
       const trigger = choiceRow(field);
-      await reveal(ui, trigger, scroll, '音频配置');
+      await revealTts(trigger, '音频配置');
       await ui.tap(`打开${title}并核对首帧与完整内容`, trigger, {
-        route: 'reading', all: [picker, { ...text(title), within: picker }, { ...close, within: picker }],
-        requiredRules: ['R9', 'R10', 'R13'], transition: surface(picker.id), filmstrip: true,
+        route: 'reading', all: [picker, { ...text(title), within: picker }, { ...closeTtsOverlay, within: picker }],
+        requiredRules: ['R9', 'R10', 'R13'], transition: surface(picker.id), screenCapture: true,
       });
       if (field === 'voice') {
         const noVoice = { text: /^当前没有可用的系统音色/, within: picker };
-        const audition = { ...action(/，试听$/u), within: picker, first: true };
+        const audition = { ...action('试听'), within: picker, first: true };
         if (ui.has(noVoice)) {
           availableVoice = false;
           ui.defer('原生音色试听、朗读启停与自动跨章', '当前 VM 的音色选择器回读为无可用系统音色');
         } else {
-          await ui.tap('试听首个可用系统音色', audition, {
-            route: 'reading', all: [picker, { ...action(/，停止试听$/u), within: picker }], screenCapture: true,
+          availableVoice = await ui.audition('试听首个可用系统音色', audition, {
+            route: 'reading', all: [picker, { ...closeTtsOverlay, within: picker }], screenCapture: true,
           });
         }
       }
       if (field === 'engine') {
-        await ui.tap('进入在线 TTS 管理表单', { ...action('管理在线 TTS'), within: picker }, {
-          route: 'reading', all: [manager, id('reader-tts-manager-form'), { ...close, within: manager }],
+        const manageOnline = { type: 'Text', originalText: '管理在线 TTS', enabled: 'true',
+          within: [picker, { type: 'Button', enabled: 'true', clickable: 'true' }] };
+        await ui.tap('进入在线 TTS 管理表单', manageOnline, {
+          route: 'reading', all: [manager, id('reader-tts-manager-form'), { ...closeTtsOverlay, within: manager }],
           requiredRules: ['R9', 'R10', 'R14'], features: ['online-tts-editor'],
-          transition: surface(manager.id), filmstrip: true,
+          transition: surface(manager.id), screenCapture: true,
         });
-        await ui.tap('关闭在线 TTS 管理表单并恢复模块输入', { ...close, within: manager }, {
+        await ui.tap('关闭在线 TTS 管理表单并恢复模块输入', { ...closeTtsOverlay, within: manager }, {
           route: 'reading', all: [tts, trigger], none: [manager, picker],
         });
       } else {
-        await ui.tap(`关闭${title}并恢复原配置行`, { ...close, within: picker }, {
+        await ui.tap(`关闭${title}并恢复原配置行`, { ...closeTtsOverlay, within: picker }, {
           route: 'reading', all: [tts, trigger], none: [picker],
         });
       }
@@ -625,7 +737,8 @@ export const journeys = {
     await ui.key('退出配置并返回模块入口', 'Back', { route: 'reading', all: [entry('tts')] });
     await ui.tap('重新打开朗读播放区', entry('tts'), { route: 'reading', all: [toggle, stopDisabled] });
     await ui.tap('启动朗读并验证单所有者变身', toggle, {
-      ...steadyReader(mode), all: [capsule('朗读', true)], none: [tts], transition: launch('tts'), filmstrip: true,
+      ...steadyReader(mode), all: [...steadyReader(mode).all, ...capsuleState('朗读', true)],
+      none: [tts], transition: launch('tts'), filmstrip: true,
     });
     await togglePlayback(ui, '朗读', mode);
     await returnFromPlaybackCapsule(ui, mode, 'tts', '朗读', toggle);
@@ -633,8 +746,8 @@ export const journeys = {
       route: 'reading', all: [tts, previous, stop], requiredRules: ['R14'], features: ['tts-transport'],
     });
     await ui.tap('退回上一句，核对下一句可用', previous, { route: 'reading', all: [tts, next, stop] });
-    const seek = { type: 'Slider', label: '跳转朗读句子', within: tts };
-    await reveal(ui, seek, scroll, '朗读播放区');
+    const seek = { ...enabled('reader-control-tts-seek-slider'), type: 'Slider', within: tts };
+    await revealTts(seek, '朗读播放区');
     if (!ui.has(seek)) ui.block('当前章未暴露可操作的逐句定位滑块，无法在有限窗口内触发自动跨章');
     await ui.slideTo('跳至最后一句，等待真实朗读跨章且正文不闪烁', seek, 1, {
       route: 'reading', all: [tts, stop], transition: chapterAdvance('reader-chapter-local'), filmstrip: true,
@@ -653,11 +766,11 @@ export const journeys = {
     const stopDisabled = transport('auto-page', 'stop', false);
     const next = transport('auto-page', 'next');
     const previous = transport('auto-page', 'previous');
-    const speed = { type: 'Slider', label: '自动翻页间隔', within: auto };
+    const speed = { ...enabled('reader-auto-speed-slider'), type: 'Slider', within: auto };
+    const speedValue = { id: 'reader-auto-speed-current', type: 'Text', text: '2 秒', within: auto };
     await openReadingDirectory(ui);
     const current = ui.has(controlTitle(SECOND_LOCAL_CHAPTER)) ? THIRD_LOCAL_CHAPTER : SECOND_LOCAL_CHAPTER;
     await jumpToLocalChapter(ui, current);
-    if (ui.has(entry('autoPage'))) await ui.key('关闭目录选择后的阅读控制', 'Back', steadyReader(mode));
     await controls(ui, 'autoPage');
     await ui.wait('核对自动翻页停止与启动的可用状态', {
       route: 'reading', all: [auto, toggle, stopDisabled, next], none: [stop],
@@ -665,20 +778,52 @@ export const journeys = {
     });
     await reveal(ui, speed, { type: 'Scroll', within: auto }, '自动翻页模块');
     await ui.slideTo('把自动翻页间隔调到下限并回读', speed, 0, {
-      route: 'reading', all: [speed, { text: '2 秒', within: auto }],
+      route: 'reading', all: [speed, speedValue],
     });
     await ui.tap('启动自动翻页并采集飞行动效', toggle, {
-      ...steadyReader(mode), all: [capsule('自动翻页', true)], none: [auto],
+      ...steadyReader(mode), all: [...steadyReader(mode).all, ...capsuleState('自动翻页', true)], none: [auto],
       transition: [launch('autoPage'), chapterAdvance('reader-chapter-local')], filmstrip: true,
     });
+    await waitAutoPageCountdown(ui, mode, 2, '等自动翻页倒计时重新开始，避开正在提交的翻页');
     await togglePlayback(ui, '自动翻页', mode);
+    await waitAutoPageCountdown(ui, mode, 1, '核对继续自动翻页后的倒计时');
+    await waitAutoPageCountdown(ui, mode, 2, '核对继续自动翻页后进入下一轮倒计时');
     await returnFromPlaybackCapsule(ui, mode, 'autoPage', '自动翻页', toggle);
+    const pauseAction = { type: 'Text', originalText: '暂停', within: toggle };
+    const resumeAction = { type: 'Text', originalText: '继续', within: toggle };
+    await ui.tap('暂停自动计时后验证手动切章', pauseAction, {
+      route: 'reading', all: [auto, resumeAction, stop], modalOpen: true,
+    });
+    const chapterLabel = { type: 'Text', text: /测试编号 \d+ · 本地书籍$/u, within: controlTopBar };
+    const chapterBefore = /测试编号 (\d+) · 本地书籍$/u.exec(ui.value(chapterLabel) ?? '');
+    if (!chapterBefore) ui.block('暂停后未取得当前本地章节编号');
+    const chapterNumber = Number(chapterBefore[1]);
+    const reader = steadyReader(mode);
+    const chapterReturn = { ...reader,
+      all: [...reader.all, ...capsuleState('自动翻页', false)], none: [auto],
+      transition: chapterAdvance('reader-chapter-local'),
+    };
+    const reopenAutoPage = async expectedChapter => {
+      await ui.tap('切章后从正文重新打开阅读控制', stageMode(mode), {
+        route: 'reading', all: [{ ...controlTopBar, enabled: 'true' }], modalOpen: true,
+      });
+      if (!ui.has(auto)) {
+        await ui.tap('重新进入自动翻页模块', entry('autoPage'), {
+          route: 'reading', all: [auto, resumeAction, stop], modalOpen: true,
+        });
+      }
+      const chapter = { ...chapterLabel,
+        text: new RegExp(`测试编号 ${String(expectedChapter).padStart(2, '0')} · 本地书籍$`, 'u') };
+      await ui.wait('核对相邻章节和暂停的自动翻页控制', {
+        route: 'reading', all: [auto, resumeAction, stop, chapter], modalOpen: true,
+      });
+    };
     await ui.tap('从自动翻页模块切换下一章并检查保留帧', next, {
-      route: 'reading', all: [auto, previous, stop], transition: chapterAdvance('reader-chapter-local'), filmstrip: true,
+      ...chapterReturn, filmstrip: true,
     });
-    await ui.tap('从自动翻页模块切回上一章', previous, {
-      route: 'reading', all: [auto, next, stop], transition: chapterAdvance('reader-chapter-local'),
-    });
+    await reopenAutoPage(chapterNumber + 1);
+    await ui.tap('从自动翻页模块切回上一章', previous, chapterReturn);
+    await reopenAutoPage(chapterNumber);
     await ui.tap('停止并核对自动翻页回到可启动状态', stop, {
       route: 'reading', all: [toggle, stopDisabled], none: [stop],
       requiredRules: ['R14'], features: ['auto-page-transport'], screenCapture: true,
@@ -692,33 +837,42 @@ export const journeys = {
     await ui.tap('切换并核对阅读纸面主题', changedTheme, {
       route: 'reading', all: [appearance, selected(changedTheme)], requiredRules: ['R14'], features: ['reading-appearance'],
     });
-    const systemFont = enabled('reader-control-font-system');
-    const serifFont = enabled('reader-control-font-serif');
-    await reveal(ui, serifFont, appearance, '字体列表');
-    await ui.wait('核对可排序的系统与衬线字体', { route: 'reading', all: [systemFont, serifFont] });
-    const originals = ui.inOrder(systemFont, serifFont) ? [systemFont, serifFont] : [serifFont, systemFont];
+    const originalSlots = await revealFontReorderPair(ui);
+    const originals = originalSlots.map(draggableFontCard);
     const reordered = originals.slice().reverse();
-    await ui.drag('按住原生字体控件并拖到另一插槽', systemFont, serifFont, {
-      route: 'reading', all: [appearance], order: reordered, screenCapture: true,
+    const fontOrder = { route: 'reading', all: [appearance], modalOpen: true };
+    await ui.wait(`核对内置字体初始顺序（${originalSlots.join(' → ')}）`, { ...fontOrder, order: originals });
+    await ui.drag('按住原生字体控件并拖到相邻插槽', originals[0], originals[1], {
+      ...fontOrder, order: reordered, screenCapture: true,
     });
-    await ui.key('退出外观模块以验证字体顺序继续保留', 'Back', { route: 'reading', all: [entry('appearance')] });
-    await ui.tap('重新打开并定位字体列表', entry('appearance'), { route: 'reading', all: [appearance] });
-    await reveal(ui, serifFont, appearance, '字体列表');
-    await ui.wait('确认重新打开后新字体顺序仍保存', { route: 'reading', order: reordered });
-    await ui.drag('反向拖动还原初始字体顺序', systemFont, serifFont, { route: 'reading', order: originals });
-    const fontSize = action('增加字号');
-    await reveal(ui, fontSize, appearance, '外观面板');
-    const size = id('reader-control-appearance-metric-value-fontSize');
+    await ui.key('退出外观模块以验证字体顺序继续保留', 'Back', {
+      route: 'reading', all: [entry('appearance')], none: [appearance],
+    });
+    await ui.tap('重新打开并定位字体列表', entry('appearance'), fontOrder);
+    await revealFontReorderPair(ui, originalSlots);
+    await ui.wait('确认重新打开后新字体顺序仍保存', { ...fontOrder, order: reordered });
+    await ui.drag('反向拖动还原初始字体顺序', originals[0], originals[1], { ...fontOrder, order: originals });
+    const increaseFontSize = { ...enabled('reader-control-appearance-metric-step-fontSize-plus'), type: 'Button', within: appearance };
+    const decreaseFontSize = { ...enabled('reader-control-appearance-metric-step-fontSize-minus'), type: 'Button', within: appearance };
+    const size = { id: 'reader-control-appearance-metric-value-fontSize', type: 'Text', within: appearance };
+    await reveal(ui, size, appearance, '外观面板');
     const before = ui.value(size);
-    const typography = { route: 'reading', all: [appearance, text('排版'), fontSize] };
     if (before === undefined) ui.block('当前窗口未暴露可复核的字号数值');
-    await ui.tap('调大字号并核对原生读数更新', fontSize, { ...typography, all: [...typography.all, size], none: [text(before)] });
-    await ui.tap('还原字号并核对初始读数', action('减少字号'), { ...typography, all: [...typography.all, { ...size, text: before }] });
+    const typography = { route: 'reading', all: [appearance, text('排版')] };
+    await ui.wait('核对字号读数与加减按钮在同一原生视口', {
+      ...typography, all: [...typography.all, size, increaseFontSize, decreaseFontSize],
+    });
+    await ui.tap('调大字号并核对原生读数更新', increaseFontSize, {
+      ...typography, all: [...typography.all, size, decreaseFontSize], none: [{ ...size, text: before }],
+    });
+    await ui.tap('还原字号并核对初始读数', decreaseFontSize, {
+      ...typography, all: [...typography.all, increaseFontSize, { ...size, text: before }],
+    });
     await ui.key('关闭外观模块', 'Back', { route: 'reading', all: [entry('settings')] });
     await ui.key('关闭阅读控制', 'Back', steadyReader(mode));
     const other = mode === 'paged' ? 'continuous' : 'paged';
-    await ensureReadingMode(ui, other);
-    await ensureReadingMode(ui, mode);
+    const originalTurnOption = await setReadingMode(ui, other);
+    await setReadingMode(ui, mode, originalTurnOption);
     await controls(ui, 'settings');
     const statusBar = { ...label(/^隐藏状态栏/u), within: readerSettings };
     await reveal(ui, statusBar, readerSettings, '阅读设置');
@@ -729,15 +883,20 @@ export const journeys = {
     await ui.tap('恢复矩阵进入阅读时的状态栏设置', statusBar, {
       route: 'reading', all: [{ ...statusBar, selected: shown === 'true' ? 'true' : 'false' }],
     });
-    await ui.key('返回亮度入口', 'Back', { route: 'reading', all: [entry('brightness')] });
-    const brightness = action(/^(跟随系统亮度，已开启，点击改为手动|手动亮度，点击跟随系统)$/u);
-    await ui.tap('打开亮度控制并检查当前亮度模式', entry('brightness'), { route: 'reading', all: [brightness] });
-    const prior = ui.value(brightness, 'description') ?? ui.value(brightness, 'accessibilityText');
-    if (!prior) ui.block('当前窗口未报告亮度方式的可访问性读数');
-    await ui.tap('切换亮度控制方式并验证回读', brightness, {
-      route: 'reading', all: [brightness], none: [action(prior)], screenCapture: true,
+    const brightness = { ...action('A'), within: id('reader-control-motion-dock') };
+    const brightnessState = automatic => ({ ...brightness, opacity: automatic ? /^1(?:\.0+)?$/u : /^0\.720*$/u });
+    await ui.key('返回阅读控制主页并核对亮度滑轨', 'Back', {
+      route: 'reading', all: [moduleId('home'), brightness], none: [readerSettings],
     });
-    await ui.tap('恢复原亮度方式', brightness, { route: 'reading', all: [action(prior)] });
+    const automatic = ui.has(brightnessState(true));
+    if (!automatic && !ui.has(brightnessState(false))) ui.block('当前原生亮度控件未呈现可核对的模式');
+    await ui.tap('切换亮度控制方式并验证回读', brightness, {
+      route: 'reading', all: [brightnessState(!automatic)], none: [brightnessState(automatic)],
+      requiredRules: ['R13'], screenCapture: true,
+    });
+    await ui.tap('恢复原亮度方式', brightness, {
+      route: 'reading', all: [brightnessState(automatic)], none: [brightnessState(!automatic)],
+    });
   },
 
   async J12(ui) {
@@ -749,18 +908,22 @@ export const journeys = {
     await ui.tap('打开正文更多菜单', more, { route: 'reading', all: [menu, bookInfo], requiredRules: ['R9', 'R10'] });
     await ui.tap('正文 → 书籍信息，应以 push 打开详情', bookInfo, {
       route: 'detail', all: [text(LOCAL_TXT), readBook], requiredRules: ['R8', 'R13'],
-      transition: routeMotion('push', 'reader-detail'), filmstrip: true,
+      // Keep PNG acquisition outside the native frame window on this VM.
+      transition: [routeMotion('push', 'reader-detail'), surface('reader-detail')]
+        .map(observation => ({ ...observation, route: 'detail' })), screenCapture: true,
     });
     if (ui.environment()?.reducedMotion) {
       ui.note('侧滑取消的适用范围', '减弱动效配置关闭交互式边缘预览，继续验证系统 Back 返回');
     } else {
+      const coveredReader = { id: /^reader-source-trigger:.*"reader-body"\]$/u,
+        enabled: 'false', clickable: 'false', hitTestBehavior: 'HitTestMode.None' };
       await ui.cancelEdgeBack('从原生窗口边缘短滑，在提交阈值前释放', {
-        route: 'detail', all: [text(LOCAL_TXT), readBook], none: [readingStage],
-        transition: [routeMotion('preview', 'reader-detail'), routeMotion('cancel', 'reader-detail')], filmstrip: true,
+        route: 'detail', all: [text(LOCAL_TXT), readBook, coveredReader],
+        transition: [routeMotion('preview', 'reader-detail'), routeMotion('cancel', 'reader-detail')], screenCapture: true,
       });
     }
     await ui.key('详情 → Back 应以 pop 恢复原正文', 'Back', {
-      ...steadyReader(mode), transition: routeMotion('pop', 'reader-detail'), filmstrip: true,
+      ...steadyReader(mode), transition: routeMotion('pop', 'reader-detail'), screenCapture: true,
     });
     await openReadingDirectory(ui);
     await ui.key('阅读目录 → 阅读控制', 'Back', { route: 'reading', all: [readerDirectory], none: [readerDirectoryContent] });
@@ -791,7 +954,7 @@ export const journeys = {
     const source = id('reader-source-content');
     const groups = id('reader-source-v9-groups');
     const imports = id('reader-source-v9-import');
-    const more = label('书源管理更多操作');
+    const more = { ...enabled(/^source-back:\d+:tools:header$/u), clickable: 'true' };
     const sourceName = text(/^ReaderNovel[AB]$/u);
     await ui.tap('进入书源管理，核对公开书源', enabled('reader-settings-source-management'), {
       route: 'source', all: [source, sourceName, more], requiredRules: ['R8', 'R13'],
@@ -818,16 +981,21 @@ export const journeys = {
       route: 'source', all: [source, more], transition: routeMotion('pop', 'source-groups'), filmstrip: true,
     });
     const importEntry = enabled(/:import:footer$/u);
+    const importOrigins = ['file', 'url', 'paste'].map(kind => enabled(`reader-source-v9-import-origin-${kind}`));
     await ui.tap('进入 V9 导入来源与解析步骤', importEntry, {
-      route: 'source', all: [imports, text('导入书源'), id('reader-source-v9-import-origin'), enabled('reader-source-v9-import-file')],
+      route: 'source', all: [imports, text('导入书源'), ...importOrigins, selected(importOrigins[0]),
+        enabled('reader-source-v9-import-file')],
       transition: routeMotion('push', 'source-import'), filmstrip: true,
     });
-    const online = label('在线链接');
-    const urlField = { type: 'TextInput', label: '书源链接', within: imports };
+    const online = enabled('reader-source-v9-import-origin-url');
+    const urlField = { type: 'TextInput', enabled: 'true', within: imports };
     const parse = enabled('reader-source-v9-import-parse');
     const review = id('reader-source-v9-import-review');
     const importedSource = 'ReaderJourneyImportV9';
-    await ui.tap('选择在线链接导入', online, { route: 'source', all: [imports, urlField], none: [parse] });
+    await ui.tap('选择在线链接导入', online, {
+      route: 'source', all: [imports, urlField, selected(online)],
+      none: [parse, selected(importOrigins[0]), enabled('reader-source-v9-import-file')],
+    });
     await ui.inputSourceUrl('填写限定的公开 V9 样本链接', urlField, { route: 'source', all: [urlField] });
     if (!ui.has(parse)) {
       await ui.key('结束链接编辑并恢复下一步', 'Back', { route: 'source', all: [imports, parse] });
@@ -845,29 +1013,32 @@ export const journeys = {
       route: 'source', all: [source, more, sourceName, text(importedSource)], none: [imports],
       transition: routeMotion('pop', 'source-import'), filmstrip: true,
     });
-    const check = action(new RegExp(`^${importedSource}，检测，`, 'u'));
+    const switchSource = { type: 'Toggle', enabled: 'true',
+      id: /^reader-toggle:source-back:\d+:https:\/\/v9-import\.reader-journeys\.invalid:\d+$/u };
+    const check = { type: 'Button', enabled: 'true', clickable: 'true',
+      within: { type: 'Row', nearestContaining: switchSource } };
     await ui.tap('打开新导入书源的检测', check, {
       route: 'source', all: [text('书源检测报告'), text(importedSource)], requiredRules: ['R9', 'R10'],
     });
-    const checkStart = action('开始检测');
+    const checkStart = { id: 'reader-source-v9-check-run', enabled: 'true' };
     if (ui.has(checkStart)) {
       await ui.tap('仅检测受控公开样本并核对状态', checkStart, {
-        route: 'source', all: [action('重新检测')], none: [checkStart], screenCapture: true,
+        route: 'source', all: [action('重新检测')], none: [action('开始检测')], screenCapture: true,
       });
     } else {
       ui.defer('触发新源的可用性检测', '当前检测面板未暴露启用的开始检测按钮');
     }
     await ui.key('关闭检测面板，保留导入源', 'Back', { route: 'source', all: [source, text(importedSource)] });
-    const switchSource = { type: 'Toggle', label: `${importedSource}，启用书源`, enabled: 'true' };
     const original = ui.value(switchSource, 'checked') ?? ui.value(switchSource, 'selected');
     const state = ui.value(switchSource, 'checked') === undefined ? 'selected' : 'checked';
     if (!['true', 'false'].includes(String(original))) ui.block('导入源未提供可验证的原生启用状态');
     const reversed = String(original) === 'true' ? 'false' : 'true';
     await ui.tap('切换新源启用状态并等待写入回读', switchSource, { route: 'source', all: [{ ...switchSource, [state]: reversed }] });
     await ui.tap('恢复新源原启用状态', switchSource, { route: 'source', all: [{ ...switchSource, [state]: original }] });
-    const item = action(importedSource);
+    const item = enabled('reader-source-batch-row:https://v9-import.reader-journeys.invalid');
     const remove = id('reader-source-batch-delete');
-    await ui.tap('进入批量管理以仅选择测试样本', action('批量管理'), { route: 'source', all: [item, remove] });
+    const batchMode = { ...enabled(/^source-back:\d+:tools:footer$/u), type: 'Button', clickable: 'true' };
+    await ui.tap('进入批量管理以仅选择测试样本', batchMode, { route: 'source', all: [item, remove] });
     await ui.tap('选定独立样本', item, { route: 'source', all: [selected(item), enabled(remove.id)] });
     await ui.tap('打开删除确认，要求只有一个公开样本', enabled(remove.id), {
       route: 'source', all: [text(/^确定删除所选 1 个书源/u), action('删除')], requiredRules: ['R9', 'R10'],

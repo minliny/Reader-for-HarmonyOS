@@ -6,7 +6,7 @@ import { ReadingSurfaceLayoutMap } from '../../entry/src/main/ets/features/readi
 import type { ReadingSessionChapter, ReadingSessionImage } from '../../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts';
 import {
   ReaderMeasurementRun, type ReaderMeasurementWindowRecovery,
-} from '../../entry/src/main/ets/features/reading/ui/ReaderMeasurementRun.ts';
+} from '../../entry/src/main/ets/features/reading/application/ReaderMeasurementRun.ts';
 import {
   planForwardMeasuredImage, planReverseMeasuredImage,
 } from '../../entry/src/main/ets/features/reading/ui/ReaderMeasuredPagePipeline.ts';

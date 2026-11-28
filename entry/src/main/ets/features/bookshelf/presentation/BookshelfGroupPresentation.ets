@@ -5,6 +5,7 @@ import { errorMessageOf } from '../../../app/ErrorMessage';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { BookshelfHost, EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT, type BookshelfManagementSnapshot } from '../application/BookshelfHost';
+import { bookshelfGroupSelection } from '../application/BookshelfGroupSelection';
 
 interface BookshelfGroupOpening {
   readonly owner: ReaderRuntimeOwner;
@@ -129,10 +130,11 @@ export class BookshelfGroupPresentation {
     const opening = this.opening;
     const host = this.host;
     const current = (): boolean => this.isCurrent(identity);
-    if (opening === undefined || host === undefined || !current() || this.assigning ||
-      this.snapshot.busy || this.snapshot.mutationBlocked === true) return;
-    if (group === this.currentGroup()) { this.dismiss(identity); return; }
-    if (group.length > 0 && !this.snapshot.data.groups.some(item => item.groupName === group)) return;
+    if (opening === undefined || host === undefined || !current()) return;
+    const selection = bookshelfGroupSelection(group, this.currentGroup(), this.snapshot.data.groups,
+      this.assigning || this.snapshot.busy || this.snapshot.mutationBlocked === true);
+    if (selection === 'dismiss') { this.dismiss(identity); return; }
+    if (selection === 'ignore') return;
     const priorGeneration = this.snapshot.receipt?.facts.generation;
     this.assigning = true;
     try {

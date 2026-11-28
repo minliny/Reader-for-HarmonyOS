@@ -1,4 +1,4 @@
-/** Physical milliseconds from the admitted play action. */
+/** Physical milliseconds from the native source transfer to the stage. */
 export const READER_SESSION_LAUNCH_DURATION_MS = 380;
 export const READER_SESSION_LAUNCH_FLIGHT_MS = 220;
 export const READER_SESSION_LAUNCH_EXPAND_START_MS = 160;

@@ -5,6 +5,9 @@ import type { ReaderTransitionObservation } from '../layout/TransitionInvariantE
 type ReaderTransitionConsumer = (observation: ReaderTransitionObservation) => void;
 let consumer: ReaderTransitionConsumer | undefined;
 
+export const READER_DETAIL_TRANSITION_HEADER = 'reader-detail-transition-header';
+export const READER_DETAIL_PRIMARY_ACTION = 'reader-detail-primary-action';
+
 export function readerTransitionsEnabled(): boolean {
   return READER_LAYOUT_DEBUG_BUILD && AppStorage.get<boolean>('readerAppForeground') === true &&
     (AppStorage.get<boolean>('readerDeveloperMode') === true || AppStorage.get<boolean>('readerLayoutInvariantAutomation') === true);

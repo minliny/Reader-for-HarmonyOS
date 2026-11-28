@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { layoutReceiptProblem } from '../../scripts/lib/vm-journey-evidence.mjs';
 import { evaluateLayoutInvariants, type LayoutInvariantRect } from '../../entry/src/main/ets/ui/layout/LayoutInvariantEvaluator.ts';
-import type { LayoutInvariantNativeNode, LayoutInvariantNativeSample, LayoutInvariantSurfaceAudit }
+import { measureMountedTextEvidence, measuredTextReflowClips, READER_LAYOUT_IMPORT_LABEL_TEXT_ID,
+  type LayoutInvariantNativeNode, type LayoutInvariantNativeSample,
+  type LayoutInvariantSurfaceAudit }
   from '../../entry/src/main/ets/ui/layout/LayoutInvariantNativeAudit.ts';
 import { inspectReaderNativeMaterialPaint } from '../../entry/src/main/ets/ui/layout/ReaderNativeMaterialPaint.ts';
+import { ReaderNativeTextSliceAudit } from '../../entry/src/main/ets/ui/layout/ReaderNativeTextSliceAudit.ts';
 
 const rect = (x: number, y: number, width: number, height: number): LayoutInvariantRect => ({ x, y, width, height });
 const viewport = rect(0, 0, 320, 600);
@@ -58,6 +61,137 @@ test('R10 detects detached, overlapping and falsely centered popovers', () => {
   assert.deepEqual(gate({ surfaces: [panel({ bounds: rect(35, 220, 180, 150) })] }).violations.map(issue => issue.rule), ['R10']);
   assert.deepEqual(gate({ surfaces: [panel({ bounds: rect(40, 90, 180, 150) })] }).violations.map(issue => issue.rule), ['R10']);
   assert.deepEqual(gate({ surfaces: [panel({ placement: 'center' })] }).violations.map(issue => issue.rule), ['R10']);
+});
+
+test('R10 uses the measured arrow bubble while R9 still checks the menu scroll viewport', () => {
+  const anchor = rect(250, 54, 44, 44);
+  const bubble = rect(100, 106, 200, 174);
+  const scrollViewport = rect(112, 118.25, 176, 150);
+  const moreMenu = panel({ id: 'reader-control-more-menu', anchor, bounds: bubble, close: 'native-dismiss',
+    contentBounds: scrollViewport, contentViewport: scrollViewport, naturalHeight: bubble.height,
+    expectsContentMeasurement: true, scrollable: true });
+
+  assert.deepEqual(gate({ surfaces: [moreMenu] }).violations, []);
+  assert.deepEqual(gate({ surfaces: [{ ...moreMenu, bounds: scrollViewport }] }).violations.map(issue => issue.rule), ['R10']);
+  assert.deepEqual(gate({ surfaces: [{ ...moreMenu, contentBounds: rect(112, 118.25, 176, 156) }] })
+    .violations.map(issue => issue.rule), ['R9']);
+  assert.ok(gate({ surfaces: [{ ...moreMenu, bounds: undefined }], requiredRules: ['R10'] })
+    .missing.includes('R10:no-applicable-evidence'));
+});
+
+test('source group panel measures its positioned surface against the saved trigger, and audits its chevron envelope', () => {
+  const group = panel({ id: 'reader-source-group-panel', placement: 'anchor-overlap',
+    bounds: rect(162, 115, 140, 172), anchor: rect(195, 115, 90, 40), close: 'visible' });
+  const chevron = leaf('Image', 'reader-source-group-collapse-chevron', rect(275, 127, 15, 15),
+    { parentBounds: rect(275, 127, 15, 15), parentType: 'Stack', clip: group.bounds });
+  const measured = gate({ surfaces: [group], nodes: [chevron], requiredRules: ['R9', 'R10', 'R13'] });
+  assert.deepEqual(measured.violations, []);
+  assert.deepEqual(measured.missing, []);
+  assert.ok(gate({ surfaces: [{ ...group, anchor: undefined }] }).missing.includes('R10:anchor:reader-source-group-panel'));
+  const outside = gate({ surfaces: [group], nodes: [{ ...chevron, bounds: rect(291, 127, 15, 15),
+    parentBounds: rect(291, 127, 15, 15) }] });
+  assert.deepEqual(outside.violations.map(issue => issue.rule), ['R13']);
+});
+
+test('paged native text projects admitted glyphs instead of the retained full paragraph and preserves R13 clipping', () => {
+  const audit = new ReaderNativeTextSliceAudit();
+  const textFrame = rect(30, -500, 240, 900);
+  const owner = rect(30, 100, 240, 200);
+  audit.publish(2, 3, rect(1, 601, 241, 195), 4);
+  assert.equal(audit.project(2, '4', textFrame, owner), undefined);
+  const slice = audit.project(2, '3', textFrame, owner);
+  assert.deepEqual(slice, { bounds: rect(31, 101, 241, 195), parentBounds: rect(30, 100, 244, 200) });
+  assert.ok(slice);
+  const leafInSlice = leaf('Text', 'paged-paragraph', slice.bounds,
+    { parentBounds: slice.parentBounds, clip: rect(30, 100, 244, 200) });
+  assert.deepEqual(gate({ nodes: [leafInSlice] }).violations, []);
+  const clipped = gate({ nodes: [{ ...leafInSlice, clip: rect(30, 100, 244, 180) },
+    leaf('Text', 'chapter-title', rect(30, 60, 100, 16), { textClipped: true })] });
+  assert.deepEqual(clipped.violations.map(issue => [issue.rule, issue.nodeId]), [
+    ['R13', 'paged-paragraph'], ['R13', 'chapter-title'],
+  ]);
+  audit.retire(2);
+  assert.equal(audit.project(2, '3', textFrame, owner), undefined);
+});
+
+test('complete mounted text evidence supersedes independent reflow while R13 still rejects clipped ink and missing text', () => {
+  const frame = rect(59, 381, 248, 16.5);
+  const parentBounds = rect(59, 360, 248, 37.5);
+  const clip = rect(16, 222, 299, 320);
+  const ink = rect(91, 384, 183, 11);
+  const tail = rect(269, 384, 5, 11);
+  const length = '支持多选 TXT、EPUB、MOBI、AZW3'.length;
+  const line = { start: 0, end: length };
+  const hint = leaf('Text', 'local-import-hint', frame, { parentBounds, clip, scrollClip: true, textClipped: true });
+  const withLayout = (mountedText: LayoutInvariantNativeNode['mountedText']) =>
+    gate({ nodes: [{ ...hint, mountedText }] });
+
+  assert.deepEqual(gate({ nodes: [hint] }).violations.map(issue => issue.rule), ['R13']);
+  const proven = measureMountedTextEvidence(length, [line], [ink], [tail]);
+  const complete = withLayout(proven);
+  assert.deepEqual(complete.violations, []);
+  assert.deepEqual(complete.missing, []);
+  assert.ok(complete.observedRules.includes('R13'));
+
+  const outside = rect(91, 384, 220, 11);
+  const clippedInk = withLayout(measureMountedTextEvidence(length, [line], [outside], [rect(305, 384, 5, 11)]));
+  assert.deepEqual(clippedInk.violations.map(issue => [issue.rule, issue.nodeId]), [['R13', hint.id]]);
+
+  const clippedText = withLayout(measureMountedTextEvidence(length, [{ start: 0, end: length - 1 }], [ink], []));
+  assert.deepEqual(clippedText.violations.map(issue => [issue.rule, issue.nodeId]), [['R13', hint.id]]);
+
+  const missing = withLayout(measureMountedTextEvidence(length, [line], [ink], []));
+  assert.deepEqual(missing.missing, ['R13:native-text-layout:local-import-hint']);
+  assert.equal(missing.observedRules.includes('R13'), false);
+
+  const ancestorClipped = gate({ nodes: [{ ...hint, mountedText: proven, scrollClip: false, clip: rect(60, 381, 210, 16.5) }] });
+  assert.deepEqual(ancestorClipped.violations.map(issue => [issue.rule, issue.nodeId]), [['R13', hint.id]]);
+
+  const wrapped = measureMountedTextEvidence(length, [{ start: 0, end: 12 }, { start: 12, end: length }],
+    [rect(91, 384, 90, 11), rect(91, 402, 95, 11)], [rect(180, 402, 6, 11)]);
+  const tallFrame = rect(59, 381, 248, 35);
+  assert.deepEqual(gate({ nodes: [{ ...hint, bounds: tallFrame, parentBounds: rect(59, 360, 248, 57), mountedText: wrapped }] })
+    .violations, []);
+});
+
+test('R13 clipping evidence identifies the native node and the reason without exporting its text', () => {
+  const frame = rect(59, 381, 248, 16.5);
+  const parent = rect(30, 360, 300, 45);
+  const clip = rect(16, 222, 250, 320);
+  const measuredText = leaf('Text', 'Text:1502', frame, { key: '1502', parentBounds: parent,
+    clip, textClipped: true, textReflow: { independentHeightVp: 33, matchedStyleHeightVp: 16.5,
+      style: { fontSize: '11.00fp', lineHeight: '16.50fp' } } });
+  const result = gate({ nodes: [measuredText] });
+  assert.deepEqual(result.violations.map(issue => [issue.rule, issue.nodeId]), [['R13', 'Text:1502']]);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.nativeAudit.clippingOffenders)), [{
+    key: '1502', id: 'Text:1502', type: 'Text', frame, parentBounds: parent, clip, scrollClip: false,
+    reasons: ['independent-text-height', 'ancestor-clips-frame'],
+    reflow: { independentHeightVp: 33, matchedStyleHeightVp: 16.5,
+      style: { fontSize: '11.00fp', lineHeight: '16.50fp' } },
+  }]);
+  const multiple = gate({ nodes: Array.from({ length: 5 }, (_, index) => ({
+    ...measuredText, id: `text:${index}`, key: `text:${index}`, parentKey: `parent:${index}`,
+  })) });
+  assert.equal(multiple.violations.length, 5);
+  assert.equal(multiple.nativeAudit.clippingOffenderCount, 5);
+  assert.equal(multiple.nativeAudit.clippingOffenders?.length, 3);
+});
+
+test('the local import label uses matched native reflow without weakening R13 clipping', () => {
+  // Round 8 FrameNode 1502 was one fully drawn line at this measured width.
+  // Repeating the measurement with the exact inspector style and px width
+  // returns one line, while reflow with the omitted style returns two.
+  const singleLine = 19.428571428571427;
+  const twoLines = 38.857142857142854;
+  const measured = { independentHeightVp: twoLines, matchedStyleHeightVp: singleLine };
+  assert.equal(measuredTextReflowClips(READER_LAYOUT_IMPORT_LABEL_TEXT_ID, singleLine, measured), false);
+  assert.equal(measuredTextReflowClips(READER_LAYOUT_IMPORT_LABEL_TEXT_ID, singleLine, {
+    ...measured, matchedStyleHeightVp: twoLines,
+  }), true);
+  assert.equal(measuredTextReflowClips(READER_LAYOUT_IMPORT_LABEL_TEXT_ID, singleLine, {
+    independentHeightVp: twoLines,
+  }), true);
+  assert.equal(measuredTextReflowClips('other-text', singleLine, measured), true);
 });
 
 test('a long scroll-backed dialog can reach its close action while a bounded drawer must meet the correct window edge', () => {

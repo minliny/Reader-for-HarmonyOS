@@ -1,8 +1,13 @@
 import { readerMotionStandardCurve } from '../foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
+import { READER_REDUCED_FADE_MS } from '../foundation/ProductMotionTiming';
+
+export function readerImportCloseDurationMs(reduceMotion: boolean): number {
+  return reduceMotion ? READER_REDUCED_FADE_MS : 180;
+}
 
 function readerDialogAnimation(entering: boolean): AnimateParam {
-  return { duration: entering ? 220 : 180, curve: readerMotionStandardCurve() };
+  return { duration: entering ? 220 : readerImportCloseDurationMs(false), curve: readerMotionStandardCurve() };
 }
 
 export function readerImportOverlayTransition(reduceMotion: boolean): TransitionEffect {

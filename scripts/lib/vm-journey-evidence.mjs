@@ -3,6 +3,37 @@ export const TRANSITION_MARKER = 'READER_TRANSITION_INVARIANTS ';
 export const FRAME_MARKER = 'READER_TRANSITION_FRAMES ';
 const TRANSITION_BEGIN_MARKER = 'READER_TRANSITION_BEGIN ';
 export const SHARE_MARKER = 'READER_JOURNEY_SHARE ';
+const TTS_AUDITION_MARKER = 'READER_VM_TTS_AUDITION ';
+
+export function verticalSwipeLane(viewport, fromY, toY, obstructions) {
+  const [left, , right] = viewport;
+  const middle = Math.round((left + right) / 2);
+  const top = Math.min(fromY, toY);
+  const bottom = Math.max(fromY, toY);
+  const margin = 4;
+  const start = left + margin;
+  const end = right - margin;
+  if (start > end) return undefined;
+  const blocked = obstructions.filter(box => box[1] <= bottom && box[3] >= top)
+    .map(box => [Math.max(start, box[0] - margin), Math.min(end, box[2] + margin)])
+    .filter(([first, last]) => first <= last)
+    .sort((a, b) => a[0] - b[0]);
+  if (!blocked.some(([first, last]) => first <= middle && middle <= last)) return middle;
+
+  let cursor = start;
+  let bestWidth = 0;
+  let lane;
+  for (const [first, last] of [...blocked, [end + 1, end + 1]]) {
+    const width = first - cursor;
+    if (width > bestWidth) {
+      bestWidth = width;
+      lane = Math.floor(cursor + (width - 1) / 2);
+    }
+    cursor = Math.max(cursor, last + 1);
+  }
+  return lane;
+}
+
 export const supportedVmDimensions = {
   material: { values: ['native', 'performance'], control: 'Reader settings', observe: 'effective material policy' },
   motion: { values: ['standard', 'reduced'], control: 'Reader settings', observe: 'effective motion preference' },
@@ -88,6 +119,13 @@ export function shareReports(text, pid) {
     if (!match || !Number.isSafeInteger(Number(match[1]))) return [];
     return [{ operationId: Number(match[1]), state: match[2] }];
   });
+}
+
+export function ttsAuditionReports(text, pid) {
+  return records(text, TTS_AUDITION_MARKER).filter(row => row.pid === pid).map(row => parse(row.payload))
+    .filter(row => row?.schemaVersion === 1 && Number.isSafeInteger(row.operationId) && row.operationId > 0 &&
+      ['started', 'completed', 'failed', 'unavailable'].includes(row.state) &&
+      (row.code === undefined || typeof row.code === 'string' && /^[a-z][a-z0-9-]{0,63}$/u.test(row.code)));
 }
 
 export function transitionReports(text, pid) {

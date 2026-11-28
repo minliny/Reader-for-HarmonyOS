@@ -31,6 +31,7 @@ export type ReaderTtsHostProbe = {
   available: boolean;
   /** Specific unavailability cause: capability, voice, or engine init failure. */
   reason?: string;
+  unavailableCode?: 'system-capability-missing';
 };
 
 export interface ReaderTtsHost {

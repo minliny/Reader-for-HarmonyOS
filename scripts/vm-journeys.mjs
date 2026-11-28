@@ -7,15 +7,19 @@ import { parseArgs } from 'node:util';
 import { applyVmJourneyProfile, journeys } from './lib/vm-journey-cases.mjs';
 import { renderVisualReview } from './lib/vm-visual-review.mjs';
 import { layoutReports, layoutReceiptProblem, matchesVmEnvironment, matchingTransitions, records, shareReports,
-  supportedVmDimensions, transitionReceiptProblem, transitionReports, transitionWatermark, vmJourneyMatrix } from './lib/vm-journey-evidence.mjs';
+  supportedVmDimensions, transitionReceiptProblem, transitionReports, transitionWatermark, verticalSwipeLane,
+  ttsAuditionReports, vmJourneyMatrix } from './lib/vm-journey-evidence.mjs';
 import { openProbe } from '../tools/ui-contract/collectors/harmonyos/transport.mjs';
 import { assertInstalled, assertRemoteVmReadiness, remoteVmServer } from '../tools/ui-contract/collectors/harmonyos/candidate-evidence.mjs';
 import { assertUnlockedFocus, assertVmLockDismissed, classifyFocusWindow, vmLockDismissalOperation } from '../tools/ui-contract/collectors/harmonyos/focus-window.mjs';
 import { candidateIdentity, nativeBounds, normalReaderWindowRoots, sha256 } from '../tools/lib/native-ui-evidence.mjs';
 
 const STEP_MS = 12000;
+const MAX_TRANSPARENT_OPACITY = 0.01;
 const readJson = file => JSON.parse(readFileSync(file, 'utf8'));
 const demand = (condition, message) => { if (!condition) throw Error(message); };
+const isUnpainted = attrs => attrs.visible === 'false' || attrs.visible === false ||
+  Number(attrs.opacity ?? 1) <= MAX_TRANSPARENT_OPACITY;
 
 class JourneyBlocked extends Error {}
 
@@ -29,7 +33,7 @@ function nativeNodes(root) {
   const result = [];
   const visit = (node, parents, clip) => {
     const attrs = node.attributes ?? {};
-    if (attrs.visible === 'false' || attrs.visible === false || Number(attrs.opacity ?? 1) <= 0) return;
+    if (isUnpainted(attrs)) return;
     const bounds = nativeBounds(attrs.bounds);
     const visible = bounds && clip ? [
       Math.max(bounds[0], clip[0]), Math.max(bounds[1], clip[1]),
@@ -53,26 +57,36 @@ function attributeMatches(matcher, values) {
 
 function matchesAttributes(attributes, selector, childLabels = []) {
   return attributeMatches(selector.id, [attributes.id, attributes.key]) && attributeMatches(selector.type, [attributes.type]) &&
-    attributeMatches(selector.text, [attributes.text]) &&
+    attributeMatches(selector.text, [attributes.text]) && attributeMatches(selector.originalText, [attributes.originalText]) &&
     attributeMatches(selector.label, [attributes.text, attributes.description, attributes.accessibilityText, ...childLabels]) &&
     attributeMatches(selector.enabled, [attributes.enabled]) && attributeMatches(selector.clickable, [attributes.clickable]) &&
-    attributeMatches(selector.selected, [attributes.selected]) &&
+    attributeMatches(selector.selected, [attributes.selected]) && attributeMatches(selector.opacity, [attributes.opacity]) &&
+    attributeMatches(selector.hitTestBehavior, [attributes.hitTestBehavior]) &&
     attributeMatches(selector.checked, [attributes.checked]);
 }
 
 function buttonLabels(node) {
   return (node.children ?? []).flatMap(child => {
     const attributes = child.attributes ?? {};
-    if (attributes.clickable === 'true' || attributes.visible === 'false' || Number(attributes.opacity ?? 1) <= 0) return [];
+    if (attributes.clickable === 'true' || isUnpainted(attributes)) return [];
     return attributes.type === 'Text' && attributes.text ? [attributes.text] : buttonLabels(child);
   });
 }
 
 function matchingNodes(root, selector) {
   const scopes = [selector.within].flat().filter(scope => scope !== undefined);
-  return nativeNodes(root).filter(node => matchesAttributes(node.attrs, selector,
+  const nodes = nativeNodes(root);
+  const scopeChecks = scopes.map(scope => {
+    if (scope.nearestContaining === undefined) {
+      return node => node.parents.some(parent => matchesAttributes(parent, scope));
+    }
+    const anchors = nodes.filter(node => matchesAttributes(node.attrs, scope.nearestContaining));
+    const ancestor = anchors.length === 1 ? anchors[0].parents.findLast(parent => matchesAttributes(parent, scope)) : undefined;
+    return node => ancestor !== undefined && node.parents.includes(ancestor);
+  });
+  return nodes.filter(node => matchesAttributes(node.attrs, selector,
     selector.label === undefined ? [] : buttonLabels(node.node)) &&
-    scopes.every(scope => node.parents.some(parent => matchesAttributes(parent, scope))));
+    scopeChecks.every(check => check(node)));
 }
 
 function actor(root, selector) {
@@ -150,6 +164,17 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
     return { seq: log.seq, reports, watermark: transitionWatermark(log.stdout, processId, reports) };
   }
 
+  async function transitionBeforeLayout(expectations, watermark) {
+    const deadline = performance.now() + STEP_MS;
+    do {
+      const evidence = await transitionLog();
+      if (expectations.every(expected => matchingTransitions(evidence.reports, watermark, expected)
+        .some(report => report.frames.length === report.frameCount))) return evidence;
+      await delay(180);
+    } while (performance.now() < deadline);
+    return undefined;
+  }
+
   async function waitShare(predicate, until = performance.now() + STEP_MS) {
     do {
       const result = await probe.command({ op: 'journeyShareLog' });
@@ -178,6 +203,10 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
       const { content, ...evidence } = await receiveCapture(image.path);
       transitionCaptures.push({ ...evidence, timestampMs: image.timestampMs, acquisitionMs: image.acquisitionMs });
     }
+    // Native tree export overlaps the VM UI thread's frame window. Read the
+    // completed native sampling receipt before requesting the steady tree.
+    let sampledTransition = action && expectations.length && !outcome.filmstrip ?
+      await transitionBeforeLayout(expectations, priorTransition) : undefined;
     const until = performance.now() + STEP_MS;
     let lastStep;
     do {
@@ -213,7 +242,8 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
         const problems = [layoutReceiptProblem(observed, outcome)].filter(Boolean);
         let waitingForTransition = false;
         if (expectations.length) {
-          const transition = await transitionLog();
+          const transition = sampledTransition ?? await transitionLog();
+          sampledTransition = undefined;
           step.transitionReportSeq = transition.seq;
           step.transition = [];
           for (const expected of expectations) {
@@ -286,6 +316,40 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
     wait: (description, outcome) => checkpoint(description, outcome),
     tap: (description, selector, outcome) => checkpoint(description, outcome,
       () => ({ op: 'click', ...center(actor(root, selector)) })),
+    audition: async (description, selector, outcome) => {
+      currentStep = description;
+      const before = await probe.command({ op: 'journeyTtsAuditionLog' });
+      const baseline = Math.max(0, ...ttsAuditionReports(before.stdout, processId).map(item => item.operationId));
+      const input = await probe.command({ op: 'click', ...center(actor(root, selector)) });
+      const step = { step: description, actionSeq: input.seq };
+      steps.push(step);
+      const deadline = performance.now() + 18000;
+      do {
+        const log = await probe.command({ op: 'journeyTtsAuditionLog' });
+        const reports = ttsAuditionReports(log.stdout, processId).filter(item => item.operationId > baseline);
+        const terminal = reports.find(item => item.state !== 'started');
+        if (terminal) {
+          step.ttsAudition = { seq: log.seq, reports };
+          demand(reports.every(item => item.operationId === terminal.operationId) &&
+            reports.filter(item => item.state !== 'started').length === 1,
+            'Expected a single native audition operation for this click');
+          if (terminal.state === 'unavailable') {
+            demand(terminal.code === 'system-capability-missing' && reports.length === 1,
+              'Native audition did not confirm a missing platform capability');
+            ui.defer(description, '当前 VM 缺少系统朗读能力');
+            await checkpoint('系统音色不可用后仍显示音色面板', outcome);
+            return false;
+          }
+          demand(terminal.state === 'completed', `系统试听失败 (${terminal.code ?? 'unknown'})`);
+          demand(reports.indexOf(terminal) > 0 && reports[0].state === 'started',
+            'No native playback start before audition completion');
+          await checkpoint('试听完成后仍显示音色面板', outcome);
+          return true;
+        }
+        await delay(250);
+      } while (performance.now() < deadline);
+      throw Error('No native audio completion or explicit unavailability after audition click');
+    },
     slideTo: (description, selector, fraction, outcome) => checkpoint(description, outcome, () => {
       demand(selector.type === 'Slider' && fraction >= 0 && fraction <= 1, 'Expected an observed slider and valid fraction');
       const [left, top, right, bottom] = actor(root, selector);
@@ -329,19 +393,29 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
       const [left, top, right, bottom] = bounds;
       const y = Math.round((top + bottom) / 2);
       const density = (right - left) / sample.environment.widthVp;
-      return { op: 'swipe', fromX: left + Math.max(4, Math.round(9 * density)), fromY: y,
+      // Stay inside the reader's native 18 vp edge lane but away from the
+      // OS-facing margin where the previous VM swipe reached no app gesture.
+      return { op: 'swipe', fromX: left + Math.max(4, Math.round(17 * density)), fromY: y,
         toX: left + Math.round((right - left) * .18), toY: y, velocity: 350 };
     }),
-    swipe: (description, selector, direction, outcome) => checkpoint(description, outcome, () => {
-      const [left, top, right, bottom] = actor(root, selector);
-      const { x, y } = center([left, top, right, bottom]);
+    swipe: (description, selector, direction, outcome, { avoid } = {}) => checkpoint(description, outcome, () => {
+      const bounds = actor(root, selector);
+      const [left, top, right, bottom] = bounds;
+      const { x, y } = center(bounds);
       const dx = direction === 'left' ? -1 : direction === 'right' ? 1 : 0;
       const dy = direction === 'up' ? -1 : direction === 'down' ? 1 : 0;
       demand(dx || dy, 'Unsupported swipe direction');
       const horizontal = Math.round((right - left) / 4);
       const vertical = Math.round((bottom - top) / 4);
-      return { op: 'swipe', fromX: x - dx * horizontal, fromY: y - dy * vertical,
-        toX: x + dx * horizontal, toY: y + dy * vertical, velocity: 500 };
+      const fromY = y - dy * vertical;
+      const toY = y + dy * vertical;
+      if (avoid) {
+        demand(dy, 'An obstruction selector requires a vertical scroll');
+        const lane = verticalSwipeLane(bounds, fromY, toY, matchingNodes(root, avoid).map(node => node.bounds));
+        demand(lane !== undefined, 'No unobstructed vertical scroll lane in the native viewport');
+        return { op: 'swipe', fromX: lane, fromY, toX: lane, toY, velocity: 500 };
+      }
+      return { op: 'swipe', fromX: x - dx * horizontal, fromY, toX: x + dx * horizontal, toY, velocity: 500 };
     }),
   };
 

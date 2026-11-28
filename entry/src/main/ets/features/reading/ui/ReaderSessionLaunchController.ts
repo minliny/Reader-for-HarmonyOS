@@ -21,6 +21,10 @@ export interface ReaderSessionLaunchIdentity {
 export type ReaderSessionLaunchCancelReason = 'stop' | 'failure' | 'stopBarrierFailure' |
   'openControl' | 'background' | 'leave' | 'bookChanged' | 'sourceChanged';
 export type ReaderSessionLaunchOwnership = 'stage' | 'handoffPending' | 'exitPending' | 'released';
+export type ReaderSessionSourceTransfer = 'preparingProxy' | 'retiringSource' | 'presenting';
+export type ReaderSessionSourceTransferResult = 'waiting' | 'retireSource' | 'present' | 'fallback' | 'stale';
+export const READER_SESSION_SOURCE_TRANSFER_DEADLINE_MS = 240;
+
 export interface ReaderSessionLaunchResource { release: () => void; }
 export interface ReaderSessionLaunchTransaction {
   readonly generation: number;
@@ -31,6 +35,7 @@ export interface ReaderSessionLaunchTransaction {
   readonly businessStatus: ReaderSessionCapsuleState;
   readonly desiredPlaying: boolean;
   readonly ownership: ReaderSessionLaunchOwnership;
+  readonly sourceTransfer: ReaderSessionSourceTransfer;
   readonly cancelReason: ReaderSessionLaunchCancelReason | undefined;
 }
 
@@ -59,6 +64,8 @@ export class ReaderSessionLaunchController {
   private current: ReaderSessionLaunchTransaction | undefined = undefined;
   private resource: ReaderSessionLaunchResource | undefined = undefined;
   private lastTimeMs: number = 0;
+  private presentationStartMs: number = 0;
+  private sourceTransferDeadlineMs: number = 0;
   private reducedMotion: boolean = false;
   private readonly curves: ReaderSessionLaunchCurves;
   private readonly timeScale: number;
@@ -82,11 +89,12 @@ export class ReaderSessionLaunchController {
     this.releaseResource();
     this.generation += 1;
     this.lastTimeMs = monotonicTimeMs;
+    this.sourceTransferDeadlineMs = monotonicTimeMs + READER_SESSION_SOURCE_TRANSFER_DEADLINE_MS;
     this.reducedMotion = reduceMotion;
     this.current = {
       generation: this.generation, identity: { ...identity }, geometry: { ...geometry },
       startTimeMs: monotonicTimeMs, sample: sampleReaderSessionLaunch(0, geometry, this.curves, reduceMotion),
-      businessStatus: 'preparing', desiredPlaying: true, ownership: 'stage', cancelReason: undefined,
+      businessStatus: 'preparing', desiredPlaying: true, ownership: 'stage', sourceTransfer: 'preparingProxy', cancelReason: undefined,
     };
     return this.current;
   }
@@ -100,12 +108,33 @@ export class ReaderSessionLaunchController {
   advance(generation: number, monotonicTimeMs: number): ReaderSessionLaunchTransaction | undefined {
     const value = this.current;
     if (value === undefined || !this.isCurrent(generation)) return value;
+    if (value.sourceTransfer !== 'presenting') return value;
     if (Number.isFinite(monotonicTimeMs)) this.lastTimeMs = Math.max(this.lastTimeMs, monotonicTimeMs);
-    const sample = sampleReaderSessionLaunch((this.lastTimeMs - value.startTimeMs) / this.timeScale,
+    const sample = sampleReaderSessionLaunch((this.lastTimeMs - this.presentationStartMs) / this.timeScale,
       value.geometry, this.curves, this.reducedMotion);
     this.current = { ...value, sample };
     if (!sample.sourceNeeded) this.releaseResource();
     return this.current;
+  }
+
+  /** The origin paints until the replacement has real layout, and the stage
+   * paints only after that exact native origin stops painting. */
+  confirmSourceTransfer(generation: number, nowMs: number, proxyReady: boolean,
+    sourceRetired: boolean): ReaderSessionSourceTransferResult {
+    const current = this.current;
+    if (current === undefined || !this.isCurrent(generation) ||
+      current.sourceTransfer === 'presenting' || !Number.isFinite(nowMs)) return 'stale';
+    if (nowMs >= this.sourceTransferDeadlineMs) return 'fallback';
+    if (!proxyReady) return 'waiting';
+    if (current.sourceTransfer === 'preparingProxy') {
+      this.current = { ...current, sourceTransfer: 'retiringSource' };
+      return 'retireSource';
+    }
+    if (!sourceRetired) return 'waiting';
+    this.lastTimeMs = nowMs;
+    this.presentationStartMs = nowMs;
+    this.current = { ...current, sourceTransfer: 'presenting' };
+    return 'present';
   }
 
   /** A snapshot is optional. Late, zero-size or stale snapshots are disposed. */
@@ -149,6 +178,10 @@ export class ReaderSessionLaunchController {
   setReduceMotion(reduceMotion: boolean): ReaderSessionLaunchTransaction | undefined {
     if (!reduceMotion || this.current?.ownership !== 'stage') return this.current;
     this.reducedMotion = true; // disabling it never replays an observed launch
+    if (this.current.sourceTransfer !== 'presenting') {
+      this.current = { ...this.current, sample: sampleReaderSessionLaunch(0, this.current.geometry, this.curves, true) };
+      return this.current;
+    }
     return this.advance(this.current.generation, this.lastTimeMs);
   }
 

@@ -45,6 +45,8 @@ export interface ReaderTransitionObservation {
   layoutBounds?: boolean;
   /** Prefix of nodes reserved for real body geometry; the final node is loading. */
   chapterBodyCount?: number;
+  /** Deferred presentation samples the mounted origin before submitting its replacement. */
+  originChapterIndex?: number;
   targetChapterIndex?: number;
 }
 
@@ -213,6 +215,7 @@ function chapterRule(input: ReaderTransitionObservation, frames: ReaderTransitio
   const baseline = new Map<string, ReaderTransitionNode>();
   const anchors = new Map<number, number>();
   let witnessedBody = false;
+  let witnessedOrigin = input.originChapterIndex === undefined;
   let witnessedTarget = input.targetChapterIndex === undefined;
   for (let index = 0; index < frames.length; index += 1) {
     const frame = frames[index];
@@ -231,7 +234,9 @@ function chapterRule(input: ReaderTransitionObservation, frames: ReaderTransitio
     witnessedBody = true;
     for (const body of bodyNodes) {
       if (body?.visible !== true || body.bodyVisible !== true) continue;
-      if (body.chapterIndex === input.targetChapterIndex) witnessedTarget = true;
+      if (index === 0 && body.chapterIndex === input.originChapterIndex) witnessedOrigin = true;
+      if ((input.originChapterIndex === undefined || index > 0) && body.chapterIndex === input.targetChapterIndex)
+        witnessedTarget = true;
       const identity = body.id;
       const initial = baseline.get(identity);
       if (initial === undefined) baseline.set(identity, body);
@@ -248,7 +253,7 @@ function chapterRule(input: ReaderTransitionObservation, frames: ReaderTransitio
       }
     }
   }
-  return witnessedBody && witnessedTarget;
+  return witnessedBody && witnessedOrigin && witnessedTarget;
 }
 
 export function evaluateTransitionInvariants(input: ReaderTransitionObservation, frames: ReaderTransitionFrame[],

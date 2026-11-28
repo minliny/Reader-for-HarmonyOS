@@ -54,6 +54,7 @@ export struct ReaderActionMenuSurface {
   @Prop specId: ReaderActionMenuSpecId = 'reader-more-menu';
   @Prop nativeId: string = '';
   @Prop auditAnchoredPopup: boolean = false;
+  @Prop auditNativePopupBubble: boolean = false;
   @Prop auditPopupAnchor: ReaderRectVp | undefined = undefined;
   @Prop nativePopupMaterial: boolean = false;
   @Prop actionIdPrefix: string = '';
@@ -82,6 +83,7 @@ export struct ReaderActionMenuSurface {
     const anchor = this.auditPopupAnchor;
     if (this.layoutOverlay === undefined || !this.auditAnchoredPopup) return undefined;
     return { placement: 'anchor', dialog: true, nativeDismiss: true, contentMeasured: true,
+      nativePopupBubble: this.auditNativePopupBubble,
       anchor: anchor === undefined ? undefined : { x: anchor.left, y: anchor.top, width: anchor.width, height: anchor.height } };
   }
 

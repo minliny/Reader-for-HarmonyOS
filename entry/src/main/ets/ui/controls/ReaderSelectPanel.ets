@@ -9,8 +9,10 @@ import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { ReaderChoiceRow } from './ReaderChoiceRow';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
-import { READER_LAYOUT_SURFACE_HINT, ReaderLayoutOverlayRoot } from '../foundation/ReaderLayoutInvariantSignals';
+import { READER_LAYOUT_ROTATION_ENVELOPE, READER_LAYOUT_SURFACE_HINT, ReaderLayoutOverlayRoot }
+  from '../foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantSurfaceHint } from '../layout/LayoutInvariantNativeAudit';
+import type { LayoutInvariantRect } from '../layout/LayoutInvariantEvaluator';
 import { ReaderInsetsVp, ReaderRectVp, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { readerOverlayChoiceRowHeight, readerOverlayListHeight, readerOverlayPanel, readerOverlayViewport }
   from '../layout/ReaderOverlayGeometry';
@@ -46,6 +48,7 @@ const SELECT_PAD = TOK_SPACE_CONTROL_INLINE; // 10
 const CHEVRON_GAP = 8;
 const CHEVRON_W = 12;
 const CHEVRON_H = 8;
+const CHEVRON_ROTATION_BOX = Math.ceil(Math.hypot(CHEVRON_W, CHEVRON_H));
 const SELECT_CHROME = SELECT_PAD * 2 + CHEVRON_GAP + CHEVRON_W; // 40
 
 class ReaderSelectParentFrame extends FrameCallback {
@@ -94,6 +97,7 @@ export struct ReaderSelectPanel {
   @Prop focusIdPrefix: string = '';
   @Prop nativeAnchorId: string = '';
   @Prop auditPopupAnchor: ReaderRectVp | undefined = undefined;
+  @Prop auditOverlayAnchor: ReaderRectVp | undefined = undefined;
   // Production callers commit the immutable choice now; finish only unmounts.
   onCommit: ((option: string, identity: string, index?: number) => void) | undefined = undefined;
   inputCurrent: (() => boolean) | undefined = undefined;
@@ -296,11 +300,13 @@ export struct ReaderSelectPanel {
     return readerSurfaceMaterialDecision('popoverMenu', this.appearancePreferences, this.appThemeScheme, this.systemScheme);
   }
 
-  private popupLayoutHint(): LayoutInvariantSurfaceHint | undefined {
-    const anchor = this.auditPopupAnchor;
-    if (this.layoutOverlay === undefined || this.hosting !== 'popup') return undefined;
-    return { placement: 'anchor', dialog: true, nativeDismiss: true, contentMeasured: true,
-      anchor: anchor === undefined ? undefined : { x: anchor.left, y: anchor.top, width: anchor.width, height: anchor.height } };
+  private panelLayoutHint(): LayoutInvariantSurfaceHint | undefined {
+    if (this.layoutOverlay === undefined) return undefined;
+    const source = this.hosting === 'popup' ? this.auditPopupAnchor : this.auditOverlayAnchor;
+    const anchor: LayoutInvariantRect | undefined = source === undefined ? undefined :
+      { x: source.left, y: source.top, width: source.width, height: source.height };
+    if (this.hosting === 'popup') return { placement: 'anchor', dialog: true, nativeDismiss: true, contentMeasured: true, anchor };
+    return anchor === undefined ? undefined : { placement: 'anchor-overlap', anchor };
   }
 
   @Builder
@@ -317,7 +323,7 @@ export struct ReaderSelectPanel {
       if (this.menuFooterHeight > 0) { this.menuFooter(); }
     }
     .id(this.layoutOverlay?.id(this.nativeAnchorId) ?? this.nativeAnchorId)
-    .customProperty(READER_LAYOUT_SURFACE_HINT, this.popupLayoutHint())
+    .customProperty(READER_LAYOUT_SURFACE_HINT, this.panelLayoutHint())
     .width(this.resolvedWidth())
     .height(this.panelHeight())
     .padding(this.variant === 'appearanceLibrary' ? 3 : 0)
@@ -374,11 +380,16 @@ export struct ReaderSelectPanel {
       if (this.onMenuHeaderCollapse !== undefined) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Stack({ alignContent: Alignment.TopStart }) {
-            Image(this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down'))
-              .width(CHEVRON_W).height(CHEVRON_H)
-              .position({ x: SOURCE_GROUP_SELECT_ARROW_TARGET - CHEVRON_W - SELECT_PAD,
-                y: (this.menuHeaderHeight - CHEVRON_H) / 2 })
-              .rotate({ angle: this.chevronAngle }).accessibilityLevel('no');
+            // Keep the old glyph center while giving every intermediate rotation a measured paint envelope.
+            Stack({ alignContent: Alignment.Center }) {
+              Image(this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down'))
+                .width(CHEVRON_W).height(CHEVRON_H)
+                .id('reader-source-group-collapse-chevron')
+                .rotate({ angle: this.chevronAngle }).accessibilityLevel('no')
+                .customProperty(READER_LAYOUT_ROTATION_ENVELOPE, this.layoutOverlay !== undefined);
+            }.width(CHEVRON_ROTATION_BOX).height(CHEVRON_ROTATION_BOX)
+              .position({ x: SOURCE_GROUP_SELECT_ARROW_TARGET - SELECT_PAD - (CHEVRON_W + CHEVRON_ROTATION_BOX) / 2,
+                y: (this.menuHeaderHeight - CHEVRON_ROTATION_BOX) / 2 });
           }.width('100%').height('100%');
         }.width(SOURCE_GROUP_SELECT_ARROW_TARGET).height(this.menuHeaderHeight)
           .padding(0)

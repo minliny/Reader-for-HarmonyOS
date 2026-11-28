@@ -38,11 +38,11 @@ export struct ReaderBottomNavigation {
     ReaderNavigationAppearanceHost({
       inputEnabled: this.inputIsEnabled(),
       bottomInset: this.bottomInset(), translateX: this.bottomBarTranslateX(),
+      layoutInvariantTag: typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'primary-dock', id: 'bottom-navigation' } as LayoutInvariantTag : undefined,
       unifiedContent: (): void => { this.unifiedTabBar(); },
       nativeContent: (appearance: ReaderNavigationAppearance): void => { this.nativeTabBar(appearance); },
-    })
-      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
-        ? { role: 'primary-dock', id: 'bottom-navigation' } as LayoutInvariantTag : undefined);
+    });
   }
 
   @Builder

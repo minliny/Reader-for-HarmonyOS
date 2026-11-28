@@ -1,8 +1,11 @@
 import type { UIContext } from '@ohos.arkui.UIContext';
 import type { AnimatorResult } from '@ohos.animator';
+import type { FrameNode } from '@ohos.arkui.node';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
+import { READER_LAUNCH_PROXY, READER_LAUNCH_SHARP } from '../../../ui/layout/TransitionInvariantEvaluator';
+import { READER_SESSION_SOURCE_TRANSFER_DEADLINE_MS } from './ReaderSessionLaunchController';
 import type { ReaderSessionLaunchController, ReaderSessionLaunchTransaction } from './ReaderSessionLaunchController';
 import type { ReaderControlCapsuleVerification } from './ReaderControlCapsuleVerification';
 import { ReaderUIFrameCallback } from './ReaderUIFrameCallback';
@@ -50,9 +53,18 @@ export class ReaderSessionLaunchEffects {
     this.sessionLaunchDeadlineTimer = setTimeout(action, durationMs + SESSION_LAUNCH_CALLBACK_GRACE_MS);
   }
 
+  armSourceTransferDeadline(generation: number): void {
+    this.clearDeadline();
+    this.sessionLaunchDeadlineTimer = setTimeout((): void => {
+      this.sessionLaunchDeadlineTimer = -1;
+      this.host.fallbackSourceTransfer(generation);
+    }, READER_SESSION_SOURCE_TRANSFER_DEADLINE_MS);
+  }
+
   scheduleFrame(generation: number): void {
+    const active = this.host.read();
     if ((this.sessionLaunchFramePending && this.pendingSessionLaunchGeneration === generation) ||
-      !this.controller.isCurrent(generation) || this.host.read()?.sample.finished) return;
+      !this.controller.isCurrent(generation) || (active?.sourceTransfer === 'presenting' && active.sample.finished)) return;
     this.sessionLaunchFramePending = true;
     this.pendingSessionLaunchGeneration = generation;
     const queuedMs = this.verification.queuedFrameTime(generation);
@@ -66,11 +78,15 @@ export class ReaderSessionLaunchEffects {
       }
       const previous = this.host.read();
       const tick = readerMotionNowMs();
+      if (previous === undefined) return;
+      if (this.host.observing())
+        this.verification.read(this.host.context(), previous, frameTimeNs, queuedMs, enteredMs, tick);
+      if (previous.sourceTransfer !== 'presenting') {
+        this.advanceSourceTransfer(previous, tick);
+        return;
+      }
       const next = this.controller.advance(generation, tick);
       if (next === undefined) return;
-      if (previous !== undefined && this.host.observing()) {
-        this.verification.read(this.host.context(), previous, frameTimeNs, queuedMs, enteredMs, tick);
-      }
       this.host.publish(next);
       this.verification.update(next, tick, previous);
       if (previous?.sample.settled !== true && next.sample.settled && this.host.observing()) {
@@ -94,6 +110,63 @@ export class ReaderSessionLaunchEffects {
       }
       if (!next.sample.finished) this.scheduleFrame(generation);
     }));
+  }
+
+  confirmOriginalRetired(generation: number, actorId: string): void {
+    const launch = this.host.read();
+    if (launch?.generation !== generation || launch.sourceTransfer !== 'retiringSource' ||
+      launch.identity.sourceActorId !== actorId || !this.host.ready() || !this.host.layoutCurrent()) return;
+    this.advanceSourceTransfer(launch, readerMotionNowMs());
+  }
+
+  private advanceSourceTransfer(previous: ReaderSessionLaunchTransaction, tick: number): void {
+    const context = this.host.context();
+    const proxyReady = this.receivesLayout(context, READER_LAUNCH_PROXY) && (!previous.sample.sourceNeeded ||
+      (this.host.controlSourceReady(previous.generation) && this.receivesLayout(context, READER_LAUNCH_SHARP)));
+    const sourceRetired = previous.sourceTransfer === 'retiringSource' &&
+      this.originalHasRetired(context, previous.identity.sourceActorId);
+    const outcome = this.controller.confirmSourceTransfer(previous.generation, tick, proxyReady, sourceRetired);
+    if (outcome === 'fallback') {
+      this.host.fallbackSourceTransfer(previous.generation);
+      return;
+    }
+    const admitted = this.controller.snapshot();
+    if (admitted === undefined || admitted.generation !== previous.generation || outcome === 'stale') return;
+    if (admitted !== previous) {
+      this.host.publish(admitted);
+      this.verification.update(admitted, tick, previous);
+    }
+    if (outcome === 'present') {
+      this.clearDeadline();
+      if (!admitted.sample.controlsPresented) {
+        this.host.hideControl();
+        this.host.updateWindow();
+        this.host.drainPageTurn();
+      }
+    }
+    this.scheduleFrame(previous.generation);
+  }
+
+  private receivesLayout(context: UIContext, id: string): boolean {
+    try {
+      const node = context.getAttachedFrameNodeById(id);
+      if (node === null || node.isDisposed() || !node.isAttached()) return false;
+      const size = node.getMeasuredSize();
+      return Number(size.width) > 0 && Number(size.height) > 0;
+    } catch (_) { return false; }
+  }
+
+  private originalHasRetired(context: UIContext, id: string): boolean {
+    try {
+      let node: FrameNode | null = context.getAttachedFrameNodeById(id);
+      let depth = 0;
+      while (node !== null && depth < 64) {
+        if (node.isDisposed() || !node.isAttached() || !node.isVisible() || node.getOpacity() <= 0) return true;
+        node = node.getParent();
+        depth += 1;
+      }
+      return depth === 0;
+    } catch (_) { return false; }
   }
 
   fadeExit(generation: number): void {

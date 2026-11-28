@@ -12,6 +12,7 @@ import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../..
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
+import { READER_ACTION_MIN_TARGET, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
@@ -788,6 +789,10 @@ export struct SourceSwitchWindow {
     });
   }
 
+  private novelCloseAuthoredMargin(): number {
+    return SOURCE_SWITCH_VISUAL.closeMarginRight - (READER_ACTION_MIN_TARGET - SOURCE_SWITCH_VISUAL.closeWidth) / 2;
+  }
+
   @Builder
   private novelHeading(attachment: number = this.surfaceAttachment, scope: number = this.surfaceScope, variant: number = this.surfaceVariant) {
     Row({ space: SOURCE_SWITCH_VISUAL.headingGap }) {
@@ -799,8 +804,12 @@ export struct SourceSwitchWindow {
       this.discoveryAction();
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Image(this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close'))
-          .width(SOURCE_SWITCH_VISUAL.closeIconSize).height(SOURCE_SWITCH_VISUAL.closeIconSize).accessibilityLevel('no');
-      }.width(44).height(44).margin({ right: SOURCE_SWITCH_VISUAL.closeMarginRight - (44 - SOURCE_SWITCH_VISUAL.closeWidth) / 2 })
+          .width(SOURCE_SWITCH_VISUAL.closeIconSize).height(SOURCE_SWITCH_VISUAL.closeIconSize)
+          // Keep the glyph at its authored position while the hit box stays inside the heading.
+          .translate({ x: Math.max(0, -this.novelCloseAuthoredMargin()) }).accessibilityLevel('no');
+      }.width(READER_ACTION_MIN_TARGET).height(READER_ACTION_MIN_TARGET)
+        .margin({ right: Math.max(0, this.novelCloseAuthoredMargin()) })
+        .responseRegion(readerActionTouchRegion(READER_ACTION_MIN_TARGET, READER_ACTION_MIN_TARGET))
         .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme,
           SOURCE_SWITCH_VISUAL.closeRadius, SOURCE_SWITCH_VISUAL.closeRadius, this.canClose()))
         .id(`reader-source-close:${scope}:${attachment}:${variant}`)

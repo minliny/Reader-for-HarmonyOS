@@ -1,6 +1,19 @@
 import type { ReaderTtsConfig } from './ReaderTtsGateway';
 import { readerTtsMultiplierForConfig } from './ReaderTtsState';
 
+export interface ReaderTtsVoicePickerAudition {
+  readonly mounted: boolean;
+  readonly pickerIdentity: string;
+  readonly callbackIdentity: string;
+  readonly voicePicker: boolean;
+  readonly editorInputCurrent: boolean;
+}
+
+export function readerTtsVoicePickerAuditionCurrent(input: ReaderTtsVoicePickerAudition): boolean {
+  return input.mounted && input.voicePicker && input.pickerIdentity.length > 0 &&
+    input.pickerIdentity === input.callbackIdentity && input.editorInputCurrent;
+}
+
 interface ReaderTtsInitialProbe {
   probeAvailability(): Promise<boolean>;
   getProbedConfig(): ReaderTtsConfig | undefined;

@@ -14,7 +14,6 @@ import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
 import { readerAppColor, type ReaderAppColorRole } from '../../../ui/foundation/ReaderThemeRegistry';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
-import { readerSceneTransition } from '../../../app/navigation/ReaderRouteMotion';
 import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerReadableFontScale } from '../../../ui/foundation/ReaderSurfaceResolvers';
@@ -91,6 +90,9 @@ export struct SourceV9GroupsPage {
   @Prop catalogError: string = '';
   @Prop @Watch('refreshGroups') sources: BookSource[] = [];
   @Prop @Watch('refreshGroups') detailGroupId: string | undefined = undefined;
+  @Prop detailTransitionActive: boolean = false;
+  @Prop detailTranslation: number = 0;
+  @Prop detailOpacity: number = 1;
   @Prop @Watch('externalMoveChanged') moveSourceIds: string[] = [];
   @Prop inputEnabled: boolean = true;
   @Prop moveOnly: boolean = false;
@@ -595,15 +597,24 @@ export struct SourceV9GroupsPage {
             if (this.inputCurrent() && this.catalog === undefined && this.catalogError.length > 0) this.onRetryCatalog();
           } })
           .layoutWeight(1);
-      } else if (this.detailGroupId === undefined) {
-        Column() {
-          this.groupList();
-        }.width('100%').layoutWeight(1).transition(readerSceneTransition(12, this.reduceMotion, true, true));
       } else {
-        Column() {
-          this.groupDetail();
-        }.id(readerTransitionsEnabled() ? 'reader-source-v9-group-detail-motion' : undefined).width('100%').layoutWeight(1)
-          .transition(readerSceneTransition(12, this.reduceMotion, true));
+        Stack({ alignContent: Alignment.TopStart }) {
+          if (this.detailGroupId === undefined || this.detailTransitionActive) {
+            Column() {
+              this.groupList();
+            }.width('100%').height('100%').enabled(this.detailGroupId === undefined)
+              .hitTestBehavior(this.detailGroupId === undefined ? HitTestMode.Default : HitTestMode.None)
+              .accessibilityLevel(this.detailGroupId === undefined ? 'auto' : 'no-hide-descendants')
+              .customProperty('readerLayoutDebugExcluded', this.detailGroupId !== undefined);
+          }
+          if (this.detailGroupId !== undefined) {
+            Column() {
+              this.groupDetail();
+            }.id(readerTransitionsEnabled() ? 'reader-source-v9-group-detail-motion' : undefined)
+              .width('100%').height('100%').backgroundColor(this.color('TOK_PAPER'))
+              .translate({ x: this.detailTranslation }).opacity(this.detailOpacity);
+          }
+        }.width('100%').layoutWeight(1).clip(true);
       }
     }.width('100%').height('100%').padding({ left: geometry.content.frame.left, right: geometry.content.frame.right,
       top: geometry.content.startInset, bottom: geometry.content.endInset });
@@ -847,18 +858,22 @@ export struct SourceV9GroupsPage {
           this.color('app.scrim.warmModal')))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no').onClick((): void => { this.consumeBack(); });
-      ReaderDialogViewport({ host: this.modalHost, content: (width: number, height: number): void => {
-          ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: width,
-            primarySurfaceColor: this.color('app.sourceUi.primary'), title: this.dialogTitle(),
-            actions: [new DialogActionView('cancel', '取消', 'default', this.dialogEditable(), true),
-              new DialogActionView('confirm', this.confirmLabel(), this.dialog === 'delete' ? 'danger' : 'primary',
-                this.dialogParams() !== undefined)],
-            onAction: (id: string): void => { void this.confirmDialog(id); },
-            body: (): void => { this.dialogBody(this.bodyLimit(height)); },
-          });
-        },
+      ReaderDialogViewport({ host: this.modalHost,
+        content: (width: number, height: number): void => { this.groupDialogCard(width, height); },
       }).transition(readerDialogCardTransition(this.reduceMotion));
     }.width('100%').height('100%').transition(readerDialogScrimTransition(this.reduceMotion));
+  }
+
+  @Builder
+  private groupDialogCard(width: number, height: number) {
+    ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: width,
+      primarySurfaceColor: this.color('app.sourceUi.primary'), title: this.dialogTitle(),
+      actions: [new DialogActionView('cancel', '取消', 'default', this.dialogEditable(), true),
+        new DialogActionView('confirm', this.confirmLabel(), this.dialog === 'delete' ? 'danger' : 'primary',
+          this.dialogParams() !== undefined)],
+      onAction: (id: string): void => { void this.confirmDialog(id); },
+      body: (): void => { this.dialogBody(this.bodyLimit(height)); },
+    });
   }
 
   @Builder

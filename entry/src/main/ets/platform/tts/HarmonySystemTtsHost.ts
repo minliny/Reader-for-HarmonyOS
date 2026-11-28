@@ -126,7 +126,8 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   async probe(language?: string, person?: number, exactVoice?: boolean): Promise<ReaderTtsHostProbe> {
     if (this.closed) return { available: false, reason: '朗读服务已关闭' };
     if (!canIUse('SystemCapability.AI.TextToSpeech')) {
-      return { available: false, reason: '当前系统不支持系统朗读，可配置在线 TTS。' };
+      return { available: false, reason: '当前系统不支持系统朗读，可配置在线 TTS。',
+        unavailableCode: 'system-capability-missing' };
     }
     try {
       const requestedLanguage = language ?? this.acceptedVoice?.language ?? DEFAULT_LANGUAGE;

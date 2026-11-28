@@ -26,6 +26,7 @@ export struct ReaderStandardPage {
   @Prop @Watch('onLayoutInputsChanged') contentLeadingRail: number = 0;
   @Prop @Watch('onLayoutInputsChanged') contentEndInset: number = -1;
   @Prop @Watch('onLayoutInputsChanged') initialFooterHeight: number = 0;
+  @Prop auditFooterDock: boolean = true;
   @Prop scrollOwner: 'page' | 'native-list' = 'page';
   @Prop initialScrollY: number = 0;
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
@@ -166,6 +167,7 @@ export struct ReaderStandardPage {
       geometry: this.geometry,
       headerMeasurementKey: this.measurementKey,
       footerMeasurementKey: this.footerMeasurementKey,
+      auditFooterDock: this.auditFooterDock,
       content: (): void => { this.pageBody(); },
       header: (): void => { this.header(); }, footer: (): void => { this.footer(); },
       overlayContent: (): void => { this.pageOverlay(); },

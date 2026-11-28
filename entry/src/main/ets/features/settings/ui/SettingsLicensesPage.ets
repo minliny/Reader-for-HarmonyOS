@@ -57,14 +57,17 @@ export struct SettingsLicensesPage {
   build() {
     ReaderStandardPage({ floatingHeader: true, embeddedWide: this.embeddedWide, variant: 'settingsGeneral',
       scroller: this.scroller,
-      header: (): void => {
-        PageBackBar({ floating: true, centered: true, elevation: 'floating',
-          title: this.selected?.label ?? '开源许可与声明', onBack: (): void => {
-            if (this.current && !this.closeDocument()) this.onBack();
-          } });
-      },
+      header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
     });
+  }
+
+  @Builder
+  private pageHeader() {
+    PageBackBar({ floating: true, centered: true, elevation: 'floating',
+      title: this.selected?.label ?? '开源许可与声明', onBack: (): void => {
+        if (this.current && !this.closeDocument()) this.onBack();
+      } });
   }
 
   @Builder

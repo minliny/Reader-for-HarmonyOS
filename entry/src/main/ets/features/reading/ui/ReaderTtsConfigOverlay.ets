@@ -1,3 +1,5 @@
+import { hilog } from '@kit.PerformanceAnalysisKit';
+import type { AnimatorResult } from '@ohos.animator';
 import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
@@ -41,6 +43,14 @@ const FORM_FIELD_GAP = 6;
 const STATUS_PADDING = 12;
 const FORMAT_GAP = 8;
 
+interface ReaderTtsPreviewMetrics {
+  readonly fullWidth: number;
+  readonly compact: boolean;
+  readonly width: number;
+  readonly paintHeight: number;
+  readonly height: number;
+}
+
 /** Temporary choices/forms live in the viewport, never inside a clipped 48vp row. */
 @Component
 export struct ReaderTtsConfigOverlay {
@@ -51,9 +61,14 @@ export struct ReaderTtsConfigOverlay {
   private readonly editorScroller: Scroller = new Scroller();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
+  @State private surfaceOpacity: number = 1;
+  private mountAnimator: AnimatorResult | undefined = undefined;
 
   private panelLayoutKey: string = '';
   private cachedPanelLayout: ReaderTtsConfigPanelLayout | undefined = undefined;
+  private previewMetricsKey: string = '';
+  private cachedPreviewMetrics: ReaderTtsPreviewMetrics | undefined = undefined;
   private releaseKeyboardAvoidance: (() => void) | undefined = undefined;
   @Prop title: string = '';
   @Prop choices: ReaderTtsConfigChoice[] = [];
@@ -109,7 +124,14 @@ export struct ReaderTtsConfigOverlay {
       if (selected !== undefined) this.beginEdit(selected);
     }
   }
+  private stopMountAnimator(): void {
+    const animator = this.mountAnimator;
+    this.mountAnimator = undefined;
+    try { animator?.cancel(); } catch (_) {}
+  }
+
   aboutToDisappear(): void {
+    this.stopMountAnimator();
     this.stopPreview();
     this.mounted = false;
     this.generation += 1;
@@ -207,28 +229,33 @@ export struct ReaderTtsConfigOverlay {
     return Math.max(44, this.textHeight('将清除已保存密钥', TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE, width));
   }
 
-  private fullPreviewActionWidth(panelWidth: number): number {
+  private previewMetrics(panelWidth: number): ReaderTtsPreviewMetrics {
+    const borderWidth = this.surfaceSpec().borderWidth;
+    const key = `${this.metricsRevision}|${panelWidth}|${borderWidth}`;
+    if (key === this.previewMetricsKey && this.cachedPreviewMetrics !== undefined) return this.cachedPreviewMetrics;
     const label = measureReaderControlText(this.getUIContext(), '试听中', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, panelWidth);
-    return Math.max(44, Math.ceil((label?.singleLineWidthVp ?? 30 * this.fontScale()) + this.previewActionChromeWidth()));
-  }
-
-  private compactVoicePreview(panelWidth: number): boolean {
+    const chrome = this.previewActionChromeWidth();
+    const fullWidth = Math.max(44, Math.ceil((label?.singleLineWidthVp ?? 30 * this.fontScale()) + chrome));
     const glyph = Math.max(TYPE_READER_TTS_VOICE_REGULAR.fontSizeFp, TYPE_READER_TTS_VOICE_SELECTED.fontSizeFp) * this.fontScale();
-    return readerTtsConfigCompactVoicePreview(panelWidth, this.surfaceSpec().borderWidth,
-      this.fullPreviewActionWidth(panelWidth), TOK_BORDER_W, glyph);
+    const compact = readerTtsConfigCompactVoicePreview(panelWidth, borderWidth, fullWidth, TOK_BORDER_W, glyph);
+    const width = compact ? 44 : fullWidth;
+    const paintHeight = compact ? 26 :
+      Math.max(26, this.textHeight('试听中', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, width - chrome, 1) + 16);
+    const height = Math.max(44, paintHeight);
+    this.previewMetricsKey = key;
+    this.cachedPreviewMetrics = { fullWidth, compact, width, paintHeight, height };
+    return this.cachedPreviewMetrics;
   }
 
-  private previewActionWidth(panelWidth: number): number {
-    return this.compactVoicePreview(panelWidth) ? 44 : this.fullPreviewActionWidth(panelWidth);
-  }
+  private fullPreviewActionWidth(panelWidth: number): number { return this.previewMetrics(panelWidth).fullWidth; }
 
-  private previewPaintHeight(panelWidth: number): number {
-    if (this.compactVoicePreview(panelWidth)) return 26;
-    const width = this.previewActionWidth(panelWidth) - this.previewActionChromeWidth();
-    return Math.max(26, this.textHeight('试听中', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, width, 1) + 16);
-  }
+  private compactVoicePreview(panelWidth: number): boolean { return this.previewMetrics(panelWidth).compact; }
 
-  private previewActionHeight(panelWidth: number): number { return Math.max(44, this.previewPaintHeight(panelWidth)); }
+  private previewActionWidth(panelWidth: number): number { return this.previewMetrics(panelWidth).width; }
+
+  private previewPaintHeight(panelWidth: number): number { return this.previewMetrics(panelWidth).paintHeight; }
+
+  private previewActionHeight(panelWidth: number): number { return this.previewMetrics(panelWidth).height; }
   private previewActionChromeWidth(): number { return 8 + 9 + 5 + 13; }
 
   private choiceHeight(choice: ReaderTtsConfigChoice, panelWidth: number): number {
@@ -266,8 +293,12 @@ export struct ReaderTtsConfigOverlay {
     const viewport = this.viewport();
     const width = Math.min(spec.width, viewport.width);
     const status = this.statusMessage();
-    const key = JSON.stringify([this.metricsRevision, viewport, this.windowModal, this.inlineAnchor, this.manager,
-      this.title, this.voicePicker, this.choices, this.selectedId, status, this.showManage, this.errorText, spec.borderWidth]);
+    const anchor = this.inlineAnchor;
+    const anchorKey = anchor === undefined ? '' : `${anchor.left},${anchor.top},${anchor.width},${anchor.height}`;
+    const choicesKey = this.choices.map((c: ReaderTtsConfigChoice): string => `${c.id}\u0000${c.label}`).join('\u0001');
+    const key = `${this.metricsRevision}|${viewport.left},${viewport.top},${viewport.width},${viewport.height}|` +
+      `${this.windowModal}|${anchorKey}|${this.manager}|${this.title}|${this.voicePicker}|${choicesKey}|` +
+      `${this.selectedId}|${status}|${this.showManage}|${this.errorText}|${spec.borderWidth}`;
     if (key === this.panelLayoutKey && this.cachedPanelLayout !== undefined) return this.cachedPanelLayout;
     const items: number[] = [this.messageHeight(status, width)];
     if (this.manager) {
@@ -300,10 +331,16 @@ export struct ReaderTtsConfigOverlay {
       Stack().width('100%').height('100%')
         .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
           this.manager ? readerAppColor('app.scrim.modal', this.appThemeScheme) : Color.Transparent, false, this.manager))
-        .onClick((): void => this.close());
+        .onClick((): void => {
+          this.observePreviewInput('scrim-click');
+          this.close();
+        });
       this.configurationPanel();
     }.id(this.layoutOverlay?.id()).width(this.windowModal ? '100%' : this.availableWidth)
       .height(this.windowModal ? '100%' : this.availableHeight).zIndex(20)
+      .onTouch((event: TouchEvent): void => {
+        if (event.type === TouchType.Up) this.observePreviewInput('cover-touch-up');
+      })
       .onAppear((): void => this.layoutOverlay?.mount(this.getUIContext()))
       .onDisAppear((): void => this.layoutOverlay?.unmount());
   }
@@ -319,8 +356,35 @@ export struct ReaderTtsConfigOverlay {
           this.layoutSurfaceHint() : undefined)
         .position({ x: this.panelLayout().rect.left - (this.windowModal ? 0 : this.inlineHost?.left ?? 0),
           y: this.panelLayout().rect.top - (this.windowModal ? 0 : this.inlineHost?.top ?? 0) })
+        .opacity(this.reduceMotion ? 1 : this.surfaceOpacity)
         .hitTestBehavior(HitTestMode.Default)
         .onAppear((): void => {
+          this.stopMountAnimator();
+          if (!this.reduceMotion) {
+            this.surfaceOpacity = 0.96;
+            try {
+              const animator = this.getUIContext().createAnimator({
+                duration: 360, easing: 'ease-out', delay: 0, fill: 'forwards',
+                direction: 'normal', iterations: 1, begin: 0.96, end: 1,
+              });
+              this.mountAnimator = animator;
+              animator.onFrame = (value: number): void => {
+                if (this.mountAnimator === animator && this.mounted) this.surfaceOpacity = value;
+              };
+              animator.onFinish = (): void => {
+                if (this.mountAnimator === animator) {
+                  this.mountAnimator = undefined;
+                  this.surfaceOpacity = 1;
+                }
+              };
+              animator.play();
+            } catch (_) {
+              this.mountAnimator = undefined;
+              this.surfaceOpacity = 1;
+            }
+          } else {
+            this.surfaceOpacity = 1;
+          }
           if (readerTransitionsEnabled()) {
             const id = this.surfaceNativeId();
             readerBeginTransition({ kind: 'surface', action: 'mount', subject: id, scope: id, nodes: [id] });
@@ -478,7 +542,14 @@ export struct ReaderTtsConfigOverlay {
             .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
         }.width(this.previewActionWidth(this.panelWidth())).height(this.previewActionHeight(this.panelWidth())).padding(0).backgroundColor(Color.Transparent)
           .enabled(!this.busy).accessibilityText(`${this.currentChoice(choice).label}，${this.previewId === choice.id ? '停止试听' : '试听'}`)
-          .onClick((): void => this.preview(choice.id));
+          .onTouch((event: TouchEvent): void => {
+            if (event.type === TouchType.Up) this.observePreviewInput('button-touch-up');
+            if (event.type === TouchType.Cancel) this.observePreviewInput('button-touch-cancel');
+          })
+          .onClick((): void => {
+            this.observePreviewInput('button-click');
+            this.preview(choice.id);
+          });
       }
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_check_theme_night') : $r('app.media.reader_appearance_make_check')))
         .width(this.voicePicker ? 16 : 11).height(this.voicePicker ? 16 : 9)
@@ -497,15 +568,27 @@ export struct ReaderTtsConfigOverlay {
     this.previewSelectionId = undefined;
     if (identity !== undefined) this.onPreviewStop(identity);
   }
+
+  private observePreviewInput(stage: string): void {
+    if (!READER_LAYOUT_DEBUG_BUILD || !this.voicePicker || AppStorage.get<boolean>('readerLayoutInvariantAutomation') !== true) return;
+    hilog.info(0x5244, 'Reader', 'READER_VM_TTS_AUDITION_INPUT %{public}s', stage);
+  }
+
   private preview(id: string): void {
-    if (!this.mounted || this.busy || !this.choices.some((choice: ReaderTtsConfigChoice): boolean => choice.id === id)) return;
-    if (this.previewId === id) { this.stopPreview(); return; }
+    if (!this.mounted) { this.observePreviewInput('overlay-unmounted'); return; }
+    if (this.busy) { this.observePreviewInput('overlay-busy'); return; }
+    if (!this.choices.some((choice: ReaderTtsConfigChoice): boolean => choice.id === id)) {
+      this.observePreviewInput('overlay-choice-retired');
+      return;
+    }
+    if (this.previewId === id) { this.observePreviewInput('overlay-cancelled'); this.stopPreview(); return; }
     this.stopPreview();
     const generation = ++this.previewGeneration;
     const identity = this.selectionId;
     this.previewId = id;
     this.previewSelectionId = identity;
     this.errorText = '';
+    this.observePreviewInput('overlay-dispatch');
     void this.onPreview(id, identity).catch((error: Error): void => {
       if (this.mounted && generation === this.previewGeneration) this.errorText = error.message;
     }).finally((): void => {

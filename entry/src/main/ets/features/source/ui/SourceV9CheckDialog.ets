@@ -195,30 +195,33 @@ export struct SourceV9CheckDialog {
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no').onClick((): void => this.close());
       ReaderDialogViewport({ host: this.modalHost,
-        content: (width: number, height: number): void => {
-          ReaderDialogSurface({
-            specId: 'source-v9-check', containerWidthVp: width,
-            title: this.batch && this.drillId.length === 0 ? this.title : '书源检测报告',
-            showCloseButton: true, closeEnabled: this.inputEnabled, onClose: (): void => this.close(),
-            body: (): void => { this.body(height); },
-            actions: [
-              new DialogActionView('back', this.drillId.length > 0 ? '返回结果' : '关闭', 'default', this.inputEnabled,
-                false, 'reader-source-v9-check-close'),
-              new DialogActionView('run', this.running ? '停止检测' :
-                (this.rows.length > 0 || this.report(this.singleSource()) !== undefined) ? '重新检测' : '开始检测',
-              this.running ? 'danger' : 'primary', this.inputEnabled && (this.running || (this.drillId.length > 0 ?
-                this.singleSource() !== undefined : this.sources.length > 0)), false, 'reader-source-v9-check-run'),
-            ],
-            onAction: (action: string): void => {
-              if (action === 'back') this.close();
-              else if (this.running) this.stop();
-              else void this.start();
-            },
-          });
-        },
+        content: (width: number, height: number): void => { this.checkCard(width, height); },
       }).transition(readerDialogCardTransition(this.reduceMotion));
     }.width('100%').height('100%')
       .transition(readerDialogScrimTransition(this.reduceMotion));
+  }
+
+  @Builder
+  private checkCard(width: number, height: number) {
+    ReaderDialogSurface({
+      specId: 'source-v9-check', containerWidthVp: width,
+      title: this.batch && this.drillId.length === 0 ? this.title : '书源检测报告',
+      showCloseButton: true, closeEnabled: this.inputEnabled, onClose: (): void => this.close(),
+      body: (): void => { this.body(height); },
+      actions: [
+        new DialogActionView('back', this.drillId.length > 0 ? '返回结果' : '关闭', 'default', this.inputEnabled,
+          false, 'reader-source-v9-check-close'),
+        new DialogActionView('run', this.running ? '停止检测' :
+          (this.rows.length > 0 || this.report(this.singleSource()) !== undefined) ? '重新检测' : '开始检测',
+        this.running ? 'danger' : 'primary', this.inputEnabled && (this.running || (this.drillId.length > 0 ?
+          this.singleSource() !== undefined : this.sources.length > 0)), false, 'reader-source-v9-check-run'),
+      ],
+      onAction: (action: string): void => {
+        if (action === 'back') this.close();
+        else if (this.running) this.stop();
+        else void this.start();
+      },
+    });
   }
 
   private bodyHeight(viewportHeight: number): number {

@@ -7,11 +7,16 @@ import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../..
 import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { READER_LAYOUT_INVARIANT_PROPERTY, ReaderLayoutOverlayRoot } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_REDUCED_FADE_MS } from '../../../ui/foundation/ProductMotionTiming';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { ReaderInsetsVp, ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
+
+const GROUP_DIALOG_CLOSE_MS: number = 180;
 
 class BookshelfGroupFocusFrame extends FrameCallback {
   private readonly action: () => void;
@@ -31,6 +36,8 @@ export struct BookshelfGroupDialog {
   @ObjectLink presentation: BookshelfGroupPresentation;
   @Prop recoveryTop: number = 0;
   isInputAllowed: (() => boolean) | undefined = undefined;
+  private readonly layoutOverlay = ReaderLayoutOverlayRoot.diagnostic('bookshelf-group');
+  private layoutOverlayIdentity: string = '';
 
   build() {
     if (this.presentation.identity.length > 0) {
@@ -52,13 +59,7 @@ export struct BookshelfGroupDialog {
       ReaderDialogViewport({
         onScrollAppeared: (): void => this.requestFocusAfterFrame((): boolean => this.presentation.identity === identity,
           this.selectorFocusKey(identity), this.focusScopeKey(identity)),
-        content: (widthVp: number, _heightVp: number): void => {
-          ReaderDialogSurface({ specId: 'shelf-group', containerWidthVp: widthVp, title: '编辑分组',
-            actions: [], showCloseButton: true,
-            onClose: (): void => { if (this.groupInputIsCurrent(identity)) this.presentation.dismiss(identity); },
-            body: (): void => { this.selector(identity); } })
-            .transition(this.cardTransition());
-        },
+        content: (widthVp: number, _heightVp: number): void => { this.groupCard(widthVp, identity); },
       });
       Column() {
         if (this.presentation.snapshot.receipt !== undefined) {
@@ -72,13 +73,38 @@ export struct BookshelfGroupDialog {
     }.width('100%').height('100%')
       .hitTestBehavior(this.presentation.identity === identity ? HitTestMode.Default : HitTestMode.None)
       .accessibilityLevel(this.presentation.identity === identity ? 'auto' : 'no-hide-descendants')
+      .customProperty(READER_LAYOUT_INVARIANT_PROPERTY, this.layoutModalTag(identity))
       .transition(this.surfaceTransition())
       .id(this.focusScopeKey(identity)).focusable(true).focusScopeId(this.focusScopeKey(identity), true, false)
-      .onDisAppear(this.restoreFocusAction(identity));
+      .onAppear((): void => this.mountLayoutOverlay(identity))
+      .onDisAppear(this.surfaceDisappearAction(identity));
+  }
+
+  @Builder
+  private groupCard(widthVp: number, identity: string) {
+    ReaderDialogSurface({ specId: 'shelf-group', containerWidthVp: widthVp, title: '编辑分组',
+      actions: [], showCloseButton: true, nativeId: `${this.focusScopeKey(identity)}:card`,
+      closeNativeId: `${this.focusScopeKey(identity)}:close`,
+      onClose: (): void => { if (this.groupInputIsCurrent(identity)) this.presentation.dismiss(identity); },
+      body: (): void => { this.selector(identity); } })
+      .transition(this.cardTransition());
   }
 
   private modalAnimation(entering: boolean): AnimateParam {
-    return { duration: entering ? 220 : 180, curve: readerMotionStandardCurve() };
+    return { duration: entering ? 220 : GROUP_DIALOG_CLOSE_MS, curve: readerMotionStandardCurve() };
+  }
+
+  private layoutModalTag(identity: string): LayoutInvariantTag | undefined {
+    if (this.layoutOverlay === undefined) return undefined;
+    const active = this.presentation.identity === identity;
+    return { role: 'modal-overlay', id: 'bookshelf-group', active, intercepts: active,
+      closeDurationMs: this.appReduceMotion ? READER_REDUCED_FADE_MS : GROUP_DIALOG_CLOSE_MS };
+  }
+
+  private mountLayoutOverlay(identity: string): void {
+    if (this.layoutOverlay === undefined || this.presentation.identity !== identity) return;
+    this.layoutOverlayIdentity = identity;
+    this.layoutOverlay.mount(this.getUIContext(), this.focusScopeKey(identity));
   }
 
   private surfaceTransition(): TransitionEffect {
@@ -116,7 +142,7 @@ export struct BookshelfGroupDialog {
       selectedGroup: this.presentation.currentGroup(),
       groups: this.presentation.snapshot.data.groups,
       busy: this.presentation.assigning || this.presentation.snapshot.busy || this.presentation.snapshot.mutationBlocked === true,
-      focusId: this.selectorFocusKey(identity),
+      defaultOptionId: this.selectorFocusKey(identity),
       onSelect: (group: string): void => {
         if (this.groupInputIsCurrent(identity)) void this.presentation.assignGroup(identity, group);
       },
@@ -132,9 +158,13 @@ export struct BookshelfGroupDialog {
 
   private selectorFocusKey(identity: string): string { return `${this.focusScopeKey(identity)}:default`; }
 
-  private restoreFocusAction(identity: string): () => void {
+  private surfaceDisappearAction(identity: string): () => void {
     const restore = this.presentation.captureFocusReturn(identity);
     return (): void => {
+      if (this.layoutOverlayIdentity === identity) {
+        this.layoutOverlay?.unmount();
+        this.layoutOverlayIdentity = '';
+      }
       if (restore !== undefined) {
         this.requestFocusAfterFrame(restore.isCurrent, restore.target ?? '', 'reader-bookshelf-search-entry');
       }

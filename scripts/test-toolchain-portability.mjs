@@ -97,7 +97,12 @@ try {
   rmSync(join(hapOutputs, 'entry-default-unsigned.hap'));
   assert.deepEqual(findBuiltHaps(hapOutputs, 'local', 'iteration'), ['entry-default-signed.hap']);
   assert.throws(() => findBuiltHaps(hapOutputs, 'local', 'acceptance'), /did not produce the unsigned HAP/);
-  const pipeline = readFileSync(pipelineEntry, 'utf8');
-  assert.equal(/\/Applications\/|\/usr\/bin\/|run\('rsync'/.test(pipeline.replace(/^#!.*\n/, '')), false);
+  const pipelineSources = [pipelineEntry, ...[
+    'locks-and-retention', 'workspace-fingerprint', 'build-and-sign', 'deploy-and-verify',
+  ].map(name => join(scripts, 'hap-pipeline', `${name}.mjs`))];
+  for (const path of pipelineSources) {
+    const source = readFileSync(path, 'utf8').replace(/^#!.*\n/, '');
+    assert.doesNotMatch(source, /\/Applications\/|\/usr\/bin\/|run\('rsync'/, path);
+  }
   console.log('HarmonyOS toolchain portability: PASS (tool discovery, CLI routing, private ACL policy, acceptance arguments).');
 } finally { rmSync(root, { recursive: true, force: true }); }

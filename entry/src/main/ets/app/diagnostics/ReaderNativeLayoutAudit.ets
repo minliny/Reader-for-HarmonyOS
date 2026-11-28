@@ -1,20 +1,27 @@
 import type { UIContext } from '@ohos.arkui.UIContext';
 import type { FrameNode } from '@ohos.arkui.node';
+import { text as graphicsText } from '@kit.ArkGraphics2D';
 import { readerOverlayViewport } from '../../ui/layout/ReaderOverlayGeometry';
 import { READER_THEME_DEFINITIONS, type ReaderThemeDefinition } from '../../ui/foundation/ReaderThemeRegistry';
 import { readerInteractiveSafeBottom, readerStableInteractiveSafeBottom, type ReaderWindowMetricsSnapshot }
   from '../../ui/foundation/ReaderWindowMetrics';
 import type { LayoutInvariantNode, LayoutInvariantRect } from '../../ui/layout/LayoutInvariantEvaluator';
 import { READER_LAYOUT_CLOSE_CONTROL, READER_LAYOUT_FOOTER, READER_LAYOUT_NATIVE_MATERIAL,
-  READER_LAYOUT_READING_PAPER, READER_LAYOUT_SURFACE_HINT } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+  READER_LAYOUT_READING_PAPER, READER_LAYOUT_ROTATION_ENVELOPE, READER_LAYOUT_SURFACE_HINT }
+  from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import { inspectReaderNativeMaterialPaint, type ReaderNativeMaterialAttributes } from '../../ui/layout/ReaderNativeMaterialPaint';
 import { evaluateReaderIslandContrast, readerIslandContrastPalette } from '../../ui/layout/ReaderIslandContrastEvaluator';
-import type { LayoutAuditClose, LayoutAuditHitTest, LayoutAuditPlacement, LayoutInvariantDensityAudit,
-  LayoutInvariantFeatureAssertion, LayoutInvariantNativeNode, LayoutInvariantNativeSample, LayoutInvariantSurfaceAudit }
+import { measureMountedTextEvidence, measuredTextReflowClips, READER_LAYOUT_IMPORT_HINT_TEXT_ID,
+  READER_LAYOUT_IMPORT_LABEL_TEXT_ID, READER_LAYOUT_MOUNTED_TEXT_CONTROLLER,
+  type LayoutAuditClose, type LayoutAuditHitTest, type LayoutAuditPlacement, type LayoutInvariantDensityAudit,
+  type LayoutInvariantFeatureAssertion, type LayoutInvariantMountedTextDiagnostics, type LayoutInvariantMountedTextEvidence,
+  type LayoutInvariantMountedTextStyle, type LayoutInvariantNativeNode, type LayoutInvariantNativeSample,
+  type LayoutInvariantSurfaceAudit, type LayoutInvariantTextLineRange, type LayoutInvariantTextReflow }
   from '../../ui/layout/LayoutInvariantNativeAudit';
 import type { LayoutInvariantSurfaceHint } from '../../ui/layout/LayoutInvariantNativeAudit';
+import { readerNativeTextSliceAudit } from '../../ui/layout/ReaderNativeTextSliceAudit';
 
-interface ReaderNativeInspectorAttributes extends ReaderNativeMaterialAttributes {
+interface ReaderNativeInspectorAttributes extends ReaderNativeMaterialAttributes, LayoutInvariantMountedTextStyle {
   enabled?: boolean | string;
   clickable?: boolean | string;
   hitTestBehavior?: number | string;
@@ -22,9 +29,6 @@ interface ReaderNativeInspectorAttributes extends ReaderNativeMaterialAttributes
   accessibilityText?: string;
   content?: string;
   textOverflow?: string;
-  fontSize?: number | string;
-  fontFamily?: string;
-  lineHeight?: number | string;
   zIndex?: number | string;
 }
 
@@ -52,14 +56,14 @@ interface ReaderNativeSurfaceSpec {
 const INTERACTIVE_TYPES: string[] = ['Button', 'TextInput', 'TextArea', 'Toggle', 'CheckBox', 'Checkbox', 'Radio',
   'Slider', 'Select', 'MenuItem', 'TextPicker', 'DatePicker', 'TimePicker', 'Search', 'Stepper', 'Rating'];
 const PAINT_LEAF_TYPES: string[] = ['Canvas', 'Rect', 'Shape', 'Path', 'Circle', 'Line', 'Ellipse'];
-const ADDITIONAL_FOOTERS: string[] = ['reader-source-footer', 'reader-source-v9-batch-dock'];
+const ADDITIONAL_FOOTERS: string[] = ['reader-source-footer-row', 'reader-source-footer-stacked', 'reader-source-v9-batch-dock'];
 const READER_NATIVE_SURFACES: ReaderNativeSurfaceSpec[] = [
   { id: 'reader-control-tts-overlay', close: 'close-action', contentId: 'reader-tts-choice-content' },
   { id: 'reader-control-tts-manager-overlay', close: 'close-action',
     contentId: 'reader-tts-manager-content' },
   { id: 'reader-control-appearance-overlay', close: 'native-dismiss' },
   { id: 'reader-source-v9-more-menu', close: 'native-dismiss' },
-  { id: 'reader-source-group-panel', close: 'close-action', placement: 'anchor-overlap', anchorId: 'reader-source-group-trigger' },
+  { id: 'reader-source-group-panel', close: 'close-action', placement: 'anchor-overlap' },
   { id: 'reader-search-sheet:filter', close: 'native-dismiss', placement: 'bottom-center' },
   { id: 'reader-search-sheet:task', close: 'native-dismiss', placement: 'bottom-center' },
   { id: 'reader-bookshelf-more-sheet', close: 'native-dismiss', placement: 'bottom-center' },
@@ -119,22 +123,93 @@ function nativeInspector(node: FrameNode, nativeId: number): ReaderNativeInspect
   } catch (_) { return undefined; }
 }
 
-function measuredTextClips(context: UIContext, node: LayoutInvariantNativeNode,
-  attrs?: ReaderNativeInspectorAttributes): boolean | undefined {
+function reflowWordBreak(value?: number | string): WordBreak | undefined {
+  if (value === WordBreak.NORMAL || value === 'normal') return WordBreak.NORMAL;
+  if (value === WordBreak.BREAK_ALL || value === 'break-all') return WordBreak.BREAK_ALL;
+  if (value === WordBreak.BREAK_WORD || value === 'break-word') return WordBreak.BREAK_WORD;
+  if (value === WordBreak.HYPHENATION || value === 'hyphenation') return WordBreak.HYPHENATION;
+  return undefined;
+}
+
+function reflowTextHeight(context: UIContext, content: string, frame: LayoutInvariantRect,
+  attrs: ReaderNativeInspectorAttributes, matchInspectorStyle: boolean = false): number | undefined {
+  try {
+    const weight = typeof attrs.fontWeight === 'string' ?
+      attrs.fontWeight.replace(/^FontWeight\./, '').replace(/^W([1-9]00)$/, '$1').toLowerCase() : attrs.fontWeight;
+    const required = context.getMeasureUtils().measureTextSize({ textContent: content,
+      constraintWidth: matchInspectorStyle ? `${context.vp2px(frame.width)}px` : frame.width,
+      fontSize: attrs.fontSize, fontFamily: attrs.fontFamily, lineHeight: attrs.lineHeight,
+      fontWeight: matchInspectorStyle ? weight : undefined,
+      letterSpacing: matchInspectorStyle ? attrs.letterSpacing : undefined,
+      wordBreak: matchInspectorStyle ? reflowWordBreak(attrs.wordBreak) : undefined,
+    });
+    const height = context.px2vp(Number(required.height));
+    return Number.isFinite(height) && height > 0 ? height : undefined;
+  } catch (_) { return undefined; }
+}
+
+function inspectorTextStyle(attrs: ReaderNativeInspectorAttributes): LayoutInvariantMountedTextStyle {
+  return { fontSize: attrs.fontSize, fontFamily: attrs.fontFamily, fontWeight: attrs.fontWeight,
+    letterSpacing: attrs.letterSpacing, lineHeight: attrs.lineHeight, wordBreak: attrs.wordBreak, maxFontScale: attrs.maxFontScale };
+}
+
+function recordTextReflow(context: UIContext, node: LayoutInvariantNativeNode,
+  attrs?: ReaderNativeInspectorAttributes): void {
   const content = attrs?.content;
   const frame = node.bounds;
   if (node.type !== 'Text' || typeof content !== 'string' || content.trim().length === 0 ||
     (typeof attrs?.fontSize !== 'number' && typeof attrs?.fontSize !== 'string') ||
-    frame === undefined || frame.width <= 0) return undefined;
+    frame === undefined || frame.width <= 0) return;
   const overflow = typeof attrs.textOverflow === 'string' ? attrs.textOverflow.toLowerCase() : '';
-  if (overflow.includes('ellipsis') || overflow.includes('marquee')) return false;
+  if (overflow.includes('ellipsis') || overflow.includes('marquee')) return;
+  const reflow: LayoutInvariantTextReflow = { independentHeightVp: reflowTextHeight(context, content, frame, attrs) };
+  // The import label shrink-wraps its explicit bold face and negative tracking.
+  // Use that same style at its measured pixel width for the independent check.
+  if (node.id === READER_LAYOUT_IMPORT_LABEL_TEXT_ID || measuredTextReflowClips(node.id, frame.height, reflow) === true) {
+    reflow.style = inspectorTextStyle(attrs);
+    reflow.matchedStyleHeightVp = reflowTextHeight(context, content, frame, attrs, true);
+  }
+  node.textClipped = measuredTextReflowClips(node.id, frame.height, reflow);
+  node.textReflow = reflow;
+}
+
+function measuredInk(context: UIContext, frame: LayoutInvariantRect, layout: LayoutManager,
+  start: number, end: number): LayoutInvariantRect[] {
+  const boxes = layout.getRectsForRange({ start, end }, graphicsText.RectWidthStyle.TIGHT, graphicsText.RectHeightStyle.TIGHT);
+  return boxes.map((box: TextBox): LayoutInvariantRect => ({
+    x: frame.x + context.px2vp(box.rect.left), y: frame.y + context.px2vp(box.rect.top),
+    width: context.px2vp(box.rect.right - box.rect.left), height: context.px2vp(box.rect.bottom - box.rect.top),
+  }));
+}
+
+function mountedTextEvidence(context: UIContext, node: FrameNode, frame?: LayoutInvariantRect,
+  attrs?: ReaderNativeInspectorAttributes): LayoutInvariantMountedTextEvidence {
+  const content = attrs?.content;
+  const diagnostics: LayoutInvariantMountedTextDiagnostics = { expectedUtf16: content?.length };
+  const missing: LayoutInvariantMountedTextEvidence = { status: 'missing', diagnostics };
+  if (frame === undefined || attrs === undefined || typeof content !== 'string' || content.length === 0) return missing;
+  diagnostics.style = inspectorTextStyle(attrs);
+  diagnostics.independentHeightVp = reflowTextHeight(context, content, frame, attrs);
+  diagnostics.matchedStyleHeightVp = reflowTextHeight(context, content, frame, attrs, true);
   try {
-    // Independent native text measure. Inspector content never leaves the device receipt.
-    const required = context.getMeasureUtils().measureTextSize({ textContent: content, constraintWidth: frame.width,
-      fontSize: attrs.fontSize, fontFamily: attrs.fontFamily, lineHeight: attrs.lineHeight });
-    const height = context.px2vp(Number(required.height));
-    return Number.isFinite(height) && height > 0 ? height > frame.height + 3 : undefined;
-  } catch (_) { return undefined; }
+    const controller = node.getCustomProperty(READER_LAYOUT_MOUNTED_TEXT_CONTROLLER) as TextController | undefined;
+    if (controller === undefined) return missing;
+    const layout = controller.getLayoutManager();
+    const count = layout.getLineCount();
+    diagnostics.lineCount = count;
+    if (!Number.isSafeInteger(count) || count <= 0 || count > content.length) return missing;
+    const lines: LayoutInvariantTextLineRange[] = [];
+    for (let index = 0; index < count; index++) {
+      const line = layout.getLineMetrics(index);
+      lines.push({ start: line.startIndex, end: line.endIndex });
+    }
+    const length = content.length;
+    const tailStart = (content.codePointAt(length - 2) ?? 0) > 0xFFFF ? length - 2 : length - 1;
+    const evidence = measureMountedTextEvidence(length, lines, measuredInk(context, frame, layout, 0, length),
+      measuredInk(context, frame, layout, tailStart, length));
+    evidence.diagnostics = diagnostics;
+    return evidence;
+  } catch (_) { return missing; }
 }
 
 function hasArea(rect?: LayoutInvariantRect): boolean {
@@ -151,6 +226,28 @@ function nativeSurfaceHint(node: FrameNode): LayoutInvariantSurfaceHint | undefi
     const property = node.getCustomProperty(READER_LAYOUT_SURFACE_HINT);
     return property !== undefined && property !== null && typeof property === 'object' ? property as LayoutInvariantSurfaceHint : undefined;
   } catch (_) { return undefined; }
+}
+
+function nativePopupBubbleBounds(context: UIContext, node: FrameNode, contentBounds?: LayoutInvariantRect):
+  LayoutInvariantRect | undefined {
+  if (contentBounds === undefined || !hasArea(contentBounds)) return undefined;
+  // The Popup node owns the full-window mask. Its direct child owns the bubble and arrow.
+  try {
+    let child = node;
+    for (let depth = 0; depth < 16; depth += 1) {
+      const parent = child.getParent();
+      if (parent === null) return undefined;
+      if (parent.getNodeType().toLowerCase() === 'popup') {
+        const offset = child.getPositionToWindowWithTransform();
+        const measured = child.getMeasuredSize();
+        const bubble: LayoutInvariantRect = { x: Number(offset.x), y: Number(offset.y),
+          width: context.px2vp(Number(measured.width)), height: context.px2vp(Number(measured.height)) };
+        return containedFrame(contentBounds, bubble) ? bubble : undefined;
+      }
+      child = parent;
+    }
+  } catch (_) { return undefined; }
+  return undefined;
 }
 
 function nativeBooleanProperty(node: FrameNode, name: string): boolean {
@@ -197,9 +294,17 @@ export class ReaderNativeLayoutAudit {
       attrs.hitTestBehavior === undefined ? 'default' : undefined);
     const enabled = bool(attrs?.enabled) ?? (interactive && attrs !== undefined && attrs.enabled === undefined ? true : undefined);
     const paintLayer = Number(attrs?.zIndex);
+    const surfaceHint = id.length > 0 || type === 'Column' ? nativeSurfaceHint(node) : undefined;
     const scrollClip = parent?.scrollClip === true;
-    const observation: LayoutInvariantNativeNode = { key, id: id.length > 0 ? id : `${type}:${key}`, type,
-      parentKey: parent?.key ?? '', parentType: parent?.type ?? '', bounds, parentBounds: parent?.bounds,
+    // The transformed origin is one rotated corner, not the image's minimum X/Y.
+    // This opt-in image paints inside its native parent's centered rotation envelope.
+    const rotationEnvelope = type === 'Image' && nativeBooleanProperty(node, READER_LAYOUT_ROTATION_ENVELOPE);
+    const textSlice = type === 'Text' ? readerNativeTextSliceAudit.project(nativeId, parent?.key ?? '', bounds, parent?.bounds) : undefined;
+    const paintBounds = textSlice?.bounds ?? (rotationEnvelope ? parent?.bounds : bounds);
+    const observation: LayoutInvariantNativeNode = { key, id: id.length > 0 ? id : `${type}:${key}`,
+      stableId: id.length > 0 ? id : undefined, type,
+      parentKey: parent?.key ?? '', parentType: parent?.type ?? '', bounds: paintBounds,
+      parentBounds: textSlice?.parentBounds ?? parent?.bounds,
       clip, scrollClip, opacity, interactive, enabled, hitTest: behavior,
       zIndex: Number.isFinite(paintLayer) ? paintLayer : undefined,
       inputAdmissionSuppressed: parent?.suppressInput === true,
@@ -207,14 +312,19 @@ export class ReaderNativeLayoutAudit {
         attrs?.accessibilityText === '关闭' || attrs?.accessibilityText === '取消' || attrs?.accessibilityText === '收起' ||
         nativeBooleanProperty(node, READER_LAYOUT_CLOSE_CONTROL)),
       paintedLeaf: leaf && (PAINT_LEAF_TYPES.includes(type) || mayPaint(attrs?.backgroundColor)),
-      surfaceHint: id.length > 0 || type === 'Column' ? nativeSurfaceHint(node) : undefined,
+      surfaceHint,
+      nativePopupBounds: surfaceHint?.nativePopupBubble === true ? nativePopupBubbleBounds(context, node, bounds) : undefined,
       dock: type === 'Column' && nativeBooleanProperty(node, READER_LAYOUT_FOOTER),
       nativeMaterialPaint: nativeBooleanProperty(node, READER_LAYOUT_NATIVE_MATERIAL) ?
         inspectReaderNativeMaterialPaint(attrs) : undefined,
       readingPaperTheme: id === 'reader-reading-stage' ? nativeReadingPaper(node) : undefined,
     };
     if (type === 'Text' && attrs?.content === '' && !hasArea(bounds)) observation.opacity = 0;
-    observation.textClipped = measuredTextClips(context, observation, attrs);
+    // R13 tests the admitted native ink against the real viewport and all
+    // ancestor clips. Independent whole-Text reflow still applies to titles and controls.
+    if (type === 'Text' && id === READER_LAYOUT_IMPORT_HINT_TEXT_ID)
+      observation.mountedText = mountedTextEvidence(context, node, bounds, attrs);
+    else if (textSlice === undefined) recordTextReflow(context, observation, attrs);
     this.nodes.push(observation);
     this.byKey.set(key, observation);
     if (id.length > 0 && (this.byId.get(id)?.opacity ?? -1) < opacity) this.byId.set(id, observation);
@@ -257,13 +367,15 @@ export class ReaderNativeLayoutAudit {
       if (node.surfaceHint?.dialog !== true || node.opacity < .1) continue;
       if (node.bounds !== undefined && node.clip !== undefined && !hasArea(node.clip)) continue;
       const hint = node.surfaceHint;
-      const viewport = hint.windowEdge === true ? windowViewport : node.clip ?? safeViewport;
+      const bounds = hint.nativePopupBubble === true ? node.nativePopupBounds : node.bounds;
+      const viewport = hint.windowEdge === true ? windowViewport :
+        hint.nativePopupBubble === true ? safeViewport : node.clip ?? safeViewport;
       const descendants = hint.contentMeasured === true ? this.descendants(node.key) : [];
       const body = descendants.find((item: LayoutInvariantNativeNode): boolean => item.parentType === 'Scroll' &&
         item.type === 'Column' && item.bounds !== undefined);
       const contentHeight = body?.bounds?.height;
-      const overhead = node.bounds === undefined || body?.clip === undefined ? 0 : Math.max(0, node.bounds.height - body.clip.height);
-      result.push({ id: node.id, bounds: node.bounds, viewport: hint.viewport ?? viewport, placement: hint.placement, anchor: hint.anchor,
+      const overhead = bounds === undefined || body?.clip === undefined ? 0 : Math.max(0, bounds.height - body.clip.height);
+      result.push({ id: node.id, bounds, viewport: hint.viewport ?? viewport, placement: hint.placement, anchor: hint.anchor,
         close: hint.nativeDismiss === true ? 'native-dismiss' : this.closeAction(node), scrollable: node.scrollClip, windowEdge: hint.windowEdge,
         contentBounds: body?.bounds, contentViewport: body?.clip, naturalHeight: contentHeight === undefined ? undefined : contentHeight + overhead,
         expectsContentMeasurement: hint.contentMeasured });

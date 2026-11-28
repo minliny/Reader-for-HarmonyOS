@@ -175,6 +175,29 @@ test('reading recovery requires the native input host to agree with application 
   assert.ok(restored.observedRules.includes('R6'));
 });
 
+test('detail recovery checks the front route and retired modal, with the reader deliberately retained underneath', () => {
+  const hiddenReader: LayoutInvariantNode = {
+    tag: { role: 'main-input', id: 'reader-body' }, opacity: 0, enabled: false,
+  };
+  const hiddenPageInput: LayoutInvariantNode = {
+    tag: { role: 'main-input', id: 'paged-input', scope: READER_PAGED_INPUT_SCOPE },
+    bounds: { x: 0, y: 60, width: 360, height: 650 }, opacity: 1, enabled: false, intercepts: false,
+  };
+  const detail = { ...sample, checkRecovery: true, requiresNativeMainInput: false,
+    nodes: [...sample.nodes, hiddenReader, hiddenPageInput] };
+  const recovered = evaluateLayoutInvariants(detail);
+  assert.deepEqual(recovered.violations, []);
+  assert.deepEqual(recovered.missing, []);
+  assert.ok(recovered.observedRules.includes('R6'));
+
+  const retired: LayoutInvariantNode = {
+    tag: { role: 'modal-overlay', id: 'reader-more-menu', active: false }, opacity: 0, intercepts: true,
+  };
+  assert.deepEqual(evaluateLayoutInvariants({
+    ...detail, mainInputEnabled: false, nodes: [...detail.nodes, retired],
+  }).violations.map(({ rule, nodeId }) => [rule, nodeId]), [['R6', 'route'], ['R6', 'reader-more-menu']]);
+});
+
 test('paged reading recovery checks the native touch layer for R5 and retains the R6 host check', () => {
   const host: LayoutInvariantNode = { tag: { role: 'main-input', id: 'reader-body' }, opacity: 1, enabled: true };
   const touchLayer: LayoutInvariantNode = {

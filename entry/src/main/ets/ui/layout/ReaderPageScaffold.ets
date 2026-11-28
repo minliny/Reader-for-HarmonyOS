@@ -20,6 +20,8 @@ export struct ReaderPageScaffold {
   @Prop frameStyle: ReaderFrameStyle;
   @Prop headerMeasurementKey: number = 0;
   @Prop @Watch('requestFooterMeasurement') footerMeasurementKey: number = 0;
+  @Prop auditFooterDock: boolean = true;
+  @Prop transitionHeaderNativeId: string = '';
   private readonly footerMeasurement: ReaderNativeSlotMeasurement = new ReaderNativeSlotMeasurement();
   /** Resolved page contract. The measured header height still arrives below. */
   @Prop geometry: ReaderPageGeometry;
@@ -52,7 +54,9 @@ export struct ReaderPageScaffold {
     return (_old: Area, next: Area): void => this.publishFooterMeasurement(readerPageAreaLength(next.height), presentedKey);
   }
 
-  private transitionHeaderId(): string { return this.footerMeasurement.id + ':transition-header'; }
+  private transitionHeaderId(): string {
+    return this.transitionHeaderNativeId || this.footerMeasurement.id + ':transition-header';
+  }
 
   private observeMount(): void {
     if (!readerTransitionsEnabled() || !this.pageVisible) return;
@@ -89,7 +93,7 @@ export struct ReaderPageScaffold {
           .width('100%').padding({ left: this.geometry.footer.insetLeft, right: this.geometry.footer.insetRight })
           .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion())
           .id(this.footerMeasurement.id)
-          .customProperty(READER_LAYOUT_FOOTER, READER_LAYOUT_DEBUG_BUILD ? true : undefined)
+          .customProperty(READER_LAYOUT_FOOTER, READER_LAYOUT_DEBUG_BUILD && this.auditFooterDock ? true : undefined)
           .onAppear((): void => this.footerMeasurement.mount(this.getUIContext(), this.footerMeasurementKey,
             (height: number, key: number): void => this.publishFooterMeasurement(height, key)))
           .onDisAppear((): void => this.footerMeasurement.unmount())

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { journeys } from '../../scripts/lib/vm-journey-cases.mjs';
-import { layoutReceiptProblem, layoutReports, matchingTransitions, matchesVmEnvironment, shareReports,
-  transitionReceiptProblem, transitionReports, transitionWatermark, vmJourneyMatrix } from '../../scripts/lib/vm-journey-evidence.mjs';
+import { fontReorderPair, journeys } from '../../scripts/lib/vm-journey-cases.mjs';
+import { layoutReceiptProblem, layoutReports, matchingTransitions, matchesVmEnvironment, shareReports, ttsAuditionReports,
+  transitionReceiptProblem, transitionReports, transitionWatermark, verticalSwipeLane, vmJourneyMatrix } from '../../scripts/lib/vm-journey-evidence.mjs';
 import { READER_VM_IMPORT_SOURCE, readerVmJourneyImportDocument, readerVmJourneyResponse,
   readerVmJourneySources } from '../../entry/src/main/ets/app/diagnostics/ReaderVmJourneyData.ts';
 
@@ -44,6 +44,43 @@ test('matrix environment requires actual native measurements, including provisio
     widthVp: 380, fontScale: 1.1, material: 'fallback', reducedMotion: false } }).length, 4);
 });
 
+test('J9 uses a clear scroll lane when the visible rate slider covers the previous swipe origin', () => {
+  const scroll = [101, 1772, 1181, 2388];
+  const rate = [123, 2198, 1159, 2352];
+  const lane = verticalSwipeLane(scroll, 2234, 1926, [rate]);
+  assert.ok(lane !== undefined && lane > scroll[0] && lane < scroll[2]);
+  assert.ok(lane < rate[0] || lane > rate[2]);
+  assert.equal(verticalSwipeLane(scroll, 2150, 1926, [rate]), 641);
+  assert.equal(verticalSwipeLane(scroll, 2234, 1926, [[101, 2100, 660, 2388], [655, 2000, 1181, 2300]]), undefined);
+});
+
+test('J11 derives an adjacent built-in font pair from fully visible native bounds', () => {
+  const viewport = '[89,1772][1193,2388]';
+  const card = (slot: string, bounds: string, origBounds = bounds, canDrag = true) =>
+    ({ slot, bounds, origBounds, canDrag });
+  const partiallyVisible = [
+    card('serif', '[120,2291][370,2388]', '[120,2291][370,2445]'),
+    card('sans', '[384,2291][634,2388]', '[384,2291][634,2445]'),
+  ];
+  assert.equal(fontReorderPair(viewport, partiallyVisible), undefined);
+
+  const measured = [
+    card('kai', '[911,1996][1161,2150]'),
+    card('import', '[384,1996][634,2150]', undefined, false),
+    card('serif', '[120,1996][370,2150]'),
+    card('sans', '[648,1996][898,2150]'),
+    card('system', '[120,2162][370,2316]'),
+  ];
+  assert.deepEqual(fontReorderPair(viewport, measured), ['sans', 'kai']);
+  assert.equal(fontReorderPair(viewport, measured, ['serif', 'sans']), undefined);
+  assert.equal(fontReorderPair(viewport, measured, ['serif', 'system']), undefined);
+  assert.deepEqual(fontReorderPair(viewport, measured.map(item => {
+    if (item.slot === 'kai') return { ...item, slot: 'sans' };
+    if (item.slot === 'sans') return { ...item, slot: 'kai' };
+    return item;
+  }), ['sans', 'kai']), ['kai', 'sans']);
+});
+
 test('layout evidence isolates current process and rejects missing rules, features and violations', () => {
   const sample = log('401', 'READER_LAYOUT_INVARIANTS', JSON.stringify(layout));
   const other = log('400', 'READER_LAYOUT_INVARIANTS', JSON.stringify({ ...layout, sequence: 8 }));
@@ -81,6 +118,19 @@ test('share receipt accepts only native records in the current process with a va
     log('401', 'READER_JOURNEY_SHARE', '20 dismissed'), log('401', 'READER_JOURNEY_SHARE', '23 assumed'),
     log('401', 'READER_JOURNEY_SHARE', '0 shown')].join('\n');
   assert.deepEqual(shareReports(output, '401'), [{ operationId: 20, state: 'presented' }, { operationId: 20, state: 'dismissed' }]);
+});
+
+test('audition receipts bind native audio delivery to the current Reader process', () => {
+  const audition = (pid: string, operationId: number, state: string) =>
+    log(pid, 'READER_VM_TTS_AUDITION', JSON.stringify({ schemaVersion: 1, operationId, state }));
+  const output = [
+    audition('408', 12, 'started'), audition('401', 2, 'started'), audition('401', 2, 'synthesized'),
+    audition('401', 2, 'completed'), audition('401', 0, 'completed'),
+  ].join('\n');
+  assert.deepEqual(ttsAuditionReports(output, '401'), [
+    { schemaVersion: 1, operationId: 2, state: 'started' },
+    { schemaVersion: 1, operationId: 2, state: 'completed' },
+  ]);
 });
 
 test('source-journey input is exact, inert outside its finite synthetic transport and excluded from initial catalog', () => {

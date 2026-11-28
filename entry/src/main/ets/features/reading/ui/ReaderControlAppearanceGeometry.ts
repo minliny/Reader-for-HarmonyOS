@@ -36,6 +36,16 @@ export function readerControlIslandFontGrid(width: number): ReaderControlIslandF
     rowStride: READER_CONTROL_ISLAND_FONT_TARGET_HEIGHT + gap };
 }
 
+export function readerControlIslandFontAutoScrollDelta(position: number, height: number, verticalTravel: number): number {
+  // A hold or horizontal reorder can start in an edge band. Only a movement
+  // toward that edge should scroll the list beneath the dragged tile.
+  if (!Number.isFinite(position) || !Number.isFinite(height) || !Number.isFinite(verticalTravel) ||
+    height <= 0 || Math.abs(verticalTravel) < 4) return 0;
+  const edge = Math.min(52, height / 3);
+  if (verticalTravel < 0) return position < edge ? -10 * Math.min(1, (edge - position) / edge) : 0;
+  return 10 * Math.max(0, Math.min(1, (position - height + edge) / edge));
+}
+
 /** One selected candidate's finite natural row sizes, not a layout-node tree. */
 export interface ReaderControlAppearanceMinimumProfile {
   quickThemeColumns: number;

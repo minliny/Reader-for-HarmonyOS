@@ -1,9 +1,11 @@
 import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import type { AnimatorResult } from '@ohos.animator';
 import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { ReaderNativeAlertOptions } from '../../../ui/platform/ReaderNativeAlertOwner';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerBeginTransition, readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
+import { motionSpecGet, readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { SourceManagementPage } from './SourceManagementPage';
 import { SourceToolsPage } from './SourceToolsPage';
 import { SourceV9TransferPage } from './SourceV9TransferPage';
@@ -12,18 +14,20 @@ import { SourceV9CheckDialog } from './SourceV9CheckDialog';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { DialogActionView, ReaderDialogSurface, readerDialogCardTransition,
   readerDialogScrimTransition } from '../../../ui/surfaces/ReaderDialogSurface';
 import { ReaderDialogViewport } from '../../../ui/surfaces/ReaderDialogViewport';
-import { readerSceneTransition } from '../../../app/navigation/ReaderRouteMotion';
+import { readerDetailSceneOpacity, readerRouteMotionPose } from '../../../app/navigation/ReaderRouteMotionModel';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import type { BookSource, SourceCheckOutcome, SourceGroupCatalogData,
   SourceGroupMutateParams, SourceGroupRecord } from '../application/SourceGateway';
 import type { SourceV9CheckOptions } from '../application/SourceOrchestrator';
 import type { SourceV9ImportedReport } from '../application/SourceV9TransferState';
 import type { SourceV9ConfirmedImport } from '../application/SourceV9TransferOwner';
-import { sourceV9BlocksOuterBackPreview, sourceV9ForegroundPane, sourceV9GroupRows, sourceV9ParentView, sourceV9Supports,
-  type SourceV9ForegroundPane, type SourceV9ListAction, type SourceV9View } from '../presentation/SourceManagementV9';
+import { sourceV9BlocksOuterBackPreview, sourceV9ForegroundPane, sourceV9GroupRows, sourceV9PaneTransition,
+  sourceV9ParentView, sourceV9Supports, type SourceV9ForegroundPane, type SourceV9ListAction,
+  type SourceV9View } from '../presentation/SourceManagementV9';
 import type { SourceToolsSelection } from '../application/SourceToolsOrchestrator';
 import { EMPTY_SOURCE_JOURNEY, SourceJourneyPresentation, type SourceJourneySnapshot } from '../presentation/SourceJourneyPresentation';
 
@@ -31,6 +35,14 @@ interface SourceJourneyPaneOpening {
   readonly pane: SourceV9ForegroundPane;
   readonly generation: number;
   readonly importSearchAction?: () => void;
+}
+
+interface SourceJourneyPaneMotion {
+  readonly actor: SourceV9View;
+  readonly popping: boolean;
+  readonly coverage: number;
+  readonly width: number;
+  readonly reduced: boolean;
 }
 
 @Component
@@ -58,6 +70,7 @@ export struct SourceJourneySurface {
   @State private view: SourceJourneySnapshot = EMPTY_SOURCE_JOURNEY;
   @State @Watch('publishBackPreviewOwnership') private pane: SourceV9View = 'list';
   @State private paneOpening: SourceJourneyPaneOpening | undefined = undefined;
+  @State private paneMotion: SourceJourneyPaneMotion | undefined = undefined;
   @State private catalog: SourceGroupCatalogData | undefined = undefined;
   @State private catalogError: string = '';
   @State private projectedRows: BookSource[] = [];
@@ -79,6 +92,9 @@ export struct SourceJourneySurface {
   private paneBack: (() => boolean) | undefined = undefined;
   private moveBack: (() => boolean) | undefined = undefined;
   private paneGeneration: number = 0;
+  private motionGeneration: number = 0;
+  private paneAnimator: AnimatorResult | undefined = undefined;
+  private paneMotionDeadline: number = -1;
   private checkBack: (() => boolean) | undefined = undefined;
   private unsubscribe: (() => void) | undefined;
   private mounted: boolean = false;
@@ -103,6 +119,7 @@ export struct SourceJourneySurface {
 
   aboutToDisappear(): void {
     this.mounted = false;
+    this.stopPaneAnimation();
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     if (!this.showingTools) {
@@ -158,6 +175,7 @@ export struct SourceJourneySurface {
 
   private consumeBack(): boolean {
     if (!this.managementInputIsCurrent()) return false;
+    if (this.paneMotion?.popping === true) return true;
     if (this.checkSourceIds.length > 0) {
       if (this.checkBack?.() !== true) this.checkSourceIds = [];
       return true;
@@ -180,10 +198,77 @@ export struct SourceJourneySurface {
     return this.listBack?.() === true;
   }
 
-  private openPane(pane: SourceV9View): void {
-    if (!this.managementInputIsCurrent()) return;
-    if (pane !== this.pane && readerTransitionsEnabled()) this.observePaneTransition(pane);
+  private openPane(pane: SourceV9View, groupId?: string): void {
+    if (!this.managementInputIsCurrent() || pane === this.pane || this.paneMotion?.popping === true) return;
+    const routeMotion = sourceV9PaneTransition(this.pane, pane);
+    const prior = this.paneMotion;
+    this.stopPaneAnimation();
+    if (routeMotion === undefined) { this.paneMotion = undefined; this.applyPane(pane, groupId); return; }
+    const popping = routeMotion.popping;
+    const width = routeMotion.actor === 'group-detail' ? 12 : this.paneRect?.width ?? 0;
+    const from = popping ? (prior?.actor === routeMotion.actor ? prior.coverage : 1) : 0;
+    if (width <= 0 || (popping && from <= .001)) { this.paneMotion = undefined; this.applyPane(pane, groupId); return; }
+    const motion: SourceJourneyPaneMotion = { actor: routeMotion.actor, popping, width, coverage: from, reduced: this.reduceMotion };
+    const generation = this.motionGeneration;
+    this.paneMotion = motion;
+    // A pop keeps its actual foreground mounted until the last painted frame.
+    if (!popping) this.applyPane(pane, groupId);
+    const context = this.getUIContext();
+    const current = (): boolean => this.mounted && generation === this.motionGeneration;
+    const finish = (): void => {
+      if (!current()) return;
+      this.stopPaneAnimation();
+      if (popping) this.applyPane(pane, groupId);
+      this.paneMotion = undefined;
+    };
+    const spec = motion.reduced ? 'app.motion.reduced.fade' : popping ? 'app.navigation.pop' : 'app.navigation.push';
+    const duration = Math.max(1, Math.round((motionSpecGet(spec)?.durationMs ?? 200) * (popping ? from : 1)));
+    this.paneMotionDeadline = setTimeout(finish, duration + 300);
+    try {
+      context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
+        if (!current()) return;
+        if (readerTransitionsEnabled()) readerBeginTransition({ kind: 'route', action: popping ? 'pop' : 'push',
+          subject: `source-${motion.actor}`, scope: `source-${this.identity}`,
+          nodes: [routeMotion.nodeId], staticMotion: motion.reduced });
+        try {
+          const animator = context.createAnimator({ duration, easing: motion.reduced ? 'ease-out' : 'linear',
+            delay: 0, fill: 'forwards', direction: 'normal', iterations: 1, begin: 0, end: 1 });
+          this.paneAnimator = animator;
+          animator.onFrame = (fraction: number): void => {
+            if (!current() || this.paneAnimator !== animator) return;
+            const progress = motion.reduced ? fraction : readerMotionStandardCurve().interpolate(fraction);
+            this.paneMotion = { actor: motion.actor, popping, width, reduced: motion.reduced,
+              coverage: popping ? from * (1 - progress) : progress };
+          };
+          animator.onFinish = (): void => { if (this.paneAnimator === animator) finish(); };
+          animator.play();
+        } catch (_) { finish(); }
+      }));
+    } catch (_) { finish(); }
+  }
+
+  private stopPaneAnimation(): void {
+    this.motionGeneration += 1;
+    if (this.paneMotionDeadline >= 0) clearTimeout(this.paneMotionDeadline);
+    this.paneMotionDeadline = -1;
+    const animator = this.paneAnimator;
+    this.paneAnimator = undefined;
+    try { animator?.cancel(); } catch (_) { /* The finished animator may already be retired. */ }
+  }
+
+  private paneTranslation(actor: SourceV9View): number {
+    const motion = this.paneMotion;
+    return motion?.actor === actor ? readerRouteMotionPose('push', 'child', motion.width, motion.coverage, motion.reduced) : 0;
+  }
+
+  private paneOpacity(actor: SourceV9View): number {
+    const motion = this.paneMotion;
+    return motion?.actor === actor ? readerDetailSceneOpacity(motion.coverage, motion.reduced) : 1;
+  }
+
+  private applyPane(pane: SourceV9View, groupId?: string): void {
     if (pane === 'groups') this.detailGroupId = undefined;
+    else if (pane === 'group-detail') this.detailGroupId = groupId;
     const scene = sourceV9ForegroundPane(pane);
     if (scene !== this.paneOpening?.pane) {
       let importSearchAction: (() => void) | undefined;
@@ -196,17 +281,6 @@ export struct SourceJourneySurface {
     }
     this.pane = pane;
     if (pane === 'groups' || pane === 'import') void this.refreshCatalog();
-  }
-
-  private observePaneTransition(next: SourceV9View): void {
-    const previous = this.pane;
-    const popping = sourceV9ParentView(previous) === next;
-    const actor = popping ? previous : next;
-    const scene = sourceV9ForegroundPane(actor);
-    if (scene === undefined) return;
-    const node = actor === 'group-detail' ? 'reader-source-v9-group-detail-motion' : `reader-source-v9-${scene}-motion`;
-    readerBeginTransition({ kind: 'route', action: popping ? 'pop' : 'push', subject: `source-${actor}`,
-      scope: `source-${this.identity}`, nodes: [node], staticMotion: this.reduceMotion });
   }
 
   private openCheck(ids: string[], title: string, batch: boolean): void {
@@ -294,7 +368,7 @@ export struct SourceJourneySurface {
 
   private paneInputCurrent(opening: SourceJourneyPaneOpening): boolean {
     return this.managementInputIsCurrent() && this.checkSourceIds.length === 0 &&
-      this.paneOpening?.generation === opening.generation;
+      this.paneOpening?.generation === opening.generation && this.paneMotion?.popping !== true;
   }
 
   private moveInputCurrent(generation: number): boolean {
@@ -323,7 +397,8 @@ export struct SourceJourneySurface {
           if (opening.pane === 'groups') this.groupsPage(opening, -1);
           else this.transferPage(opening);
         }.id(readerTransitionsEnabled() ? `reader-source-v9-${opening.pane}-motion` : undefined).width('100%').height('100%')
-          .transition(readerSceneTransition(this.paneRect?.width ?? 0, this.reduceMotion, true));
+          .translate({ x: this.paneTranslation(opening.pane) }).opacity(this.paneOpacity(opening.pane))
+          .enabled(this.paneMotion?.popping !== true);
       }, (opening: SourceJourneyPaneOpening): string => `${opening.pane}:${opening.generation}`);
       if (this.pane === 'list' && this.moveSourceIds.length > 0 && !this.moveCatalogDialogVisible()) {
         ForEach([this.listDialogGeneration], (generation: number): void => {
@@ -338,21 +413,9 @@ export struct SourceJourneySurface {
                 readerAppColor('app.scrim.warmModal', this.scheme)))
               .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
               .accessibilityLevel('no').onClick((): void => this.chooseListDialog(generation, 'cancel'));
-            ReaderDialogViewport({ host: this.paneRect, content: (width: number): void => {
-              ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: width,
-                title: this.deleteSourceIds.length > 0 ? '删除书源' : '移动书源', actions: this.listDialogActions(),
-                onAction: (action: string): void => this.chooseListDialog(generation, action),
-                body: (): void => {
-                  if (this.deleteSourceIds.length > 0) {
-                    this.deleteDialogBody();
-                  } else {
-                    ReaderPageState({ variant: 'inline', padded: false, loading: this.moveCatalogLoading,
-                      loadingActive: this.inputEnabled,
-                      message: this.moveCatalogLoading ? '正在读取书源分组' : '无法读取书源分组，请重试。' });
-                  }
-                },
-              });
-            } }).transition(readerDialogCardTransition(this.reduceMotion));
+            ReaderDialogViewport({ host: this.paneRect,
+              content: (width: number): void => { this.listDialogCard(width, generation); },
+            }).transition(readerDialogCardTransition(this.reduceMotion));
           }.width('100%').height('100%').transition(readerDialogScrimTransition(this.reduceMotion));
         }, (generation: number): string => generation.toString());
       }
@@ -372,6 +435,26 @@ export struct SourceJourneySurface {
       .onAreaChange((_previous: Area, next: Area): void => {
         if (this.mounted) this.recordPane(next);
       });
+  }
+
+  @Builder
+  private listDialogCard(width: number, generation: number) {
+    ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: width,
+      title: this.deleteSourceIds.length > 0 ? '删除书源' : '移动书源', actions: this.listDialogActions(),
+      onAction: (action: string): void => this.chooseListDialog(generation, action),
+      body: (): void => { this.listDialogBody(); },
+    });
+  }
+
+  @Builder
+  private listDialogBody() {
+    if (this.deleteSourceIds.length > 0) {
+      this.deleteDialogBody();
+    } else {
+      ReaderPageState({ variant: 'inline', padded: false, loading: this.moveCatalogLoading,
+        loadingActive: this.inputEnabled,
+        message: this.moveCatalogLoading ? '正在读取书源分组' : '无法读取书源分组，请重试。' });
+    }
   }
 
   private recordPane(area: Area): void {
@@ -427,19 +510,22 @@ export struct SourceJourneySurface {
   private groupsPage(opening: SourceJourneyPaneOpening | undefined, moveGeneration: number) {
     SourceV9GroupsPage({
       catalog: this.catalog, sources: this.projectedRows, detailGroupId: opening === undefined ? undefined : this.detailGroupId,
+      detailTransitionActive: opening !== undefined && this.paneMotion?.actor === 'group-detail',
+      detailTranslation: this.paneTranslation('group-detail'), detailOpacity: this.paneOpacity('group-detail'),
       modalHost: this.paneRect,
       catalogError: this.catalogError, onRetryCatalog: (): void => {
         if (this.groupsInputCurrent(opening, moveGeneration)) void this.refreshCatalog();
       },
       embeddedWide: this.embeddedWide, moveOnly: opening === undefined,
       moveSourceIds: opening === undefined ? this.moveSourceIds : [],
-      inputEnabled: this.inputEnabled && this.checkSourceIds.length === 0,
+      // The group list can mount underneath the outgoing detail. Publish pop
+      // completion as an observed prop so retained buttons regain input.
+      inputEnabled: this.inputEnabled && this.checkSourceIds.length === 0 && this.paneMotion?.popping !== true,
       isInputAllowed: (): boolean => this.groupsInputCurrent(opening, moveGeneration),
       onBack: (): void => { if (this.groupsInputCurrent(opening, moveGeneration)) this.consumeBack(); },
       onOpenGroup: (groupId: string): void => {
         if (this.groupsInputCurrent(opening, moveGeneration)) {
-          this.detailGroupId = groupId;
-          this.openPane('group-detail');
+          this.openPane('group-detail', groupId);
         }
       },
       onCloseMove: (applied?: boolean): void => {
@@ -507,7 +593,7 @@ export struct SourceJourneySurface {
       onStatusAction: (revision: number): void => {
         if (this.managementInputIsCurrent()) this.presentation.runSearchAction(this.identity, revision);
       },
-      onBack: (): void => { if (this.managementInputIsCurrent()) this.onBack(); },
+      onBack: (): void => { if (this.managementInputIsCurrent() && this.listIsInteractive()) this.onBack(); },
       onToggleSource: (id: string, enabled: boolean): void => {
         if (this.managementInputIsCurrent()) this.presentation.management(this.identity)?.toggleSource(id, enabled, this.identity);
       },
@@ -522,7 +608,8 @@ export struct SourceJourneySurface {
       onRetryLoad: (): void => {
         if (this.managementInputIsCurrent()) this.presentation.management(this.identity)?.retryLoad(this.identity);
       },
-    }).hitTestBehavior(this.listIsInteractive() ? HitTestMode.Default : HitTestMode.None)
+    }).enabled(this.listIsInteractive()).hitTestBehavior(this.listIsInteractive() ? HitTestMode.Default : HitTestMode.None)
+      .customProperty('readerLayoutDebugExcluded', this.pane !== 'list')
       .accessibilityLevel(this.listIsInteractive() ? 'auto' : 'no-hide-descendants');
   }
 

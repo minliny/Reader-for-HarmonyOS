@@ -1,5 +1,7 @@
 import { readerHarmonyCapabilities } from '../HarmonyCapabilityProbe';
 import { defaultNavigationPreferences } from '../../ui/surfaces/ReaderSurfaceMaterial';
+import { READER_LAYOUT_INVARIANT_PROPERTY } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
 import {
   adoptReaderNavigationAppearance, resolveReaderNavigationAppearance, type ReaderNavigationAppearance,
   type ReaderNavigationPreferences,
@@ -15,6 +17,7 @@ export struct ReaderNavigationAppearanceHost {
   @Prop @Watch('refreshAppearance') inputEnabled: boolean = true;
   @Prop bottomInset: number = 0;
   @Prop translateX: number = 0;
+  @Prop layoutInvariantTag: LayoutInvariantTag | undefined = undefined;
   @BuilderParam unifiedContent: () => void = this.emptyUnified;
   @BuilderParam nativeContent: (appearance: ReaderNavigationAppearance) => void = this.emptyNative;
   @State private shown: ReaderNavigationAppearance = 'unified';
@@ -46,6 +49,7 @@ export struct ReaderNavigationAppearanceHost {
     // and the space beside the translated capsule stay outside its hit region.
     .margin({ bottom: this.bottomInset })
     .translate({ x: this.translateX })
+    .customProperty(READER_LAYOUT_INVARIANT_PROPERTY, this.layoutInvariantTag)
     .hitTestBehavior(HitTestMode.Default)
     .onTouch((event: TouchEvent): void => this.onTouchActivity(event))
     .onFocus((): void => {

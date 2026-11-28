@@ -1,6 +1,7 @@
 export const READER_ROUTE_PARENT_PARALLAX = 0.16;
 export const READER_ROUTE_PARENT_DIM = 0.04;
 export const READER_ROUTE_EDGE_BACK_COMMIT_FRACTION = 0.33;
+export const READER_RETAINED_DETAIL_LANE = 'reader-detail-scene';
 
 export interface ReaderConditionalSceneMotion {
   enter: 'push' | 'none';
@@ -25,7 +26,7 @@ export function readerDetailSceneOpacity(coverage: number, reducedMotion: boolea
   return reducedMotion ? unit(coverage) : 1;
 }
 
-export type ReaderDetailScenePhase = 'push' | 'covered' | 'preview' | 'cancel' | 'pop';
+export type ReaderDetailScenePhase = 'push' | 'covered' | 'preview' | 'cancel-pending' | 'cancel' | 'pop' | 'retired';
 
 export interface ReaderDetailSceneSnapshot {
   generation: number;
@@ -49,7 +50,7 @@ export class ReaderDetailSceneTransition {
 
   back(): ReaderDetailSceneSnapshot | undefined {
     const current = this.current;
-    if (current === undefined || current.phase === 'pop') return current;
+    if (current === undefined || current.phase === 'pop' || current.phase === 'retired') return current;
     return this.begin('pop', current.coverage);
   }
 
@@ -70,13 +71,20 @@ export class ReaderDetailSceneTransition {
 
   previewViewportMatches(width: number): boolean { return width === this.previewWidth; }
 
-  cancelPreview(): ReaderDetailSceneSnapshot | undefined {
-    return this.current?.phase === 'preview' ? this.begin('cancel', this.current.coverage) : undefined;
+  requestPreviewCancel(): ReaderDetailSceneSnapshot | undefined {
+    return this.current?.phase === 'preview' ? this.begin('cancel-pending', this.current.coverage) : undefined;
+  }
+
+  beginPreviewCancel(generation: number): ReaderDetailSceneSnapshot | undefined {
+    const current = this.current;
+    return current?.generation === generation && current.phase === 'cancel-pending' ?
+      this.begin('cancel', current.coverage) : undefined;
   }
 
   sample(generation: number, fraction: number): ReaderDetailSceneSnapshot | undefined {
     const current = this.current;
-    if (current?.generation !== generation || current.phase === 'preview' || current.phase === 'covered') return current;
+    if (current?.generation !== generation || current.phase === 'preview' || current.phase === 'cancel-pending' ||
+      current.phase === 'covered' || current.phase === 'retired') return current;
     const target = current.phase === 'pop' ? 0 : 1;
     const coverage = this.from + (target - this.from) * unit(fraction);
     return this.update(current.phase === 'pop' ? Math.min(current.coverage, coverage) : Math.max(current.coverage, coverage));
@@ -84,7 +92,10 @@ export class ReaderDetailSceneTransition {
 
   settle(generation: number): ReaderDetailSceneSnapshot | undefined {
     if (this.current?.generation !== generation) return this.current;
-    if (this.current.phase === 'pop') { this.clear(); return undefined; }
+    if (this.current.phase === 'retired') return this.current;
+    // The normal detail destination can remain cached under the reader. Keep
+    // the outgoing pose until the host has no further use for this scene.
+    if (this.current.phase === 'pop') return this.begin('retired', 0);
     return this.begin('covered', 1);
   }
 
