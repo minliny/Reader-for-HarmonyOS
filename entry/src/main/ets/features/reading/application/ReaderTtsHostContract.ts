@@ -1,6 +1,8 @@
 export type ReaderTtsNativeSpeakPoint =
   'enter' | 'return' | 'engine-cache-hit' | 'engine-cache-alias-hit' | 'engine-cache-miss';
 
+export type ReaderTtsHostPlaybackState = 'preparing' | 'playing' | 'paused' | 'completed' | 'stopped' | 'error';
+
 export type ReaderTtsHostSpeakRequest = {
   requestId: string;
   /** Process-local diagnostics identity, never speech/book/provider data. */
@@ -51,7 +53,7 @@ export interface ReaderTtsHost {
   /** Optional one-slice lookahead; implementations must bound and cancel it. */
   prefetchNext?(request: ReaderTtsHostSpeakRequest): void;
   stop(): Promise<void>;
-  publishPlaybackState(state: 'preparing' | 'playing' | 'paused' | 'completed' | 'stopped' | 'error', rate?: number): void;
+  publishPlaybackState(state: ReaderTtsHostPlaybackState, rate?: number): void;
   /** Optional policy gate for the platform continuous-task lease. */
   setBackgroundPlaybackEnabled?(enabled: boolean): void;
 }

@@ -1,178 +1,130 @@
 import { readerHostFilesDirectory } from '../../app/diagnostics/ReaderPublicFixtureScope';
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
-import statfs from '@ohos.file.statvfs';
-import cryptoFramework from '@ohos.security.cryptoFramework';
 import util from '@ohos.util';
 import type { BusinessError } from '@ohos.base';
-import { readMangaAtomicPayload } from './MangaAtomicPayloadPort';
 import { canonicalReadingImageBaseUrl } from '../../common/ReadingImageIdentity';
 import {
   assertReadingOfflineWriteCapacity,
   ReadingOfflineMaterializationError,
 } from '../../features/reading/application/ReadingOfflineContract';
+import {
+  CACHE_FORMAT_VERSION,
+  LEGACY_CACHE_FORMAT_VERSION,
+  TEXT_CACHE_OWNER,
+  MAX_READING_IMAGE_BYTES,
+  MIN_READING_IMAGE_FREE_RESERVE_BYTES,
+  MANGA_FREE_RESERVE_BYTES,
+  MANGA_CACHE_BUDGET_MAX_BYTES,
+  MANGA_FOREGROUND_RESERVE_BYTES,
+  MANGA_FOREGROUND_CHECK_MS,
+  MANGA_BUDGET_CALIBRATION_MS,
+  MANGA_READ_TTL_SECONDS,
+  MANGA_IDENTITY_METADATA_BYTES,
+  HarmonyReadingImageFreeSpaceProbe,
+  type MangaStorageChapter,
+  type MangaStorageClass,
+  type MangaStorageReason,
+  type MangaStorageScope,
+  type MangaStorageCleanup,
+  type MangaStorageGrant,
+  type MangaStoragePolicy,
+  type MangaExpiryGuard,
+  type MangaStorageAuthority,
+  type MangaExternalFile,
+  type MangaExternalStorage,
+  type MangaWriteReservation,
+  type MangaInventoryFile,
+  type MangaBudgetInventory,
+  type SharedDownloadStoragePolicy,
+  type ReadingTextStorageChapter,
+  type ReadingTextStorageImageChapter,
+  type ReadingTextStoragePolicy,
+  type ReadingImageStorageSummary,
+  type ReadingImageCleanupFile,
+  type ReadingInventoryFile,
+  type ReadingImageCleanupInventory,
+  type ReadingImageStorageSnapshot,
+  type ReadingImageDigestProof,
+  type ReadingImageFreeSpaceProbe,
+  type MangaStorageCapacity,
+  type MangaStorageBuckets,
+  type ReadingImageCacheIdentity,
+  type ReadingImageChapterIdentity,
+  type ReadingImageChapterManifest,
+} from './ReadingImageDiskCacheTypes';
+import {
+  clearCapturedTextFilesOps,
+  finishPendingChapterClearsOps,
+  finishPendingClearOps,
+  type ReadingImageClearOpsContext,
+} from './ReadingImageDiskClearOps';
+import {
+  assertChapterIdentity,
+  assertMangaStorageChapter,
+  assertNonBlankValue,
+  assertOperationCurrent,
+  assertResourceIdentity,
+  assertSameChapterIdentity,
+  bookHash,
+  bookMutationKey,
+  computeMangaStorageBuckets,
+  computeMangaStorageCapacity,
+  containsMangaManifest,
+  ensureDirectory,
+  fetchAuthorityClassBatch,
+  fetchAuthorityClassSnapshot,
+  fetchAuthorityPolicyBatch,
+  hasUnambiguousLegacyResourceIdentity,
+  isNotFoundError,
+  isTextOwnershipManifest,
+  legacyBookHash,
+  legacyMangaResourceHash,
+  legacyResourceHash,
+  listFileIfPresent,
+  mangaCacheProfile,
+  mangaChapterKey,
+  mangaChapterOfIdentity,
+  mangaDerivedDeletionFilesForChapter,
+  manifestPathForDirectory,
+  performAtomicFileWrite,
+  readDiskManifestIdentity,
+  readMangaMetadataBytes,
+  readRawResourceBytes,
+  readResourceFingerprint,
+  readTextManifestIdentity,
+  resourceHash,
+  sameChapterIdentity,
+  sha256Bytes,
+  sha256Text,
+  statIfPresent,
+  validResourceFile,
+} from './ReadingImageDiskFsOps';
 
-const CACHE_FORMAT_VERSION = 2;
-const LEGACY_CACHE_FORMAT_VERSION = 1;
-const TEXT_CACHE_OWNER = 'reader-text-images-v2';
-const MANGA_SCRIPT_CACHE_PROFILE = 'script-bgra-v2';
-const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
-const READING_IMAGE_WRITE_CHUNK_BYTES = 1024 * 1024;
-const MIN_READING_IMAGE_FREE_RESERVE_BYTES = 16 * 1024 * 1024;
-const FILE_SYSTEM_NO_SPACE_ERROR = 13900025;
-/**
- * The cache ceiling is a safety cap, not the default budget.  The actual
- * budget is derived from the volume reported by statvfs so a small VM cannot
- * consume its whole data partition.  A probe without total-size support keeps
- * the historical cap as a conservative compatibility fallback.
- */
-const MANGA_CACHE_BUDGET_MAX_BYTES = 10 * 1024 * 1024 * 1024;
-const MANGA_FREE_RESERVE_BYTES = 512 * 1024 * 1024;
-const MANGA_FOREGROUND_RESERVE_BYTES = 32 * 1024 * 1024;
-const MANGA_SYSTEM_RESERVE_RATIO = 0.10;
-const MANGA_SYSTEM_RESERVE_FLOOR_BYTES = 64 * 1024 * 1024;
-const MANGA_DERIVED_BUDGET_RATIO = 0.75;
-const MANGA_FOREGROUND_CHECK_MS = 24 * 60 * 60 * 1000;
-const MANGA_BUDGET_CALIBRATION_MS = 60 * 1000;
-const MANGA_READ_TTL_SECONDS = 7 * 24 * 60 * 60;
-const MANGA_IDENTITY_METADATA_BYTES = 64 * 1024;
-const MANGA_MANIFEST_METADATA_BYTES = 2 * 1024 * 1024;
-/**
- * Core's classify/policy batch contract accepts at most 256 chapters. Keep a
- * lower ceiling here so storage summaries and maintenance remain safe when a
- * large shelf is handed to the Host. The helper below restores the original
- * ordering after issuing one bounded request per slice.
- */
-const MANGA_AUTHORITY_BATCH_SIZE = 128;
-
-export type MangaStorageChapter = { sourceId: string; bookId: string; chapterId: string; contentVersion: string; };
-export type MangaStorageClass = 'cache' | 'download' | 'protected' | 'unknown' | 'missing';
-export type MangaStorageReason = 'expiry' | 'capacity' | 'clear';
-export type MangaStorageScope = { sourceId: string; bookId: string; };
-export type MangaStorageCleanup = { deletedBytes: number; deletedFiles: number; };
-export type MangaStorageGrant = MangaStorageChapter & { grantToken: string; };
-export type MangaStoragePolicy = { status: MangaStorageClass; inUse: boolean; lastReadAt: number | null; };
-export type MangaExpiryGuard = { nowSeconds: number; ttlSeconds: number; };
-export interface MangaStorageAuthority {
-  classify(chapter: MangaStorageChapter): Promise<MangaStorageClass>;
-  /** Optional one-snapshot classification seam. Core implementations can
-   * answer this from a versioned book/status index; the compatibility path
-   * below fans out only when an older authority has no batch method. */
-  classifyBatch?(chapters: MangaStorageChapter[]): Promise<MangaStorageClass[]>;
-  policy?(chapter: MangaStorageChapter): Promise<MangaStoragePolicy>;
-  /** Optional ordered policy snapshot for expiry/maintenance passes. */
-  policyBatch?(chapters: MangaStorageChapter[]): Promise<MangaStoragePolicy[]>;
-  candidates(reason: MangaStorageReason, scope?: MangaStorageScope, expiry?: MangaExpiryGuard): Promise<MangaStorageChapter[]>;
-  claim(chapter: MangaStorageChapter, expiry?: MangaExpiryGuard): Promise<MangaStorageGrant | undefined>;
-  complete(grant: MangaStorageGrant, removed: boolean): Promise<void>;
-  pending(): Promise<MangaStorageGrant[]>;
-}
-export type MangaExternalFile = { path: string; owners: MangaStorageChapter[]; live: boolean; };
-export interface MangaExternalStorage {
-  inventory(): Promise<MangaExternalFile[]>;
-  /** This adapter reports successful publications and invalidates uncertain mutations. */
-  tracksPublishedFiles?: boolean;
-  /** The display owner rechecks its own live references under its mutation lock. */
-  remove(grant: MangaStorageGrant, files: MangaExternalFile[]): Promise<boolean>;
-  /** Rebuildable download display files use no original-content eviction grant.
-   * Await the current authority guard before every unlink, then recheck live I/O. */
-  removeDerived?(chapter: MangaStorageChapter, files: MangaExternalFile[], current: () => Promise<boolean>): Promise<boolean>;
-}
-export interface MangaWriteReservation { release(): void; }
-type MangaInventoryFile = MangaExternalFile & { size: number; physicalKey: string; mtime: string; external: boolean; };
-interface MangaBudgetInventory {
-  epoch: number;
-  calibratedAt: number;
-  files: Map<string, MangaInventoryFile>;
-}
-export type SharedDownloadStoragePolicy = { capacityBytes: number; expiryDays: number; };
-export type ReadingTextStorageChapter = { sourceId: string; bookId: string; chapterIndex: number; };
-export type ReadingTextStorageImageChapter = ReadingTextStorageChapter & { contentBytes: number; cachedAtSeconds?: number; };
-export type ReadingTextStoragePolicy = { retained: boolean; inUse: boolean; };
-export type ReadingImageStorageSummary = { totalBytes: number; retainedBytes: number; automaticBytes: number;
-  cleanableBytes?: number; availableBytes?: number; classificationKnown: boolean; };
-export type ReadingImageCleanupFile = { path: string; physicalKey: string; size: number; mtime: string;
-  textOwner?: ReadingTextStorageChapter; };
-type ReadingInventoryFile = MangaInventoryFile & { textOwner?: ReadingTextStorageChapter; };
-type ReadingImageCleanupInventory = { files: ReadingImageCleanupFile[]; };
-export type ReadingImageStorageSnapshot = { files: ReadingInventoryFile[]; writeRevision: number;
-  hostImageChapters: ReadingTextStorageImageChapter[]; protectedChapters: ReadingTextStorageChapter[]; };
-
-
-interface ReadingImageDigestProof { fingerprint: string; digest: string; }
-
-export interface ReadingImageFreeSpaceProbe {
-  getFreeBytes(path: string): Promise<number>;
-  /** Optional on older SDK fixtures; production statvfs supports it. */
-  getTotalBytes?(path: string): Promise<number | undefined>;
-}
-
-class HarmonyReadingImageFreeSpaceProbe implements ReadingImageFreeSpaceProbe {
-  async getFreeBytes(path: string): Promise<number> {
-    return statfs.getFreeSize(path);
-  }
-  async getTotalBytes(path: string): Promise<number | undefined> {
-    // Older test/preview SDKs expose getFreeSize only.  Keep the fixed cap
-    // fallback there; production API level 20 supplies getTotalSize.
-    if (typeof statfs.getTotalSize !== 'function') return undefined;
-    return statfs.getTotalSize(path);
-  }
-}
-
-export type MangaStorageCapacity = {
-  freeBytes: number;
-  totalBytes: number | undefined;
-  systemReserveBytes: number;
-  cacheBudgetBytes: number;
-  originalBudgetBytes: number;
-  derivedBudgetBytes: number;
-};
-
-type MangaStorageBuckets = {
-  ordinaryBytes: number;
-  originalBytes: number;
-  derivedBytes: number;
-  downloadBytes: number;
-};
-
-export type ReadingImageCacheIdentity = {
-  sourceId: string;
-  bookId: string;
-  chapterIndex: number;
-  chapterId?: string;
-  contentVersion: string;
-  mangaDecodeRevision?: string;
-  priority?: 'foreground' | 'background';
-  imageUrl: string;
-  resourceRef?: string;
-  baseUrl?: string;
-};
-
-export type ReadingImageChapterIdentity = {
-  sourceId: string;
-  bookId: string;
-  chapterIndex: number;
-  chapterId?: string;
-  contentVersion: string;
-  mangaDecodeRevision?: string;
-  priority?: 'foreground' | 'background';
-};
-
-/** One canonical identity form shared by projection, requests, and disk keys. */
-type ReadingImageChapterManifest = {
-  /** Upstream manga manifests and partial text ownership use separate files. */
-  manga?: boolean;
-  mangaCacheProfile?: string;
-  chapterId?: string;
-  cacheOwner?: string;
-  resourceDigests?: Record<string, string>;
-  formatVersion: number;
-  sourceId: string;
-  bookId: string;
-  chapterIndex: number;
-  contentVersion: string;
-  resourceHashes: string[];
-  completedAt: number;
+export type {
+  MangaStorageChapter,
+  MangaStorageClass,
+  MangaStorageReason,
+  MangaStorageScope,
+  MangaStorageCleanup,
+  MangaStorageGrant,
+  MangaStoragePolicy,
+  MangaExpiryGuard,
+  MangaStorageAuthority,
+  MangaExternalFile,
+  MangaExternalStorage,
+  MangaWriteReservation,
+  SharedDownloadStoragePolicy,
+  ReadingTextStorageChapter,
+  ReadingTextStorageImageChapter,
+  ReadingTextStoragePolicy,
+  ReadingImageStorageSummary,
+  ReadingImageCleanupFile,
+  ReadingImageStorageSnapshot,
+  ReadingImageFreeSpaceProbe,
+  MangaStorageCapacity,
+  ReadingImageCacheIdentity,
+  ReadingImageChapterIdentity,
 };
 
 /**
@@ -252,7 +204,7 @@ export class ReadingImageDiskCache {
       this.mangaAuthorityReady = this.enqueueMangaPolicy(async (): Promise<void> => {
         const pending = await authority.pending();
         if (this.mangaAuthority !== authority || this.closed) return;
-        for (const grant of pending) this.mangaEvicting.set(this.mangaChapterKey(grant), grant);
+        for (const grant of pending) this.mangaEvicting.set(mangaChapterKey(grant), grant);
       });
     }
     const work = this.mangaAuthorityReady;
@@ -287,7 +239,7 @@ export class ReadingImageDiskCache {
           try {
             const pending = await this.mangaAuthority?.pending() ?? [];
             this.mangaEvicting.clear();
-            for (const grant of pending) this.mangaEvicting.set(this.mangaChapterKey(grant), grant);
+            for (const grant of pending) this.mangaEvicting.set(mangaChapterKey(grant), grant);
             this.mangaClaiming.clear(); this.mangaRestoreBlocked = false;
           } catch (error) {
             // Keep admission blocked until maintenance reconciles Core's
@@ -301,11 +253,11 @@ export class ReadingImageDiskCache {
 
   /** Keep the current and two recent chapters pinned for the reading session. */
   pinMangaChapter(chapter: MangaStorageChapter): () => void {
-    this.assertMangaStorageChapter(chapter);
-    const key = this.mangaChapterKey(chapter);
+    assertMangaStorageChapter(chapter);
+    const key = mangaChapterKey(chapter);
     if (this.mangaRestoreRequests > 0 || this.mangaRestoreBlocked) throw new Error('MANGA_CACHE_STORAGE_RESTORING');
     if (this.closed || this.mangaEvicting.has(key) || this.mangaClaiming.has(key)) throw new Error('MANGA_CACHE_EVICTING');
-    this.mangaBooks.add(this.bookMutationKey(chapter.sourceId, chapter.bookId));
+    this.mangaBooks.add(bookMutationKey(chapter.sourceId, chapter.bookId));
     this.mangaBusy.set(key, (this.mangaBusy.get(key) ?? 0) + 1);
     let released = false;
     return (): void => {
@@ -323,7 +275,7 @@ export class ReadingImageDiskCache {
     priority: 'foreground' | 'background' = 'foreground',
     kind: 'original' | 'derived' = 'original',
   ): Promise<MangaWriteReservation> {
-    this.assertMangaStorageChapter(chapter);
+    assertMangaStorageChapter(chapter);
     if (!Number.isSafeInteger(bytes) || bytes < 0) throw new Error('invalid manga write reservation');
     const unpin = this.pinMangaChapter(chapter);
     let ordinaryReservation = false;
@@ -331,7 +283,7 @@ export class ReadingImageDiskCache {
       await this.loadMangaStorageAuthority();
       await this.enqueueMangaPolicy(async (): Promise<void> => {
         if (this.mangaRestoreRequests > 0 || this.mangaRestoreBlocked) throw new Error('MANGA_CACHE_STORAGE_RESTORING');
-        if (this.mangaEvicting.has(this.mangaChapterKey(chapter))) throw new Error('MANGA_CACHE_EVICTING');
+        if (this.mangaEvicting.has(mangaChapterKey(chapter))) throw new Error('MANGA_CACHE_EVICTING');
         ordinaryReservation = kind === 'derived' ||
           (await this.mangaAuthority?.classify(chapter) ?? 'unknown') !== 'download';
         let snapshot = await this.readMangaBudget();
@@ -362,7 +314,7 @@ export class ReadingImageDiskCache {
         }
         if (snapshot.revision !== this.mangaInventoryRevision) throw new Error('MANGA_CACHE_INVENTORY_CHANGED');
         if (overBudget() || lowSpace()) throw new ReadingOfflineMaterializationError('storage_full', 'MANGA_CACHE_STORAGE_FULL');
-        if (this.closed || this.mangaEvicting.has(this.mangaChapterKey(chapter))) throw new Error('MANGA_CACHE_EVICTING');
+        if (this.closed || this.mangaEvicting.has(mangaChapterKey(chapter))) throw new Error('MANGA_CACHE_EVICTING');
         this.mangaReservedBytes += bytes;
         if (ordinaryReservation) {
           this.mangaOrdinaryReservedBytes += bytes;
@@ -392,7 +344,7 @@ export class ReadingImageDiskCache {
       if (this.mangaRestoreBlocked) {
         const pending = await this.mangaAuthority?.pending() ?? [];
         this.mangaEvicting.clear();
-        for (const grant of pending) this.mangaEvicting.set(this.mangaChapterKey(grant), grant);
+        for (const grant of pending) this.mangaEvicting.set(mangaChapterKey(grant), grant);
         this.mangaClaiming.clear(); this.mangaRestoreBlocked = false;
       }
       await this.evictMangaCandidates(reason, scope);
@@ -443,7 +395,7 @@ export class ReadingImageDiskCache {
       if (this.mangaRestoreBlocked) {
         const pending = await this.mangaAuthority?.pending() ?? [];
         this.mangaEvicting.clear();
-        for (const grant of pending) this.mangaEvicting.set(this.mangaChapterKey(grant), grant);
+        for (const grant of pending) this.mangaEvicting.set(mangaChapterKey(grant), grant);
         this.mangaClaiming.clear(); this.mangaRestoreBlocked = false;
       }
       const elapsed = Date.now() - this.mangaLastForegroundCheck;
@@ -475,7 +427,7 @@ export class ReadingImageDiskCache {
   }> {
     const inventory = await this.mangaInventory();
     const buckets = await this.mangaStorageBuckets(inventory);
-    const capacity = await this.mangaStorageCapacityForPath(readerHostFilesDirectory(this.context.filesDir));
+    const capacity = await this.mangaStorageCapacity();
     const cleanableBytes = await this.mangaCleanableBytes(inventory);
     return {
       totalBytes: buckets.downloadBytes + buckets.ordinaryBytes,
@@ -502,7 +454,7 @@ export class ReadingImageDiskCache {
     await this.enqueueMangaPolicy(async (): Promise<void> => {
       if (this.closed) throw new Error('MANGA_CACHE_CLOSED');
       const directory = `${readerHostFilesDirectory(this.context.filesDir)}/reader-offline`;
-      await this.ensureDirectory(directory);
+      await ensureDirectory(directory);
       await this.writeAtomicBytes(`${directory}/storage-policy.json`, new util.TextEncoder().encodeInto(
         JSON.stringify({ version: 1, limitMb, cleanupAfterDays })));
       // Publish only after the durable write succeeds, so a rejected setting
@@ -565,9 +517,9 @@ export class ReadingImageDiskCache {
       measured.contentBytes += Math.max(...aliases.map(file => file.size));
       for (const file of aliases) {
         if (file.textOwner === undefined || file.live || this.inFlightWrites.has(file.path) ||
-          this.bookMutationTails.has(this.bookMutationKey(owner.sourceId, owner.bookId)) ||
+          this.bookMutationTails.has(bookMutationKey(owner.sourceId, owner.bookId)) ||
           this.textStorageKey(file.textOwner) !== key) protectedChapters.set(key, owner);
-        const stat = await this.statIfPresent(file.path);
+        const stat = await statIfPresent(file.path);
         if (stat === undefined || this.mangaPhysicalKey(stat) !== file.physicalKey || String(stat.mtimeNs) !== file.mtime) {
           scanChanged = true;
           protectedChapters.set(key, owner);
@@ -598,9 +550,9 @@ export class ReadingImageDiskCache {
     for (const file of snapshot.files) {
       const aliases = physical.get(file.physicalKey) ?? [];
       aliases.push(file); physical.set(file.physicalKey, aliases);
-      for (const owner of file.owners) owners.set(this.mangaChapterKey(owner), owner);
+      for (const owner of file.owners) owners.set(mangaChapterKey(owner), owner);
     }
-    const classes = await this.mangaStorageClassSnapshot(Array.from(owners.values()));
+    const classes = await fetchAuthorityClassSnapshot(this.mangaAuthority, Array.from(owners.values()));
     const mangaEligible = await this.mangaCleanablePhysicalKeys(snapshot.files);
     const protectedText = new Set(snapshot.protectedChapters.map(chapter => this.textStorageKey(chapter)));
     let totalBytes = 0, retainedBytes = 0, automaticBytes = 0, cleanableBytes = 0, classificationKnown = true;
@@ -615,10 +567,10 @@ export class ReadingImageDiskCache {
           if (policy === undefined) { known = false; removable = false; }
           else { retained = retained || policy.retained; removable = removable && !policy.retained && !policy.inUse; }
           if (protectedText.has(this.textStorageKey(file.textOwner))) removable = false;
-          if (this.bookMutationTails.has(this.bookMutationKey(file.textOwner.sourceId, file.textOwner.bookId))) removable = false;
+          if (this.bookMutationTails.has(bookMutationKey(file.textOwner.sourceId, file.textOwner.bookId))) removable = false;
         } else if (file.owners.length > 0) {
           for (const owner of file.owners) {
-            const classification = classes.get(this.mangaChapterKey(owner)) ?? 'unknown';
+            const classification = classes.get(mangaChapterKey(owner)) ?? 'unknown';
             if (classification === 'unknown' || classification === 'missing') known = false;
             retained = retained || (!file.external && classification === 'download');
           }
@@ -667,7 +619,7 @@ export class ReadingImageDiskCache {
     const index = new Map<string, number | undefined>();
     for (const [key, physical] of byBook) {
       const [sourceId, bookId] = JSON.parse(key) as string[];
-      const unknownOwner = unknown.has(await this.bookHash(sourceId, bookId)) || unknown.has(await this.legacyBookHash(sourceId, bookId));
+      const unknownOwner = unknown.has(await bookHash(sourceId, bookId)) || unknown.has(await legacyBookHash(sourceId, bookId));
       index.set(key, unknownOwner ? undefined : Array.from(physical.values()).reduce((sum, bytes) => sum + bytes, 0));
     }
     return index;
@@ -684,7 +636,7 @@ export class ReadingImageDiskCache {
       const removedPaths = new Set<string>();
       let deletedBytes = 0;
       for (const file of before.files) {
-        if (await this.statIfPresent(file.path) !== undefined) continue;
+        if (await statIfPresent(file.path) !== undefined) continue;
         removedPaths.add(file.path);
         if (!retained.has(file.physicalKey) && !released.has(file.physicalKey)) {
           released.add(file.physicalKey); deletedBytes += file.size;
@@ -717,8 +669,8 @@ export class ReadingImageDiskCache {
     const knownFiles = new Set<string>();
     for (const format of [CACHE_FORMAT_VERSION, LEGACY_CACHE_FORMAT_VERSION]) {
       for (const name of format === CACHE_FORMAT_VERSION ? ['manifest.json', 'text-identity.json'] : ['manifest.json']) {
-        const manifest = await this.readTextManifestIdentity(directory, format, name, true);
-        if (manifest === undefined || !this.isTextOwnership(manifest)) continue;
+        const manifest = await readTextManifestIdentity(directory, format, (): boolean => !this.closed, name, true);
+        if (manifest === undefined || !isTextOwnershipManifest(manifest)) continue;
         const expected = format === CACHE_FORMAT_VERSION ? await this.ordinalChapterDirectory(manifest) :
           await this.legacyChapterDirectory(manifest);
         if (directory !== expected || (name === 'text-identity.json' && manifest.cacheOwner !== TEXT_CACHE_OWNER)) continue;
@@ -727,9 +679,9 @@ export class ReadingImageDiskCache {
         for (const hash of manifest.resourceHashes) knownFiles.add(`${hash}.bin`);
       }
     }
-    for (const name of await this.listFileIfPresent(directory)) {
+    for (const name of await listFileIfPresent(directory)) {
       const path = `${directory}/${name}`;
-      const stat = await this.statIfPresent(path);
+      const stat = await statIfPresent(path);
       if (stat === undefined) continue;
       if (stat.isDirectory()) {
         if (name !== '.manga' && name !== '.clear') await this.collectTextStorageFiles(path, result);
@@ -755,12 +707,12 @@ export class ReadingImageDiskCache {
     let bytes: Uint8Array;
     try {
       if (!(await fileIo.access(path))) return;
-      bytes = await this.readMangaMetadata(path, MANGA_IDENTITY_METADATA_BYTES);
+      bytes = await readMangaMetadataBytes(path, MANGA_IDENTITY_METADATA_BYTES, (): boolean => !this.closed);
     } catch (error) {
       // A missing or structurally invalid policy keeps the volume default.
       // Transient I/O must evict the failed shared read so the next user
       // action can observe the persisted policy instead of a permanent default.
-      if (this.isNotFoundError(error) || (error instanceof Error && error.message === 'MANGA_ATOMIC_PAYLOAD_BUDGET')) return;
+      if (isNotFoundError(error) || (error instanceof Error && error.message === 'MANGA_ATOMIC_PAYLOAD_BUDGET')) return;
       throw error;
     }
     try {
@@ -808,6 +760,11 @@ export class ReadingImageDiskCache {
     return this.mangaStorageCapacityForPath(readerHostFilesDirectory(this.context.filesDir));
   }
 
+  private async mangaStorageCapacityForPath(directory: string): Promise<MangaStorageCapacity> {
+    await this.loadStoragePolicy();
+    return computeMangaStorageCapacity(this.freeSpaceProbe, directory, this.configuredCacheLimitBytes);
+  }
+
   /**
    * Reclaim only rebuildable display derivatives.  Original manga bytes,
    * manifests, text books and user data are never passed to this entry point.
@@ -827,7 +784,7 @@ export class ReadingImageDiskCache {
     bookId: string,
     isCurrent?: () => boolean,
   ): Promise<Array<{ sourceId: string; bookId: string; chapterId: string; }>> {
-    this.assertNonBlank(sourceId, 'sourceId'); this.assertNonBlank(bookId, 'bookId');
+    assertNonBlankValue(sourceId, 'sourceId'); assertNonBlankValue(bookId, 'bookId');
     const epoch = this.mangaStorageEpoch;
     await this.loadMangaStorageAuthority();
     return this.enqueueMangaPolicy(async (): Promise<Array<{ sourceId: string; bookId: string; chapterId: string; }>> => {
@@ -847,7 +804,7 @@ export class ReadingImageDiskCache {
     chapter: { sourceId: string; bookId: string; chapterId: string; },
     isCurrent?: () => boolean,
   ): Promise<string[]> {
-    for (const value of [chapter.sourceId, chapter.bookId, chapter.chapterId]) this.assertNonBlank(value, 'manga storage identity');
+    for (const value of [chapter.sourceId, chapter.bookId, chapter.chapterId]) assertNonBlankValue(value, 'manga storage identity');
     const epoch = this.mangaStorageEpoch;
     await this.loadMangaStorageAuthority();
     return this.enqueueMangaPolicy(async (): Promise<string[]> => {
@@ -869,7 +826,7 @@ export class ReadingImageDiskCache {
     const owners = new Map<string, MangaStorageChapter>();
     for (const file of await this.mangaInventory()) for (const owner of file.owners) {
       if (owner.sourceId === sourceId && owner.bookId === bookId && (chapterId === undefined || owner.chapterId === chapterId)) {
-        owners.set(this.mangaChapterKey(owner), owner);
+        owners.set(mangaChapterKey(owner), owner);
       }
     }
     const downloads: MangaStorageChapter[] = [];
@@ -884,24 +841,24 @@ export class ReadingImageDiskCache {
   /** The Runtime releases the user's retention separately before this call.
    * A Core transaction must grant this exact version before any bytes move. */
   async deleteMangaVersion(chapter: MangaStorageChapter, isCurrent?: () => boolean): Promise<boolean> {
-    this.assertMangaStorageChapter(chapter);
+    assertMangaStorageChapter(chapter);
     const epoch = this.mangaStorageEpoch;
     await this.loadMangaStorageAuthority();
     return this.enqueueMangaPolicy(async (): Promise<boolean> => {
       this.assertMangaPolicyCurrent(epoch, isCurrent);
       const authority = this.mangaAuthority;
       if (authority === undefined || this.closed) return false;
-      const key = this.mangaChapterKey(chapter);
+      const key = mangaChapterKey(chapter);
       if (this.mangaBusy.has(key) || this.mangaClaiming.has(key) ||
-        this.bookMutationTails.has(this.bookMutationKey(chapter.sourceId, chapter.bookId))) return false;
-      const pending = (await authority.pending()).find(grant => this.mangaChapterKey(grant) === key);
+        this.bookMutationTails.has(bookMutationKey(chapter.sourceId, chapter.bookId))) return false;
+      const pending = (await authority.pending()).find(grant => mangaChapterKey(grant) === key);
       if (pending !== undefined) return this.removeMangaGrant(pending,
         (): boolean => epoch === this.mangaStorageEpoch && isCurrent?.() !== false);
       if (this.mangaEvicting.has(key)) return false;
       if (this.mangaDeletionFiles(chapter, await this.mangaInventory()) === undefined ||
         await authority.classify(chapter) !== 'cache') return false;
       this.assertMangaPolicyCurrent(epoch, isCurrent);
-      if (this.mangaBusy.has(key) || this.bookMutationTails.has(this.bookMutationKey(chapter.sourceId, chapter.bookId))) return false;
+      if (this.mangaBusy.has(key) || this.bookMutationTails.has(bookMutationKey(chapter.sourceId, chapter.bookId))) return false;
       // Reserve the identity before awaiting Core: a new read/write must not
       // enter between the local live check and the transactional grant.
       this.mangaClaiming.add(key);
@@ -909,14 +866,14 @@ export class ReadingImageDiskCache {
       try { grant = await authority.claim(chapter); }
       finally { this.mangaClaiming.delete(key); }
       if (grant === undefined) return false;
-      if (this.mangaChapterKey(grant) !== key || grant.grantToken.trim().length === 0) throw new Error('invalid manga eviction grant');
+      if (mangaChapterKey(grant) !== key || grant.grantToken.trim().length === 0) throw new Error('invalid manga eviction grant');
       return this.removeMangaGrant(grant, (): boolean => epoch === this.mangaStorageEpoch && isCurrent?.() !== false);
     });
   }
 
   private assertMangaPolicyCurrent(epoch: number, isCurrent?: () => boolean): void {
     if (this.mangaRestoreRequests > 0 || this.mangaRestoreBlocked) throw new Error('MANGA_CACHE_STORAGE_RESTORING');
-    this.assertCurrent((): boolean => !this.closed && epoch === this.mangaStorageEpoch && isCurrent?.() !== false);
+    assertOperationCurrent((): boolean => !this.closed && epoch === this.mangaStorageEpoch && isCurrent?.() !== false);
   }
 
   private enqueueMangaPolicy<T>(operation: () => Promise<T>): Promise<T> {
@@ -925,152 +882,12 @@ export class ReadingImageDiskCache {
     return task;
   }
 
-  private mangaChapterKey(chapter: MangaStorageChapter): string {
-    return JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterId, chapter.contentVersion]);
-  }
-
-  private mangaChapter(identity: ReadingImageChapterIdentity): MangaStorageChapter | undefined {
-    if (identity.mangaDecodeRevision === undefined || identity.chapterId === undefined) return undefined;
-    return { sourceId: identity.sourceId, bookId: identity.bookId, chapterId: identity.chapterId, contentVersion: identity.contentVersion };
-  }
-
-  private assertMangaStorageChapter(chapter: MangaStorageChapter): void {
-    for (const value of [chapter.sourceId, chapter.bookId, chapter.chapterId, chapter.contentVersion]) this.assertNonBlank(value, 'manga storage identity');
-  }
-
   private async mangaStorageBuckets(files: MangaInventoryFile[]): Promise<MangaStorageBuckets> {
-    const physical = new Map<string, { size: number; kind: 'original' | 'derived' | 'download'; }>();
-    const classes = new Map<string, MangaStorageClass>();
-    const originalOwners = new Map<string, MangaStorageChapter>();
-    for (const file of files) if (!file.external) for (const owner of file.owners)
-      originalOwners.set(this.mangaChapterKey(owner), owner);
-    const snapshot = await this.mangaStorageClassSnapshot(Array.from(originalOwners.values()));
-    for (const file of files) {
-      let kind: 'original' | 'derived' | 'download' = file.external ? 'derived' : 'original';
-      // Display derivatives always count toward ordinary cache. Only original
-      // consumers need an authority read to exempt permanently owned bytes.
-      if (!file.external) {
-        for (const owner of file.owners) {
-          const key = this.mangaChapterKey(owner);
-          let classification = classes.get(key);
-          if (classification === undefined) {
-            classification = snapshot.get(key) ?? 'unknown'; classes.set(key, classification);
-          }
-          if (classification === 'download') kind = 'download';
-        }
-      }
-      const existing = physical.get(file.physicalKey);
-      // A hard-linked permanent original keeps every alias outside the cache
-      // budget. Otherwise an external display file remains derived; an
-      // ordinary original wins over that display alias for conservative
-      // accounting.
-      if (existing !== undefined) {
-        if (existing.kind === 'download' || kind === 'download') kind = 'download';
-        else if (existing.kind === 'original' || kind === 'original') kind = 'original';
-      }
-      physical.set(file.physicalKey, { size: Math.max(file.size, existing?.size ?? 0), kind });
-    }
-    let originalBytes = 0, derivedBytes = 0, downloadBytes = 0;
-    for (const item of physical.values()) {
-      if (item.kind === 'download') downloadBytes += item.size;
-      else if (item.kind === 'derived') derivedBytes += item.size;
-      else originalBytes += item.size;
-    }
-    return { originalBytes, derivedBytes, downloadBytes, ordinaryBytes: originalBytes + derivedBytes };
-  }
-
-  private async mangaStorageClassSnapshot(chapters: MangaStorageChapter[]): Promise<Map<string, MangaStorageClass>> {
-    const authority = this.mangaAuthority;
-    const result = new Map<string, MangaStorageClass>();
-    if (authority === undefined || chapters.length === 0) return result;
-    // Storage summaries are advisory and can cover a very large shelf. Keep
-    // each Core batch small and cap the number of in-flight RPCs so a thousand
-    // chapter book cannot monopolize the request lane or allocate one giant
-    // result array. Ordering is restored before publishing the snapshot.
-    const batchSize = 32;
-    const batches: MangaStorageChapter[][] = [];
-    for (let start = 0; start < chapters.length; start += batchSize)
-      batches.push(chapters.slice(start, Math.min(chapters.length, start + batchSize)));
-    const values = new Array<MangaStorageClass>(chapters.length);
-    let nextBatch = 0;
-    const worker = async (): Promise<void> => {
-      while (nextBatch < batches.length) {
-        const batchIndex = nextBatch++;
-        const batch = batches[batchIndex];
-        const batchValues = authority.classifyBatch === undefined ?
-          await Promise.all(batch.map((chapter): Promise<MangaStorageClass> => authority.classify(chapter))) :
-          await authority.classifyBatch(batch);
-        if (batchValues.length !== batch.length) throw new Error('MANGA_STORAGE_CLASS_SNAPSHOT_INVALID');
-        batchValues.forEach((value, offset): void => { values[batchIndex * batchSize + offset] = value; });
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(2, batches.length) }, (): Promise<void> => worker()));
-    chapters.forEach((chapter, index): void => {
-      const value = values[index];
-      if (value === undefined) throw new Error('MANGA_STORAGE_CLASS_SNAPSHOT_INVALID');
-      result.set(this.mangaChapterKey(chapter), value);
-    });
-    return result;
-  }
-
-  private async mangaAuthorityClassSnapshot(chapters: MangaStorageChapter[]): Promise<MangaStorageClass[] | undefined> {
-    const authority = this.mangaAuthority;
-    if (authority?.classifyBatch === undefined || chapters.length === 0) return undefined;
-    const values: MangaStorageClass[] = [];
-    for (let start = 0; start < chapters.length; start += MANGA_AUTHORITY_BATCH_SIZE) {
-      const batch = chapters.slice(start, Math.min(chapters.length, start + MANGA_AUTHORITY_BATCH_SIZE));
-      const batchValues = await authority.classifyBatch(batch);
-      if (batchValues.length !== batch.length) throw new Error('MANGA_CACHE_CLASSIFY_BATCH_INVALID');
-      values.push(...batchValues);
-    }
-    return values;
-  }
-
-  private async mangaAuthorityPolicySnapshot(chapters: MangaStorageChapter[]): Promise<MangaStoragePolicy[] | undefined> {
-    const authority = this.mangaAuthority;
-    if (authority?.policyBatch === undefined || chapters.length === 0) return undefined;
-    const values: MangaStoragePolicy[] = [];
-    for (let start = 0; start < chapters.length; start += MANGA_AUTHORITY_BATCH_SIZE) {
-      const batch = chapters.slice(start, Math.min(chapters.length, start + MANGA_AUTHORITY_BATCH_SIZE));
-      const batchValues = await authority.policyBatch(batch);
-      if (batchValues.length !== batch.length) throw new Error('MANGA_CACHE_POLICY_BATCH_INVALID');
-      values.push(...batchValues);
-    }
-    return values;
+    return computeMangaStorageBuckets(this.mangaAuthority, files);
   }
 
   private async mangaOrdinaryBytes(files: MangaInventoryFile[]): Promise<number> {
     return (await this.mangaStorageBuckets(files)).ordinaryBytes;
-  }
-
-  private async mangaStorageCapacityForPath(path: string): Promise<MangaStorageCapacity> {
-    await this.loadStoragePolicy();
-    const freeBytes = await this.freeSpaceProbe.getFreeBytes(path);
-    const totalBytes = this.freeSpaceProbe.getTotalBytes === undefined ? undefined :
-      await this.freeSpaceProbe.getTotalBytes(path);
-    if (!Number.isSafeInteger(freeBytes) || freeBytes < 0 ||
-      (totalBytes !== undefined && (!Number.isSafeInteger(totalBytes) || totalBytes < 0))) {
-      throw new Error('MANGA_CACHE_STORAGE_CAPACITY_INVALID');
-    }
-    if (totalBytes === undefined) {
-      return {
-        freeBytes, totalBytes: undefined, systemReserveBytes: MANGA_FREE_RESERVE_BYTES,
-        cacheBudgetBytes: this.configuredCacheLimitBytes ?? MANGA_CACHE_BUDGET_MAX_BYTES,
-        originalBudgetBytes: this.configuredCacheLimitBytes ?? MANGA_CACHE_BUDGET_MAX_BYTES,
-        derivedBudgetBytes: this.configuredCacheLimitBytes ?? MANGA_CACHE_BUDGET_MAX_BYTES,
-      };
-    }
-    const systemReserveBytes = Math.min(
-      MANGA_FREE_RESERVE_BYTES,
-      Math.max(MANGA_SYSTEM_RESERVE_FLOOR_BYTES, Math.floor(totalBytes * MANGA_SYSTEM_RESERVE_RATIO)),
-    );
-    const volumeBudgetBytes = Math.min(MANGA_CACHE_BUDGET_MAX_BYTES, Math.max(0, totalBytes - systemReserveBytes));
-    const cacheBudgetBytes = Math.min(volumeBudgetBytes, this.configuredCacheLimitBytes ?? volumeBudgetBytes);
-    const derivedBudgetBytes = Math.floor(cacheBudgetBytes * MANGA_DERIVED_BUDGET_RATIO);
-    return {
-      freeBytes, totalBytes, systemReserveBytes, cacheBudgetBytes,
-      derivedBudgetBytes, originalBudgetBytes: cacheBudgetBytes - derivedBudgetBytes,
-    };
   }
 
   private async mangaInventory(): Promise<MangaInventoryFile[]> {
@@ -1080,7 +897,7 @@ export class ReadingImageDiskCache {
     if (this.mangaExternal !== undefined) {
       for (const file of await this.mangaExternal.inventory()) {
         if (!file.path.startsWith(`${readerHostFilesDirectory(this.context.filesDir)}/`) || file.path.split('/').indexOf('..') >= 0) throw new Error('manga external path escapes app storage');
-        const stat = await this.statIfPresent(file.path);
+        const stat = await statIfPresent(file.path);
         if (stat === undefined || !stat.isFile()) continue;
         result.push({ ...file, size: stat.size, physicalKey: this.mangaPhysicalKey(stat), mtime: String(stat.mtimeNs), external: true });
       }
@@ -1111,7 +928,7 @@ export class ReadingImageDiskCache {
     for (let attempt = 0; attempt < 3; attempt++) {
       const revision = this.mangaInventoryRevision;
       const buckets = await this.mangaStorageBuckets(await this.mangaInventoryForBudget());
-      const capacity = await this.mangaStorageCapacityForPath(readerHostFilesDirectory(this.context.filesDir));
+      const capacity = await this.mangaStorageCapacity();
       // If an in-flight writer published while the classifier/free-space read
       // was pending, its reservation may no longer be in the live totals.
       if (revision === this.mangaInventoryRevision) return { buckets, capacity, revision };
@@ -1139,7 +956,7 @@ export class ReadingImageDiskCache {
         this.invalidateMangaBudgetInventory();
         return;
       }
-      const stat = await this.statIfPresent(path);
+      const stat = await statIfPresent(path);
       if (this.mangaBudgetInventory !== inventory) return;
       if (stat === undefined || !stat.isFile()) { this.invalidateMangaBudgetInventory(); return; }
       // First publication over orphaned bytes changes attribution for the
@@ -1186,21 +1003,21 @@ export class ReadingImageDiskCache {
     const identityPath = `${directory}/manga-identity.json`;
     if (await fileIo.access(identityPath)) {
       try {
-        const raw = await this.readMangaMetadata(identityPath, MANGA_IDENTITY_METADATA_BYTES);
+        const raw = await readMangaMetadataBytes(identityPath, MANGA_IDENTITY_METADATA_BYTES, (): boolean => !this.closed);
         const value = JSON.parse(util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(raw)) as MangaStorageChapter;
-        this.assertMangaStorageChapter(value);
-        const expected = `${this.rootDirectory()}/${await this.bookHash(value.sourceId, value.bookId)}/.manga/` +
-          `${await this.sha256(value.chapterId)}/${await this.sha256(value.contentVersion)}`;
+        assertMangaStorageChapter(value);
+        const expected = `${this.rootDirectory()}/${await bookHash(value.sourceId, value.bookId)}/.manga/` +
+          `${await sha256Text(value.chapterId)}/${await sha256Text(value.contentVersion)}`;
         owners = expected === directory ? [value] : [];
       } catch (_) { owners = []; }
     } else if (owners.length === 0) {
-      const manifest = await this.readManifestIdentity(directory, CACHE_FORMAT_VERSION, undefined, true) ??
-        await this.readManifestIdentity(directory, LEGACY_CACHE_FORMAT_VERSION, undefined, true);
+      const manifest = await readDiskManifestIdentity(directory, CACHE_FORMAT_VERSION, (): boolean => !this.closed, undefined, true) ??
+        await readDiskManifestIdentity(directory, LEGACY_CACHE_FORMAT_VERSION, (): boolean => !this.closed, undefined, true);
       if (manifest !== undefined && manifest.manga !== true) return;
     }
-    for (const name of await this.listFileIfPresent(directory)) {
+    for (const name of await listFileIfPresent(directory)) {
       const path = `${directory}/${name}`;
-      const stat = await this.statIfPresent(path);
+      const stat = await statIfPresent(path);
       if (stat === undefined) continue;
       if (stat.isDirectory()) await this.collectMangaFiles(path, owners, result);
       else if (stat.isFile()) {
@@ -1244,7 +1061,7 @@ export class ReadingImageDiskCache {
       (expiry === undefined || expiry.ttlSeconds === (this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS));
     const localAtRead = new Map(this.mangaEvicting);
     const pending = await authority.pending();
-    const active = new Set(pending.map(grant => this.mangaChapterKey(grant)));
+    const active = new Set(pending.map(grant => mangaChapterKey(grant)));
     await this.mangaPolicyStep(batched, async (): Promise<void> => {
       if (!current()) return;
       // Core may have completed a grant whose reply was lost. Retire only
@@ -1259,28 +1076,28 @@ export class ReadingImageDiskCache {
       if (!current()) return;
       if (scope !== undefined && (grant.sourceId !== scope.sourceId || grant.bookId !== scope.bookId)) continue;
       await this.mangaPolicyStep(batched, async (): Promise<void> => {
-        if (!current() || this.bookMutationTails.has(this.bookMutationKey(grant.sourceId, grant.bookId))) return;
+        if (!current() || this.bookMutationTails.has(bookMutationKey(grant.sourceId, grant.bookId))) return;
         if (batched && !(await authority.pending()).some(latest => latest.grantToken === grant.grantToken &&
-          this.mangaChapterKey(latest) === this.mangaChapterKey(grant))) return;
+          mangaChapterKey(latest) === mangaChapterKey(grant))) return;
         await this.removeMangaGrant(grant, current);
       });
       if (batched) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
     }
     if (hasCapacity !== undefined && await hasCapacity()) return;
     const candidates = await authority.candidates(reason, scope, expiry);
-    const classSnapshot = new Map(candidates.map((candidate, index) => [this.mangaChapterKey(candidate), index]));
+    const classSnapshot = new Map(candidates.map((candidate, index) => [mangaChapterKey(candidate), index]));
     const policySnapshot = candidates.length > 0 && reason === 'expiry' && authority.policyBatch !== undefined ?
-      await this.mangaAuthorityPolicySnapshot(candidates) : undefined;
+      await fetchAuthorityPolicyBatch(this.mangaAuthority, candidates) : undefined;
     if (policySnapshot !== undefined && policySnapshot.length !== candidates.length) throw new Error('MANGA_CACHE_POLICY_BATCH_INVALID');
     const classes = candidates.length === 0 ? [] : policySnapshot?.map(policy => policy.status) ??
-      (authority.classifyBatch === undefined ? undefined : await this.mangaAuthorityClassSnapshot(candidates));
+      (authority.classifyBatch === undefined ? undefined : await fetchAuthorityClassBatch(this.mangaAuthority, candidates));
     if (classes !== undefined && classes.length !== candidates.length) throw new Error('MANGA_CACHE_CLASSIFY_BATCH_INVALID');
     for (const candidate of candidates) {
       if (!current()) return;
       await this.mangaPolicyStep(batched, async (): Promise<void> => {
-        const key = this.mangaChapterKey(candidate);
+        const key = mangaChapterKey(candidate);
         if (!current() || this.mangaBusy.has(key) || this.mangaEvicting.has(key)) return;
-        if (this.bookMutationTails.has(this.bookMutationKey(candidate.sourceId, candidate.bookId))) return;
+        if (this.bookMutationTails.has(bookMutationKey(candidate.sourceId, candidate.bookId))) return;
         const index = classSnapshot?.get(key);
         const classification = classes === undefined || index === undefined ? await authority.classify(candidate) : classes[index];
         if (classification !== 'cache') return;
@@ -1296,7 +1113,7 @@ export class ReadingImageDiskCache {
         try { grant = await authority.claim(candidate, expiry); }
         finally { this.mangaClaiming.delete(key); }
         if (grant === undefined) return;
-        if (this.mangaChapterKey(grant) !== key || grant.grantToken.trim().length === 0) throw new Error('invalid manga eviction grant');
+        if (mangaChapterKey(grant) !== key || grant.grantToken.trim().length === 0) throw new Error('invalid manga eviction grant');
         this.mangaEvicting.set(key, grant);
         await this.removeMangaGrant(grant, current);
       });
@@ -1331,14 +1148,14 @@ export class ReadingImageDiskCache {
   private async mangaCleanablePhysicalKeys(files: MangaInventoryFile[]): Promise<Set<string>> {
     const authority = this.mangaAuthority;
     if (authority?.policy === undefined || files.length === 0) return new Set<string>();
-    const ordinaryCandidates = new Set((await authority.candidates('clear')).map(chapter => this.mangaChapterKey(chapter)));
+    const ordinaryCandidates = new Set((await authority.candidates('clear')).map(chapter => mangaChapterKey(chapter)));
     const chapters = new Map<string, MangaStorageChapter>();
     for (const file of files) if (file.external) for (const owner of file.owners)
-      chapters.set(this.mangaChapterKey(owner), owner);
+      chapters.set(mangaChapterKey(owner), owner);
     const chapterValues = Array.from(chapters.values());
     let values: MangaStoragePolicy[];
     if (authority.policyBatch !== undefined) {
-      values = await this.mangaAuthorityPolicySnapshot(chapterValues) ?? [];
+      values = await fetchAuthorityPolicyBatch(this.mangaAuthority, chapterValues) ?? [];
     } else {
       // Compatibility authorities may expose only the single-chapter seam.
       // Keep the fallback bounded so a large shelf cannot create one promise
@@ -1366,13 +1183,13 @@ export class ReadingImageDiskCache {
     const isEligible = (file: MangaInventoryFile): boolean => {
       if (file.live || this.inFlightWrites.has(file.path) || file.owners.length === 0) return false;
       const ownersEligible = file.external ?
-        file.owners.every(owner => eligible.has(this.mangaChapterKey(owner))) :
-        file.owners.every(owner => ordinaryCandidates.has(this.mangaChapterKey(owner)));
+        file.owners.every(owner => eligible.has(mangaChapterKey(owner))) :
+        file.owners.every(owner => ordinaryCandidates.has(mangaChapterKey(owner)));
       if (!ownersEligible) return false;
       return !file.owners.some(owner => {
-        const key = this.mangaChapterKey(owner);
+        const key = mangaChapterKey(owner);
         return this.mangaBusy.has(key) || this.mangaEvicting.has(key) || this.mangaClaiming.has(key) ||
-          this.bookMutationTails.has(this.bookMutationKey(owner.sourceId, owner.bookId));
+          this.bookMutationTails.has(bookMutationKey(owner.sourceId, owner.bookId));
       });
     };
     const eligibleByPhysicalKey = new Map<string, boolean>();
@@ -1383,18 +1200,7 @@ export class ReadingImageDiskCache {
   }
 
   private mangaDerivedDeletionFiles(chapter: MangaStorageChapter, files: MangaInventoryFile[]): MangaExternalFile[] | undefined {
-    const key = this.mangaChapterKey(chapter);
-    const matching = files.filter(file => file.external && file.owners.some(owner => this.mangaChapterKey(owner) === key));
-    if (matching.length === 0) return undefined;
-    const unsafe = new Set(files.filter(alias => !alias.external || alias.live ||
-      alias.owners.length === 0 || alias.owners.some(owner => this.mangaChapterKey(owner) !== key)).map(alias => alias.physicalKey));
-    for (const file of matching) {
-      if (file.live || this.inFlightWrites.has(file.path) || file.owners.some(owner => this.mangaChapterKey(owner) !== key)) return undefined;
-      // Even an exact derived alias must not unlink physical bytes shared with
-      // an original, unknown historical owner, or another live consumer.
-      if (unsafe.has(file.physicalKey)) return undefined;
-    }
-    return matching;
+    return mangaDerivedDeletionFilesForChapter(chapter, files, (path: string): boolean => this.inFlightWrites.has(path));
   }
 
   /** Ordinary Core candidates keep their LRU ordering. Only after that pass,
@@ -1409,13 +1215,13 @@ export class ReadingImageDiskCache {
     const candidates = new Map<string, MangaStorageChapter>();
     for (const file of await this.mangaInventory()) if (file.external) for (const owner of file.owners) {
       if (scope === undefined || (owner.sourceId === scope.sourceId && owner.bookId === scope.bookId)) {
-        candidates.set(this.mangaChapterKey(owner), owner);
+        candidates.set(mangaChapterKey(owner), owner);
       }
     }
     for (const chapter of candidates.values()) {
       await this.mangaPolicyStep(batched, async (): Promise<void> => {
-        const key = this.mangaChapterKey(chapter);
-        const bookKey = this.bookMutationKey(chapter.sourceId, chapter.bookId);
+        const key = mangaChapterKey(chapter);
+        const bookKey = bookMutationKey(chapter.sourceId, chapter.bookId);
         if (this.mangaBusy.has(key) || this.mangaEvicting.has(key) || this.mangaClaiming.has(key) || this.bookMutationTails.has(bookKey)) return;
         const current = async (): Promise<boolean> => {
           if (this.closed || epoch !== this.mangaStorageEpoch || this.mangaRestoreRequests > 0 || this.mangaRestoreBlocked ||
@@ -1447,26 +1253,26 @@ export class ReadingImageDiskCache {
   }
 
   private mangaDeletionFiles(chapter: MangaStorageChapter, files: MangaInventoryFile[]): MangaInventoryFile[] | undefined {
-    const key = this.mangaChapterKey(chapter);
-    const matching = files.filter(file => file.owners.some(owner => this.mangaChapterKey(owner) === key));
+    const key = mangaChapterKey(chapter);
+    const matching = files.filter(file => file.owners.some(owner => mangaChapterKey(owner) === key));
     const unsafe = new Set(files.filter(alias => alias.live || alias.owners.length === 0 ||
-      alias.owners.some(owner => this.mangaChapterKey(owner) !== key)).map(alias => alias.physicalKey));
+      alias.owners.some(owner => mangaChapterKey(owner) !== key)).map(alias => alias.physicalKey));
     for (const file of matching) {
-      if (file.live || file.owners.some(owner => this.mangaChapterKey(owner) !== key) || this.inFlightWrites.has(file.path)) return undefined;
+      if (file.live || file.owners.some(owner => mangaChapterKey(owner) !== key) || this.inFlightWrites.has(file.path)) return undefined;
       if (unsafe.has(file.physicalKey)) return undefined;
     }
     return matching;
   }
 
   private async removeMangaGrant(grant: MangaStorageGrant, isCurrent?: () => boolean): Promise<boolean> {
-    const key = this.mangaChapterKey(grant);
+    const key = mangaChapterKey(grant);
     this.mangaEvicting.set(key, grant);
     const authority = this.mangaAuthority;
     if (authority === undefined) return false;
     let removed = false;
     try {
       if (this.mangaBusy.has(key) || isCurrent?.() === false) return false;
-      await this.enqueueBookMutation(this.bookMutationKey(grant.sourceId, grant.bookId), async (): Promise<void> => {
+      await this.enqueueBookMutation(bookMutationKey(grant.sourceId, grant.bookId), async (): Promise<void> => {
         if (this.mangaBusy.has(key) || isCurrent?.() === false) return;
         const files = await this.mangaInventory();
         const matching = this.mangaDeletionFiles(grant, files);
@@ -1495,7 +1301,7 @@ export class ReadingImageDiskCache {
 
   /** Capture before a network request; a later clear/close cannot admit its bytes. */
   captureValidity(sourceId: string, bookId: string, isCurrent?: () => boolean): () => boolean {
-    const key = this.bookMutationKey(sourceId, bookId);
+    const key = bookMutationKey(sourceId, bookId);
     const generation = this.bookClearGenerations.get(key) ?? 0;
     const mangaEpoch = this.mangaStorageEpoch;
     return (): boolean => !this.closed && (this.bookClearGenerations.get(key) ?? 0) === generation &&
@@ -1516,39 +1322,39 @@ export class ReadingImageDiskCache {
     identity: ReadingImageCacheIdentity,
     isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
   ): Promise<Uint8Array | undefined> {
-    this.assertResourceIdentity(identity);
+    assertResourceIdentity(identity);
     const requestedIdentity: ReadingImageCacheIdentity = { ...identity };
     let result: Uint8Array | undefined;
-    await this.enqueueBookMutation(this.bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
-      this.assertCurrent(isCurrent);
+    await this.enqueueBookMutation(bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
+      assertOperationCurrent(isCurrent);
       await this.finishPendingClear(requestedIdentity.sourceId, requestedIdentity.bookId);
       const path = await this.resourcePath(requestedIdentity);
       const legacyRevocation = `${await this.clearMarkerPath(requestedIdentity.sourceId, requestedIdentity.bookId)}.legacy-revoked`;
       // An old clear cannot delete unidentifiable bytes, but it also cannot
       // admit them again. Fresh text writes carry their own exact ownership.
       if (!(await fileIo.access(legacyRevocation)) || await this.ownsTextResource(requestedIdentity)) {
-        result = await this.readResourceBytes(path, isCurrent);
+        result = await readRawResourceBytes(path, isCurrent);
       }
-      if (result === undefined && this.hasUnambiguousLegacyResourceIdentity(requestedIdentity) &&
+      if (result === undefined && hasUnambiguousLegacyResourceIdentity(requestedIdentity) &&
         !(await fileIo.access(legacyRevocation))) {
         // A legacy ordinal alone is never evidence. Only its exact manifest
         // identity/version and listed resource hash authorize byte migration.
         const directory = await this.legacyChapterDirectory(requestedIdentity);
         const manifest = await this.readValidManifest(directory, LEGACY_CACHE_FORMAT_VERSION);
-        const hash = await this.legacyResourceHash(requestedIdentity);
-        if (manifest !== undefined && this.sameChapter(manifest, requestedIdentity) &&
+        const hash = await legacyResourceHash(requestedIdentity);
+        if (manifest !== undefined && sameChapterIdentity(manifest, requestedIdentity) &&
           manifest.resourceHashes.indexOf(hash) >= 0) {
-          result = await this.readResourceBytes(`${directory}/${hash}.bin`, isCurrent);
+          result = await readRawResourceBytes(`${directory}/${hash}.bin`, isCurrent);
           if (result !== undefined) {
             const target = await this.chapterDirectory(requestedIdentity);
-            await this.ensureDirectory(target);
+            await ensureDirectory(target);
             await this.assertWriteCapacity(target, result.byteLength);
             await this.recordTextResourceOwnership(requestedIdentity, isCurrent);
             await this.writeAtomicBytes(path, result, isCurrent);
           }
         }
       }
-      this.assertCurrent(isCurrent);
+      assertOperationCurrent(isCurrent);
     });
     return result;
   }
@@ -1557,17 +1363,17 @@ export class ReadingImageDiskCache {
     identity: ReadingImageCacheIdentity,
     isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
   ): Promise<Uint8Array | undefined> {
-    if (this.mangaChapter(identity) === undefined && identity.mangaDecodeRevision === undefined)
+    if (mangaChapterOfIdentity(identity) === undefined && identity.mangaDecodeRevision === undefined)
       return this.loadTextResource(identity, isCurrent);
-    this.assertResourceIdentity(identity);
+    assertResourceIdentity(identity);
     const requestedIdentity: ReadingImageCacheIdentity = { ...identity };
     const unpin = this.beginMangaOperation(requestedIdentity);
     let result: Uint8Array | undefined;
     let migrationBytes: Uint8Array | undefined;
     try {
       await this.assertMangaAdmission(requestedIdentity);
-      await this.enqueueBookMutation(this.bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
-        this.assertCurrent(isCurrent);
+      await this.enqueueBookMutation(bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
+        assertOperationCurrent(isCurrent);
         await this.finishPendingClear(requestedIdentity.sourceId, requestedIdentity.bookId);
         const directory = await this.chapterDirectory(requestedIdentity);
         const path = await this.resourcePath(requestedIdentity);
@@ -1575,33 +1381,33 @@ export class ReadingImageDiskCache {
         const oldDirectory = await this.ordinalChapterDirectory(requestedIdentity);
         if (result === undefined && directory !== oldDirectory) {
           const manifest = await this.readValidManifest(oldDirectory, CACHE_FORMAT_VERSION,
-            this.mangaCacheProfile(requestedIdentity.mangaDecodeRevision), isCurrent, true);
-          const resourceHash = await this.resourceHash(requestedIdentity);
-          if (manifest !== undefined && this.sameChapter(manifest, requestedIdentity) &&
-            manifest.manga === true && manifest.resourceHashes.indexOf(resourceHash) >= 0) {
-            result = await this.readMangaResourceBytes(requestedIdentity, oldDirectory, `${oldDirectory}/${resourceHash}.bin`, isCurrent);
+            mangaCacheProfile(requestedIdentity.mangaDecodeRevision), isCurrent, true);
+          const hash = await resourceHash(requestedIdentity);
+          if (manifest !== undefined && sameChapterIdentity(manifest, requestedIdentity) &&
+            manifest.manga === true && manifest.resourceHashes.indexOf(hash) >= 0) {
+            result = await this.readMangaResourceBytes(requestedIdentity, oldDirectory, `${oldDirectory}/${hash}.bin`, isCurrent);
             if (result !== undefined) migrationBytes = result;
           }
         }
-        if (result === undefined && this.mangaCacheProfile(requestedIdentity.mangaDecodeRevision) !== undefined &&
-          (await this.validResourceFile(`${directory}/${await this.legacyMangaResourceHash(requestedIdentity)}.bin`) ||
-            await this.validResourceFile(`${oldDirectory}/${await this.legacyMangaResourceHash(requestedIdentity)}.bin`))) {
-          this.assertCurrent(isCurrent); throw new Error('READING_IMAGE_REPROCESS_REQUIRED');
+        if (result === undefined && mangaCacheProfile(requestedIdentity.mangaDecodeRevision) !== undefined &&
+          (await validResourceFile(`${directory}/${await legacyMangaResourceHash(requestedIdentity)}.bin`) ||
+            await validResourceFile(`${oldDirectory}/${await legacyMangaResourceHash(requestedIdentity)}.bin`))) {
+          assertOperationCurrent(isCurrent); throw new Error('READING_IMAGE_REPROCESS_REQUIRED');
         }
         const legacyRevocation = `${await this.clearMarkerPath(requestedIdentity.sourceId, requestedIdentity.bookId)}.legacy-revoked`;
-        if (result === undefined && this.hasUnambiguousLegacyResourceIdentity(requestedIdentity) && !(await fileIo.access(legacyRevocation))) {
+        if (result === undefined && hasUnambiguousLegacyResourceIdentity(requestedIdentity) && !(await fileIo.access(legacyRevocation))) {
           const legacy = await this.legacyChapterDirectory(requestedIdentity);
           const manifest = await this.readValidManifest(legacy, LEGACY_CACHE_FORMAT_VERSION);
-          const hash = await this.legacyResourceHash(requestedIdentity);
-          if (manifest !== undefined && this.sameChapter(manifest, requestedIdentity) && manifest.resourceHashes.indexOf(hash) >= 0) {
-            result = await this.readResourceBytes(`${legacy}/${hash}.bin`, isCurrent);
+          const hash = await legacyResourceHash(requestedIdentity);
+          if (manifest !== undefined && sameChapterIdentity(manifest, requestedIdentity) && manifest.resourceHashes.indexOf(hash) >= 0) {
+            result = await readRawResourceBytes(`${legacy}/${hash}.bin`, isCurrent);
             if (result !== undefined) {
-              await this.ensureDirectory(directory); await this.assertWriteCapacity(directory, result.byteLength);
+              await ensureDirectory(directory); await this.assertWriteCapacity(directory, result.byteLength);
               await this.writeAtomicBytes(path, result, isCurrent);
             }
           }
         }
-        this.assertCurrent(isCurrent);
+        assertOperationCurrent(isCurrent);
       });
       if (migrationBytes !== undefined) await this.migrateMangaResource(requestedIdentity,
         await this.resourcePath(requestedIdentity), migrationBytes, isCurrent);
@@ -1610,52 +1416,52 @@ export class ReadingImageDiskCache {
   }
 
   private beginMangaOperation(identity: ReadingImageChapterIdentity): () => void {
-    if (identity.mangaDecodeRevision !== undefined) this.mangaBooks.add(this.bookMutationKey(identity.sourceId, identity.bookId));
-    const chapter = this.mangaChapter(identity);
+    if (identity.mangaDecodeRevision !== undefined) this.mangaBooks.add(bookMutationKey(identity.sourceId, identity.bookId));
+    const chapter = mangaChapterOfIdentity(identity);
     return chapter === undefined ? (): void => {} : this.pinMangaChapter(chapter);
   }
 
   private async assertMangaAdmission(identity: ReadingImageChapterIdentity): Promise<void> {
-    const chapter = this.mangaChapter(identity);
+    const chapter = mangaChapterOfIdentity(identity);
     if (chapter === undefined) return;
     await this.loadMangaStorageAuthority();
     if (this.mangaRestoreRequests > 0 || this.mangaRestoreBlocked) throw new Error('MANGA_CACHE_STORAGE_RESTORING');
-    if (this.mangaEvicting.has(this.mangaChapterKey(chapter))) throw new Error('MANGA_CACHE_EVICTING');
+    if (this.mangaEvicting.has(mangaChapterKey(chapter))) throw new Error('MANGA_CACHE_EVICTING');
   }
 
   private async readMangaResourceBytes(identity: ReadingImageCacheIdentity, directory: string, path: string,
     isCurrent: () => boolean): Promise<Uint8Array | undefined> {
-    if (identity.resourceRef !== undefined && await this.validResourceFile(path)) {
-      const hash = await this.resourceHash(identity);
-      const manifest = await this.readManifestIdentity(directory, CACHE_FORMAT_VERSION, this.mangaCacheProfile(identity.mangaDecodeRevision), true, isCurrent);
+    if (identity.resourceRef !== undefined && await validResourceFile(path)) {
+      const hash = await resourceHash(identity);
+      const manifest = await readDiskManifestIdentity(directory, CACHE_FORMAT_VERSION, isCurrent, mangaCacheProfile(identity.mangaDecodeRevision), true);
       const partialDigest = `${path}.sha256`;
       let expected: string | undefined;
-      if (manifest !== undefined && this.sameChapter(manifest, identity) && manifest.manga === true && manifest.resourceHashes.indexOf(hash) >= 0) {
+      if (manifest !== undefined && sameChapterIdentity(manifest, identity) && manifest.manga === true && manifest.resourceHashes.indexOf(hash) >= 0) {
         expected = manifest.resourceDigests?.[hash];
       } else if (await fileIo.access(partialDigest)) {
-        expected = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(await this.readMangaMetadata(partialDigest, 64, isCurrent));
+        expected = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(await readMangaMetadataBytes(partialDigest, 64, isCurrent));
       }
       if (expected !== undefined) {
         if (!/^[0-9a-f]{64}$/.test(expected)) throw new Error('MANGA_CACHE_RESOURCE_CORRUPT');
         const proofEpoch = this.digestProofEpoch;
-        const bytes = await this.readVerifiedResourceBytes(path, expected, await this.resourceFingerprint(path), proofEpoch, isCurrent);
+        const bytes = await this.readVerifiedResourceBytes(path, expected, await readResourceFingerprint(path), proofEpoch, isCurrent);
         if (bytes === undefined) throw new Error('MANGA_CACHE_RESOURCE_CORRUPT');
         return bytes;
       }
       if (manifest?.manga === true && expected === undefined) throw new Error('MANGA_CACHE_RESOURCE_CORRUPT');
     }
-    return this.readResourceBytes(path, isCurrent);
+    return readRawResourceBytes(path, isCurrent);
   }
 
   private async migrateMangaResource(identity: ReadingImageCacheIdentity, path: string, bytes: Uint8Array, valid: () => boolean): Promise<void> {
-    const chapter = this.mangaChapter(identity);
+    const chapter = mangaChapterOfIdentity(identity);
     const reservation = chapter === undefined ? undefined : await this.reserveExternalWrite(chapter, bytes.byteLength + this.mangaIdentityBytes(chapter).byteLength + 64, identity.priority);
     try {
-      await this.enqueueBookMutation(this.bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
-      const directory = await this.chapterDirectory(identity); await this.ensureDirectory(directory);
+      await this.enqueueBookMutation(bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
+      const directory = await this.chapterDirectory(identity); await ensureDirectory(directory);
       if (chapter !== undefined) await this.writeAtomicBytes(`${directory}/manga-identity.json`, this.mangaIdentityBytes(chapter), valid, chapter);
       await this.assertWriteCapacity(directory, bytes.byteLength, chapter !== undefined); await this.writeAtomicBytes(path, bytes, valid, chapter);
-      await this.writeAtomicBytes(`${path}.sha256`, new util.TextEncoder().encodeInto(await this.sha256Bytes(bytes)), valid, chapter);
+      await this.writeAtomicBytes(`${path}.sha256`, new util.TextEncoder().encodeInto(await sha256Bytes(bytes)), valid, chapter);
       });
     } finally { reservation?.release(); }
   }
@@ -1669,29 +1475,29 @@ export class ReadingImageDiskCache {
     bytes: Uint8Array,
     isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
   ): Promise<void> {
-    this.assertResourceIdentity(identity);
+    assertResourceIdentity(identity);
     if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) {
       throw new Error(`offline reading image must contain 1..${MAX_READING_IMAGE_BYTES} bytes`);
     }
     const requestedIdentity: ReadingImageCacheIdentity = { ...identity };
     const payload = bytes.slice();
-    const chapter = this.mangaChapter(requestedIdentity);
+    const chapter = mangaChapterOfIdentity(requestedIdentity);
     const identityBytes = chapter === undefined ? undefined : this.mangaIdentityBytes(chapter);
     const reservation = chapter === undefined ? undefined : await this.reserveExternalWrite(chapter,
       payload.byteLength + (identityBytes?.byteLength ?? 0) + 64, identity.priority);
     const unpin = chapter === undefined ? this.beginMangaOperation(requestedIdentity) : (): void => {};
-    try { await this.enqueueBookMutation(this.bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
-      this.assertCurrent(isCurrent);
+    try { await this.enqueueBookMutation(bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
+      assertOperationCurrent(isCurrent);
       await this.finishPendingClear(requestedIdentity.sourceId, requestedIdentity.bookId);
       const directory = await this.chapterDirectory(requestedIdentity);
-      await this.ensureDirectory(directory);
+      await ensureDirectory(directory);
       if (chapter === undefined && requestedIdentity.mangaDecodeRevision === undefined)
         await this.recordTextResourceOwnership(requestedIdentity, isCurrent);
       if (identityBytes !== undefined) await this.writeAtomicBytes(`${directory}/manga-identity.json`, identityBytes, isCurrent, chapter);
       await this.assertWriteCapacity(directory, payload.byteLength, chapter !== undefined);
       const path = await this.resourcePath(requestedIdentity);
       await this.writeAtomicBytes(path, payload, isCurrent, chapter);
-      if (chapter !== undefined) await this.writeAtomicBytes(`${path}.sha256`, new util.TextEncoder().encodeInto(await this.sha256Bytes(payload)), isCurrent, chapter);
+      if (chapter !== undefined) await this.writeAtomicBytes(`${path}.sha256`, new util.TextEncoder().encodeInto(await sha256Bytes(payload)), isCurrent, chapter);
     }); } finally { unpin(); reservation?.release(); }
   }
 
@@ -1699,12 +1505,12 @@ export class ReadingImageDiskCache {
     identity: ReadingImageCacheIdentity,
     isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
   ): Promise<void> {
-    this.assertResourceIdentity(identity);
+    assertResourceIdentity(identity);
     const requestedIdentity: ReadingImageCacheIdentity = { ...identity };
     const unpin = this.beginMangaOperation(requestedIdentity);
     try { await this.assertMangaAdmission(requestedIdentity);
-      await this.enqueueBookMutation(this.bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
-      this.assertCurrent(isCurrent);
+      await this.enqueueBookMutation(bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
+      assertOperationCurrent(isCurrent);
       await this.finishPendingClear(requestedIdentity.sourceId, requestedIdentity.bookId);
       const path = await this.resourcePath(requestedIdentity);
       this.verifiedDigests.remove(path);
@@ -1713,9 +1519,9 @@ export class ReadingImageDiskCache {
       // Do not permit a corrupt migrated resource to be loaded again from v1.
       const legacyDirectory = await this.legacyChapterDirectory(requestedIdentity);
       const manifest = await this.readValidManifest(legacyDirectory, LEGACY_CACHE_FORMAT_VERSION);
-      const hash = await this.legacyResourceHash(requestedIdentity);
-      if (manifest !== undefined && this.sameChapter(manifest, requestedIdentity) &&
-        this.hasUnambiguousLegacyResourceIdentity(requestedIdentity) && manifest.resourceHashes.indexOf(hash) >= 0) {
+      const hash = await legacyResourceHash(requestedIdentity);
+      if (manifest !== undefined && sameChapterIdentity(manifest, requestedIdentity) &&
+        hasUnambiguousLegacyResourceIdentity(requestedIdentity) && manifest.resourceHashes.indexOf(hash) >= 0) {
         await this.unlinkIfPresent(`${legacyDirectory}/${hash}.bin`);
       }
     }); } finally { unpin(); }
@@ -1726,36 +1532,36 @@ export class ReadingImageDiskCache {
     resources: ReadingImageCacheIdentity[],
     isCurrent: () => boolean = this.captureValidity(chapter.sourceId, chapter.bookId),
   ): Promise<void> {
-    this.assertChapterIdentity(chapter);
+    assertChapterIdentity(chapter);
     const requestedChapter: ReadingImageChapterIdentity = { ...chapter };
     const requestedResources = resources.map((resource: ReadingImageCacheIdentity): ReadingImageCacheIdentity => ({ ...resource }));
-    const mangaChapter = this.mangaChapter(requestedChapter);
+    const mangaChapter = mangaChapterOfIdentity(requestedChapter);
     const identityBytes = mangaChapter === undefined ? undefined : this.mangaIdentityBytes(mangaChapter);
     const reservation = mangaChapter === undefined ? undefined : await this.reserveExternalWrite(mangaChapter,
       (identityBytes?.byteLength ?? 0) * 2 + requestedResources.length * 220 + 1024, chapter.priority);
     const unpin = mangaChapter === undefined ? this.beginMangaOperation(requestedChapter) : (): void => {};
-    try { await this.enqueueBookMutation(this.bookMutationKey(chapter.sourceId, chapter.bookId), async (): Promise<void> => {
-      this.assertCurrent(isCurrent);
+    try { await this.enqueueBookMutation(bookMutationKey(chapter.sourceId, chapter.bookId), async (): Promise<void> => {
+      assertOperationCurrent(isCurrent);
       await this.finishPendingClear(requestedChapter.sourceId, requestedChapter.bookId);
       const resourceHashes: string[] = [];
       const manga = requestedResources.some(resource => resource.resourceRef !== undefined);
       if (manga && requestedChapter.mangaDecodeRevision === undefined) throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
-      const profile = this.mangaCacheProfile(requestedChapter.mangaDecodeRevision);
+      const profile = mangaCacheProfile(requestedChapter.mangaDecodeRevision);
       if (manga && requestedResources.some(resource => resource.resourceRef === undefined)) throw new Error('mixed manga resource manifest');
       const resourceDigests: Record<string, string> = {};
       const directory = await this.chapterDirectory(requestedChapter);
       for (const resource of requestedResources) {
-        this.assertResourceIdentity(resource);
-        this.assertSameChapter(requestedChapter, resource);
+        assertResourceIdentity(resource);
+        assertSameChapterIdentity(requestedChapter, resource);
         if (manga && resource.mangaDecodeRevision !== requestedChapter.mangaDecodeRevision) throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
-        const hash = await this.resourceHash(resource);
-        if (!(await this.validResourceFile(`${directory}/${hash}.bin`))) {
+        const hash = await resourceHash(resource);
+        if (!(await validResourceFile(`${directory}/${hash}.bin`))) {
           throw new Error('offline reading image manifest cannot reference missing bytes');
         }
         if (manga) {
-          const bytes = await this.readResourceBytes(`${directory}/${hash}.bin`, isCurrent);
+          const bytes = await readRawResourceBytes(`${directory}/${hash}.bin`, isCurrent);
           if (bytes === undefined) throw new Error('offline manga bytes disappeared');
-          resourceDigests[hash] = await this.sha256Bytes(bytes);
+          resourceDigests[hash] = await sha256Bytes(bytes);
         }
         if (resourceHashes.indexOf(hash) < 0) resourceHashes.push(hash);
       }
@@ -1772,32 +1578,32 @@ export class ReadingImageDiskCache {
       if (requestedChapter.chapterId !== undefined && manga) manifest.chapterId = requestedChapter.chapterId;
       if (manga) { manifest.manga = true; manifest.resourceDigests = resourceDigests; }
       if (profile !== undefined) manifest.mangaCacheProfile = profile;
-      await this.ensureDirectory(directory);
+      await ensureDirectory(directory);
       if (identityBytes !== undefined) await this.writeAtomicBytes(`${directory}/manga-identity.json`, identityBytes, isCurrent, mangaChapter);
       const manifestBytes = new util.TextEncoder().encodeInto(JSON.stringify(manifest));
       await this.assertWriteCapacity(directory, manifestBytes.byteLength, mangaChapter !== undefined);
-      await this.writeAtomicBytes(this.manifestPath(directory, profile), manifestBytes, isCurrent, mangaChapter);
+      await this.writeAtomicBytes(manifestPathForDirectory(directory, profile), manifestBytes, isCurrent, mangaChapter);
       // Publication never reclaims another version (or an active display's
       // resources). Only an explicit Core-first book clear owns that decision.
     }); } finally { unpin(); reservation?.release(); }
   }
 
   async isChapterComplete(chapter: ReadingImageChapterIdentity): Promise<boolean> {
-    this.assertChapterIdentity(chapter);
+    assertChapterIdentity(chapter);
     const requestedChapter: ReadingImageChapterIdentity = { ...chapter };
     const isCurrent = this.captureValidity(chapter.sourceId, chapter.bookId);
     let complete = false;
     const unpin = this.beginMangaOperation(requestedChapter);
     try { await this.assertMangaAdmission(requestedChapter);
-      await this.enqueueBookMutation(this.bookMutationKey(chapter.sourceId, chapter.bookId), async (): Promise<void> => {
-      this.assertCurrent(isCurrent);
+      await this.enqueueBookMutation(bookMutationKey(chapter.sourceId, chapter.bookId), async (): Promise<void> => {
+      assertOperationCurrent(isCurrent);
       await this.finishPendingClear(requestedChapter.sourceId, requestedChapter.bookId);
       let value = await this.readValidManifest(await this.chapterDirectory(requestedChapter), CACHE_FORMAT_VERSION,
-        this.mangaCacheProfile(requestedChapter.mangaDecodeRevision), isCurrent, requestedChapter.mangaDecodeRevision !== undefined);
-      if (value === undefined && this.mangaChapter(requestedChapter) !== undefined) value = await this.readValidManifest(
-        await this.ordinalChapterDirectory(requestedChapter), CACHE_FORMAT_VERSION, this.mangaCacheProfile(requestedChapter.mangaDecodeRevision), isCurrent, true);
-      this.assertCurrent(isCurrent);
-      complete = value !== undefined && this.sameChapter(value, requestedChapter) &&
+        mangaCacheProfile(requestedChapter.mangaDecodeRevision), isCurrent, requestedChapter.mangaDecodeRevision !== undefined);
+      if (value === undefined && mangaChapterOfIdentity(requestedChapter) !== undefined) value = await this.readValidManifest(
+        await this.ordinalChapterDirectory(requestedChapter), CACHE_FORMAT_VERSION, mangaCacheProfile(requestedChapter.mangaDecodeRevision), isCurrent, true);
+      assertOperationCurrent(isCurrent);
+      complete = value !== undefined && sameChapterIdentity(value, requestedChapter) &&
         (value.manga !== true || requestedChapter.mangaDecodeRevision !== undefined);
     }); } finally { unpin(); }
     return complete;
@@ -1805,8 +1611,8 @@ export class ReadingImageDiskCache {
 
   /** An ordinal without a body version cannot prove the current catalog's assets. */
   async isChapterMaterialized(sourceId: string, bookId: string, chapterIndex: number): Promise<boolean> {
-    this.assertNonBlank(sourceId, 'sourceId');
-    this.assertNonBlank(bookId, 'bookId');
+    assertNonBlankValue(sourceId, 'sourceId');
+    assertNonBlankValue(bookId, 'bookId');
     if (!Number.isSafeInteger(chapterIndex) || chapterIndex < 0) {
       throw new Error('chapterIndex must be a non-negative safe integer');
     }
@@ -1818,12 +1624,12 @@ export class ReadingImageDiskCache {
   private async readValidManifest(directory: string, formatVersion: number, profile?: string,
     isCurrent: () => boolean = (): boolean => !this.closed, manga: boolean = false): Promise<ReadingImageChapterManifest | undefined> {
     try {
-      const value = await this.readManifestIdentity(directory, formatVersion, profile, manga, isCurrent);
+      const value = await readDiskManifestIdentity(directory, formatVersion, isCurrent, profile, manga);
       if (value === undefined || !Array.isArray(value.resourceHashes) ||
-        (!manga && profile === undefined && !this.isTextOwnership(value))) return undefined;
+        (!manga && profile === undefined && !isTextOwnershipManifest(value))) return undefined;
       for (const hash of value.resourceHashes) {
         if (typeof hash !== 'string' || !/^[0-9a-f]{64}$/.test(hash) ||
-          !(await this.validResourceFile(`${directory}/${hash}.bin`))) return undefined;
+          !(await validResourceFile(`${directory}/${hash}.bin`))) return undefined;
         if (value.manga === true) {
           const expected = value.resourceDigests?.[hash];
           if (expected === undefined || !/^[0-9a-f]{64}$/.test(expected) ||
@@ -1836,21 +1642,14 @@ export class ReadingImageDiskCache {
     }
   }
 
-  /** Second-resolution stat values cannot safely cache same-size writes. */
-  private async resourceFingerprint(path: string): Promise<string | undefined> {
-    const stat = await fileIo.stat(path);
-    if (!stat.isFile() || typeof stat.mtimeNs !== 'bigint' || typeof stat.ctimeNs !== 'bigint') return undefined;
-    return `${stat.ino.toString()}:${stat.size}:${stat.mtimeNs.toString()}:${stat.ctimeNs.toString()}`;
-  }
-
   private async matchesResourceDigest(path: string, expected: string,
     isCurrent: () => boolean = (): boolean => !this.closed): Promise<boolean> {
-    this.assertCurrent(isCurrent);
+    assertOperationCurrent(isCurrent);
     const proofEpoch = this.digestProofEpoch;
-    const before = await this.resourceFingerprint(path);
+    const before = await readResourceFingerprint(path);
     const verified = this.verifiedDigests.get(path);
     if (before !== undefined && verified?.fingerprint === before && verified.digest === expected) {
-      this.assertCurrent(isCurrent); return true;
+      assertOperationCurrent(isCurrent); return true;
     }
     return (await this.readVerifiedResourceBytes(path, expected, before, proofEpoch, isCurrent)) !== undefined;
   }
@@ -1860,87 +1659,21 @@ export class ReadingImageDiskCache {
     const proof = this.verifiedDigests.get(path);
     const alreadyVerified = before !== undefined && proof?.fingerprint === before && proof.digest === expected;
     if (!alreadyVerified) this.verifiedDigests.remove(path);
-    const bytes = await this.readResourceBytes(path, isCurrent);
-    if (bytes === undefined || (!alreadyVerified && await this.sha256Bytes(bytes) !== expected)) return undefined;
-    const after = await this.resourceFingerprint(path);
-    this.assertCurrent(isCurrent);
+    const bytes = await readRawResourceBytes(path, isCurrent);
+    if (bytes === undefined || (!alreadyVerified && await sha256Bytes(bytes) !== expected)) return undefined;
+    const after = await readResourceFingerprint(path);
+    assertOperationCurrent(isCurrent);
     if (before !== undefined && after !== before) return undefined;
     if (after !== undefined && before === after && proofEpoch === this.digestProofEpoch)
       this.verifiedDigests.put(path, { fingerprint: after, digest: expected });
     return bytes;
   }
 
-  private async readMangaMetadata(path: string, maximumBytes: number,
-    isCurrent: () => boolean = (): boolean => !this.closed): Promise<Uint8Array> {
-    this.assertCurrent(isCurrent);
-    const stat = await fileIo.stat(path);
-    if (!stat.isFile() || stat.size <= 0 || stat.size > maximumBytes) throw new Error('MANGA_ATOMIC_PAYLOAD_BUDGET');
-    const bytes = await readMangaAtomicPayload(path, stat.size, maximumBytes, isCurrent, true);
-    this.assertCurrent(isCurrent);
-    return bytes;
-  }
-
-  private async readTextAtomicMetadata(path: string,
-    isCurrent: () => boolean = (): boolean => !this.closed): Promise<Uint8Array | undefined> {
-    this.assertCurrent(isCurrent);
-    const stat = await fileIo.stat(path);
-    if (!stat.isFile() || !Number.isSafeInteger(stat.size) || stat.size <= 0) return undefined;
-    // Existing text manifests have no format-defined byte limit. The worker
-    // uses the exact admitted size and rechecks it before the AtomicFile read.
-    const bytes = await readMangaAtomicPayload(path, stat.size, stat.size, isCurrent, 'text-manifest');
-    this.assertCurrent(isCurrent);
-    return bytes;
-  }
-
-  private async readTextManifestIdentity(directory: string, formatVersion: number, fileName: string = 'manifest.json',
-    retryIoErrors: boolean = false): Promise<ReadingImageChapterManifest | undefined> {
-    const path = `${directory}/${fileName}`;
-    if (!(await fileIo.access(path))) return undefined;
-    let bytes: Uint8Array | undefined;
-    try {
-      bytes = await this.readTextAtomicMetadata(path);
-    } catch (error) {
-      if (retryIoErrors && !this.isNotFoundError(error)) throw error;
-      return undefined;
-    }
-    if (bytes === undefined) return undefined;
-    try {
-      const raw = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes);
-      const value = JSON.parse(raw) as ReadingImageChapterManifest;
-      if (value.formatVersion !== formatVersion || typeof value.sourceId !== 'string' ||
-        typeof value.bookId !== 'string' || !Number.isSafeInteger(value.chapterIndex) || value.chapterIndex < 0 ||
-        typeof value.contentVersion !== 'string' || value.contentVersion.trim().length === 0) return undefined;
-      return value;
-    } catch (_) {
-      return undefined;
-    }
-  }
-
-  private async readManifestIdentity(directory: string, formatVersion: number, profile?: string,
-    manga: boolean = false, isCurrent: () => boolean = (): boolean => !this.closed): Promise<ReadingImageChapterManifest | undefined> {
-    const path = this.manifestPath(directory, profile);
-    if (!(await fileIo.access(path))) return undefined;
-    try {
-      const bytes = manga || directory.includes('/.manga/') || profile !== undefined ?
-        await this.readMangaMetadata(path, MANGA_MANIFEST_METADATA_BYTES, isCurrent) :
-        await this.readTextAtomicMetadata(path, isCurrent);
-      if (bytes === undefined) return undefined;
-      const raw = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes);
-      const value = JSON.parse(raw) as ReadingImageChapterManifest;
-      if (value.mangaCacheProfile !== profile || value.formatVersion !== formatVersion || typeof value.sourceId !== 'string' ||
-        typeof value.bookId !== 'string' || !Number.isSafeInteger(value.chapterIndex) || value.chapterIndex < 0 ||
-        typeof value.contentVersion !== 'string' || value.contentVersion.trim().length === 0) return undefined;
-      return value;
-    } catch (_) {
-      return undefined;
-    }
-  }
-
   /** Called only after Core has invalidated the corresponding usable refs. */
   async clearBook(sourceId: string, bookId: string, manga: boolean = false): Promise<void> {
-    this.assertNonBlank(sourceId, 'sourceId');
-    this.assertNonBlank(bookId, 'bookId');
-    const key = this.bookMutationKey(sourceId, bookId);
+    assertNonBlankValue(sourceId, 'sourceId');
+    assertNonBlankValue(bookId, 'bookId');
+    const key = bookMutationKey(sourceId, bookId);
     if (manga) {
       this.mangaBooks.add(key);
       // Ordinary clear never turns a Core candidate into blanket book deletion.
@@ -1949,10 +1682,10 @@ export class ReadingImageDiskCache {
     }
     this.bookClearGenerations.set(key, (this.bookClearGenerations.get(key) ?? 0) + 1);
     await this.enqueueBookMutation(key, async (): Promise<void> => {
-      const directory = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}`;
+      const directory = `${this.rootDirectory()}/${await bookHash(sourceId, bookId)}`;
       for (const proofPath of this.verifiedDigests.keys()) if (proofPath.startsWith(`${directory}/`)) this.verifiedDigests.remove(proofPath);
       const marker = await this.clearMarkerPath(sourceId, bookId);
-      await this.ensureDirectory(`${this.rootDirectory()}/.clear`);
+      await ensureDirectory(`${this.rootDirectory()}/.clear`);
       // Keep this small durable intent until deletion finishes. After a crash,
       // reads/writes resume the already-authorized deletion before admission.
       await this.writeAtomicBytes(marker, new util.TextEncoder().encodeInto('clear'));
@@ -1967,176 +1700,55 @@ export class ReadingImageDiskCache {
    * A durable chapter intent shares the existing book mutation serialization. */
   async clearChapter(sourceId: string, bookId: string, chapterIndex: number, captured?: ReadingImageCleanupFile[],
     current?: () => boolean): Promise<void> {
-    this.assertNonBlank(sourceId, 'sourceId'); this.assertNonBlank(bookId, 'bookId');
+    assertNonBlankValue(sourceId, 'sourceId'); assertNonBlankValue(bookId, 'bookId');
     if (!Number.isSafeInteger(chapterIndex) || chapterIndex < 0) throw new Error('invalid chapterIndex');
-    const key = this.bookMutationKey(sourceId, bookId);
+    const key = bookMutationKey(sourceId, bookId);
     this.bookClearGenerations.set(key, (this.bookClearGenerations.get(key) ?? 0) + 1);
     await this.enqueueBookMutation(key, async (): Promise<void> => {
       if (captured !== undefined) {
         await this.clearCapturedTextFiles(sourceId, bookId, chapterIndex, captured, current);
         return;
       }
-      await this.ensureDirectory(`${this.rootDirectory()}/.clear`);
+      await ensureDirectory(`${this.rootDirectory()}/.clear`);
       const marker = `${await this.clearMarkerPath(sourceId, bookId)}.chapter-${chapterIndex}`;
       await this.writeAtomicBytes(marker, new util.TextEncoder().encodeInto('clear'));
       await this.finishPendingChapterClears(sourceId, bookId);
     });
   }
 
-  /** Settings already durably recorded the exact Core ACK and captured files.
-   * Reopening the app must not clear a newer publication at the same ordinal. */
+  private clearOpsContext(): ReadingImageClearOpsContext {
+    return {
+      rootDirectory: (): string => this.rootDirectory(),
+      legacyRootDirectory: (): string => this.legacyRootDirectory(),
+      isOpen: (): boolean => !this.closed,
+      mangaPhysicalKey: (stat: fileIo.Stat): string => this.mangaPhysicalKey(stat),
+      removeVerifiedDigest: (path: string): void => { this.verifiedDigests.remove(path); },
+      verifiedDigestKeys: (): string[] => this.verifiedDigests.keys(),
+      writeAtomicBytes: (path: string, bytes: Uint8Array, isCurrent?: () => boolean): Promise<void> =>
+        this.writeAtomicBytes(path, bytes, isCurrent),
+      unlinkIfPresent: (path: string): Promise<void> => this.unlinkIfPresent(path),
+    };
+  }
+
   private async clearCapturedTextFiles(sourceId: string, bookId: string, chapterIndex: number,
     captured: ReadingImageCleanupFile[], current?: () => boolean): Promise<void> {
-    const currentRoot = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}/${chapterIndex}/`;
-    const legacy = `${this.legacyRootDirectory()}/${await this.legacyBookHash(sourceId, bookId)}/${chapterIndex}/`;
-    const currentFile = /^[0-9a-f]{64}\/(?:manifest\.json|text-identity\.json|[0-9a-f]{64}\.bin)$/;
-    const legacyFile = /^(?:manifest\.json|[0-9a-f]{64}\.bin)$/;
-    for (const file of captured) {
-      if (!(file.path.startsWith(currentRoot) && currentFile.test(file.path.substring(currentRoot.length))) &&
-        !(file.path.startsWith(legacy) && legacyFile.test(file.path.substring(legacy.length))))
-        throw new Error('TEXT_CACHE_CLEANUP_FILE_IDENTITY_INVALID');
-    }
-    const ordered = [...captured].sort((a, b) => Number(a.path.endsWith('.json')) - Number(b.path.endsWith('.json')));
-    for (const file of ordered) {
-      const stat = await this.statIfPresent(file.path);
-      if (stat === undefined || !stat.isFile() || this.mangaPhysicalKey(stat) !== file.physicalKey ||
-        stat.size !== file.size || typeof stat.mtimeNs !== 'bigint' || stat.mtimeNs.toString() !== file.mtime) continue;
-      if (current?.() === false) throw new Error('TEXT_CACHE_CLEANUP_PROTECTION_CHANGED');
-      this.verifiedDigests.remove(file.path);
-      try { await fileIo.unlink(file.path); }
-      catch (error) { if (!this.isNotFoundError(error)) throw error; }
-    }
+    await clearCapturedTextFilesOps(this.clearOpsContext(), sourceId, bookId, chapterIndex, captured, current);
   }
 
   private async finishPendingChapterClears(sourceId: string, bookId: string): Promise<void> {
-    const clearRoot = `${this.rootDirectory()}/.clear`;
-    const entries = await this.listFileIfPresent(clearRoot);
-    if (entries.length === 0) return;
-    const prefix = `${await this.bookHash(sourceId, bookId)}.pending.chapter-`;
-    for (const name of entries) {
-      if (!name.startsWith(prefix) || !/^(0|[1-9][0-9]*)$/.test(name.substring(prefix.length))) continue;
-      const ordinal = name.substring(prefix.length);
-      const chapter = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}/${ordinal}`;
-      if ((await this.statIfPresent(chapter))?.isDirectory() === true) {
-        for (const version of await this.listFileIfPresent(chapter)) {
-          if (!/^[0-9a-f]{64}$/.test(version)) continue;
-          const directory = `${chapter}/${version}`;
-          if ((await this.statIfPresent(directory))?.isDirectory() !== true) continue;
-          for (const proof of this.verifiedDigests.keys()) if (proof.startsWith(`${directory}/`)) this.verifiedDigests.remove(proof);
-          await this.clearOwnedTextDirectory(directory, CACHE_FORMAT_VERSION, sourceId, bookId, ordinal, version);
-        }
-        await this.removeEmptyDirectory(chapter);
-      }
-      const legacy = `${this.legacyRootDirectory()}/${await this.legacyBookHash(sourceId, bookId)}/${ordinal}`;
-      if ((await this.statIfPresent(legacy))?.isDirectory() === true)
-        await this.clearOwnedTextDirectory(legacy, LEGACY_CACHE_FORMAT_VERSION, sourceId, bookId, ordinal);
-      await this.unlinkIfPresent(`${clearRoot}/${name}`);
-    }
+    await finishPendingChapterClearsOps(this.clearOpsContext(), sourceId, bookId);
   }
 
   private async finishPendingClear(sourceId: string, bookId: string): Promise<void> {
-    await this.finishPendingChapterClears(sourceId, bookId);
-    const marker = await this.clearMarkerPath(sourceId, bookId);
-    if (!(await fileIo.access(marker))) return;
-    const book = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}`;
-    if ((await this.statIfPresent(book))?.isDirectory() === true) {
-      for (const ordinal of await this.listFileIfPresent(book)) {
-        if (!/^(0|[1-9][0-9]*)$/.test(ordinal)) continue;
-        const chapter = `${book}/${ordinal}`;
-        if ((await this.statIfPresent(chapter))?.isDirectory() !== true) continue;
-        for (const version of await this.listFileIfPresent(chapter)) {
-          if (!/^[0-9a-f]{64}$/.test(version)) continue;
-          const directory = `${chapter}/${version}`;
-          if ((await this.statIfPresent(directory))?.isDirectory() !== true) continue;
-          await this.clearOwnedTextDirectory(directory, CACHE_FORMAT_VERSION, sourceId, bookId, ordinal, version);
-        }
-        await this.removeEmptyDirectory(chapter);
-      }
-      await this.removeEmptyDirectory(book);
-    }
-    const legacyBook = `${this.legacyRootDirectory()}/${await this.legacyBookHash(sourceId, bookId)}`;
-    if ((await this.statIfPresent(legacyBook))?.isDirectory() === true) {
-      for (const name of await this.listFileIfPresent(legacyBook)) {
-        if (!/^(0|[1-9][0-9]*)$/.test(name)) continue;
-        const directory = `${legacyBook}/${name}`;
-        // v1 delimiter keys could collide. Never delete another pair's data,
-        // nor claim unidentifiable legacy garbage merely by directory number.
-        if ((await this.statIfPresent(directory))?.isDirectory() === true) {
-          await this.clearOwnedTextDirectory(directory, LEGACY_CACHE_FORMAT_VERSION, sourceId, bookId, name);
-        }
-      }
-      await this.removeEmptyDirectory(legacyBook);
-    }
-    // Revocation survives successful cleanup too: unreadable/unidentifiable
-    // legacy leftovers must never become readable after a later restart.
-    await this.writeAtomicBytes(`${marker}.legacy-revoked`, new util.TextEncoder().encodeInto('cleared'));
-    await this.unlinkIfPresent(marker);
-  }
-
-  /** Same manga signals used by the upstream Host; no retention policy here. */
-
-  private async containsMangaManifest(directory: string): Promise<boolean> {
-    for (const name of await this.listFileIfPresent(directory)) {
-      const path = `${directory}/${name}`;
-      if (name === '.manga' || name === 'manga-identity.json' || name === 'manifest-script-bgra-v2.json') return true;
-      const stat = await this.statIfPresent(path);
-      if (stat === undefined) continue;
-      if (stat.isDirectory()) {
-        if (await this.containsMangaManifest(path)) return true;
-      } else if (name === 'manifest.json') {
-        const value = await this.readTextManifestIdentity(directory, CACHE_FORMAT_VERSION, name, true) ??
-          await this.readTextManifestIdentity(directory, LEGACY_CACHE_FORMAT_VERSION, name, true);
-        if (value?.manga === true || value?.chapterId !== undefined || value?.mangaCacheProfile !== undefined) return true;
-      }
-    }
-    return false;
-  }
-
-  private isTextOwnership(value: ReadingImageChapterManifest): boolean {
-    return value.manga !== true && value.chapterId === undefined && value.mangaCacheProfile === undefined &&
-      (value.cacheOwner === undefined || value.cacheOwner === TEXT_CACHE_OWNER) && Array.isArray(value.resourceHashes) &&
-      value.resourceHashes.every((hash: string): boolean => typeof hash === 'string' && /^[0-9a-f]{64}$/.test(hash));
-  }
-
-  private async clearOwnedTextDirectory(directory: string, formatVersion: number, sourceId: string, bookId: string,
-    ordinal: string, version?: string): Promise<void> {
-    if (await this.containsMangaManifest(directory)) return;
-    const files = formatVersion === CACHE_FORMAT_VERSION ? ['manifest.json', 'text-identity.json'] : ['manifest.json'];
-    const ownedFiles: string[] = [];
-    const hashes: Set<string> = new Set<string>();
-    for (const fileName of files) {
-      const value = await this.readTextManifestIdentity(directory, formatVersion, fileName, true);
-      if (value === undefined || !this.isTextOwnership(value) || value.sourceId !== sourceId || value.bookId !== bookId ||
-        `${value.chapterIndex}` !== ordinal || (version !== undefined && await this.sha256(value.contentVersion) !== version) ||
-        (fileName === 'text-identity.json' && value.cacheOwner !== TEXT_CACHE_OWNER)) continue;
-      ownedFiles.push(fileName);
-      for (const hash of value.resourceHashes) hashes.add(hash);
-    }
-    if (ownedFiles.length === 0) return;
-    // Keep ownership until all named bytes have been removed. A failure must
-    // leave both the original pending intent and enough proof for its retry.
-    for (const hash of hashes) {
-      const path = `${directory}/${hash}.bin`;
-      if ((await this.statIfPresent(path))?.isFile() === true) await this.unlinkIfPresent(path);
-    }
-    for (const fileName of ownedFiles) await this.unlinkIfPresent(`${directory}/${fileName}`);
-    await this.removeEmptyDirectory(directory);
-  }
-
-  private async removeEmptyDirectory(directory: string): Promise<void> {
-    try {
-      if ((await fileIo.listFile(directory)).length === 0) await fileIo.rmdir(directory);
-    } catch (error) {
-      if (!this.isNotFoundError(error)) throw error;
-    }
+    await finishPendingClearOps(this.clearOpsContext(), sourceId, bookId);
   }
 
   private async ownsTextResource(identity: ReadingImageCacheIdentity): Promise<boolean> {
     const directory = await this.chapterDirectory(identity);
-    const hash = await this.resourceHash(identity);
+    const hash = await resourceHash(identity);
     for (const fileName of ['manifest.json', 'text-identity.json']) {
-      const value = await this.readTextManifestIdentity(directory, CACHE_FORMAT_VERSION, fileName, true);
-      if (value !== undefined && this.isTextOwnership(value) && this.sameChapter(value, identity) &&
+      const value = await readTextManifestIdentity(directory, CACHE_FORMAT_VERSION, (): boolean => !this.closed, fileName, true);
+      if (value !== undefined && isTextOwnershipManifest(value) && sameChapterIdentity(value, identity) &&
         (fileName !== 'text-identity.json' || value.cacheOwner === TEXT_CACHE_OWNER) && value.resourceHashes.indexOf(hash) >= 0) return true;
     }
     return false;
@@ -2145,13 +1757,13 @@ export class ReadingImageDiskCache {
   /** Partial writes need durable ownership without publishing completion. */
   private async recordTextResourceOwnership(identity: ReadingImageCacheIdentity, current: () => boolean): Promise<void> {
     const directory = await this.chapterDirectory(identity);
-    if (await this.containsMangaManifest(directory)) throw new Error('text image cache cannot overwrite manga ownership');
-    const previous = await this.readTextManifestIdentity(directory, CACHE_FORMAT_VERSION, 'text-identity.json', true);
+    if (await containsMangaManifest(directory, (): boolean => !this.closed)) throw new Error('text image cache cannot overwrite manga ownership');
+    const previous = await readTextManifestIdentity(directory, CACHE_FORMAT_VERSION, (): boolean => !this.closed, 'text-identity.json', true);
     if ((previous === undefined && await fileIo.access(`${directory}/text-identity.json`)) ||
-      (previous !== undefined && (!this.isTextOwnership(previous) || previous.cacheOwner !== TEXT_CACHE_OWNER ||
-      !this.sameChapter(previous, identity)))) throw new Error('text image cache ownership mismatch');
+      (previous !== undefined && (!isTextOwnershipManifest(previous) || previous.cacheOwner !== TEXT_CACHE_OWNER ||
+      !sameChapterIdentity(previous, identity)))) throw new Error('text image cache ownership mismatch');
     const hashes = new Set<string>(previous?.resourceHashes ?? []);
-    hashes.add(await this.resourceHash(identity));
+    hashes.add(await resourceHash(identity));
     const ownership: ReadingImageChapterManifest = { formatVersion: CACHE_FORMAT_VERSION, cacheOwner: TEXT_CACHE_OWNER,
       sourceId: identity.sourceId, bookId: identity.bookId, chapterIndex: identity.chapterIndex,
       contentVersion: identity.contentVersion, resourceHashes: Array.from(hashes).sort(), completedAt: 0 };
@@ -2159,27 +1771,27 @@ export class ReadingImageDiskCache {
   }
 
   private async clearMarkerPath(sourceId: string, bookId: string): Promise<string> {
-    return `${this.rootDirectory()}/.clear/${await this.bookHash(sourceId, bookId)}.pending`;
+    return `${this.rootDirectory()}/.clear/${await bookHash(sourceId, bookId)}.pending`;
   }
 
   private async chapterDirectory(identity: ReadingImageChapterIdentity): Promise<string> {
-    const chapter = this.mangaChapter(identity);
-    if (chapter !== undefined) return `${this.rootDirectory()}/${await this.bookHash(identity.sourceId, identity.bookId)}/` +
-      `.manga/${await this.sha256(chapter.chapterId)}/${await this.sha256(chapter.contentVersion)}`;
+    const chapter = mangaChapterOfIdentity(identity);
+    if (chapter !== undefined) return `${this.rootDirectory()}/${await bookHash(identity.sourceId, identity.bookId)}/` +
+      `.manga/${await sha256Text(chapter.chapterId)}/${await sha256Text(chapter.contentVersion)}`;
     return this.ordinalChapterDirectory(identity);
   }
 
   private async ordinalChapterDirectory(identity: ReadingImageChapterIdentity): Promise<string> {
-    return `${this.rootDirectory()}/${await this.bookHash(identity.sourceId, identity.bookId)}/` +
-      `${identity.chapterIndex}/${await this.sha256(identity.contentVersion)}`;
+    return `${this.rootDirectory()}/${await bookHash(identity.sourceId, identity.bookId)}/` +
+      `${identity.chapterIndex}/${await sha256Text(identity.contentVersion)}`;
   }
 
   private async isMangaBook(sourceId: string, bookId: string): Promise<boolean> {
-    const key = this.bookMutationKey(sourceId, bookId);
+    const key = bookMutationKey(sourceId, bookId);
     if (this.mangaBooks.has(key)) return true;
-    const directory = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}`;
-    if (await fileIo.access(`${directory}/.manga`) || await this.containsMangaManifest(directory) ||
-      await this.containsMangaManifest(`${this.legacyRootDirectory()}/${await this.legacyBookHash(sourceId, bookId)}`)) {
+    const directory = `${this.rootDirectory()}/${await bookHash(sourceId, bookId)}`;
+    if (await fileIo.access(`${directory}/.manga`) || await containsMangaManifest(directory, (): boolean => !this.closed) ||
+      await containsMangaManifest(`${this.legacyRootDirectory()}/${await legacyBookHash(sourceId, bookId)}`, (): boolean => !this.closed)) {
       this.mangaBooks.add(key); return true;
     }
     return false;
@@ -2187,26 +1799,11 @@ export class ReadingImageDiskCache {
 
 
   private async legacyChapterDirectory(identity: ReadingImageChapterIdentity): Promise<string> {
-    return `${this.legacyRootDirectory()}/${await this.legacyBookHash(identity.sourceId, identity.bookId)}/${identity.chapterIndex}`;
+    return `${this.legacyRootDirectory()}/${await legacyBookHash(identity.sourceId, identity.bookId)}/${identity.chapterIndex}`;
   }
 
   private async resourcePath(identity: ReadingImageCacheIdentity): Promise<string> {
-    return `${await this.chapterDirectory(identity)}/${await this.resourceHash(identity)}.bin`;
-  }
-
-  private async bookHash(sourceId: string, bookId: string): Promise<string> {
-    return this.sha256(JSON.stringify([sourceId, bookId]));
-  }
-
-  private async legacyBookHash(sourceId: string, bookId: string): Promise<string> {
-    return this.sha256(`${sourceId}\u0000${bookId}`);
-  }
-
-  private bookMutationKey(sourceId: string, bookId: string): string {
-    // Do not use a delimiter-only key: although normal IDs are opaque strings,
-    // a caller-controlled NUL could otherwise make two distinct pairs share a
-    // mutation tail (for example `a\0b`/`c` and `a`/`b\0c`).
-    return JSON.stringify([sourceId, bookId]);
+    return `${await this.chapterDirectory(identity)}/${await resourceHash(identity)}.bin`;
   }
 
   private enqueueBookMutation(
@@ -2224,58 +1821,6 @@ export class ReadingImageDiskCache {
         this.bookMutationTails.delete(key);
       }
     });
-  }
-
-  private async resourceHash(identity: ReadingImageCacheIdentity): Promise<string> {
-    if (identity.resourceRef !== undefined) {
-      const profile = this.mangaCacheProfile(identity.mangaDecodeRevision);
-      return profile === undefined ? this.legacyMangaResourceHash(identity) :
-        this.sha256(JSON.stringify(['manga-resource-v2', profile, identity.contentVersion, identity.resourceRef]));
-    }
-    const baseUrl = canonicalReadingImageBaseUrl(identity.baseUrl);
-    return this.sha256(JSON.stringify([identity.contentVersion, identity.imageUrl, baseUrl ?? '']));
-  }
-
-  private async legacyMangaResourceHash(identity: ReadingImageCacheIdentity): Promise<string> {
-    return this.sha256(JSON.stringify(['manga-resource-v1', identity.contentVersion, identity.resourceRef]));
-  }
-
-  private mangaCacheProfile(revision?: string): string | undefined {
-    if (revision === 'bytes-v1') return MANGA_SCRIPT_CACHE_PROFILE;
-    if (revision === undefined || revision === 'identity-v1') return undefined;
-    throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
-  }
-
-  private manifestPath(directory: string, profile?: string): string {
-    return profile === undefined ? `${directory}/manifest.json` : `${directory}/manifest-${profile}.json`;
-  }
-
-  private hasUnambiguousLegacyResourceIdentity(identity: ReadingImageCacheIdentity): boolean {
-    // v1 has no URL metadata to disambiguate delimiter-bearing resource keys.
-    return identity.resourceRef === undefined && identity.imageUrl.indexOf('\u0000') < 0 &&
-      (canonicalReadingImageBaseUrl(identity.baseUrl) ?? '').indexOf('\u0000') < 0;
-  }
-
-  private async legacyResourceHash(identity: ReadingImageCacheIdentity): Promise<string> {
-    const baseUrl = canonicalReadingImageBaseUrl(identity.baseUrl);
-    return this.sha256(`${identity.contentVersion}\u0000${identity.imageUrl}\u0000${baseUrl ?? ''}`);
-  }
-
-  private async sha256(value: string): Promise<string> {
-    return this.sha256Bytes(new util.TextEncoder().encodeInto(value));
-  }
-
-  private async sha256Bytes(value: Uint8Array): Promise<string> {
-    const digest = cryptoFramework.createMd('SHA256');
-    await digest.update({ data: value });
-    const output = await digest.digest();
-    const alphabet = '0123456789abcdef';
-    let result = '';
-    for (const byte of output.data) {
-      result += alphabet.charAt((byte >>> 4) & 0x0f);
-      result += alphabet.charAt(byte & 0x0f);
-    }
-    return result;
   }
 
   private rootDirectory(): string {
@@ -2335,48 +1880,7 @@ export class ReadingImageDiskCache {
 
   private async performAtomicWrite(path: string, bytes: Uint8Array, isCurrent?: () => boolean): Promise<void> {
     this.nextTemporaryFile += 1;
-    const tmpPath = `${path}.tmp-${this.nextTemporaryFile}`;
-    try {
-      this.assertCurrent(isCurrent);
-      const file = await fileIo.open(
-        tmpPath,
-        fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC,
-      );
-      let written = false;
-      try {
-        let writtenBytes = 0;
-        while (writtenBytes < bytes.byteLength) {
-          this.assertCurrent(isCurrent);
-          // FileIO has no source-buffer offset; reuse the bounded chunk pattern
-          // of book/font staging and retry partial writes from the next byte.
-          const chunk = bytes.slice(writtenBytes, Math.min(bytes.byteLength, writtenBytes + READING_IMAGE_WRITE_CHUNK_BYTES));
-          const written = await fileIo.write(file.fd, chunk.buffer);
-          if (!Number.isSafeInteger(written) || written <= 0 || written > chunk.byteLength) {
-            throw new Error('offline reading image destination stopped accepting bytes');
-          }
-          writtenBytes += written;
-        }
-        await fileIo.fsync(file.fd);
-        written = true;
-      } finally {
-        try { await fileIo.close(file); }
-        catch (error) { if (written) throw error; }
-      }
-      this.assertCurrent(isCurrent);
-      await fileIo.rename(tmpPath, path);
-    } catch (error) {
-      try {
-        await fileIo.unlink(tmpPath);
-      } catch (_) {
-      }
-      if ((error as BusinessError).code === FILE_SYSTEM_NO_SPACE_ERROR) {
-        throw new ReadingOfflineMaterializationError(
-          'storage_full',
-          'MANGA_CACHE_STORAGE_FULL',
-        );
-      }
-      throw error;
-    }
+    await performAtomicFileWrite(path, `${path}.tmp-${this.nextTemporaryFile}`, bytes, isCurrent);
   }
 
   private async assertWriteCapacity(directory: string, writeBytes: number, manga: boolean = false): Promise<void> {
@@ -2409,110 +1913,14 @@ export class ReadingImageDiskCache {
     }
   }
 
-  private async ensureDirectory(path: string): Promise<void> {
-    if (await fileIo.access(path)) {
-      return;
-    }
-    try {
-      await fileIo.mkdir(path, true);
-    } catch (error) {
-      if (!(await fileIo.access(path))) {
-        throw error;
-      }
-    }
-  }
-
-  private isNotFoundError(error: unknown): boolean {
-    const code = (error as { code?: number | string } | undefined)?.code;
-    return code === 13900002 || code === 'ENOENT';
-  }
-
-  private async statIfPresent(path: string): Promise<fileIo.Stat | undefined> {
-    try { return await fileIo.stat(path); }
-    catch (error) {
-      if (this.isNotFoundError(error)) return undefined;
-      throw error;
-    }
-  }
-
-  private async listFileIfPresent(path: string): Promise<string[]> {
-    try { return await fileIo.listFile(path); }
-    catch (error) {
-      if (this.isNotFoundError(error)) return [];
-      throw error;
-    }
-  }
-
   private async unlinkIfPresent(path: string): Promise<void> {
     try {
       await fileIo.unlink(path);
       this.inFlightWriteRevision += 1;
     } catch (error) {
-      if (!this.isNotFoundError(error)) { this.invalidateMangaBudgetInventory(); throw error; }
+      if (!isNotFoundError(error)) { this.invalidateMangaBudgetInventory(); throw error; }
     }
     this.mangaBudgetFileRemoved(path);
   }
 
-  private async validResourceFile(path: string): Promise<boolean> {
-    if (!(await fileIo.access(path))) return false;
-    const stat = await fileIo.stat(path);
-    return !stat.isDirectory() && Number.isSafeInteger(stat.size) && stat.size > 0 && stat.size <= MAX_READING_IMAGE_BYTES;
-  }
-
-  private async readResourceBytes(path: string,
-    isCurrent: () => boolean = (): boolean => !this.closed): Promise<Uint8Array | undefined> {
-    this.assertCurrent(isCurrent);
-    if (!(await fileIo.access(path))) return undefined;
-    const stat = await fileIo.stat(path);
-    if (!stat.isFile() || !Number.isSafeInteger(stat.size) || stat.size <= 0 || stat.size > MAX_READING_IMAGE_BYTES) return undefined;
-    const bytes = await readMangaAtomicPayload(path, stat.size, MAX_READING_IMAGE_BYTES, isCurrent);
-    this.assertCurrent(isCurrent);
-    return bytes;
-  }
-
-  private sameChapter(left: ReadingImageChapterIdentity, right: ReadingImageChapterIdentity): boolean {
-    return left.sourceId === right.sourceId && left.bookId === right.bookId &&
-      (left.chapterId !== undefined && right.chapterId !== undefined ? left.chapterId === right.chapterId : left.chapterIndex === right.chapterIndex) &&
-      left.contentVersion === right.contentVersion;
-  }
-
-  private assertCurrent(isCurrent?: () => boolean): void {
-    if (isCurrent !== undefined && !isCurrent()) throw new Error('offline reading image operation was superseded');
-  }
-
-  private assertResourceIdentity(identity: ReadingImageCacheIdentity): void {
-    this.assertChapterIdentity(identity);
-    if (identity.resourceRef !== undefined && identity.mangaDecodeRevision === undefined) throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
-    this.mangaCacheProfile(identity.mangaDecodeRevision);
-    this.assertNonBlank(identity.imageUrl, 'imageUrl');
-    if (identity.resourceRef !== undefined && !/^manga:mp1:[0-9a-f]{64}$/.test(identity.resourceRef)) {
-      throw new Error('invalid manga resourceRef');
-    }
-  }
-
-  private assertChapterIdentity(identity: ReadingImageChapterIdentity): void {
-    this.assertNonBlank(identity.sourceId, 'sourceId');
-    this.assertNonBlank(identity.bookId, 'bookId');
-    this.assertNonBlank(identity.contentVersion, 'contentVersion');
-    if (identity.chapterId !== undefined) this.assertNonBlank(identity.chapterId, 'chapterId');
-    this.mangaCacheProfile(identity.mangaDecodeRevision);
-    if (!Number.isSafeInteger(identity.chapterIndex) || identity.chapterIndex < 0) {
-      throw new Error('chapterIndex must be a non-negative safe integer');
-    }
-  }
-
-  private assertSameChapter(
-    chapter: ReadingImageChapterIdentity,
-    resource: ReadingImageCacheIdentity,
-  ): void {
-    if (!this.sameChapter(resource, chapter)) {
-      throw new Error('offline reading image resource belongs to a different chapter version');
-    }
-  }
-
-  private assertNonBlank(value: string, field: string): void {
-    if (value.trim().length === 0) {
-      throw new Error(`${field} must be non-blank`);
-    }
-  }
 }
