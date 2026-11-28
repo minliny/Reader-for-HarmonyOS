@@ -5,6 +5,7 @@ on:
     branches: ['**']
     paths-ignore: ['docs/**', '**/*.md', '.reader-artifacts/**']
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
       sdk:
@@ -62,7 +63,8 @@ jobs:
         !cancelled() && github.repository == 'minliny/Reader-for-HarmonyOS' && github.actor != 'dependabot[bot]' &&
         ((needs.host-fast-checks.result == 'success' &&
           ((github.event_name == 'push' && github.ref == 'refs/heads/main' && !github.event.deleted) ||
-           (github.event_name == 'pull_request' && github.event.pull_request.head.repo.id == github.event.repository.id &&
+           (github.event_name == 'pull_request' && !github.event.pull_request.draft &&
+            github.event.pull_request.head.repo.id == github.event.repository.id &&
             needs.host-fast-checks.outputs.non_document == 'true'))) ||
          (needs.host-fast-checks.result == 'skipped' &&
           (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')))
@@ -81,9 +83,20 @@ jobs:
         id: core
         shell: bash
         run: |
-          commit=$(node -p 'require("./Reader-for-HarmonyOS/scripts/core-dependency.json").coreCommit')
-          [[ "$commit" =~ ^[a-f0-9]{40}$ ]]
-          printf 'commit=%s\n' "$commit" >> "$GITHUB_OUTPUT"
+          node -e '
+            const fs = require("node:fs");
+            const dep = JSON.parse(fs.readFileSync("./Reader-for-HarmonyOS/scripts/core-dependency.json", "utf8"));
+            if (!/^[a-f0-9]{40}$/.test(dep.coreCommit)) throw new Error("invalid coreCommit");
+            if (!/^[a-f0-9]{64}$/.test(dep.coreInputFingerprint)) throw new Error("invalid coreInputFingerprint");
+            if (!/^\d+\.\d+\.\d+$/.test(dep.rustToolchain)) throw new Error("invalid rustToolchain");
+            if (!Array.isArray(dep.abis) || dep.abis.length !== 1 || !dep.abis[0]) throw new Error("invalid abis");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,
+              `commit=${dep.coreCommit}\n` +
+              `fingerprint=${dep.coreInputFingerprint}\n` +
+              `rust_toolchain=${dep.rustToolchain}\n` +
+              `abi=${dep.abis[0]}\n`
+            );
+          '
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: minliny/Reader-Core
@@ -104,7 +117,8 @@ jobs:
         !cancelled() && github.repository == 'minliny/Reader-for-HarmonyOS' && github.actor != 'dependabot[bot]' &&
         ((needs.host-fast-checks.result == 'success' &&
           ((github.event_name == 'push' && github.ref == 'refs/heads/main' && !github.event.deleted) ||
-           (github.event_name == 'pull_request' && github.event.pull_request.head.repo.id == github.event.repository.id &&
+           (github.event_name == 'pull_request' && !github.event.pull_request.draft &&
+            github.event.pull_request.head.repo.id == github.event.repository.id &&
             needs.host-fast-checks.outputs.non_document == 'true'))) ||
          (needs.host-fast-checks.result == 'skipped' &&
           (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')))
@@ -132,9 +146,20 @@ jobs:
         id: core
         shell: bash
         run: |
-          commit=$(node -p 'require("./Reader-for-HarmonyOS/scripts/core-dependency.json").coreCommit')
-          [[ "$commit" =~ ^[a-f0-9]{40}$ ]]
-          printf 'commit=%s\n' "$commit" >> "$GITHUB_OUTPUT"
+          node -e '
+            const fs = require("node:fs");
+            const dep = JSON.parse(fs.readFileSync("./Reader-for-HarmonyOS/scripts/core-dependency.json", "utf8"));
+            if (!/^[a-f0-9]{40}$/.test(dep.coreCommit)) throw new Error("invalid coreCommit");
+            if (!/^[a-f0-9]{64}$/.test(dep.coreInputFingerprint)) throw new Error("invalid coreInputFingerprint");
+            if (!/^\d+\.\d+\.\d+$/.test(dep.rustToolchain)) throw new Error("invalid rustToolchain");
+            if (!Array.isArray(dep.abis) || dep.abis.length !== 1 || !dep.abis[0]) throw new Error("invalid abis");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,
+              `commit=${dep.coreCommit}\n` +
+              `fingerprint=${dep.coreInputFingerprint}\n` +
+              `rust_toolchain=${dep.rustToolchain}\n` +
+              `abi=${dep.abis[0]}\n`
+            );
+          '
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: minliny/Reader-Core
@@ -165,12 +190,22 @@ jobs:
           docker pull --platform linux/amd64 "$image"
           df -h "$docker_root" "$RUNNER_TEMP"
           printf 'image=%s\n' "$image" >> "$GITHUB_OUTPUT"
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+      - name: Restore Core Native package cache
+        id: native-cache
+        if: matrix.sdk == 'api26r' && github.event_name != 'schedule'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ runner.temp }}/reader-core-native-cache
+          key: harmony-core-native-v1-${{ matrix.sdk }}-${{ steps.sdk.outputs.digest }}-${{ steps.core.outputs.commit }}-${{ steps.core.outputs.fingerprint }}-${{ steps.core.outputs.rust_toolchain }}-${{ steps.core.outputs.abi }}
       - name: Compile Native and prepare the toolchain
         id: prepare
         shell: bash
         env:
           IMAGE: ${{ steps.sdk.outputs.image }}
           SDK: ${{ matrix.sdk }}
+          NATIVE_CACHE_ENABLED: ${{ matrix.sdk == 'api26r' && github.event_name != 'schedule' }}
+          NATIVE_CACHE_HIT: ${{ steps.native-cache.outputs.cache-hit == 'true' }}
         run: |
           build_temp=$(mktemp -d "$RUNNER_TEMP/reader-unsigned.XXXXXX")
           node_home=$(dirname "$(dirname "$(command -v node)")")
@@ -178,11 +213,27 @@ jobs:
           if [ "$SDK" != api26r ]; then
             mode=--native-only
           fi
-          docker run --rm --platform linux/amd64 \
-            --mount "type=bind,src=$build_temp,dst=/reader-ci" \
-            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/reader-ci/workspace" \
-            --mount "type=bind,src=$node_home,dst=/reader-ci/node,readonly" \
-            --env GITHUB_SHA --env IMAGE --env SDK \
+          docker_args=(
+            --rm --platform linux/amd64
+            --mount "type=bind,src=$build_temp,dst=/reader-ci"
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/reader-ci/workspace"
+            --mount "type=bind,src=$node_home,dst=/reader-ci/node,readonly"
+            --env GITHUB_SHA --env IMAGE --env SDK
+          )
+          if [ "$NATIVE_CACHE_ENABLED" = true ]; then
+            native_cache="$RUNNER_TEMP/reader-core-native-cache"
+            mkdir -p "$native_cache"
+            mount_opt="type=bind,src=$native_cache,dst=/reader-ci/native-cache"
+            if [ "$NATIVE_CACHE_HIT" = true ]; then
+              mount_opt="$mount_opt,readonly"
+            fi
+            docker_args+=(
+              --mount "$mount_opt"
+              --env CORE_NATIVE_CACHE_DIR=/reader-ci/native-cache
+              --env "CORE_NATIVE_CACHE_HIT=$NATIVE_CACHE_HIT"
+            )
+          fi
+          docker run "${docker_args[@]}" \
             "$IMAGE" bash /reader-ci/workspace/Reader-for-HarmonyOS/scripts/ci/build-unsigned-hap.sh "$mode"
           printf 'directory=%s\n' "$build_temp" >> "$GITHUB_OUTPUT"
       - name: Resolve local OHPM dependencies, build and verify the HAP offline
@@ -212,8 +263,8 @@ jobs:
           retention-days: 5
 
   harmonyos-ci-gate:
-    # A branch push on the PR head must not publish the required PR check.
-    name: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && 'harmonyos-ci-gate' || 'harmonyos-ci-result' }}
+    # A branch push or draft PR must not publish the required PR check.
+    name: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && !github.event.pull_request.draft && 'harmonyos-ci-gate' || 'harmonyos-ci-result' }}
     if: always()
     needs: [host-fast-checks, core-fixture-parity, unsigned-hap-build]
     runs-on: ubuntu-24.04
@@ -229,6 +280,7 @@ jobs:
           SELECTED: ${{ needs.host-fast-checks.outputs.selected }}
           EXECUTED: ${{ needs.host-fast-checks.outputs.executed }}
           SAME_REPO_PR: ${{ github.event.pull_request.head.repo.id == github.event.repository.id }}
+          DRAFT_PR: ${{ github.event.pull_request.draft || false }}
           DELETED_PUSH: ${{ github.event.deleted || false }}
         run: |
           set -euo pipefail
@@ -240,7 +292,7 @@ jobs:
           fi
           case "$GITHUB_EVENT_NAME" in
             pull_request)
-              if [[ "$trusted" == true && "$SAME_REPO_PR" == true && "$NON_DOCUMENT" == true ]]; then
+              if [[ "$trusted" == true && "$SAME_REPO_PR" == true && "$DRAFT_PR" != true && "$NON_DOCUMENT" == true ]]; then
                 expected_trusted=success
               fi
               ;;

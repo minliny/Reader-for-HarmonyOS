@@ -67,7 +67,7 @@ run_stage() {
   if (( result != 0 )); then
     printf '%s FAIL (%ss, exit %s)\n' "$name" "$((SECONDS - started))" "$result"
     case "$name" in
-      workspace-admission|toolchain-setup|offline-admission|unsigned-hap-build|public-evidence)
+      workspace-admission|toolchain-setup|core-native-cache-restore|core-native-cache-export|offline-admission|unsigned-hap-build|public-evidence)
         tail -n 120 -- "$log" >&2 || true
         ;;
     esac
@@ -201,6 +201,53 @@ build_native() {
   timeout --kill-after=30s 45m bash scripts/build-harmony-napi.sh --abi "$abi"
 }
 
+restore_cached_native() {
+  test -n "${CORE_NATIVE_CACHE_DIR:-}"
+  [[ -d "$CORE_NATIVE_CACHE_DIR" && ! -L "$CORE_NATIVE_CACHE_DIR" ]]
+  "$READER_NODE" "$host/scripts/ci/verify-cached-native.mjs" \
+    --cache-dir "$CORE_NATIVE_CACHE_DIR" \
+    --lock "$lock" \
+    --abi "$abi" \
+    --rust-target "$rust_target" \
+    --core-repo "$core"
+  local dest="$CARGO_TARGET_DIR/harmony-napi/$abi"
+  rm -rf "$dest"
+  mkdir -p "$dest"
+  cp -R \
+    "$CORE_NATIVE_CACHE_DIR/core-build-identity.json" \
+    "$CORE_NATIVE_CACHE_DIR/core-input-snapshot.json" \
+    "$CORE_NATIVE_CACHE_DIR/harmony-package-manifest.sha256" \
+    "$CORE_NATIVE_CACHE_DIR/harmony-napi-build-evidence.txt" \
+    "$CORE_NATIVE_CACHE_DIR/package" \
+    "$dest/"
+}
+
+export_native_cache() {
+  test -n "${CORE_NATIVE_CACHE_DIR:-}"
+  [[ -d "$CORE_NATIVE_CACHE_DIR" && ! -L "$CORE_NATIVE_CACHE_DIR" ]]
+  local src="$CARGO_TARGET_DIR/harmony-napi/$abi"
+  find "$CORE_NATIVE_CACHE_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+  cp -R \
+    "$src/core-build-identity.json" \
+    "$src/core-input-snapshot.json" \
+    "$src/harmony-package-manifest.sha256" \
+    "$src/harmony-napi-build-evidence.txt" \
+    "$src/package" \
+    "$CORE_NATIVE_CACHE_DIR/"
+  "$READER_NODE" "$host/scripts/ci/verify-cached-native.mjs" \
+    --cache-dir "$CORE_NATIVE_CACHE_DIR" \
+    --lock "$lock" \
+    --abi "$abi" \
+    --rust-target "$rust_target" \
+    --core-repo "$core"
+  chmod -R a+rX "$CORE_NATIVE_CACHE_DIR"
+  local owner
+  owner=$(stat -c '%u:%g' "$CORE_NATIVE_CACHE_DIR")
+  if [[ "$owner" != 0:0 ]]; then
+    chown -R "$owner" "$CORE_NATIVE_CACHE_DIR"
+  fi
+}
+
 build_hap() {
   timeout --kill-after=30s 20m bash -euo pipefail -s -- "$host" "$private" "$lock" "$abi" <<'HAP'
 cd "$1"
@@ -295,11 +342,23 @@ if [[ "$phase" == package-offline ]]; then
   run_stage offline-admission admit_offline_inputs
   run_stage unsigned-hap-build build_hap
   run_stage public-evidence stage_public_evidence
+elif [[ "$phase" == native-only && "${CORE_NATIVE_CACHE_HIT:-false}" == true ]]; then
+  printf 'CORE_NATIVE_CACHE_HIT is unsupported with --native-only\n' >&2
+  exit 2
+elif [[ "$phase" == prepare && "${CORE_NATIVE_CACHE_HIT:-false}" == true ]]; then
+  run_stage workspace-admission prepare_workspace
+  run_stage toolchain-setup prepare_hap_tools
+  run_stage core-native-cache-restore restore_cached_native
+  printf 'core-native-napi REUSED (0s, cache hit)\n' | tee -a "$summary"
+  prepared_inputs > "$private/prepared-inputs"
 else
   run_stage workspace-admission prepare_workspace
   run_stage toolchain-setup prepare_tools
   run_stage core-native-napi build_native
   if [[ "$phase" == prepare ]]; then
+    if [[ -n "${CORE_NATIVE_CACHE_DIR:-}" ]]; then
+      run_stage core-native-cache-export export_native_cache
+    fi
     prepared_inputs > "$private/prepared-inputs"
   fi
 fi
