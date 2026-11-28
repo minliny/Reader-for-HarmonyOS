@@ -768,7 +768,7 @@ export struct RssPage {
       this.stateCard(
         (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_empty_theme_night') : $r('app.media.rss_empty')),
         '暂无未读订阅',
-        (): string => '当前订阅源没有新的未读条目。你可以查看全部、管理订阅源或手动刷新。日常空状态仍保留 RSS 主导航上下文。',
+        (): string => '当前订阅源没有新的未读条目，可查看全部、管理订阅源或手动刷新。',
         (): RssFailedSource[] => [],
         '查看全部',
         (): void => this.onModeRequested('all'));

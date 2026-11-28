@@ -218,7 +218,7 @@ export struct ReaderWebDavLibraryPanel {
     if (action !== 'saveConfig' && outcome.state !== 'listed') {
       this.showMessage(action === 'cleanup' && outcome.state === 'exported' ? '本机暂存已清理' :
         removal && outcome.state === 'conflict' ? '所选旧包或替代备份已变化，清理未继续' :
-          removal && outcome.state === 'readOnly' ? '服务端不支持条件删除，现有备份仍可读取和恢复' : this.outcomeMessage(outcome), current);
+          removal && outcome.state === 'readOnly' ? '服务端不支持安全删除，现有备份仍可读取和恢复' : this.outcomeMessage(outcome), current);
     }
     if (action === 'export' || action === 'cleanup' || action === 'saveConfig' || removal || action === 'leaveRetirement') {
       if (!this.editing || action === 'saveConfig') await this.readConfiguration(revision, this.editing);
@@ -232,13 +232,13 @@ export struct ReaderWebDavLibraryPanel {
 
   private outcomeMessage(outcome: SyncLibraryBackupResult): string {
     switch (outcome.state) {
-      case 'exported': return '新备份已上传并完成回读校验，旧备份已保留';
-      case 'cleanupPending': return '远端备份已完成回读校验，本机暂存待清理';
+      case 'exported': return '新备份已上传并完成校验，旧备份已保留';
+      case 'cleanupPending': return '远端备份已完成校验，本机暂存待清理';
       case 'retirementPending': return '远端旧包清理待续办，请查看清理状态';
       case 'retirementCompleted': return '所选旧备份已清理';
       case 'retirementAbandoned': return '已放弃本次清理，旧备份仍可读取';
-      case 'retirementPaused': return '本次清理已停止，保留了远端现有文件和原清理回执';
-      case 'deletionUnavailable': return '服务端不支持条件删除，现有备份仍可读取和恢复';
+      case 'retirementPaused': return '本次清理已停止，已保留远端文件与清理记录';
+      case 'deletionUnavailable': return '服务端不支持安全删除，现有备份仍可读取和恢复';
       case 'cleanupFailed': return '远端旧包清理未完成，可以继续原操作或退出';
       case 'replacementUnverified': return '未能验证可恢复的同库替代备份，清理已暂停。请核对备份口令或远端列表。';
       case 'replacementMissingOriginals': return '替代备份缺少旧备份中的原书，清理已暂停。';
@@ -246,7 +246,7 @@ export struct ReaderWebDavLibraryPanel {
       case 'cancelled': return '已取消 WebDAV 操作';
       case 'notConfigured': return '请先保存 WebDAV 配置';
       case 'authentication': return 'WebDAV 认证失效，请更新账号和密码';
-      case 'readOnly': return 'WebDAV 缺少可靠的条件写入，仍可读取已有备份';
+      case 'readOnly': return 'WebDAV 缺少可靠的安全写入，仍可读取已有备份';
       case 'empty': return '该 WebDAV 目录暂无可恢复的 Reader 书库备份';
       case 'missingDirectory': return 'WebDAV 备份目录不存在，请核对配置';
       case 'providerChanged': return 'WebDAV 配置已变更，请重新选择备份';
@@ -382,7 +382,7 @@ export struct ReaderWebDavLibraryPanel {
   private configNotice() {
     ReaderRecoveryNotice({ tag: '配置保存待核对', actionLabel: this.configNeedsOriginal ? '重填原配置' : '续办原配置',
       view: { visible: true, canRetry: true, generation: this.revision,
-        message: this.configNeedsOriginal ? '请输入原 HTTPS 地址、目录、账号和密码以继续。' : '从安全存储续办同一次保存。' },
+        message: this.configNeedsOriginal ? '请输入原 HTTPS 地址、目录、账号和密码以继续。' : '将从已保存配置继续。' },
       onReconcile: (expected: number): void => {
         if (!this.current(expected) || !this.canAct()) return;
         if (this.configNeedsOriginal) this.editing = true;
@@ -404,7 +404,7 @@ export struct ReaderWebDavLibraryPanel {
 
   @Builder
   private deletionUnavailableNotice() {
-    ReaderRecoveryNotice({ tag: '服务端不支持条件删除',
+    ReaderRecoveryNotice({ tag: '服务端不支持安全删除',
       view: { visible: true, canRetry: false, generation: this.revision, message: '现有备份仍可读取和恢复。' } });
   }
 
@@ -453,7 +453,7 @@ export struct ReaderWebDavLibraryPanel {
     ReaderRecoveryNotice({ tag: this.cleanupReceipt.length > 0 ? '本机暂存待清理' : '备份待核对',
       actionLabel: this.cleanupReceipt.length > 0 ? '清理本机暂存' : '核对此次备份',
       view: { visible: true, canRetry: true, generation: this.revision,
-        message: this.cleanupReceipt.length > 0 ? '远端备份已回读确认。' : '将核对原备份，有缺失时继续上传同一份加密内容。' },
+        message: this.cleanupReceipt.length > 0 ? '远端备份已校验确认。' : '将核对原备份，有缺失时继续上传同一份加密内容。' },
       onReconcile: (expected: number): void => {
         if (this.current(expected)) void this.run(this.cleanupReceipt.length > 0 ? 'cleanup' : 'export');
       } });

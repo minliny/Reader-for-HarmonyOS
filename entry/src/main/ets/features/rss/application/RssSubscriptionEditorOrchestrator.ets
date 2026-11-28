@@ -166,7 +166,7 @@ export class RssSubscriptionEditorOrchestrator {
     const receipt = this.receipts.get(this.activeKey);
     this.publish({ busy: this.pending.has(this.activeKey), canSave: !this.pending.has(this.activeKey) && receipt?.confirmation !== 'unknown' && receipt?.projection.receipt.readback !== 'reading' &&
       receipt?.projection.receipt.fact !== 'confirmedRefreshFailed',
-      operation: receipt?.projection, statusMessage: receipt?.projection.facts.message ?? (mode === 'create' ? '新增 RSS 订阅' : '正在读取 Core 订阅…') });
+      operation: receipt?.projection, statusMessage: receipt?.projection.facts.message ?? (mode === 'create' ? '新增 RSS 订阅' : '正在读取订阅…') });
     if (mode === 'edit' || receipt !== undefined || this.pending.has(this.activeKey) || this.gateway.supportsOriginalRecovery()) {
       const key = this.activeKey;
       void this.serialize(async (): Promise<void> => { if (this.isCurrentSession(session)) await this.readEditor(key, session); }).catch((error: Error): void => this.fail(session, 'RSS 读取未执行', error));
@@ -221,7 +221,7 @@ export class RssSubscriptionEditorOrchestrator {
     catch (error) { this.publish({ busy: false, statusMessage: `RSS 订阅尚未提交：${(error as Error).message}` }); return; }
     const revision = this.revisions.get(key) ?? 0;
     this.pending.add(key);
-    this.publish({ busy: true, canSave: false, statusMessage: '正在由 Core 保存 RSS 订阅…' });
+    this.publish({ busy: true, canSave: false, statusMessage: '正在保存 RSS 订阅…' });
     void this.serialize(async (): Promise<void> => {
       if (!this.isCurrentSession(session)) {
         this.pending.delete(key);
@@ -348,7 +348,7 @@ export class RssSubscriptionEditorOrchestrator {
       if (receipt?.confirmation === 'confirmed' && subscription !== undefined) publishCurrent({ mode: 'edit', subscriptionId: subscription.subscriptionId });
       publishCurrent({ busy: false, canSave: receipt?.confirmation !== 'unknown' && original?.blocked!==true && original?.busy!==true,
         readFacts: projectOperationFacts<RssSubscription>({ phase: 'succeeded', value: subscription, generation: ++editorProjectionGeneration }),
-        statusMessage: receipt?.confirmation === 'unknown' ? '提交结果待核对；已读取当前数据，原提交回执仍未确认，草稿保留' :
+        statusMessage: receipt?.confirmation === 'unknown' ? '提交结果待核对，已读取当前数据，草稿已保留' :
           receipt?.confirmation === 'confirmed' ? unchangedDraft ? 'RSS 订阅已保存' : '本次提交已保存，当前草稿仍有未保存更改' : '编辑 RSS 订阅' });
       if (finishSaved && receipt?.confirmation === 'confirmed' && unchangedDraft && this.isCurrentSession(session)) {
         this.drafts.delete(key); this.dirty.delete(key); this.revisions.delete(key); this.receipts.delete(key);

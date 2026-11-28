@@ -339,7 +339,7 @@ export class RulesMutationIntentStore {
         typeof binding['payloadFingerprint']!=='string' || !/^[0-9a-f]{64}$/.test(binding['payloadFingerprint'] as string) ||
         receipt['method']!==fact.method || receipt['outcome']!==fact.outcome || JSON.stringify(receipt['data'])!==JSON.stringify(fact.data) ||
         receipt['ackFingerprint']!==await sha256Hex(JSON.stringify([fact.method,fact.outcome,fact.data])))
-        throw new Error('订阅最新原回执与固定步骤不匹配，已保留');
+        throw new Error('订阅更新结果与预期步骤不匹配');
     }
   }
   private assertCurrent(): void { if (!ReaderRuntimeOwner.isCurrent(this.runtime as ReaderRuntimeOwner)) throw new Error('规则服务已退役，请由当前服务核对原记录'); }

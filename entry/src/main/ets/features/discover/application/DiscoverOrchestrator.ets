@@ -107,7 +107,7 @@ export class DiscoverOrchestrator {
     this.session += 1;
     this.retryQueued = false;
     const session = this.session;
-    this.beginRead({ kind: 'sources' } as DiscoverSourcesRead, '正在读取 Core 发现书源…');
+    this.beginRead({ kind: 'sources' } as DiscoverSourcesRead, '正在读取发现书源…');
     this.enqueue(async (): Promise<void> => this.loadSources(session));
   }
 
@@ -173,7 +173,7 @@ export class DiscoverOrchestrator {
 
   private async loadSources(session: number): Promise<void> {
     if (!this.isCurrentSession(session)) return;
-    const generation = this.beginRead({ kind: 'sources' } as DiscoverSourcesRead, '正在读取 Core 发现书源…');
+    const generation = this.beginRead({ kind: 'sources' } as DiscoverSourcesRead, '正在读取发现书源…');
     try {
       const stored = await this.sourceGateway.loadSources(undefined, false, (): boolean => this.isCurrentRead(session, generation));
       const sources: DiscoverSource[] = stored.filter((source: BookSource): boolean =>
@@ -226,8 +226,8 @@ export class DiscoverOrchestrator {
     const kind = kinds[kindIndex];
     if (source === undefined || kind === undefined || !this.isCurrentSession(session)) return;
     const generation = sourceGeneration ?? this.beginRead({ kind: 'page', sourceId: source.sourceId,
-      kindIndex, url: kind.url, page, probingNext } as DiscoverPageRead, `正在由 Core 加载第 ${page} 页…`);
-    this.publish({ loading: true, statusMessage: `正在由 Core 加载第 ${page} 页…` });
+      kindIndex, url: kind.url, page, probingNext } as DiscoverPageRead, `正在加载第 ${page} 页…`);
+    this.publish({ loading: true, statusMessage: `正在加载第 ${page} 页…` });
     try {
       let invalidBooks = 0;
       const books = await this.gateway.loadExplore(source.sourceId, kind.url, page, source.category,
@@ -240,7 +240,7 @@ export class DiscoverOrchestrator {
         return;
       }
       if (probingNext && books.length === 0) {
-        this.publish({ loading: false, hasNext: false, statusMessage: 'Core 返回空页，没有更多内容',
+        this.publish({ loading: false, hasNext: false, statusMessage: '没有更多内容',
           operation: projectOperationFacts({ phase: 'succeeded', value: this.presentation.books, generation }) });
         return;
       }

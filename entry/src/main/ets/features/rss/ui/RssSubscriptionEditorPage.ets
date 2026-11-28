@@ -76,7 +76,7 @@ export struct RssSubscriptionEditorPage {
       .borderRadius(8);
     this.operationRecovery();
     Column({ space: TOK_SPACE_MD }) {
-      this.editorField('订阅名称', (): string => this.snapshot.title, '留空时由 Core 回退为 Feed URL',
+      this.editorField('订阅名称', (): string => this.snapshot.title, '留空时默认使用订阅地址',
         (value: string): void => this.onTitleChanged(value));
       this.editorField('Feed URL', (): string => this.snapshot.feedUrl, 'https://example.com/feed.xml',
         (value: string): void => this.onFeedUrlChanged(value));
@@ -85,7 +85,7 @@ export struct RssSubscriptionEditorPage {
         (value: string): void => this.onSourceFieldChanged('sourceGroup', value));
       this.editorField('自定义排序', (): string => this.snapshot.customOrder, '非负整数，数值小的在前',
         (value: string): void => this.onSourceFieldChanged('customOrder', value));
-      this.editorField('更新间隔（分钟）', (): string => this.snapshot.updateIntervalMinutes, '正整数；留空由 Core 决定',
+      this.editorField('更新间隔（分钟）', (): string => this.snapshot.updateIntervalMinutes, '正整数；留空使用默认值',
         (value: string): void => this.onSourceFieldChanged('updateIntervalMinutes', value));
       Row() {
         Column({ space: TOK_SPACE_XS }) {
@@ -94,10 +94,6 @@ export struct RssSubscriptionEditorPage {
             .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
             .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-          Text('刷新、解析、未读统计均由 Core 维护')
-            .fontFamily(TYPE_FORM_HINT.fontFamily as string)
-            .fontSize(TYPE_FORM_HINT.fontSizeFp)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start);
@@ -119,7 +115,7 @@ export struct RssSubscriptionEditorPage {
             .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
             .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-          Text('由 Host 隔离存储；导出不包含 Cookie 明文')
+          Text('仅保存在本机，导出不包含 Cookie')
             .fontFamily(TYPE_FORM_HINT.fontFamily as string)
             .fontSize(TYPE_FORM_HINT.fontSizeFp)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
@@ -137,7 +133,7 @@ export struct RssSubscriptionEditorPage {
       .width('100%')
       .constraintSize({ minHeight: 60 })
       .alignItems(VerticalAlign.Center);
-      this.editorField('请求头规则', (): string => this.snapshot.header, 'JSON 对象；动态 JS 规则会由 Core fail-closed',
+      this.editorField('请求头规则', (): string => this.snapshot.header, 'JSON 对象，不支持动态脚本规则',
         (value: string): void => this.onSourceFieldChanged('header', value));
       this.sectionTitle('规则型 RSS（HTML）');
       this.editorField('文章列表规则', (): string => this.snapshot.ruleArticles, '.article',
@@ -163,12 +159,6 @@ export struct RssSubscriptionEditorPage {
     .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(10);
-    Text('完整来源配置由 Core 归一化并持久化；XML/Atom 与静态 HTML 规则共用同一订阅身份。')
-      .width('100%')
-      .fontFamily(TYPE_FORM_NOTE.fontFamily as string)
-      .fontSize(TYPE_FORM_NOTE.fontSizeFp)
-      .lineHeight(TYPE_FORM_NOTE.lineHeightFp as number)
-      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
   }
 
 

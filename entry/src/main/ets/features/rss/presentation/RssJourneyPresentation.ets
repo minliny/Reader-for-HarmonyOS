@@ -383,7 +383,7 @@ export class RssJourneyPresentation {
     if (!current()) return;
     this.navigation.confirm({
       title: '导入 RSS 源',
-      message: '“合并导入”保留现有来源；“覆盖全部”会原子替换当前 RSS 来源与阅读状态。',
+      message: '“合并导入”保留现有来源；“覆盖全部”会替换当前订阅源与阅读状态。',
       primaryButton: {
         value: '合并导入',
         action: (): void => { if (current()) this.navigation.openImport('rssMerge'); },
@@ -406,7 +406,7 @@ export class RssJourneyPresentation {
       replaceExisting,
       (result: RssSourceImportResult | undefined): void => {
         if (result !== undefined && current()) {
-          this.showRssOperationResult('RSS 源导入完成', `Core 已原子导入 ${result.imported} 个来源。`);
+          this.showRssOperationResult('RSS 源导入完成', `已导入 ${result.imported} 个来源。`);
         }
       },
       (error: Error): void => { if (current()) this.showRssOperationResult('RSS 源导入失败', error.message); },
