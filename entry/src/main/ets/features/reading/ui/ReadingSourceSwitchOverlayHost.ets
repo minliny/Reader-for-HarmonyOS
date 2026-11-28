@@ -6,7 +6,7 @@ import type { UIContext } from '@ohos.arkui.UIContext';
 import type { AnimatorResult } from '@ohos.animator';
 import curves from '@ohos.curves';
 import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS } from '../../../ui/feedback/ReaderTransientFeedback';
-import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
+import { readerTransitionFrameSamplingEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { ReaderSourceSwitchReveal } from '../presentation/ReaderSourceSwitchReveal';
 import { createReaderSourceSwitchWash } from './ReaderSourceSwitchWash';
 import { SOURCE_SWITCH_VISUAL } from '../../source/ui/SourceSwitchVisual';
@@ -207,7 +207,7 @@ export class ReadingSourceSwitchOverlayHost {
       duration: READER_FEEDBACK_EXTENDED_MS,
     }, current);
     if (scope.reducedMotion()) return;
-    if (!readerTransitionsEnabled()) {
+    if (!readerTransitionFrameSamplingEnabled()) {
       const from = 1 - SOURCE_SWITCH_VISUAL.readerEnterFromOpacity;
       scope.publishOpacity(from);
       scope.uiContext().animateTo({

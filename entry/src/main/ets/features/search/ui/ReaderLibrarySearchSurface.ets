@@ -30,7 +30,7 @@ import { motionSegment } from '../../../ui/foundation/MotionTimeline';
 import { motionAnimateParam, motionSpecGet, readerMotionStandardCurve, MotionSpecEntry } from '../../../ui/foundation/MotionSpec';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
-import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
+import { readerTransitionFrameSamplingEnabled, readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import type { ReaderSearchEditorEvent, ReaderSearchEditorObservation } from '../../../ui/controls/ReaderSearchField';
@@ -339,7 +339,7 @@ export struct ReaderLibrarySearchSurface {
     else this.schedule(token);
   }
   private usesNativeTransition(): boolean {
-    return !readerTransitionsEnabled() && this.model.verification?.enabled() !== true;
+    return !readerTransitionFrameSamplingEnabled() && this.model.verification?.enabled() !== true;
   }
   private beginNativeTransition(token: number, deferFirstFrame: boolean): void {
     this.nativeSearchMotion = true;

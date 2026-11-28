@@ -3,7 +3,7 @@ import type { AnimatorResult } from '@ohos.animator';
 import type { FrameNode } from '@ohos.arkui.node';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
-import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
+import { readerTransitionFrameSamplingEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { READER_LAUNCH_PROXY, READER_LAUNCH_SHARP } from '../../../ui/layout/TransitionInvariantEvaluator';
 import { READER_SESSION_SOURCE_TRANSFER_DEADLINE_MS } from './ReaderSessionLaunchController';
@@ -200,7 +200,7 @@ export class ReaderSessionLaunchEffects {
       this.host.setStageOpacity(0);
       if (!reducedMotion) this.host.finalizeFooter();
     };
-    if ((observingFade || readerTransitionsEnabled()) && !reducedMotion && launch?.cancelReason === 'openControl' && parameters.duration !== undefined) {
+    if ((observingFade || readerTransitionFrameSamplingEnabled()) && !reducedMotion && launch?.cancelReason === 'openControl' && parameters.duration !== undefined) {
       // Render the exit curve on the still-mounted capsule while the restored
       // controls own input. Each opacity is written to the actual stage.
       try {

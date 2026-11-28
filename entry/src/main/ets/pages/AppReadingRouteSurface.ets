@@ -13,7 +13,7 @@ import { ReaderPostLayoutFrame } from '../ui/layout/ReaderPostLayoutFrame';
 import { motionSpecGet, readerMotionStandardCurve } from '../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../ui/foundation/ReaderMotionPolicy';
 import { readerBeginTransition, readerRouteTransitionLaneId, readerTransitionActorX,
-  readerTransitionsEnabled, READER_DETAIL_PRIMARY_ACTION, READER_DETAIL_TRANSITION_HEADER }
+  readerTransitionFrameSamplingEnabled, readerTransitionsEnabled, READER_DETAIL_PRIMARY_ACTION, READER_DETAIL_TRANSITION_HEADER }
   from '../ui/foundation/ReaderTransitionSignals';
 
 const DETAIL_NATIVE_FRAME_GRACE_MS = 300;
@@ -134,7 +134,7 @@ export class AppReadingDetailMotion {
           scope: 'reader-detail-anchors', nodes: [READER_DETAIL_TRANSITION_HEADER, READER_DETAIL_PRIMARY_ACTION], axis: 'x' });
       }
       try {
-        if (readerTransitionsEnabled()) {
+        if (readerTransitionFrameSamplingEnabled()) {
           const animator = context.createAnimator({ duration, easing: reduced ? 'ease-out' : 'linear',
             delay: 0, fill: 'forwards', direction: 'normal', iterations: 1, begin: 0, end: 1 });
           this.animator = animator;

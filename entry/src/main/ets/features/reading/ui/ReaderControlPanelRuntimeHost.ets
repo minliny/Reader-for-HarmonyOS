@@ -9,7 +9,7 @@ import { readerControlIslandHeight, type ReaderControlContentBudget } from './Re
 import { readerTtsWaveformSnapshot } from './ReaderTtsWaveform';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
-import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
+import { readerTransitionFrameSamplingEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { readerControlNativeMotionMode, type ReaderControlNativeMotionMode } from './ReaderControlNativeMotionPolicy';
 import { readerControlIsDirectSheet } from './ReaderControlHostSession';
 import { ReaderControlMotionFrameCache } from './ReaderControlMotionGeometry';
@@ -395,7 +395,7 @@ export class ReaderControlPanelRuntimeHost {
       readerControlIsDirectSheet(session.transition.fromLocation.module);
     const toDirect = target.level === 'secondary' && readerControlIsDirectSheet(target.module);
     const direct = this.host.facts().geometry.directSheet && (fromDirect || toDirect);
-    const transitionsProbed = readerTransitionsEnabled() || this.host.facts().geometry.verification?.observing() === true;
+    const transitionsProbed = readerTransitionFrameSamplingEnabled() || this.host.facts().geometry.verification?.observing() === true;
     return readerControlNativeMotionMode(
       session.transition.kind,
       this.host.facts().geometry.fixedIsland,
