@@ -26,13 +26,16 @@ export struct CoverProgressBadge {
     Stack() {
       if (this.hasProgress()) {
         if (this.variant === 'pill') {
-          this.badgeContent()
-            .height(15.5 * this.resolvedScale())
-            .padding({ left: 4.5 * this.resolvedScale(), right: 5.5 * this.resolvedScale() })
-            .borderRadius(8 * this.resolvedScale())
-            .backgroundColor(readerAppColor('app.cover.progressPillBg', this.appThemeScheme))
-            .border({ width: 0.5, color: readerAppColor('app.cover.progressPillBorder', this.appThemeScheme) })
-            .shadow(readerSurfaceElevation('control', this.appThemeScheme));
+          Row() {
+            this.badgeContent();
+          }
+          .alignItems(VerticalAlign.Center)
+          .height(15.5 * this.resolvedScale())
+          .padding({ left: 4.5 * this.resolvedScale(), right: 5.5 * this.resolvedScale() })
+          .borderRadius(8 * this.resolvedScale())
+          .backgroundColor(readerAppColor('app.cover.progressPillBg', this.appThemeScheme))
+          .border({ width: 0.5, color: readerAppColor('app.cover.progressPillBorder', this.appThemeScheme) })
+          .shadow(readerSurfaceElevation('control', this.appThemeScheme));
         } else {
           this.badgeContent();
         }

@@ -20,6 +20,8 @@ export struct ReaderSearchHistoryPanel {
   @Prop history: string[] = [];
   @Prop status: SearchHistoryStatus | undefined = undefined;
   @Prop emptyHint: string = '';
+  @Prop scrollable: boolean = false;
+  @Prop extraBottomInset: number = 0;
   @Prop layout: SearchHistoryPanelLayout = new SearchHistoryPanelLayout(
     new SearchHistoryGeometry(0, 0, 1, false), [], 0);
   @Prop observeActions: boolean = false;
@@ -143,7 +145,8 @@ export struct ReaderSearchHistoryPanel {
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       }
-    }.width('100%').alignItems(HorizontalAlign.Start);
+    }.width('100%').alignItems(HorizontalAlign.Start)
+      .padding({ bottom: this.scrollable ? this.extraBottomInset : 0 });
   }
 
   build() {
@@ -172,8 +175,14 @@ export struct ReaderSearchHistoryPanel {
           padded: false, customActions: true, actionContent: (): void => { this.retryHistoryAction(); } })
           .onAreaChange(this.feedbackMeasurement(this.status));
       }
-      this.historyRows();
-    }.width('100%').padding({
+      if (this.scrollable) {
+        Scroll() {
+          this.historyRows();
+        }.width('100%').layoutWeight(1).align(Alignment.TopStart).scrollBar(BarState.Off);
+      } else {
+        this.historyRows();
+      }
+    }.width('100%').height(this.scrollable ? '100%' : undefined).padding({
       left: this.layout.geometry.innerInset,
       right: this.layout.geometry.innerInset,
       top: this.layout.geometry.topInset,

@@ -9,23 +9,39 @@ import inputMethod from '@ohos.inputMethod';
 import { PathShape } from '@ohos.arkui.shape';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
-import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
+import {
+  isReaderNativeChromeStyle,
+  isReaderRealtimeBlurEnabled,
+  type ReaderNavigationPreferences,
+  type ReaderSurfaceMaterialDecision,
+} from '../../../app/HarmonyCapabilityPolicy';
 import { readerVisualSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReaderFixedHeaderHost } from '../../../ui/layout/ReaderFixedHeaderHost';
 import { ReaderHeaderFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { readerPresentedHeaderBottom, readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { bookshelfHeaderSpec, searchHeaderSpec, SearchHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
-import { readerLibraryHeaderContentHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerLibraryHeaderContentHeight, readerScaledBarHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerSearchControlHeight, readerSearchControlVisualHeight, readerSearchActionWidth,
   SEARCH_CAPSULE_EMPTY_CHROME, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
-import { resolveSearchHeaderField, SearchHeaderFieldGeometry } from '../../../ui/foundation/ReaderHeaderMetrics';
+import { APP_HEADER_BAR_HEIGHT, resolveSearchHeaderField, SearchHeaderFieldGeometry } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
-import { readerSurfaceElevation, readerHeaderVeilBorder } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
-  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { TOK_BORDER_W, TOK_HOME_TOP_BAR_INSET } from '../../../ui/foundation/ReaderTokens';
+import {
+  readerHeaderVeilBorder,
+  readerNativeScrolledHeaderDivider,
+  readerNativeScrolledHeaderMaterial,
+  readerNativeScrolledHeaderSolid,
+  readerSurfaceElevation,
+} from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import {
+  defaultNavigationPreferences,
+  READER_NO_SHADOW,
+  ReaderImmersiveMaterialModifier,
+  ReaderModalScrimModifier,
+  readerSurfaceMaterialDecision,
+} from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { motionSegment } from '../../../ui/foundation/MotionTimeline';
 import { motionAnimateParam, motionSpecGet, readerMotionStandardCurve, MotionSpecEntry } from '../../../ui/foundation/MotionSpec';
@@ -37,8 +53,8 @@ import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import type { ReaderSearchEditorEvent, ReaderSearchEditorObservation } from '../../../ui/controls/ReaderSearchField';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../../../ui/foundation/ReaderPressMotion';
-import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
-import { TYPE_SEARCH_BOOK_PANEL_INPUT } from '../../../ui/foundation/ReaderTypography';
+import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
+import { TYPE_APP_HOME_TITLE, TYPE_SEARCH_BOOK_PANEL_INPUT } from '../../../ui/foundation/ReaderTypography';
 import { ReaderSearchHistoryPanel } from './ReaderSearchHistoryPanel';
 import { projectSearchHistoryPanel, SearchHistoryGeometry, SearchHistoryPanelLayout, SearchHistoryViewport } from './SearchHistoryGeometry';
 import type { ReaderSurfaceRect } from '../../../ui/layout/ReaderSurfaceRect';
@@ -678,10 +694,53 @@ export struct ReaderLibrarySearchSurface {
     return laneWidthPx > 0 && (1 - progress) * laneWidthPx < 1 ? 1 : progress;
   }
   private titleOpacity(): number { return 1 - Math.min(1, this.surfaceValue() / .45); }
+  private nativeChrome(): boolean {
+    return isReaderNativeChromeStyle(this.appearancePreferences);
+  }
+  private nativeIdle(): boolean {
+    return this.nativeChrome() && this.mode === 'idle' && !this.searchMounted;
+  }
+  private nativeFullPageSearch(): boolean {
+    return this.nativeChrome() && !this.nativeIdle();
+  }
+  private nativeIdleBarHeight(): number {
+    return readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_APP_HOME_TITLE.lineHeightFp as number, this.fontScale(), 6);
+  }
+  private nativeHorizontalInset(left: boolean): number {
+    this.metricsRevision;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const safe = left ? readerInteractiveSafeLeft(metrics) : readerInteractiveSafeRight(metrics);
+    return Math.max(TOK_HOME_TOP_BAR_INSET, safe);
+  }
+  private barOuterWidth(): number {
+    this.metricsRevision;
+    return this.nativeChrome() ? ReaderWindowCoordinator.metrics().windowRect.width : this.cardContentWidth();
+  }
+  private nativeBackX(): number {
+    return Math.max(4, this.nativeHorizontalInset(true) - 12);
+  }
+  private nativeMoreX(): number {
+    return Math.max(0, this.barOuterWidth() - Math.max(8, this.nativeHorizontalInset(false) - 10) - bookshelfHeaderSpec().actionExtent);
+  }
+  private nativeIdleActionTop(): number {
+    return 6 + (this.barHeight() - 6 - bookshelfHeaderSpec().actionExtent) / 2;
+  }
+  private headerTopInset(): number {
+    return this.nativeChrome() ? 0 : bookshelfHeaderSpec().topInset;
+  }
+  private headerBorderWidth(): number {
+    return this.nativeChrome() ? 0 : this.spec.borderWidth;
+  }
   private barHeight(): number {
+    if (this.nativeChrome()) {
+      const idleHeight = this.nativeIdleBarHeight();
+      if (!this.searchMounted) return idleHeight;
+      const searchBarHeight = this.spec.barHeight(this.searchLaneHeight());
+      return idleHeight + (searchBarHeight - idleHeight) * this.surfaceValue();
+    }
     const shelf = bookshelfHeaderSpec();
     const searchBarHeight = this.searchMounted ? this.spec.barHeight(this.searchLaneHeight()) : undefined;
-    return readerLibraryHeaderContentHeight(shelf.barHeight, shelf.titleLineHeight, this.fontScale(), this.spec.borderWidth,
+    return readerLibraryHeaderContentHeight(shelf.barHeight, shelf.titleLineHeight, this.fontScale(), this.headerBorderWidth(),
       searchBarHeight, this.searchMounted ? this.surfaceValue() : 0);
   }
   private trailingWidth(): number {
@@ -848,24 +907,34 @@ export struct ReaderLibrarySearchSurface {
     return readerKeyboardHostBottom(metrics, this.surfaceWindowY, this.surfaceHeight());
   }
   private historyBarBottom(): number {
-    return readerPresentedHeaderBottom(bookshelfHeaderSpec().topInset,
-      this.spec.barHeight(this.searchLaneHeight()) + 2 * this.spec.borderWidth);
+    return readerPresentedHeaderBottom(this.headerTopInset(),
+      this.spec.barHeight(this.searchLaneHeight()) + 2 * this.headerBorderWidth());
   }
-  private historyLimit(): number { return Math.max(0, this.availableBottom() - this.historyBarBottom() - 12); }
+  private historyLimit(): number {
+    return Math.max(0, this.availableBottom() - this.historyBarBottom() - (this.nativeFullPageSearch() ? 0 : 12));
+  }
   private captureHeader(height: number, key: number): void {
     if (!this.mounted || key !== this.measurementKey || !Number.isFinite(height) || height <= 0) return;
-    const bottom = readerPresentedHeaderBottom(bookshelfHeaderSpec().topInset, height);
+    const bottom = readerPresentedHeaderBottom(this.headerTopInset(), height);
     if (Math.abs(bottom - this.headerBottom) > .1) this.headerBottom = bottom;
     this.onHeaderBottom(bottom, this.identity, key, this.navigationGeneration, this.mounting);
   }
   private cardContentWidth(): number {
     const metrics = ReaderWindowCoordinator.metrics();
     return Math.max(0, metrics.windowRect.width - this.horizontalInset(true) - this.horizontalInset(false) -
-      2 * this.spec.borderWidth);
+      2 * this.headerBorderWidth());
   }
   private actionWidth(): number { return readerSearchActionWidth(this.expandedLayout, this.fontScale()); }
-  private searchLaneLeft(): number { return this.spec.barPaddingLeft + bookshelfHeaderSpec().actionExtent; }
+  private searchLaneLeft(): number {
+    return this.nativeChrome() ?
+      this.nativeBackX() + bookshelfHeaderSpec().actionExtent + 2 :
+      this.spec.barPaddingLeft + bookshelfHeaderSpec().actionExtent;
+  }
   private searchLaneWidth(): number {
+    if (this.nativeChrome()) {
+      const rightInset = Math.max(12, this.nativeHorizontalInset(false) - 4);
+      return Math.max(0, this.barOuterWidth() - this.searchLaneLeft() - rightInset);
+    }
     return Math.max(0, this.cardContentWidth() - this.searchLaneLeft() - this.spec.barPaddingRight);
   }
   private searchHeaderField(): SearchHeaderFieldGeometry {
@@ -894,13 +963,29 @@ export struct ReaderLibrarySearchSurface {
     return new SearchHistoryViewport(height, this.historyBarBottom(), this.availableBottom(), cardBottom, cardTop);
   }
   private historyGeometry(): SearchHistoryGeometry {
+    if (this.nativeFullPageSearch()) {
+      const inset = Math.max(this.nativeHorizontalInset(true), this.nativeHorizontalInset(false));
+      return new SearchHistoryGeometry(this.barOuterWidth(), this.historyLimit(), this.fontScale(),
+        this.expandedLayout, this.model.historyStatus ?? '',
+        this.measuredHistoryFeedbackKey === this.historyFeedbackKey() ? this.measuredHistoryFeedback : 0,
+        inset);
+    }
     return new SearchHistoryGeometry(this.cardContentWidth(), this.historyLimit(), this.fontScale(),
       this.expandedLayout, this.model.historyStatus ?? '',
       this.measuredHistoryFeedbackKey === this.historyFeedbackKey() ? this.measuredHistoryFeedback : 0,
       this.spec.panelInnerInset);
   }
+  private keyboardVisible(): boolean {
+    const metrics = ReaderWindowCoordinator.metrics();
+    return (metrics.keyboardArea?.available === true && metrics.keyboardArea.visible) ||
+      metrics.keyboardInsets.bottom > 0;
+  }
+  private historyExtraBottomInset(): number {
+    if (!this.nativeFullPageSearch()) return 0;
+    return this.keyboardVisible() ? 8 : Math.max(16, readerVisualSafeBottom(ReaderWindowCoordinator.metrics()) + 8);
+  }
   private historyLayout(): SearchHistoryPanelLayout {
-    return projectSearchHistoryPanel(this.model.history, this.historyGeometry());
+    return projectSearchHistoryPanel(this.model.history, this.historyGeometry(), this.nativeFullPageSearch());
   }
   private historyFeedbackKey(): string {
     return JSON.stringify([this.metricsRevision, this.cardContentWidth(), this.model.historyStatus]);
@@ -996,23 +1081,41 @@ export struct ReaderLibrarySearchSurface {
   @Builder
   private bar() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Text('书架').width('100%').textAlign(TextAlign.Center)
-          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(bookshelfHeaderSpec().titleFontSize)
-          .lineHeight(bookshelfHeaderSpec().titleLineHeight).fontWeight(FontWeight.Bold)
-          .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD &&
-            this.mode === 'idle' && this.layoutInvariantHeaderStable()
-        ? { role: 'header-content', id: 'bookshelf-title' } as LayoutInvariantTag : undefined)
-          .fontColor(readerAppColor('TOK_INK', this.scheme)).opacity(this.titleOpacity())
-          .accessibilityLevel(this.mode === 'idle' ? 'auto' : 'no-hide-descendants');
-      }.width(Math.max(0, this.cardContentWidth() - 2 * bookshelfHeaderSpec().titleSideInset)).height(this.barHeight())
-        .position({ x: bookshelfHeaderSpec().titleSideInset, y: 0 });
+      if (this.nativeChrome()) {
+        Stack({ alignContent: Alignment.Start }) {
+          Text('书架').width('100%').textAlign(TextAlign.Start)
+            .fontFamily(TYPE_APP_HOME_TITLE.fontFamily).fontSize(TYPE_APP_HOME_TITLE.fontSizeFp)
+            .lineHeight(`${TYPE_APP_HOME_TITLE.lineHeightFp}fp`).fontWeight(TYPE_APP_HOME_TITLE.fontWeight)
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+            .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD &&
+              this.mode === 'idle' && this.layoutInvariantHeaderStable()
+          ? { role: 'header-content', id: 'bookshelf-title' } as LayoutInvariantTag : undefined)
+            .fontColor(readerAppColor('TOK_INK', this.scheme)).opacity(this.titleOpacity())
+            .accessibilityLevel(this.mode === 'idle' ? 'auto' : 'no-hide-descendants');
+        }.width(Math.max(0, this.nativeMoreX() - bookshelfHeaderSpec().actionExtent - this.nativeHorizontalInset(true)))
+          .height(Math.max(0, this.barHeight() - 6))
+          .position({ x: this.nativeHorizontalInset(true), y: 6 });
+      } else {
+        Stack({ alignContent: Alignment.Center }) {
+          Text('书架').width('100%').textAlign(TextAlign.Center)
+            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(bookshelfHeaderSpec().titleFontSize)
+            .lineHeight(bookshelfHeaderSpec().titleLineHeight).fontWeight(FontWeight.Bold)
+            .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD &&
+              this.mode === 'idle' && this.layoutInvariantHeaderStable()
+          ? { role: 'header-content', id: 'bookshelf-title' } as LayoutInvariantTag : undefined)
+            .fontColor(readerAppColor('TOK_INK', this.scheme)).opacity(this.titleOpacity())
+            .accessibilityLevel(this.mode === 'idle' ? 'auto' : 'no-hide-descendants');
+        }.width(Math.max(0, this.cardContentWidth() - 2 * bookshelfHeaderSpec().titleSideInset)).height(this.barHeight())
+          .position({ x: bookshelfHeaderSpec().titleSideInset, y: 0 });
+      }
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         this.headerActionGlyph('more');
       }.headerActionFrame().padding(0).backgroundColor(Color.Transparent)
-        .position({ x: Math.max(0, this.cardContentWidth() - bookshelfHeaderSpec().actionExtent -
-          bookshelfHeaderSpec().retainedTrailingInset),
-          y: this.headerActionTop() })
+        .position(this.nativeChrome() ?
+          { x: this.nativeMoreX(), y: this.nativeIdleActionTop() } :
+          { x: Math.max(0, this.cardContentWidth() - bookshelfHeaderSpec().actionExtent -
+            bookshelfHeaderSpec().retainedTrailingInset),
+            y: this.headerActionTop() })
         .opacity(1 - this.surfaceValue())
         .id(this.moreIdentity)
         .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD &&
@@ -1033,6 +1136,7 @@ export struct ReaderLibrarySearchSurface {
               ReaderSearchField({ editingHost: this.editingHost,
                 editingCurrent: (): boolean => this.acceptsField(this.model.currentOwner(), key) && !this.model.panelOwnsInput,
                 variant: 'bookPanel', mode: 'submit', focusOnAppear: false,
+                surfaceRole: this.nativeChrome() ? 'card' : '',
                 bookKeyboardOnFocus: this.model.fieldKeyboardOnFocus === true,
                 bookPanelFrameId: 'reader-bookshelf-search-field',
                 observeBookEditor: this.model.verification === undefined ? undefined :
@@ -1055,17 +1159,22 @@ export struct ReaderLibrarySearchSurface {
             Button({ type: ButtonType.Normal, stateEffect: false }) {
               Stack({ alignContent: Alignment.Center }) {
                 Text(this.model.sweeping ? '停止' : '搜索')
-                  .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(13).fontWeight(FontWeight.Bold)
+                  .fontFamily(this.nativeChrome() && !this.submitButtonActive() ?
+                    READER_FONT_NOTO_SANS_SC_UI_MEDIUM : READER_FONT_NOTO_SANS_SC_UI_BOLD)
+                  .fontSize(this.nativeChrome() && !this.submitButtonActive() ? 14 : 13)
+                  .fontWeight(this.nativeChrome() && !this.submitButtonActive() ? FontWeight.Medium : FontWeight.Bold)
                   .lineHeight(18).halfLeading(true)
                   .minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale()))
-                  .fontColor(readerAppColor(this.submitButtonActive() ? 'TOK_ON_PRIMARY' : 'TOK_MUTED', this.scheme));
+                  .fontColor(readerAppColor(this.submitButtonActive() ? 'TOK_ON_PRIMARY' : 'TOK_MUTED', this.scheme))
+                  .opacity(this.nativeChrome() && !this.submitButtonActive() ? 0.75 : 1);
               }.width(this.actionWidth()).height(this.searchActionVisualHeight())
                 .border({
-                  width: this.submitButtonActive() ? 0 : TOK_BORDER_W,
+                  width: this.submitButtonActive() || this.nativeChrome() ? 0 : TOK_BORDER_W,
                   color: readerAppColor('app.border.control', this.scheme),
                 })
                 .attributeModifier(new ReaderPressFeedback(
-                  readerAppColor(this.submitButtonActive() ? 'TOK_PRIMARY_DARK' : 'TOK_PAPER', this.scheme),
+                  this.submitButtonActive() ? readerAppColor('TOK_PRIMARY_DARK', this.scheme) :
+                    this.nativeChrome() ? Color.Transparent : readerAppColor('TOK_PAPER', this.scheme),
                   this.scheme, this.searchActionVisualHeight() / 2, this.searchActionVisualHeight() / 2,
                   this.actionInteractive(), this.searchActionPointer >= 0))
                 .scale(readerPressScale(this.actionInteractive() && this.searchActionPointer >= 0, this.reduceMotion))
@@ -1099,7 +1208,11 @@ export struct ReaderLibrarySearchSurface {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         this.headerActionGlyph('leading');
       }.headerActionFrame().padding(0).backgroundColor(Color.Transparent)
-        .position({ x: bookshelfHeaderSpec().retainedLeadingInset, y: this.headerActionTop() })
+        .position(this.nativeChrome() ?
+          (!this.presentedSearch() ?
+            { x: Math.max(0, this.nativeMoreX() - bookshelfHeaderSpec().actionExtent), y: this.nativeIdleActionTop() } :
+            { x: this.nativeBackX(), y: this.headerActionTop() }) :
+          { x: bookshelfHeaderSpec().retainedLeadingInset, y: this.headerActionTop() })
         .id(this.mode === 'idle' ? 'reader-bookshelf-search-entry' : READER_LIBRARY_SEARCH_BACK_FOCUS_ID)
         .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD && this.layoutInvariantHeaderStable()
         ? { role: 'key-control', id: 'search-entry-back' } as LayoutInvariantTag : undefined)
@@ -1110,17 +1223,18 @@ export struct ReaderLibrarySearchSurface {
         .onClick(this.leadingAction(this.identity, this.navigationGeneration, this.mounting));
     }.width('100%').height(this.barHeight()).id('reader-bookshelf-search-bar')
       .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD && this.layoutInvariantHeaderStable()
-        ? { role: 'floating-header', id: 'bookshelf-search-header',
+        ? { role: this.nativeChrome() ? 'fixed-header' : 'floating-header', id: 'bookshelf-search-header',
           scope: this.mode === 'idle' ? 'bookshelf' : undefined, expectedHeightVp: this.mode === 'idle'
-            ? bookshelfHeaderSpec().barHeight - 2 * this.spec.borderWidth : this.spec.barHeight(this.searchLaneHeight()),
-          expectedTopGapVp: bookshelfHeaderSpec().topInset + this.spec.borderWidth } as LayoutInvariantTag : undefined);
+            ? (this.nativeChrome() ? this.nativeIdleBarHeight() : bookshelfHeaderSpec().barHeight - 2 * this.headerBorderWidth())
+            : this.spec.barHeight(this.searchLaneHeight()),
+          expectedTopGapVp: this.headerTopInset() + this.headerBorderWidth() } as LayoutInvariantTag : undefined);
   }
   private panelBorderColor(): string {
     return readerAppColor(this.scheme === 'night' || this.historyProgress() > .01 ?
       'app.search.panelBorder' : 'app.border.control', this.scheme);
   }
   private headerVeil(): boolean {
-    if (!this.headerSurfaceCollapsed()) return false;
+    if (this.nativeChrome() || !this.headerSurfaceCollapsed()) return false;
     return (this.mode === 'idle' && !this.searchMounted) ||
       (this.mode === 'results' && this.resultsProgress() > .01);
   }
@@ -1145,6 +1259,7 @@ export struct ReaderLibrarySearchSurface {
     return this.mounted ? this.headerRaisedShape : undefined;
   }
   private headerMaterialRadius(): number {
+    if (this.nativeChrome()) return 0;
     const width = this.cardContentWidth() + 2 * this.spec.borderWidth;
     const height = this.barHeight() + 2 * this.spec.borderWidth;
     const collapsed = this.currentHeaderRaisedShape();
@@ -1176,6 +1291,7 @@ export struct ReaderLibrarySearchSurface {
   }
   private historyDividerColor(): string { return readerAppColor('TOK_LINE', this.scheme); }
   private historyViewportHeight(): number {
+    if (this.nativeFullPageSearch()) return this.historyLimit();
     const limit = this.displayedHistoryLimit > 0 ? this.displayedHistoryLimit : this.historyLimit();
     return Math.min(this.displayedHistoryViewport, limit);
   }
@@ -1183,11 +1299,37 @@ export struct ReaderLibrarySearchSurface {
   private historyPanel(owner: number) {
     ReaderSearchHistoryPanel({ history: this.model.history, status: this.model.historyStatus,
       emptyHint: this.model.emptyHistoryHint,
+      scrollable: this.nativeFullPageSearch(),
+      extraBottomInset: this.historyExtraBottomInset(),
       layout: this.historyLayout(),
       observeActions: this.model.verification?.enabled() === true,
       onFeedbackHeight: this.historyFeedbackAction(owner),
       onClear: this.clearHistoryAction(owner), onRetry: this.retryHistoryAction(owner),
       onSelect: this.historyAction(owner), onDelete: this.deleteHistoryAction(owner) });
+  }
+  private headerSurfaceBackground(): ResourceColor {
+    if (this.nativeIdle()) {
+      if (!this.headerScrolled) return Color.Transparent;
+      return isReaderRealtimeBlurEnabled(this.appearancePreferences) ?
+        Color.Transparent : readerNativeScrolledHeaderSolid(this.scheme);
+    }
+    if (this.nativeFullPageSearch()) return readerAppColor('TOK_PAPER', this.scheme);
+    return this.headerMaterial()?.native ? Color.Transparent : readerAppColor('app.search.panelSurface', this.scheme);
+  }
+  private headerSurfaceBorder(): BorderOptions {
+    if (this.nativeIdle()) {
+      return this.headerScrolled ?
+        { width: { bottom: 1 }, color: readerNativeScrolledHeaderDivider(this.scheme) } :
+        { width: 0, color: Color.Transparent };
+    }
+    if (this.nativeFullPageSearch()) {
+      return this.mode === 'results' ?
+        { width: { bottom: 1 }, color: readerAppColor('TOK_LINE', this.scheme) } :
+        { width: 0, color: Color.Transparent };
+    }
+    return { width: this.headerMaterial()?.native ? 0 : this.spec.borderWidth,
+      color: this.headerMaterial()?.native ? Color.Transparent :
+        this.headerVeil() ? readerHeaderVeilBorder(this.scheme) : this.panelBorderColor() };
   }
   @Builder
   private header() {
@@ -1201,7 +1343,8 @@ export struct ReaderLibrarySearchSurface {
           }, (owner: number): string => `search-history:${owner}`);
           Column() {
             Column().width('100%').height(1).backgroundColor(this.historyDividerColor());
-          }.width('100%').height(1).padding({ left: this.spec.panelInnerInset, right: this.spec.panelInnerInset })
+          }.width('100%').height(1)
+            .padding({ left: this.nativeChrome() ? 0 : this.spec.panelInnerInset, right: this.nativeChrome() ? 0 : this.spec.panelInnerInset })
             .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
         }.width('100%').height(this.historyViewportHeight() * this.historyProgress()).clip(true)
           .id('reader-search-history-viewport')
@@ -1211,17 +1354,16 @@ export struct ReaderLibrarySearchSurface {
           .accessibilityLevel(this.historyInteractive() ? 'auto' : 'no-hide-descendants');
       }
       }.width('100%')
-        .borderRadius(Math.max(0, this.headerMaterialRadius() - this.spec.borderWidth)).clip(true);
+        .borderRadius(this.nativeChrome() ? 0 : Math.max(0, this.headerMaterialRadius() - this.spec.borderWidth)).clip(true);
     }.width('100%').clip(false)
-      .padding(this.headerMaterial()?.native ? this.spec.borderWidth : 0)
-      .backgroundColor(this.headerMaterial()?.native ? Color.Transparent :
-        readerAppColor('app.search.panelSurface', this.scheme))
-      .backgroundEffect(undefined)
-      .border({ width: this.headerMaterial()?.native ? 0 : this.spec.borderWidth,
-        color: this.headerMaterial()?.native ? Color.Transparent :
-          this.headerVeil() ? readerHeaderVeilBorder(this.scheme) : this.panelBorderColor() })
+      .padding(this.nativeChrome() ? 0 :
+        this.headerMaterial()?.native ? this.spec.borderWidth : 0)
+      .backgroundColor(this.headerSurfaceBackground())
+      .backgroundEffect(this.nativeIdle() && this.headerScrolled && isReaderRealtimeBlurEnabled(this.appearancePreferences) ?
+        readerNativeScrolledHeaderMaterial(this.scheme) : undefined)
+      .border(this.headerSurfaceBorder())
       .borderRadius(this.headerMaterialRadius()).hitTestBehavior(HitTestMode.Default)
-      .shadow(this.headerMaterial()?.native ? undefined : this.headerStackShadow())
+      .shadow(this.nativeChrome() ? READER_NO_SHADOW : this.headerMaterial()?.native ? undefined : this.headerStackShadow())
       .attributeModifier(this.headerMaterialModifier())
       .onAreaChange(this.headerSurfaceAreaChange());
   }
@@ -1270,12 +1412,17 @@ export struct ReaderLibrarySearchSurface {
       Stack().width('100%').height('100%')
         .attributeModifier(this.backdropScrimModifier(
           this.mode === 'input' && this.model.sourceRecoveryVisible ? Color.Transparent :
+            this.nativeFullPageSearch() ? readerAppColor('TOK_PAPER', this.scheme) :
             readerAppColor('app.scrim.modal', this.scheme), this.headerMaterial()?.native === true,
-          this.scrimProgress() > .01 && !(this.mode === 'input' && this.model.sourceRecoveryVisible)))
+          !this.nativeFullPageSearch() && this.scrimProgress() > .01 && !(this.mode === 'input' && this.model.sourceRecoveryVisible)))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
         .opacity(this.scrimProgress() * this.reducedSearchOpacity).zIndex(1)
-        .hitTestBehavior(this.mode === 'input' && this.scrimProgress() > .01 ? HitTestMode.Default : HitTestMode.None)
-        .onClick(this.backAction(this.identity, this.navigationGeneration, this.mounting));
+        .hitTestBehavior(this.nativeFullPageSearch() ?
+          (this.model.sourceRecoveryVisible ? HitTestMode.Transparent : HitTestMode.Default) :
+          (this.mode === 'input' && this.scrimProgress() > .01 ? HitTestMode.Default : HitTestMode.None))
+        .onClick((): void => {
+          if (!this.nativeFullPageSearch()) this.onBack(this.identity, this.navigationGeneration, this.mounting);
+        });
       if (this.mode === 'input' && this.model.sourceRecoveryVisible) {
         Stack().id('reader-library-search-recovery-scrim').width('100%').height('100%')
           .attributeModifier(this.recoveryScrimModifier(
@@ -1286,8 +1433,11 @@ export struct ReaderLibrarySearchSurface {
       Column() {
         ReaderFixedHeaderHost({ style: new ReaderHeaderFrameStyle(true, ''), measurementKey: this.measurementKey,
           content: (): void => { this.header(); }, onHeightChange: (height: number, key: number): void => this.captureHeader(height, key) });
-      }.width('100%').padding({ left: this.horizontalInset(true), right: this.horizontalInset(false) })
-        .margin({ top: bookshelfHeaderSpec().topInset }).zIndex(4).hitTestBehavior(HitTestMode.Transparent);
+      }.width('100%').padding({
+        left: this.nativeChrome() ? 0 : this.horizontalInset(true),
+        right: this.nativeChrome() ? 0 : this.horizontalInset(false),
+      })
+        .margin({ top: this.headerTopInset() }).zIndex(4).hitTestBehavior(HitTestMode.Transparent);
     }.id(this.editingScroll.id).width('100%').height('100%')
       .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.editingScroller))
       .onDisAppear((): void => this.editingScroll.unmount())

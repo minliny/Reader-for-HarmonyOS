@@ -878,6 +878,27 @@ export struct ReaderControlDirectoryContent {
     if (localBookId !== undefined) readerDirectorySignalScrollCommand(localBookId);
   }
 
+  private tabGrooveDirX(): number { return this.value(this.tab === 'bookmarks' ? 15 : 16, 9); }
+  private tabGrooveBmX(): number {
+    return this.value(this.tab === 'bookmarks' ? 142 : 143, 169) + (this.availableWidth - this.value(286, 338)) / 2;
+  }
+  private tabGroovePillHeight(): number { return Math.max(0, this.tabHeight() - this.value(13, 8)); }
+  private tabGrooveX(): number { return Math.max(0, this.tabGrooveDirX() - 3); }
+  private tabGrooveY(): number { return this.contentGeometry().tabTop + (this.tabHeight() - this.tabGroovePillHeight()) / 2 - 3; }
+  private tabGrooveWidth(): number { return Math.max(0, this.tabGrooveBmX() + this.tabWidth() - this.tabGrooveDirX() + 6); }
+  private tabGrooveHeight(): number { return this.tabGroovePillHeight() + 6; }
+  private tabThumbShadow(active: boolean): ShadowOptions {
+    if (!active) return { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 };
+    const observed = readerWindowMetrics().densityPixels;
+    const density = Number.isFinite(observed) && observed > 0 ? observed : 1;
+    return {
+      radius: 3.5 * density,
+      color: readerAppColor('app.shadow.cover', this.appThemeScheme),
+      offsetX: 0,
+      offsetY: 1.5 * density,
+    };
+  }
+
   @Builder
   private tabButton(tab: string, title: string, presentation: () => number = (): number => this.layoutPresentation ?? 0) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
@@ -897,7 +918,10 @@ export struct ReaderControlDirectoryContent {
       }.width('100%').height(this.tabHeight() - this.value(13, 8)).justifyContent(FlexAlign.Center)
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
     }.width('100%').height(this.tabHeight() - this.value(13, 8))
-      .borderRadius(8).backgroundColor(this.tab === tab ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent)
+      .borderRadius(8)
+      .backgroundColor(this.tab === tab ? readerAppColor('app.segment.selected', this.appThemeScheme) : Color.Transparent)
+      .border(this.tab === tab ? { width: 0.5, color: readerAppColor('TOK_LINE', this.appThemeScheme) } : { width: 0 })
+      .shadow(this.tabThumbShadow(this.tab === tab))
       .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }.width(this.tabWidth()).height(this.tabHeight()).padding(0)
       .borderRadius(8).backgroundColor(Color.Transparent)
@@ -1224,6 +1248,33 @@ export struct ReaderControlDirectoryContent {
     Stack({ alignContent: Alignment.TopStart }) {
       Scroll(this.editingScroller) {
         Stack({ alignContent: Alignment.TopStart }) {
+      Stack({ alignContent: Alignment.Center }) {
+        Row()
+          .width('100%').height('100%')
+          .translate({ y: 0.75 })
+          .borderRadius(10)
+          .backgroundColor(readerAppColor(this.appThemeScheme === 'night' ? 'TOK_LINE' : 'TOK_SURFACE_ELEVATED', this.appThemeScheme))
+          .opacity(this.appThemeScheme === 'night' ? 1 : 0.85)
+          .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+        Row()
+          .width('100%').height('100%')
+          .clip(true)
+          .borderRadius(10)
+          .backgroundColor(readerAppColor('app.segment.surface', this.appThemeScheme))
+          .linearGradient({
+            direction: GradientDirection.Bottom,
+            colors: [
+              [readerAppColor(this.appThemeScheme === 'night' ? 'app.segment.border' : 'app.chrome.raisedShadowAmbient', this.appThemeScheme), 0.0],
+              [readerAppColor('app.surface.transparent', this.appThemeScheme), 0.36],
+            ],
+          })
+          .border({ width: 0.75, color: readerAppColor('app.segment.border', this.appThemeScheme) })
+          .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+      }
+        .width(this.tabGrooveWidth()).height(this.tabGrooveHeight())
+        .position({ x: this.tabGrooveX(), y: this.tabGrooveY() })
+        .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
+        .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
       Stack() { this.tabButton('directory', '章节'); }
         .position({ x: this.value(this.tab === 'bookmarks' ? 15 : 16, 9),
           y: this.contentGeometry().tabTop });

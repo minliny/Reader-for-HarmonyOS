@@ -79,8 +79,15 @@ export class SearchHistoryPanelLayout {
   }
 }
 
-export function projectSearchHistoryPanel(history: string[], geometry: SearchHistoryGeometry): SearchHistoryPanelLayout {
-  const items = geometry.recordsVisible ? history.slice(0, geometry.rows) : [];
+export function projectSearchHistoryPanel(
+  history: string[],
+  geometry: SearchHistoryGeometry,
+  unbounded: boolean = false,
+): SearchHistoryPanelLayout {
+  const canRenderItems = geometry.headingVisible && geometry.contentWidth >= SEARCH_CONTROL_MIN_TARGET &&
+    (geometry.feedbackHeight === 0 || geometry.feedbackVisible);
+  const items = unbounded ? (canRenderItems ? history.slice() : []) :
+    (geometry.recordsVisible ? history.slice(0, geometry.rows) : []);
   return new SearchHistoryPanelLayout(geometry, items, geometry.contentHeight(items.length, history.length));
 }
 

@@ -82,6 +82,10 @@ test('search history admits up to 6 rows without scrolling and clamps safely whe
   assert.deepEqual(full.items, ['one', 'two', 'three', 'four', 'five', 'six']);
   assert.equal(full.height, 294);
 
+  const unbounded = projectSearchHistoryPanel(keywords, new SearchHistoryGeometry(336, 385, 1, false), true);
+  assert.deepEqual(unbounded.items, keywords);
+  assert.equal(unbounded.height, 374);
+
   const tight = projectSearchHistoryPanel(keywords, new SearchHistoryGeometry(336, 200, 1, false));
   assert.deepEqual(tight.items, ['one', 'two', 'three']);
   assert.equal(tight.height, 174);
