@@ -10,13 +10,18 @@ import type { SettingsOperationProjection } from '../../settings/application/Set
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
-import { ReaderSegmentedControl, READER_APP_THEME_SEGMENT_WIDTH } from '../../../ui/controls/ReaderSegmentedControl';
+import { ReaderVisualChoiceOption, ReaderVisualChoiceStrip } from '../../../ui/controls/ReaderVisualChoiceStrip';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
 import { CategorySection } from '../../settings/ui/CategorySection';
 import { WebDavCredentialStore } from '../../sync/application/WebDavCredentialStore';
 
 /** Persistent bookshelf preferences, shared by More and the settings route. */
 import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../application/BookshelfViewMode';
+
+const BOOKSHELF_VIEW_OPTIONS: ReaderVisualChoiceOption[] = [
+  new ReaderVisualChoiceOption('cover', '封面', 'bookshelf-cover'),
+  new ReaderVisualChoiceOption('list', '列表', 'bookshelf-list'),
+];
 
 @Component
 export struct BookshelfSettingsPage {
@@ -183,15 +188,17 @@ export struct BookshelfSettingsPage {
     CategorySection({ title: '书架偏好' }) {
       if (this.viewModeSnapshot.canonical !== undefined || this.modePending()) {
         ForEach([this.preferenceControlIdentity()], (identity: string): void => {
-          ReaderFormRow({ label: '显示方式', kind: 'standard', contentMinWidth: READER_APP_THEME_SEGMENT_WIDTH }) {
-            ReaderSegmentedControl({ options: ['封面', '列表'], optionIds: ['cover', 'list'],
-              inputIdentity: identity, accessibilityLabel: '显示方式', selectedIndex: this.mode === 'list' ? 1 : 0,
-              actionEnabled: this.viewModeHost.canSave(),
-              onSelect: (index: number): void => {
-                if (identity === this.preferenceControlIdentity()) this.selectMode(index === 0 ? 'cover' : 'list');
-              },
-            });
-          }
+          ReaderVisualChoiceStrip({
+            label: '显示方式',
+            summary: this.mode === 'list' ? '列表模式' : '封面网格',
+            options: BOOKSHELF_VIEW_OPTIONS,
+            selectedId: this.mode === 'list' ? 'list' : 'cover',
+            inputIdentity: identity,
+            actionEnabled: this.viewModeHost.canSave(),
+            onSelect: (index: number): void => {
+              if (identity === this.preferenceControlIdentity()) this.selectMode(index === 0 ? 'cover' : 'list');
+            },
+          });
         }, (identity: string): string => identity);
       } else {
         ReaderPageState({ title: this.modeLoadBusy || this.modeReconcileBusy || this.viewModeSnapshot.readFacts?.fact === 'loading' || this.viewModeSnapshot.readFacts?.fact === 'refreshing' ? '正在读取显示方式…' :

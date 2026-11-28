@@ -17,7 +17,7 @@ import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from 
 import { readerReadableFontScale, readerScaledBarHeight, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 
-export type SettingsSelectField = 'language' | 'startup';
+export type SettingsSelectField = 'language' | 'startup' | 'renderMode';
 
 const PHONE_HORIZONTAL_INSET = 14;
 const PHONE_BOTTOM_INSET = 20;
@@ -336,6 +336,8 @@ export struct SettingsSelectOverlay {
   }
 
   private title(): string {
-    return this.field === 'language' ? '选择语言' : '选择启动页';
+    if (this.field === 'language') return '选择语言';
+    if (this.field === 'renderMode') return '选择渲染模式';
+    return '选择启动页';
   }
 }

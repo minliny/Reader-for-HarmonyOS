@@ -79,12 +79,14 @@ export async function applyVmJourneyProfile(ui) {
       await ui.tap('设置并回读应用主题', themeOption, { route: 'settings', all: [selected(themeOption)], scheme });
     }
     if (material && ui.environment()?.material !== material) {
-      const render = label(material === 'native' ? '效果优先' : '性能优先');
-      if (!ui.has(selected(render))) {
-        await ui.tap('设置并回读渲染模式', render, { route: 'settings', all: [selected(render)] });
+      const renderText = material === 'native' ? '效果优先' : '性能优先';
+      if (!ui.has(text(renderText))) {
+        await ui.tap('打开渲染模式选择器', action('渲染模式'), { route: 'settings', all: [label(renderText)] });
+        await ui.tap('设置并回读渲染模式', label(renderText), { route: 'settings', all: [text(renderText)] });
       }
-      if (material === 'native' && !ui.has(selected(label('原生')))) {
-        await ui.tap('请求原生界面外观', label('原生'), { route: 'settings', all: [selected(label('原生'))] });
+      const nativeToggle = { type: 'Toggle', label: '系统原生外观', enabled: 'true' };
+      if (material === 'native' && !ui.has({ ...nativeToggle, checked: 'true' })) {
+        await ui.tap('开启系统原生外观', nativeToggle, { route: 'settings', all: [{ ...nativeToggle, checked: 'true' }] });
       }
     }
     if (motion && ui.environment()?.reducedMotion !== (motion === 'reduced')) {

@@ -32,6 +32,7 @@ import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
 import { ReaderSelect } from '../../../ui/controls/ReaderSelect';
 import { ReaderSegmentedControl, READER_APP_THEME_SEGMENT_WIDTH } from '../../../ui/controls/ReaderSegmentedControl';
+import { ReaderVisualChoiceOption, ReaderVisualChoiceStrip } from '../../../ui/controls/ReaderVisualChoiceStrip';
 import { CategorySection } from './CategorySection';
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
 import { DialogActionView, ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
@@ -40,7 +41,7 @@ import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
-import type { ReaderNavigationPreferenceChange, ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import type { ReaderNavigationPreferenceChange, ReaderNavigationPreferences, ReaderRenderMode } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderNavigationAppearancePreferences } from '../../../app/ReaderNavigationAppearancePreferences';
 import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../../bookshelf/application/BookshelfViewMode';
@@ -56,8 +57,11 @@ import { isReaderProductSurfaceEnabled } from '../../../app/ReaderProductScope';
 import { emptyReaderAppBuildInfo, readReaderAppBuildInfo, readerAppBuildDisplay, readerAppBuildCopy, type ReaderAppBuildInfo } from '../../../platform/bundle/ReaderAppBuildInfo';
 import { copyReaderBuildIdentity } from '../../../platform/clipboard/ReaderClipboardHost';
 
-// App主题 为分段控件 (Figma ThemeSegment 2114:20635), 非下拉; 标签用 Figma 原文。
-const SEG_OPTIONS: string[] = ['跟随', '浅色', '深色'];
+const APP_THEME_OPTIONS: ReaderVisualChoiceOption[] = [
+  new ReaderVisualChoiceOption('system', '跟随', 'app-theme-system'),
+  new ReaderVisualChoiceOption('day', '浅色', 'app-theme-day'),
+  new ReaderVisualChoiceOption('night', '深色', 'app-theme-night'),
+];
 const THEME_SUMMARIES: string[] = ['跟随系统主题', '浅色主题', '深色主题'];
 const DEVELOPER_UNLOCK_TAPS: number = 5;
 const DEVELOPER_UNLOCK_MAX_GAP_MS: number = 1500;
@@ -933,13 +937,16 @@ export struct SettingsPage {
   @Builder
   private preferenceCard() {
     CategorySection({ title: '外观与显示' }) {
-      this.segmentRow('App 主题');
+      this.appThemeStrip();
       NavigationAppearanceSettings({ generation: this.navigationGeneration,
         actionEnabled: this.navigationPreferenceActionCurrent(this.navigationGeneration) && !this.navigationSavePending,
         onChange: (change: ReaderNavigationPreferenceChange, generation: number): void => {
           void this.applyNavigationPreference(generation, change);
-        } });
-      this.switchRow('减少动态效果', 'reduceMotion', this.systemReduceMotion ? '已由系统辅助功能开启' : '');
+        },
+        onOpenRenderMode: (generation: number): void => this.openRenderModeSelection(generation),
+        onRenderModeAnchor: (anchor: ReaderRectVp): void => this.recordSelectAnchor('renderMode', anchor),
+      });
+      this.switchRow('减少动态效果', 'reduceMotion', this.systemReduceMotion ? '已由系统辅助功能开启' : '减弱页面切换与弹层动效');
     }
   }
 
@@ -1155,20 +1162,15 @@ export struct SettingsPage {
   }
 
   @Builder
-  private segmentRow(label: string) {
-    ReaderFormRow({ label, contentMinWidth: READER_APP_THEME_SEGMENT_WIDTH }) {
-      this.appThemeControl();
-    }
-  }
-
-  @Builder
-  private appThemeControl() {
+  private appThemeStrip() {
     ForEach([this.appThemeControlIdentity()], (capturedIdentity: string): void => {
-      ReaderSegmentedControl({
-        specId: 'app-theme-segment', options: SEG_OPTIONS, optionIds: ['system', 'day', 'night'],
-        inputIdentity: capturedIdentity, accessibilityLabel: 'App 主题',
+      ReaderVisualChoiceStrip({
+        label: 'App 主题',
+        summary: THEME_SUMMARIES[this.themeIndex()],
+        options: APP_THEME_OPTIONS,
+        selectedId: this.appThemeMode === 'day' ? 'day' : this.appThemeMode === 'night' ? 'night' : 'system',
+        inputIdentity: capturedIdentity,
         actionEnabled: this.settingsInputIsCurrent() && this.appThemeControlIsCurrent(capturedIdentity),
-        selectedIndex: this.themeIndex(),
         onSelect: (index: number): void => this.selectAppTheme(index, capturedIdentity),
       });
     }, (capturedIdentity: string): string => capturedIdentity);
@@ -1264,6 +1266,9 @@ export struct SettingsPage {
     if (key === 'language') {
       return this.languageValue;
     }
+    if (key === 'renderMode') {
+      return readerRenderModeLabel(this.navigationPreferences.renderMode);
+    }
     return this.startupValue;
   }
 
@@ -1279,7 +1284,23 @@ export struct SettingsPage {
     if (key === 'language') {
       return ['简体中文', '繁體中文', 'English', '日本語', '한국어'];
     }
+    if (key === 'renderMode') {
+      return ['效果优先', '性能优先'];
+    }
     return ['书架', '发现', 'RSS', '设置'];
+  }
+
+  private recordSelectAnchor(field: SettingsSelectField, anchor: ReaderRectVp): void {
+    this.selectAnchors.set(field, anchor);
+    if (this.openSelect === field) this.selectAnchor = anchor;
+  }
+
+  private openRenderModeSelection(generation: number): void {
+    if (!this.navigationPreferenceActionCurrent(generation) || this.navigationSavePending) return;
+    const anchor = this.selectAnchors.get('renderMode');
+    if (this.openSelect !== 'renderMode' && anchor === undefined && this.paneExpanded()) return;
+    if (anchor !== undefined) this.selectAnchor = anchor;
+    this.toggleSelection('renderMode');
   }
 
   // 展开面板: SettingsShell 根 Stack 即全高 overlay 宿主, 面板相对位置 = 触发条全局坐标
@@ -1309,7 +1330,16 @@ export struct SettingsPage {
 
   private commitSelection(option: string, identity: string | undefined): void {
     if (!this.ownsSelection(identity) || this.openSelect === '' || !this.selectOptions(this.openSelect).includes(option)) return;
-    this.setSelectValue(this.openSelect, option); this.retireSelection();
+    const field = this.openSelect;
+    this.retireSelection();
+    if (field === 'renderMode') {
+      const renderMode: ReaderRenderMode = option === '性能优先' ? 'performance' : 'quality';
+      if (renderMode !== this.navigationPreferences.renderMode) {
+        void this.applyNavigationPreference(this.navigationGeneration, { renderMode });
+      }
+      return;
+    }
+    this.setSelectValue(field, option);
   }
 
   private dismissSelection(identity: string | undefined): void {
