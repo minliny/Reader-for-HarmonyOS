@@ -56,18 +56,18 @@ export class JsonImportPresentation {
     const id = ++this.sequence;
     switch (context) {
       case 'bookSource':
-        this.opening = { id, context, title: '导入书源', description: '支持 Legado 书源 JSON；本地文件和在线链接共用 Core 导入校验。',
+        this.opening = { id, context, title: '导入书源', description: '',
           focusTargets: focusTargets === undefined ? undefined : { preferred: focusTargets.preferred, fallback: focusTargets.fallback } };
         break;
       case 'ruleBundle':
-        this.opening = { id, context, title: '导入规则包', description: '本地和在线导入共用 Core 规则包校验；同主键以导入值为准。',
+        this.opening = { id, context, title: '导入规则包', description: '',
           focusTargets };
         break;
       case 'rssMerge':
-        this.opening = { id, context, title: '导入 RSS 源', description: '合并导入会保留现有 RSS 来源。' };
+        this.opening = { id, context, title: '导入 RSS 源', description: '合并导入会保留现有订阅源。' };
         break;
       case 'rssReplace':
-        this.opening = { id, context, title: '导入 RSS 源', description: '覆盖导入会原子替换当前 RSS 来源与阅读状态。' };
+        this.opening = { id, context, title: '导入 RSS 源', description: '覆盖导入会替换当前订阅源与阅读状态。' };
         break;
     }
   }

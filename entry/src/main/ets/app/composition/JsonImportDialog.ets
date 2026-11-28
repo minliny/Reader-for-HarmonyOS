@@ -51,7 +51,7 @@ export struct JsonImportDialog {
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
 
   title: string = '导入 JSON';
-  description: string = '支持选择本地 JSON 文件，或从在线链接下载后导入。';
+  description: string = '';
   expandedLayout: boolean = false;
   openingId: number = 0;
   captureFocusReturn: (() => JsonImportFocusReturn | undefined) | undefined = undefined;
@@ -158,12 +158,14 @@ export struct JsonImportDialog {
   @Builder
   private formBody() {
     Column({ space: 12 }) {
-      Text(this.description)
-        .width('100%')
-        .fontFamily(MESSAGE_BODY.fontFamily as string)
-        .fontSize(MESSAGE_BODY.fontSizeFp)
-        .lineHeight(MESSAGE_BODY.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+      if (this.description.length > 0) {
+        Text(this.description)
+          .width('100%')
+          .fontFamily(MESSAGE_BODY.fontFamily as string)
+          .fontSize(MESSAGE_BODY.fontSizeFp)
+          .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+      }
 
       this.localButton();
 
@@ -185,12 +187,6 @@ export struct JsonImportDialog {
             onTextChange: (value: string): void => this.updateUrlDraft(revision, value),
             onSubmit: (): void => { if (revision === this.urlInputRevision) this.submitOnlineImport(); } });
         }, (revision: number): string => `json-import-url:${revision}`);
-        Text('GitHub 仓库文件请使用 Raw 链接；普通 blob 页面不是 JSON。')
-          .width('100%')
-          .fontFamily(MESSAGE_META.fontFamily as string)
-          .fontSize(MESSAGE_META.fontSizeFp)
-          .lineHeight(MESSAGE_META.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
         if (this.validationMessage.length > 0) {
           Text(this.validationMessage)
             .width('100%')
@@ -247,11 +243,11 @@ export struct JsonImportDialog {
     this.retireClipboardPaste();
     const onlineUrl = this.urlDraft.trim();
     if (onlineUrl.length === 0) {
-      this.validationMessage = '请输入在线 JSON 的 HTTP/HTTPS 地址';
+      this.validationMessage = '请输入在线链接';
       return;
     }
     if (!/^https?:\/\//i.test(onlineUrl)) {
-      this.validationMessage = '请使用以 http:// 或 https:// 开头的 JSON 链接';
+      this.validationMessage = '链接需以 http:// 或 https:// 开头';
       return;
     }
     this.onImportOnline(onlineUrl);

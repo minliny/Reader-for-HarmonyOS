@@ -134,7 +134,7 @@ export class RulesManagementOrchestrator {
     if (!this.admitPresentation(presentationIdentity)) return;
     this.session += 1;
     const session = this.session;
-    this.publish({ busy: true, statusMessage: '正在读取 Core 规则实体…',
+    this.publish({ busy: true, statusMessage: '正在读取规则…',
       readFacts: projectOperationFacts({ phase: 'loading', value: this.readValue(), generation: ++rulesProjectionGeneration }) });
     const original = this.gateway.mutationSnapshot();
     if (original.confirmation === 'unknown') {
@@ -143,7 +143,7 @@ export class RulesManagementOrchestrator {
     }
     this.enqueue(async (): Promise<void> => {
       await this.recoverOriginal(session, false);
-      await this.reload(session, 'Core 规则实体已就绪');
+      await this.reload(session, '规则已就绪');
     });
   }
 
@@ -164,7 +164,7 @@ export class RulesManagementOrchestrator {
       } else if (read?.generation === generation && read.canRetry) {
         this.publishIfCurrent(session, { busy: true, readFacts: projectOperationFacts({
           phase: 'loading', value: this.readValue(), generation: ++rulesProjectionGeneration }) });
-        await this.reload(session, 'Core 规则实体已就绪');
+        await this.reload(session, '规则已就绪');
       }
     });
   }
@@ -237,7 +237,7 @@ export class RulesManagementOrchestrator {
     const session = this.session;
     this.enqueue(async (): Promise<void> => {
       if (!this.isCurrentSession(session)) return;
-      this.publishIfCurrent(session, { busy: true, statusMessage: '正在由 Core 生成规则包…' });
+      this.publishIfCurrent(session, { busy: true, statusMessage: '正在生成规则包…' });
       try {
         const bundle = await this.gateway.exportBundle();
         const saved = await this.owner.saveRuleBundleJson(bundle.json, `reader-rules-${Date.now()}.json`);
@@ -260,7 +260,7 @@ export class RulesManagementOrchestrator {
       if (!this.isCurrentSession(session)) return;
       this.publishIfCurrent(session, {
         busy: true,
-        statusMessage: onlineUrl === undefined ? '请选择本地 Core 规则包…' : '正在下载在线 Core 规则包…',
+        statusMessage: onlineUrl === undefined ? '请选择本地规则包…' : '正在下载在线规则包…',
       });
       try {
         const selected = onlineUrl === undefined ?
@@ -272,7 +272,7 @@ export class RulesManagementOrchestrator {
         }
         if (!this.isCurrentSession(session)) return;
         await this.performWrite(session, '规则包导入', async (): Promise<string> =>
-          `${await this.gateway.importBundle(selected.text, false)}（同主键以导入值为准）`);
+          await this.gateway.importBundle(selected.text, false));
       } catch (error) {
         this.fail(session, '规则包导入失败', error as Error);
       }
@@ -286,7 +286,7 @@ export class RulesManagementOrchestrator {
       if (!this.isCurrentInputSession(session)) return;
       this.publishIfCurrent(session, { busy: true, statusMessage: `正在${label}…` });
       await this.performWrite(session, label, async (): Promise<string> => {
-        await operation(); return `${label}已由 Core 确认`;
+        await operation(); return `${label}已完成`;
       });
     });
   }
@@ -365,7 +365,7 @@ export class RulesManagementOrchestrator {
         errors.length === 0 && this.gateway.mutationSnapshot().blocked !== true ? 'succeeded' : 'failed', this.gateway.mutationSnapshot().blocked ? this.gateway.mutationSnapshot().message : errors.length === 0 ? undefined : errors.join('；'));
       this.publish({ busy: false, statusMessage: errors.length === 0 &&
         (receipt === undefined || receipt.receipt.confirmation === 'confirmed') ? statusMessage :
-        receipt === undefined ? `规则实体刷新失败：${errors.join('；')}` : this.snapshot.statusMessage,
+        receipt === undefined ? `规则刷新失败：${errors.join('；')}` : this.snapshot.statusMessage,
         readFacts: projectOperationFacts({ phase: errors.length === 0 ? 'succeeded' : readCount > 0 ? 'partial' : 'failed',
           value: this.readValue(), canRetry: errors.length > 0, generation: ++rulesProjectionGeneration,
           message: errors.join('；') }) });

@@ -455,7 +455,7 @@ export struct SyncPage {
       .opacity(0.62)
       .hitTestBehavior(HitTestMode.None)
       .accessibilityText('备份范围')
-      .accessibilityDescription('多选展开设计和持久化契约待确认，当前不可编辑');
+      .accessibilityDescription('暂不支持自定义备份范围');
     }
     .width('100%')
     .constraintSize({ minHeight: 58 })

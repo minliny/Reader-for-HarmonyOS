@@ -23,11 +23,11 @@ export class ReaderChineseConversionGateway {
   }
   async putMode(mode: ReaderChineseConversionMode, current: () => boolean = (): boolean => true): Promise<ReaderChineseConversionMode> {
     this.assertMode(mode, 'reader.chinese-conversion.put mode');
-    if (this.runtime.supportsCoreCapability?.('rules.mutation.conversion.v1') !== true) throw new Error('当前 Core 不具备转换原操作回执能力，未派发');
+    if (this.runtime.supportsCoreCapability?.('rules.mutation.conversion.v1') !== true) throw new Error('当前版本暂不支持核对此转换操作');
     return RulesMutationOwner.forRuntime(this.runtime).run('简繁转换保存',current,async (request,confirmed): Promise<ReaderChineseConversionMode> => {
       const result = await request('reader.chinese-conversion.put',{mode});
       const actual = this.decodeConfigMode(result.data['config'],'reader.chinese-conversion.put');
-      if (actual !== mode || (result.data['config'] as JsonObject)['configId'] !== 1) throw new Error('转换原回执不匹配');
+      if (actual !== mode || (result.data['config'] as JsonObject)['configId'] !== 1) throw new Error('转换结果与选择不符');
       confirmed(); return actual;
     });
   }

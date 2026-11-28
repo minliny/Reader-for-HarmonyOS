@@ -117,7 +117,7 @@ export class SyncOrchestrator {
             // Missing atomic Core receipt proves no configuration apply. This
             // is stronger evidence than a matching later configuration read.
             this.lastSnapshot = this.patchedSnapshot(this.source(), { clearRestoreConflict: true });
-            this.publishReceipt(session, operation.action, observation, 'succeeded', '已核对 Core 恢复记录：没有应用本机配置');
+            this.publishReceipt(session, operation.action, observation, 'succeeded', '已核对恢复记录：未应用本机配置');
           }
         } catch (error) {
           if (observation.write.dispatchedCount > 0) this.publishReceipt(session, operation.action, observation, 'failed', this.safeError(error as Error));
@@ -132,7 +132,7 @@ export class SyncOrchestrator {
             observation.writeGeneration = operation.writeGeneration;
             observation.operationId = operation.operationId;
             observation.configReceiptQualified = true; observation.completed = true;
-            this.publishReceipt(session, 'saveConfig', observation, 'reading', '已核对安全存储中的本次保存回执');
+            this.publishReceipt(session, 'saveConfig', observation, 'reading', '已核对本次保存记录');
           }
         } catch (error) {
           this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error as Error));
@@ -319,7 +319,7 @@ export class SyncOrchestrator {
           canContinueOriginal: snapshot.canContinueConfigSave === true,
           projection: projectPersistedReceipt<boolean>({ confirmation: 'unknown', readback: 'succeeded',
             canRetry: true, generation: ++syncProjectionGeneration,
-            message: snapshot.configSaveHeadMatchesOriginal ? '原配置已读到，保存或清理回执尚待核对' : snapshot.configSavePayloadAvailable ? '原配置保存尚未确认；请先核对原操作' : '原配置准备未完成；请重新填写本次配置后继续原操作' }) };
+            message: snapshot.configSaveHeadMatchesOriginal ? '原配置已读到，保存结果待核对' : snapshot.configSavePayloadAvailable ? '原配置保存尚未确认；请先核对原操作' : '原配置准备未完成；请重新填写配置后再试' }) };
       }
       if (snapshot.configSaveIntent === undefined && snapshot.restoreRecoveryOperationId !== undefined &&
         (this.latestOperation?.action !== 'resolveRestore' || this.latestOperation.completed)) {
@@ -371,7 +371,7 @@ export class SyncOrchestrator {
     observation.completed = receipt.retentionCompleted;
     observation.retentionSkipped = receipt.retentionSkipped;
     this.publishReceipt(session, 'backup', observation, receipt.retentionSkipped ? 'succeeded' : receipt.retentionCompleted ? 'reading' : 'failed',
-      receipt.retentionSkipped ? '备份已保留，清理已由你结束；已发出的远端请求不会撤回' : receipt.retentionCompleted ? '已核对本次备份及保留清理完成回执' : receipt.undispatched ? '本次备份尚未发出，可重新提交' :
+      receipt.retentionSkipped ? '备份已保留，清理已由你结束；已发出的远端请求不会撤回' : receipt.retentionCompleted ? '已核对本次备份及清理结果' : receipt.undispatched ? '本次备份尚未发出，可重新提交' :
         uploadQualified ? '本次备份上传已核实，保留清理尚未完成；不会自动重传或删除' : '本次备份远端结果待核对，不重复上传');
   }
 
@@ -380,9 +380,9 @@ export class SyncOrchestrator {
     const confirmation = action === 'saveConfig' ? observation.configReceiptQualified ? 'confirmed' :
       observation.write.dispatchedCount > 0 ? 'unknown' : 'undispatched' : observation.write.confirmation();
     const partial = observation.coreApplied && !observation.completed
-      ? 'Core 配置已应用，Host 恢复尚未完成；核对已有恢复，不重复覆盖' : undefined;
-    const remotePartial = observation.retentionSkipped ? '备份已保留，保留清理已由你结束；已发出的远端请求不会撤回' : !observation.completed && observation.uploadQualified ? '本次备份上传已核实，保留清理尚无完成回执' + (errorOrStatus === undefined ? '' : '，' + errorOrStatus) :
-      !observation.completed && observation.remoteConfirmedCount > 0 ? `已有 ${observation.remoteConfirmedCount} 个远端写入响应，备份完成回执待核对；不自动重传` : undefined;
+      ? '云端配置已应用，本机恢复尚未完成，请核对已有恢复' : undefined;
+    const remotePartial = observation.retentionSkipped ? '备份已保留，保留清理已由你结束；已发出的远端请求不会撤回' : !observation.completed && observation.uploadQualified ? '本次备份上传已核实，旧备份清理尚未确认' + (errorOrStatus === undefined ? '' : '，' + errorOrStatus) :
+      !observation.completed && observation.remoteConfirmedCount > 0 ? `已有 ${observation.remoteConfirmedCount} 个远端写入响应，备份结果待核对，不重复上传` : undefined;
     this.latestOperation = { action, writeGeneration: observation.writeGeneration, operationId: observation.operationId, coreApplied: observation.coreApplied, hostApplied: observation.hostApplied,
       completed: observation.completed, retentionSkipped: observation.retentionSkipped, remoteConfirmedCount: observation.remoteConfirmedCount, uploadQualified: observation.uploadQualified,
       projection: projectPersistedReceipt<boolean>({ confirmation, readback, value: this.lastSnapshot === undefined ? undefined : true,

@@ -543,21 +543,21 @@ export class HttpExecuteHost {
   private sanitizeDiagnosticError(value: string): string {
     const normalized = value.toLowerCase();
     if (normalized.includes('cancel')) {
-      return 'Host 请求已取消';
+      return '请求已取消';
     }
     if (normalized.includes('deadline') || normalized.includes('timeout')) {
-      return 'Host 请求超时';
+      return '请求超时';
     }
     if (normalized.includes('decode') || normalized.includes('charset')) {
-      return 'Host 响应解码失败';
+      return '响应解码失败';
     }
     if (normalized.includes('response exceeds')) {
-      return 'Host 响应体超过限制';
+      return '响应体超过限制';
     }
     if (normalized.includes('redirect')) {
-      return 'Host 重定向失败';
+      return '重定向失败';
     }
-    return 'Host 网络请求失败';
+    return '网络请求失败';
   }
 
   /**

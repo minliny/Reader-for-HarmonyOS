@@ -61,10 +61,12 @@ export function readerTtsSectionHeader(header: ReaderTtsSectionHeader, appScheme
       .fontWeight(TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL.fontWeight)
       .fontSize(TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL.fontSizeFp)
       .fontColor(readerAppColor('TOK_TTS_INK', appScheme));
-    Text(header.meta).fontFamily(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META.fontFamily)
-      .fontWeight(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META.fontWeight)
-      .fontSize(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META.fontSizeFp)
-      .fontColor(readerAppColor('TOK_TTS_MUTED', appScheme));
+    if (header.meta.length > 0) {
+      Text(header.meta).fontFamily(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META.fontFamily)
+        .fontWeight(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META.fontWeight)
+        .fontSize(TYPE_READER_TTS_RETAINED_SECTION_HEADER_META.fontSizeFp)
+        .fontColor(readerAppColor('TOK_TTS_MUTED', appScheme));
+    }
   }.width('100%').height(headerHeight).padding({ left: 3, right: 3 }).alignItems(VerticalAlign.Center);
 }
 
@@ -336,7 +338,7 @@ export struct ReaderControlTtsConfigSection {
   build() {
     if (this.section === 'detail') {
       Column({ space: 8 }) {
-        readerTtsSectionHeader({ title: '播放配置', meta: '即时生效' }, this.appScheme, this.textMinimum?.sectionHeader ?? 18);
+        readerTtsSectionHeader({ title: '播放配置', meta: '' }, this.appScheme, this.textMinimum?.sectionHeader ?? 18);
         Column({ space: 0 }) {
           this.voiceSelectorRow();
           this.toggleRow('followHighlight');

@@ -51,9 +51,9 @@ export class RulesMutationOwner {
       confirmed: () => void) => Promise<T>, observer?: ReaderWriteEvidence,
     sourceCleanup?: () => Promise<boolean>, onWriteDispatched?: () => void): Promise<T> {
     if (this.state.busy || this.state.blocked || this.state.confirmation === 'unknown')
-      throw new RulesMutationError(this.state.busy ? '另一规则操作正在执行' : this.state.message || '先前规则原操作仍需核对', this.state.confirmation === 'unknown');
+      throw new RulesMutationError(this.state.busy ? '另一规则操作正在执行' : this.state.message || '上次规则操作仍需核对', this.state.confirmation === 'unknown');
     const current = (): boolean => this.current(isCurrent);
-    if (!current()) throw new RulesMutationError('规则请求已过期，未派发', false);
+    if (!current()) throw new RulesMutationError('规则请求已过期，未提交', false);
     const evidence = new ReaderWriteEvidence(); const generation = this.state.generation + 1;
     const assignedBefore = this.intents.accepted();
     this.state = { generation, busy: true, confirmation: 'undispatched', label, method: '', message: '',
@@ -121,7 +121,7 @@ export class RulesMutationOwner {
           // not a durable unknown. Never borrow the successor's journal.
         }
       }
-      if (this.state.confirmation === 'unknown') this.state.message = `规则原操作记录或 Core 回执尚未确认，已保留原内容；读取列表不能解除保护：${message}`;
+      if (this.state.confirmation === 'unknown') this.state.message = `规则操作尚未确认，当前内容已保留，请先核对：${message}`;
       else this.state.message = message;
       throw new RulesMutationError(this.state.message, this.state.confirmation === 'unknown');
     } finally { this.state.busy = false; }
@@ -185,9 +185,9 @@ export class RulesMutationOwner {
       if (receipt === undefined) {
         this.requireMethodCapability(intent.mutation.method,intent.mutation.params);
         const head = q?.head?.sequence ?? 0;
-        if (head !== intent.sequence - 1) throw new Error(head >= intent.sequence ? '流水已越过订阅原步骤且无精确回执，保持阻断' : '订阅原流水不连续');
+        if (head !== intent.sequence - 1) throw new Error(head >= intent.sequence ? '已有新操作，上次订阅步骤结果暂无法确认' : '订阅操作记录不连续');
         this.state.canRetryOriginal = true;
-        if (!explicit) { this.state.message = '可继续保留的原订阅步骤，下载内容与更新时间不会重建'; return this.snapshot(); }
+        if (!explicit) { this.state.message = '可继续未完成的订阅更新步骤'; return this.snapshot(); }
         if (!durable) await this.intents.ensureDurable(intent,current);
         this.state.writeStage = 'core';
         const event = await this.runtime.request('rules.mutation.apply',this.params(intent), {
@@ -217,7 +217,7 @@ export class RulesMutationOwner {
       // Actual head must still belong to this original ACK; a foreign higher
       // sequence never admits advancing the old journey.
       const head = (await this.query(intent,current)).head;
-      if (head?.operationId !== intent.operationId || head.sequence !== intent.sequence) throw new Error('订阅原回执已被较新流水越过，保持阻断');
+      if (head?.operationId !== intent.operationId || head.sequence !== intent.sequence) throw new Error('已有更新的记录，当前订阅操作已暂停');
       intent = await this.intents.advanceSubscription(intent,receipt as unknown as JsonObject,head.sequence,current);
       durable = true; this.admitPending(intent);
     }
@@ -254,12 +254,12 @@ export class RulesMutationOwner {
       const directoryFamily = intent.subscription===undefined && intent.mutation.method==='reading.directory.rules.apply.v2';
       if (expectedOperationId!==undefined && expectedOperationId!==intent.operationId ||
         originalAdmission!==undefined && !originalAdmission(intent.mutation.method,intent.mutation.params))
-        throw new Error('当前恢复动作不属于保留的原操作；原记录保持阻断');
+        throw new Error('当前操作与待核对记录不符');
       const ownFamily = family==='directory-rules' ? directoryFamily : !directoryFamily &&
         (family==='source-management') === sourceFamily && (family==='rss-management') === rssFamily;
       if (!ownFamily || inspectOnly) {
         await this.inspectOriginal(intent, current, ownFamily, qualify);
-        if (retryOriginal) throw new Error('纯核对或当前入口不能继续另一家族的原操作；原记录保持阻断');
+        if (retryOriginal) throw new Error('当前页面只能核对，无法继续其他模块的操作');
         return this.snapshot();
       }
       if (intent.subscription !== undefined) return await this.continueSubscription(intent,current,qualify,retryOriginal);
@@ -269,10 +269,10 @@ export class RulesMutationOwner {
       if (receipt === undefined) {
         this.requireMethodCapability(intent.mutation.method,intent.mutation.params);
         const head = query?.head?.sequence ?? 0;
-        if (head >= intent.sequence) throw new RulesMutationError('规则流水已越过原记录且无精确回执，保持阻断；不能按列表或总量判定成功', true);
-        if (head !== intent.sequence - 1) throw new RulesMutationError('规则原记录与当前流水不连续，保持阻断', true);
+        if (head >= intent.sequence) throw new RulesMutationError('已有新操作，上次规则操作结果暂无法确认', true);
+        if (head !== intent.sequence - 1) throw new RulesMutationError('规则操作记录不连续，已暂停新操作', true);
         this.state.canRetryOriginal = true;
-        if (!retryOriginal) { this.state.message = '尚无原操作精确回执；可明确重试已保留的原规则内容，不会创建新标识'; return this.snapshot(); }
+        if (!retryOriginal) { this.state.message = '上次规则操作尚未确认，可继续原操作'; return this.snapshot(); }
         await this.intents.ensureDurable(intent, current); this.state.writeStage = 'core';
         const event = await this.runtime.request('rules.mutation.apply', this.params(intent), { canDispatch: current });
         receipt = await this.decodeReceipt(event.data, intent);
@@ -313,14 +313,14 @@ export class RulesMutationOwner {
       this.state.writeStage = 'cleanup';
       this.state.canRetryOriginal = ownFamily;
       this.state.message = receipt.outcome === 'applied' ?
-        `原步骤 Core 写入已确认；原旅程或 Host 清理仍待完成${ownFamily ? '，可明确继续原操作' : '，请返回所属入口，当前入口不能继续'}` :
-        `Core 已确认原步骤未执行；原记录仍待处理${ownFamily ? '，可明确继续原处理' : '，请返回所属入口，当前入口不能继续'}`;
+        `上次修改已生效，收尾处理仍待完成${ownFamily ? '，可继续原操作' : '，请返回所属页面继续'}` :
+        `上次修改未生效${ownFamily ? '，可继续处理' : '，请返回所属页面查看'}`;
     } else {
       this.state.writeStage = 'core';
       this.state.canRetryOriginal = ownFamily && (query.head?.sequence ?? 0) === intent.sequence - 1;
       this.state.message = (query.head?.sequence ?? 0) >= intent.sequence ?
-        '原流水已越过且无精确回执，保持阻断；请返回原操作入口核对' :
-        `尚无原步骤精确回执；${this.state.canRetryOriginal ? '可明确继续已保留的原操作，不创建新标识' : '当前入口仅能核对，不能继续另一家族的原操作'}`;
+        '已有新操作，上次操作结果暂无法确认，请返回原页面核对' :
+        `上次操作尚未确认；${this.state.canRetryOriginal ? '可继续原操作' : '当前页面仅支持核对'}`;
     }
   }
   private needsSourceCleanup(intent: RulesMutationIntent): boolean {
@@ -330,77 +330,77 @@ export class RulesMutationOwner {
     cleanup: () => Promise<boolean>, explicit: boolean): Promise<boolean> {
     this.state.confirmation='confirmed';this.state.writeStage='cleanup';this.state.blocked=true;
     this.state.canRetryOriginal=true;
-    this.state.message='Core 原书源写入已确认；Host 登录会话清理仍待完成，可继续原清理，不会重写 Core';
+    this.state.message='书源修改已生效；登录会话清理仍待完成，可继续清理';
     try {
       await this.intents.retainTerminal(intent,receipt as unknown as JsonObject);
       if (!explicit) return false;
       if (!await cleanup()) return false;
       return true;
     } catch (error) {
-      this.state.message+='：'+(error instanceof Error ? error.message : '原清理尚未确认');
+      this.state.message+='：'+(error instanceof Error ? error.message : '清理尚未确认');
       return false;
     }
   }
   private async clearTerminal(intent: RulesMutationIntent, confirmation: 'confirmed' | 'undispatched', terminal?: RulesMutationReceipt): Promise<void> {
     this.state.confirmation = confirmation; this.state.writeStage = 'cleanup'; this.state.canRetryOriginal = false;
     try { await this.intents.clear(intent, terminal as unknown as JsonObject | undefined); this.state.blocked = false; this.state.message = ''; }
-    catch (_) { this.state.blocked = true; this.state.message = `${confirmation === 'confirmed' ? '原规则写入已确认' : '原规则操作未执行'}；原记录清理尚未确认，请核对后再开始下一项`; }
+    catch (_) { this.state.blocked = true; this.state.message = `${confirmation === 'confirmed' ? '规则修改已生效' : '规则修改未执行'}；记录清理尚未确认，请核对后再继续`; }
   }
   private admitIdentity(intent: RulesMutationIntent): void { this.state.operationId = intent.operationId; this.state.sequence = intent.sequence; this.state.label = intent.label; this.state.method = intent.mutation.method; this.state.original=intent.mutation; this.projectSubscription(intent); }
   private admitPending(intent: RulesMutationIntent): void {
     this.admitIdentity(intent); this.state.confirmation = 'unknown'; this.state.blocked = true;
-    this.state.message = '先前规则原操作仍需核对，不能覆盖原内容或接受另一草稿';
+    this.state.message = '上次规则操作仍需核对，暂不可覆盖当前记录';
   }
   private params(intent: RulesMutationIntent): JsonObject { return { operationId: intent.operationId, sequence: intent.sequence, mutation: intent.mutation }; }
   private current(admission: () => boolean): boolean { try { return ReaderRuntimeOwner.isCurrent(this.runtime as ReaderRuntimeOwner) && admission(); } catch (_) { return false; } }
   private requireSubscriptionCapability(kind: 0 | 1 | 2 | 3): void {
     this.requireCapability();
     if (kind===3) return;
-    if (this.runtime.supportsCoreCapability?.('rules.mutation.subscription.v1') !== true) throw new Error('当前 Core 不支持订阅原旅程回执，已停止派发');
+    if (this.runtime.supportsCoreCapability?.('rules.mutation.subscription.v1') !== true) throw new Error('当前版本暂不支持核对订阅更新操作');
   }
   private requireMethodCapability(method: string, params?: JsonObject): void {
     this.requireCapability();
     if (method==='source.import' && params?.['expectedVersion'] !== undefined &&
       this.runtime.supportsCoreCapability?.('source.import.conditional.v1') !== true)
-      throw new Error('当前 Core 不支持书源条件编辑，保留原操作并停止派发');
+      throw new Error('当前版本暂不支持保存书源编辑');
     if (method==='reading.directory.rules.apply.v2' && this.runtime.supportsCoreCapability?.('rules.mutation.directory-rules.v1') !== true)
-      throw new Error('当前 Core 不支持本书目录规则原操作回执，已停止派发');
+      throw new Error('当前版本暂不支持应用目录层级规则');
     if ((method==='source.update' || method==='source.delete') && this.runtime.supportsCoreCapability?.('rules.mutation.source-management.v1') !== true)
-      throw new Error('当前 Core 不支持书源原管理回执，已停止派发');
+      throw new Error('当前版本暂不支持管理书源变更');
     if ((method==='source.group.mutate' || method==='source.import.grouped') &&
       this.runtime.supportsCoreCapability?.('rules.mutation.source-groups.v1') !== true)
-      throw new Error('当前 Core 不支持书源分组原管理回执，已停止派发');
+      throw new Error('当前版本暂不支持管理书源分组');
     if (method==='rule-sub.update.apply.v1' &&
       this.runtime.supportsCoreCapability?.('rules.mutation.subscription.v1') !== true)
-      throw new Error('当前 Core 不支持订阅更新原操作回执，已停止派发');
+      throw new Error('当前版本暂不支持应用规则订阅更新');
     if ((method.startsWith('rss.') || method==='rss-source.put') && this.runtime.supportsCoreCapability?.('rules.mutation.rss-management.v1') !== true)
-      throw new Error('当前 Core 不支持 RSS 原管理回执，已停止派发');
+      throw new Error('当前版本暂不支持管理 RSS 订阅');
   }
-  private requireCapability(): void { if (this.runtime.supportsCoreCapability?.('rules.mutation.exact.v1') !== true) throw new Error('当前 Core 不具备规则精确回执能力，已停止写入'); }
+  private requireCapability(): void { if (this.runtime.supportsCoreCapability?.('rules.mutation.exact.v1') !== true) throw new Error('当前版本暂不支持此规则操作'); }
   private async query(intent: RulesMutationIntent | undefined, current: () => boolean): Promise<RulesMutationQuery> {
     const event = await this.runtime.request('rules.mutation.query', intent === undefined ? {} : { operationId: intent.operationId, expected: this.params(intent) }, { canDispatch: current });
     const raw = event.data; const headRaw = raw['head'];
     let head: RulesMutationQuery['head'];
     if (headRaw !== null) {
-      const value = this.object(headRaw, '规则流水');
+      const value = this.object(headRaw, '规则状态');
       if (!Number.isSafeInteger(value['sequence']) || (value['sequence'] as number) <= 0 ||
-        typeof value['operationId'] !== 'string' || !this.fingerprint(value['payloadFingerprint'])) throw new Error('规则流水回执无效');
+        typeof value['operationId'] !== 'string' || !this.fingerprint(value['payloadFingerprint'])) throw new Error('规则状态记录无效');
       head = value as unknown as RulesMutationQuery['head'];
     }
     const receiptRaw = raw['receipt'];
     if (receiptRaw === null) return { head };
-    if (intent === undefined) throw new Error('规则头查询不应返回无归属回执');
-    const receipt = await this.decodeReceipt(this.object(receiptRaw, '规则回执'), intent);
+    if (intent === undefined) throw new Error('状态查询返回了异常结果');
+    const receipt = await this.decodeReceipt(this.object(receiptRaw, '规则结果'), intent);
     if (head?.operationId !== receipt.binding.operationId || head.sequence !== receipt.binding.sequence ||
-      head.payloadFingerprint !== receipt.binding.payloadFingerprint) throw new Error('规则回执与实际流水不一致');
+      head.payloadFingerprint !== receipt.binding.payloadFingerprint) throw new Error('规则结果与状态记录不一致');
     return { head, receipt };
   }
   private async decodeReceipt(raw: JsonObject, intent: RulesMutationIntent): Promise<RulesMutationReceipt> {
     const binding = this.object(raw['binding'], '规则绑定');
     if (binding['operationId'] !== intent.operationId || binding['sequence'] !== intent.sequence ||
       !this.fingerprint(binding['payloadFingerprint']) || !this.fingerprint(raw['ackFingerprint']) ||
-      raw['method'] !== intent.mutation.method || (raw['outcome'] !== 'applied' && raw['outcome'] !== 'rejected')) throw new Error('规则原回执与固定标识不匹配');
-    this.object(raw['data'], '规则原数据'); await this.intents.qualifyTerminal(intent,raw); return raw as unknown as RulesMutationReceipt;
+      raw['method'] !== intent.mutation.method || (raw['outcome'] !== 'applied' && raw['outcome'] !== 'rejected')) throw new Error('规则结果与请求标识不匹配');
+    this.object(raw['data'], '规则结果数据'); await this.intents.qualifyTerminal(intent,raw); return raw as unknown as RulesMutationReceipt;
   }
   private rejectionMessage(receipt: RulesMutationReceipt): string {
     // This finite variant retains the original preview/apply unavailable DTO.
@@ -408,8 +408,8 @@ export class RulesMutationOwner {
     // be reclassified as unknown because the old DTO has no CoreError wrapper.
     if (receipt.method === 'reading.directory.rules.apply.v2' && receipt.data['status'] === 'unavailable')
       return `本书目录规则未应用：${String(receipt.data['reason'] ?? '没有可靠的层级边界')}`;
-    const error = this.object(receipt.data['error'], '规则原拒绝');
-    return typeof error['message'] === 'string' ? error['message'] : 'Core 明确拒绝原规则操作';
+    const error = this.object(receipt.data['error'], '规则失败信息');
+    return typeof error['message'] === 'string' ? error['message'] : '规则操作未生效';
   }
   private object(value: unknown, name: string): JsonObject { if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${name}结构无效`); return value as JsonObject; }
   private fingerprint(value: unknown): boolean { return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value); }

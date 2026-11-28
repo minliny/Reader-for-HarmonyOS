@@ -199,7 +199,7 @@ export class SourceOrchestrator {
     this.session += 1;
     const session = this.session;
     this.checkResults.clear();
-    this.publishStatus('loading', '正在读取 Core 书源数据…');
+    this.publishStatus('loading', '正在读取书源…');
     this.publishRead(session, 'loading');
     this.operationChain = this.operationChain.then((): Promise<void> => this.loadList(session));
   }
@@ -859,7 +859,7 @@ export class SourceOrchestrator {
       hilog.warn(DOMAIN, 'Reader',
         'Book-source import persisted but source.list refresh failed: file=%{private}s count=%{public}d err=%{private}s',
         selection.fileName, importedCount, (error as Error).message);
-      const refreshWarning = `Core 已导入 ${importedCount} 个书源，但列表刷新失败：${(error as Error).message}`;
+      const refreshWarning = `已导入 ${importedCount} 个书源，列表刷新失败：${(error as Error).message}`;
       this.publishReceipt(session, 'import', '', evidence.confirmation(), 'failed', (error as Error).message, evidence.confirmedCount);
       this.publishStatus('warning', refreshWarning);
       return { importedCount, refreshWarning, failureSummary };
@@ -989,7 +989,7 @@ export class SourceOrchestrator {
     if (clearLoginReport && ReaderRuntimeOwner.isCurrent(this.owner)) {
       try {
         const cleared = await this.gateway.clearSourceCheckReports([id], (): boolean => ReaderRuntimeOwner.isCurrent(this.owner));
-        if (!cleared.supported) reportCleanupWarning = '书源已停用，当前 Core 无法清除已保存的检测报告';
+        if (!cleared.supported) reportCleanupWarning = '书源已停用，旧检测报告暂无法清除';
       } catch (error) {
         reportCleanupWarning = '书源已停用，未能确认旧检测报告已清除';
         hilog.warn(DOMAIN, 'Reader', 'Disabled source report cleanup failed: %{private}s', errorMessageOf(error));

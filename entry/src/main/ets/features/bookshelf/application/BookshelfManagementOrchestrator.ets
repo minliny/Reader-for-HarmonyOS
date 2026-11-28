@@ -120,7 +120,7 @@ export class BookshelfManagementOrchestrator {
     if (!this.admit(identity)) return;
     this.session += 1;
     const session = this.session;
-    this.publish({ busy: true, statusMessage: '正在读取 Core 书架数据…',
+    this.publish({ busy: true, statusMessage: '正在读取书架数据…',
       readFacts: projectOperationFacts({ phase: 'loading', value: this.hasRead ? this.snapshot.data : undefined,
         generation: ++bookshelfManagementGeneration }) });
     this.enqueue(async (): Promise<void> => {
@@ -222,7 +222,7 @@ export class BookshelfManagementOrchestrator {
       (candidate: BookGroup): boolean => candidate.groupId === this.snapshot.selectedGroupId,
     );
     this.enqueueWrite(session, async (): Promise<void> => {
-      this.publishIfCurrent(session, { busy: true, statusMessage: '正在由 Core 保存分组…' });
+      this.publishIfCurrent(session, { busy: true, statusMessage: '正在保存分组…' });
       await this.performWrite(session, async (): Promise<void> => {
         if (selected === undefined) {
           await this.gateway.createGroup(name, order);
@@ -250,10 +250,10 @@ export class BookshelfManagementOrchestrator {
     if (!this.canWrite(identity)) return;
     const session = this.session;
     this.enqueueWrite(session, async (): Promise<void> => {
-      this.publishIfCurrent(session, { busy: true, statusMessage: '正在由 Core 删除分组…' });
+      this.publishIfCurrent(session, { busy: true, statusMessage: '正在删除分组…' });
       await this.performWrite(session, async (): Promise<void> => {
         await this.gateway.deleteGroup(groupId);
-      }, '分组实体已删除；书籍上的同名标签按 Core 原值保留');
+      }, '分组已删除');
     });
   }
 
@@ -281,7 +281,7 @@ export class BookshelfManagementOrchestrator {
     if (book === undefined) return;
     const group = this.snapshot.assignmentGroupDraft;
     this.enqueueWrite(session, async (): Promise<void> => {
-      this.publishIfCurrent(session, { busy: true, statusMessage: '正在由 Core 分配书架分组…' });
+      this.publishIfCurrent(session, { busy: true, statusMessage: '正在设置书籍分组…' });
       await this.performWrite(session, async (): Promise<void> => {
         await this.gateway.assignGroup(book, group);
       }, group.trim().length === 0 ? '已清除书籍分组' : `已分配到：${group.trim()}`);
@@ -292,7 +292,7 @@ export class BookshelfManagementOrchestrator {
     if (!this.canWrite(identity)) return Promise.resolve(this.currentSnapshot());
     const session = this.session;
     return this.enqueueWrite(session, async (): Promise<void> => {
-      this.publish({ busy: true, statusMessage: '正在由 Core 分配书架分组…' });
+      this.publish({ busy: true, statusMessage: '正在设置书籍分组…' });
       await this.performWrite(session, async (): Promise<void> => { await this.gateway.assignGroup(book, group); },
         group.trim().length === 0 ? '已清除书籍分组' : `已分配到：${group.trim()}`);
     }).then((): BookshelfManagementSnapshot => this.currentSnapshot());

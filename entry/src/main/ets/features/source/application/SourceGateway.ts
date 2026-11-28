@@ -272,7 +272,7 @@ export class SourceGateway {
         const passed = selected.every((step: SourceCheckReportStep): boolean => step.status === 'pass');
         const mode = latest.report.mode === 'explore' ? '发现' : latest.report.mode === 'search' ? '搜索' : '旧版';
         const budget = latest.report.executionOptions === undefined ? '预算未知（旧版记录）' :
-          `Core 预算 ${latest.report.executionOptions.timeoutMs}ms`;
+          `超时预算 ${latest.report.executionOptions.timeoutMs}ms`;
         lastCheckSummary = `${latest.stale ? '已过期' : '历史'} · ${mode} ${levels} ${passed ? '通过' : '未通过'} · ${budget} · ` +
           new Date(latest.checkedAtMs).toLocaleString();
       }
@@ -416,7 +416,7 @@ export class SourceGateway {
       },this.writeEvidence,(step: RuleSubscriptionStep, data: JsonObject): void => {
         const error=data['error'] as JsonObject;
         failures.push({index:step.sourceIndex ?? -1,sourceId:step.params['sourceId'] as string,
-          message:typeof error?.['message']==='string' ? error['message'] as string : 'Core 明确拒绝原书源条目'});
+          message:typeof error?.['message']==='string' ? error['message'] as string : '保存书源被拒绝'});
       },identifyOriginal);
     return {importedCount:result.subscription?.confirmedParts ?? 0,sourceIds,
       failedCount:result.subscription?.failedParts ?? failures.length,failures};
@@ -444,7 +444,7 @@ export class SourceGateway {
 
   async loadSourceGroupCatalog(current?: () => boolean): Promise<SourceGroupCatalogData> {
     if (!this.runtimeOwner.supportsCoreCapability('source.group.metadata.v1')) {
-      throw new Error('当前 Core 不支持书源分组目录');
+      throw new Error('当前版本不支持书源分组列表');
     }
     const event = await this.runtimeOwner.request('source.group.catalog', { reportVersion: 1 }, {
       canDispatch: current, canContinue: current,
@@ -487,7 +487,7 @@ export class SourceGateway {
 
   async mutateSourceGroup(input: SourceGroupMutateParams, current?: () => boolean): Promise<SourceGroupMutateData> {
     if (!this.runtimeOwner.supportsCoreCapability('rules.mutation.source-groups.v1')) {
-      throw new Error('当前 Core 不支持书源分组写入');
+      throw new Error('当前版本不支持保存书源分组');
     }
     const params: JsonObject = { expectedRevision: input.expectedRevision, action: input.action };
     if (input.groupId !== undefined) params['groupId'] = input.groupId;
@@ -541,7 +541,7 @@ export class SourceGateway {
   async importGroupedSources(items: SourceImportCandidate[], expectedRevision: number, strategy: SourceImportGroupStrategy,
     target?: SourceImportGroupTarget, current?: () => boolean, keepPlan?: (plan: SourceGroupedImportPlan) => void): Promise<SourceGroupedImportOutcome> {
     if (!this.runtimeOwner.supportsCoreCapability('rules.mutation.source-groups.v1')) {
-      throw new Error('当前 Core 不支持分组导入');
+      throw new Error('当前版本不支持分组导入');
     }
     // Re-admit the original DTO at the write boundary. UI selection or a prior
     // diagnostics result cannot give an unsupported media type write access.
@@ -616,11 +616,11 @@ export class SourceGateway {
     }
     if (!this.supportsOriginalSourceImport() ||
       !this.runtimeOwner.supportsCoreCapability('source.import.conditional.v1')) {
-      throw new Error('当前 Core 不支持按版本覆盖书源');
+      throw new Error('当前版本不支持按版本覆盖书源');
     }
     const imported = await this.importOriginalSourceDocument(JSON.stringify(candidate), current, undefined,
       { sourceId, expectedVersion });
-    if (imported.importedCount !== 1) throw new Error(imported.failures[0]?.message ?? 'Core 未确认覆盖书源');
+    if (imported.importedCount !== 1) throw new Error(imported.failures[0]?.message ?? '未能确认覆盖书源');
   }
 
   private prepareImportCandidate(value: unknown, index: number): SourceImportCandidate {
@@ -655,7 +655,7 @@ export class SourceGateway {
       (action === 'assign' ? groupId !== params['targetGroupId'] : groupId.length === 0) ||
       ((action === 'delete' || action === 'rename') && groupId !== params['groupId']) ||
       ((action === 'create' || action === 'rename') && affectedSourceIds.length > 0)) {
-      throw new Error('书源分组原操作回执不匹配');
+      throw new Error('书源分组结果与请求不符');
     }
     if (action === 'assign') {
       const expectedIds = this.readSourceIds(params['sourceIds'], '分组成员请求');
@@ -876,7 +876,7 @@ export class SourceGateway {
     if (!this.supportsOriginalSourceImport() ||
       this.runtimeOwner.supportsCoreCapability?.('source.import.conditional.v1') !== true ||
       expectedVersion === undefined || !/^[0-9a-f]{64}$/.test(expectedVersion)) {
-      throw new Error('当前 Core 无法核定编辑前的完整书源版本；草稿保留，请更新 Core 后重新读取');
+      throw new Error('当前版本无法校验书源版本，草稿已保留，请更新应用后重试');
     }
     const currentDefinition = await this.readSourceDefinition(sourceId);
     if (currentDefinition === undefined || currentDefinition.identity !== baseline) {
@@ -1049,7 +1049,7 @@ export class SourceGateway {
       throw new Error('source.check.run requires a non-empty sourceId');
     }
     if (!this.runtimeOwner.supportsCoreCapability('source.check.mode.v1')) {
-      throw new Error('当前 Core 不支持分项书源检测，请使用配套 Native');
+      throw new Error('当前版本不支持分项书源检测，请更新应用');
     }
     const selectedLevels = this.admitCheckOptions(levels, timeoutMs);
     const params: JsonObject = { sourceIds: [sourceId], timeoutMs, mode, levels: selectedLevels };
@@ -1077,7 +1077,7 @@ export class SourceGateway {
     onStage?: (stage: string) => void,
   ): Promise<SourceCheckOutcome[]> {
     if (!this.supportsEphemeralSourceCheck()) {
-      throw new Error('当前 Core 不支持未入库书源检测，可跳过检测后继续');
+      throw new Error('暂不支持未入库书源检测，可跳过检测后继续');
     }
     if (sources.length < 1 || sources.length > 100) throw new Error('未入库检测支持每批 1–100 条书源');
     const selected = this.admitCheckOptions(levels, timeoutMs);
@@ -1263,8 +1263,8 @@ export class SourceGateway {
         const target = record.finalUrl !== undefined && record.finalUrl !== record.url ?
           `${record.url} → ${record.finalUrl}` : record.url;
         const message = record.errorMessage === undefined ?
-          `[Host] ${record.stage} ${record.method} ${target} → HTTP ${status ?? '未知'}（${record.durationMs}ms）` :
-          `[Host] ${record.stage} ${record.method} ${target} → ${record.errorMessage}`;
+          `${record.stage} ${record.method} ${target} → HTTP ${status ?? '未知'}（${record.durationMs}ms）` :
+          `${record.stage} ${record.method} ${target} → ${record.errorMessage}`;
         const log: SourceDebugLog = {
           state: record.errorMessage === undefined ? 1 : -1,
           message,

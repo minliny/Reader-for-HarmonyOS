@@ -120,7 +120,7 @@ export struct ReaderDirectoryRules {
         });
         this.loaded = true;
         this.message = gateway.supportsApply() ? (this.rules.length === 0 ? '正在使用默认卷规则' : '已载入本书规则') :
-          '已载入本书规则；当前 Core 尚不支持原操作回执，仅可预览';
+          '已载入本书规则（当前仅支持预览）';
       }).catch((_error: Error): void => {
         if (current()) { this.operation = gateway.snapshot(); this.message = '当前规则读取尚未完成，草稿已保留，请重新读取'; }
       }).finally((): void => {
@@ -229,7 +229,7 @@ export struct ReaderDirectoryRules {
   private publishRecovery(): void {
     const view = this.recoveryView(), identity = this.recoveryIdentity(), generation = this.operation.generation;
     if (!view.visible || !this.ownsRecovery(identity)) { this.onRecoveryChanged(undefined); return; }
-    this.onRecoveryChanged({ bookId: this.bookId, identity, view, actionLabel: '核对原操作回执',
+    this.onRecoveryChanged({ bookId: this.bookId, identity, view, actionLabel: '核对原操作',
       secondaryActionLabel: this.canContinueOriginal() ? '继续原操作' : '', busy: this.busy,
       onReconcile: (expected: number): void => {
         if (expected === generation && generation === this.operation.generation && this.ownsRecovery(identity))
@@ -293,7 +293,7 @@ export struct ReaderDirectoryRules {
         this.notifyApplied();
       } else if (continuing && !this.operation.blocked) {
         this.previewReady = false;
-        this.message = `${this.operation.message || 'Core 已确认原操作未执行'}；原草稿已保留，请重新预览`;
+        this.message = `${this.operation.message || '原修改未生效'}；原草稿已保留，请重新预览`;
       }
     } catch (_error) { if (current()) { this.operation = gateway.snapshot(); this.message = this.operation.message; } }
     finally {
@@ -309,9 +309,7 @@ export struct ReaderDirectoryRules {
         .fontWeight(TYPE_READER_DIRECTORY_RULE_HEADING.fontWeight as number)
         .id(this.focusTargetId.length > 0 ? this.focusTargetId : undefined)
         .focusable(this.interactionEnabled && this.focusTargetId.length > 0);
-      Text('只调整导航层级；0 为最外层，范围 0–31。删除所有规则可恢复默认，请先预览。')
-        .fontFamily(TYPE_APP_INHERITED_HINT.fontFamily).fontWeight(TYPE_APP_INHERITED_HINT.fontWeight).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.scheme));
-      Text('正则匹配完整标题或独立行，例如“第一卷.*”可匹配“第一卷 童子行”。')
+      Text('仅调整目录层级（0 为最外层，0–31）；清空规则恢复默认。')
         .fontFamily(TYPE_APP_INHERITED_HINT.fontFamily).fontWeight(TYPE_APP_INHERITED_HINT.fontWeight).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.scheme));
       ForEach([this.actorIdentity()], (identity: string) => {
       if (this.rules.length > 0) {
@@ -320,7 +318,7 @@ export struct ReaderDirectoryRules {
         Column({ space: 6 }) {
           ReaderFormField({ editingHost: this.editingHost, specId: 'directory-rule-pattern', scheme: this.scheme, text: this.currentRule(rule.id)?.pattern ?? '',
             fieldAccessibilityLabel: `规则${rule.id}匹配表达式`,
-            isEditable: this.canEdit(), placeholder: '匹配完整标题或独立正文行的正则表达式',
+            isEditable: this.canEdit(), placeholder: '输入标题正则表达式，如 第一卷.*',
             onTextChange: (value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'pattern', value); } });
           Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
             space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {

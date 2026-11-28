@@ -567,13 +567,6 @@ export struct SourceToolsPage {
           this.snapshot.batchCheck.total - this.snapshot.batchCheck.completed)}`, (): string => readerAppColor('TOK_MUTED', this.appThemeScheme));
       }
       .width('100%');
-      if (this.snapshot.batchCheck.phase === 'running' && this.snapshot.batchCheck.results.length === 0) {
-        Text('每个书源完成后，结果会立即出现在这里。')
-          .width('100%')
-          .fontFamily(TYPE_SOURCE_TOOLS_HINT.fontFamily as string)
-          .fontSize(TYPE_SOURCE_TOOLS_HINT.fontSizeFp)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      }
     }
   }
 
@@ -763,12 +756,6 @@ export struct SourceToolsPage {
   private exportCard() {
     ReaderCard({ specId: 'editor-section' }) {
       ReaderSectionHeading({ variant: 'tool-card', title: '书源导出' });
-      Text('将书源备份为 Legado 兼容的 JSON 文件。')
-        .width('100%')
-        .fontFamily(TYPE_SOURCE_TOOLS_DESCRIPTION.fontFamily as string)
-        .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp)
-        .lineHeight(TYPE_SOURCE_TOOLS_DESCRIPTION.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       this.fullWidthActionButton(`导出全部书源（${this.snapshot.sources.length}）`, true,
         (): void => this.confirmExportThen((): void => this.onExportAll()));
     }
@@ -956,7 +943,7 @@ export struct SourceToolsPage {
   private editorCard(revision: number) {
     ReaderCard({ specId: 'editor-section' }) {
       ReaderSectionHeading({ variant: 'tool-card', title: `编辑：${this.snapshot.editorSourceId}` });
-      Text('bookSourceUrl 是主键；本页不执行隐式迁移。保存时由 Core source.import 校验并持久化。')
+      Text('请保留原书源地址，保存时将校验格式。')
         .width('100%')
         .fontFamily(TYPE_SOURCE_TOOLS_DESCRIPTION.fontFamily as string)
         .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp)
@@ -1025,7 +1012,7 @@ export struct SourceToolsPage {
         }.width('100%');
         ForEach([this.debugInputRevision], (inputRevision: number): void => {
           ReaderFormField({ editingHost: this.editingHost, scheme: this.appThemeScheme, specId: 'source-debug', text: this.snapshot.debugKey,
-            placeholder: '检测关键词（留空时使用 Core 默认“我的”）', isEditable: !busy,
+            placeholder: '检测关键词（留空默认“我的”）', isEditable: !busy,
             onTextChange: this.debugKeyChange(busy, inputRevision) });
         }, (inputRevision: number): string => `source-debug-input:${inputRevision}`);
       }, (busy: boolean): string => busy ? 'source-debug-busy' : 'source-debug-edit');

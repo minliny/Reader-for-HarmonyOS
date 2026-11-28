@@ -55,7 +55,7 @@ class ReadingDomainIntent {
     qualify: (data: JsonObject, intent: ReadingOperationIntent) => T, evidence: ReaderWriteEvidence | undefined, current: () => boolean): Promise<T> {
     return this.serial(async (): Promise<T> => {
       this.assertCurrent(); if (!current()) throw new Error('READING_OPERATION_RETIRED_BEFORE_DISPATCH');
-      if (!this.validContext(context)) throw new ReadingOperationPendingError('原操作实体上下文格式无效', undefined, true);
+      if (!this.validContext(context)) throw new ReadingOperationPendingError('操作记录格式无效', undefined, true);
       if (this.domain === 'bookmark' ? method !== 'bookmark.create' && method !== 'bookmark.delete' : method !== 'cache.clear')
         throw new ReadingOperationPendingError('操作与固定域不符', undefined, true);
       const old = await this.load();
@@ -160,7 +160,7 @@ class ReadingDomainIntent {
     // clear fails. These failures retain the same intent, never repeat writes.
     try {
       const receipt = await this.queryIntent(intent);
-      if (receipt === undefined) throw new ReadingOperationPendingError('操作已回执，精确持久回执尚未可读，原标识已保留', intent, true);
+      if (receipt === undefined) throw new ReadingOperationPendingError('操作已确认，详细记录暂不可读', intent, true);
       qualify(receipt.data, intent);
       await this.finishQualified(intent, receipt.binding, receipt.phase, receipt.data);
     } catch (error) { const issue = error as ReadingOperationPendingError;
@@ -169,7 +169,7 @@ class ReadingDomainIntent {
   }
   private async queryHead(): Promise<ReadingOperationBinding | undefined> {
     const data = (await this.runtime.request(this.queryMethod(), {}, { canDispatch: (): boolean => this.runtimeCurrent() })).data;
-    if (data['receipt'] !== null) throw new ReadingOperationPendingError('操作head查询返回了非空未知回执', undefined, true);
+    if (data['receipt'] !== null) throw new ReadingOperationPendingError('状态查询返回了异常结果', undefined, true);
     return data['head'] === null ? undefined : this.binding(data['head']);
   }
   private async queryIntent(intent: ReadingOperationIntent): Promise<ReadingQualifiedReceipt | undefined> {
@@ -180,26 +180,26 @@ class ReadingDomainIntent {
     catch (error) { throw new ReadingOperationPendingError(`原操作核对不可用：${(error as Error).message}`, intent, true); }
     const head = data['head'] === null ? undefined : this.binding(data['head']);
     if (data['receipt'] === null) {
-      if (intent.phase === 'confirmed') throw new ReadingOperationPendingError('已确认操作的精确回执缺失，已阻断；不能重新写入', intent, true, true);
+      if (intent.phase === 'confirmed') throw new ReadingOperationPendingError('已确认操作的记录缺失，请核对后重试', intent, true, true);
       if (head !== undefined && head.sequence >= (intent.params['sequence'] as number))
-        throw new ReadingOperationPendingError('原操作回执缺失且流水号已越过，已阻断，不能重新派发或猜测成功', intent, true);
+        throw new ReadingOperationPendingError('上次操作记录缺失且已有新操作，请核对列表', intent, true);
       if (intent.params['sequence'] !== (head?.sequence ?? 0) + 1)
-        throw new ReadingOperationPendingError('原操作流水号与当前回执不连续，已保留并阻断，不能继续派发', intent, true);
+        throw new ReadingOperationPendingError('操作序号与当前记录不连续，已暂停后续操作', intent, true);
       return undefined;
     }
     const receipt = this.object(data['receipt']); const binding = this.binding(receipt['binding']);
     if (head === undefined || head.sequence < binding.sequence || (head.sequence === binding.sequence &&
       (head.operationId !== binding.operationId || head.payloadFingerprint !== binding.payloadFingerprint)))
-      throw new ReadingOperationPendingError('持久head与精确回执不符', intent, true);
+      throw new ReadingOperationPendingError('状态记录与操作结果不符', intent, true);
     if (binding.operationId !== intent.params['operationId'] || binding.sequence !== intent.params['sequence'] ||
       (intent.binding !== undefined && (binding.payloadFingerprint !== intent.binding.payloadFingerprint || binding.operationId !== intent.binding.operationId)))
-      throw new ReadingOperationPendingError('回执与原操作标识/指纹不符，已保留并阻断', intent, true);
+      throw new ReadingOperationPendingError('操作结果与原请求不符，已暂停后续操作', intent, true);
     const phase = receipt['phase'];
-    if (phase !== 'committed' && phase !== 'settled') throw new ReadingOperationPendingError('回执阶段无效', intent, true);
+    if (phase !== 'committed' && phase !== 'settled') throw new ReadingOperationPendingError('操作状态无效', intent, true);
     let result: JsonObject;
     if (this.domain === 'bookmark') {
       const outcome = this.object(receipt['outcome']);
-      if (outcome['action'] !== (intent.method === 'bookmark.create' ? 'create' : 'delete')) throw new ReadingOperationPendingError('回执动作不符', intent, true);
+      if (outcome['action'] !== (intent.method === 'bookmark.create' ? 'create' : 'delete')) throw new ReadingOperationPendingError('操作结果类型不符', intent, true);
       result = this.object(outcome['result']);
     } else result = this.object(receipt['result']);
     return { binding, phase, data: result };
@@ -229,7 +229,7 @@ class ReadingDomainIntent {
       } catch (error) {
         // Lost metadata ACK is resolved with a read of this same exact ID.
         const observed = await this.queryIntent(confirmed);
-        if (observed?.phase !== 'settled') throw new ReadingOperationPendingError('操作已确认，回执结算尚未确认，原标识已保留', confirmed);
+        if (observed?.phase !== 'settled') throw new ReadingOperationPendingError('操作已确认，记录收尾尚未完成', confirmed);
       }
     }
     await this.clear(confirmed);
@@ -258,7 +258,7 @@ class ReadingDomainIntent {
           throw new ReadingOperationPendingError('确认记录与原操作身份不符', disk, true);
         this.object(disk.result);
       } else if (disk.binding !== undefined || disk.result !== undefined)
-        throw new ReadingOperationPendingError('未确认记录包含非法回执资格', disk, true);
+        throw new ReadingOperationPendingError('待确认记录包含无效结果', disk, true);
     }
     const warm = this.lane.warm;
     if (warm !== undefined && disk !== undefined && !this.same(warm, disk)) throw new ReadingOperationPendingError('原操作暖态与持久标识冲突，已停止覆盖', warm, true);
@@ -269,22 +269,22 @@ class ReadingDomainIntent {
   }
   private async clear(intent: ReadingOperationIntent): Promise<void> {
     this.assertCurrent();
-    if (this.lane.warm === undefined || !this.same(this.lane.warm, intent)) throw new ReadingOperationPendingError('旧服务不能清除另一标识', intent, true);
+    if (this.lane.warm === undefined || !this.same(this.lane.warm, intent)) throw new ReadingOperationPendingError('旧状态不能清除当前操作', intent, true);
     await this.replace(''); this.assertCurrent();
-    if (this.lane.warm === undefined || !this.same(this.lane.warm, intent)) throw new ReadingOperationPendingError('旧清理回执不能清除新标识', intent, true);
+    if (this.lane.warm === undefined || !this.same(this.lane.warm, intent)) throw new ReadingOperationPendingError('清理结果不能清除当前操作', intent, true);
     this.lane.warm = undefined;
   }
   private async replace(raw: string): Promise<void> { const context = this.runtime.getUIAbilityContext?.(); if (context === undefined) throw new Error('READING_OPERATION_DURABLE_IO_UNAVAILABLE'); await replaceReaderAtomicSnapshot(this.path(), readerHostFilesDirectory(context.filesDir), raw); }
   private path(): string { const context = this.runtime.getUIAbilityContext?.(); if (context === undefined) throw new Error('READING_OPERATION_DURABLE_IO_UNAVAILABLE'); return `${readerHostFilesDirectory(context.filesDir)}/${this.domain === 'bookmark' ? 'reader-bookmark-intent-v1.json' : 'reader-cache-clear-intent-v1.json'}`; }
   private runtimeCurrent(): boolean { try { return this.ownsRuntime(); } catch (_) { return false; } }
-  private assertCurrent(): void { if (!this.runtimeCurrent()) throw new ReadingOperationPendingError('原Runtime已退役，请由当前服务核对保留记录'); }
+  private assertCurrent(): void { if (!this.runtimeCurrent()) throw new ReadingOperationPendingError('页面会话已切换，请稍后重试'); }
   private same(a: ReadingOperationIntent, b: ReadingOperationIntent): boolean { return a.method === b.method && JSON.stringify(a.params) === JSON.stringify(b.params) && JSON.stringify(a.context) === JSON.stringify(b.context); }
   private validContext(context: ReadingOperationContext | undefined): boolean {
     return typeof context?.sourceId === 'string' && typeof context?.bookId === 'string' &&
       (context.title === undefined || typeof context.title === 'string') &&
       (context.author === undefined || typeof context.author === 'string');
   }
-  private assertContext(intent: ReadingOperationIntent, context: ReadingOperationContext): void { if (intent.context.sourceId !== context.sourceId || intent.context.bookId !== context.bookId || intent.context.title !== context.title || intent.context.author !== context.author) throw new ReadingOperationPendingError('另一实体的原操作仍需核对，请返回原内容', intent, true); }
+  private assertContext(intent: ReadingOperationIntent, context: ReadingOperationContext): void { if (intent.context.sourceId !== context.sourceId || intent.context.bookId !== context.bookId || intent.context.title !== context.title || intent.context.author !== context.author) throw new ReadingOperationPendingError('另一项待处理操作尚未完成，请返回原页面核对', intent, true); }
   private validNewId(id: unknown, sequence: unknown): boolean {
     return typeof sequence === 'number' && Number.isSafeInteger(sequence) && sequence > 0 && typeof id === 'string' &&
       new RegExp('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/' + String(sequence) + '$').test(id);
@@ -292,8 +292,8 @@ class ReadingDomainIntent {
   private queryMethod(): string { return this.domain === 'bookmark' ? 'bookmark.operation.query' : 'cache.clear.operation.query'; }
   private settleMethod(): string { return this.domain === 'bookmark' ? 'bookmark.operation.settle' : 'cache.clear.operation.settle'; }
   private noExecution(error: unknown): boolean { return isReaderCoreTransactionPendingError(error) || (error instanceof ReaderCoreRequestError && error.event.error.details?.['nonExecution'] === true && (error.event.error.details?.['domain'] === (this.domain === 'bookmark' ? 'bookmark' : 'cacheClear') || error.event.error.details?.['domain'] === 'reading')); }
-  private object(value: unknown): JsonObject { if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new ReadingOperationPendingError('原操作回执格式无效', this.lane.warm, true); return value as JsonObject; }
-  private binding(value: unknown): ReadingOperationBinding { const b = this.object(value); if (typeof b['operationId'] !== 'string' || !Number.isSafeInteger(b['sequence']) || (b['sequence'] as number) <= 0 || typeof b['payloadFingerprint'] !== 'string' || !/^[0-9a-f]{64}$/.test(b['payloadFingerprint'])) throw new ReadingOperationPendingError('原操作回执身份无效', this.lane.warm, true); return { operationId: b['operationId'], sequence: b['sequence'] as number, payloadFingerprint: b['payloadFingerprint'] }; }
+  private object(value: unknown): JsonObject { if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new ReadingOperationPendingError('操作结果格式无效', this.lane.warm, true); return value as JsonObject; }
+  private binding(value: unknown): ReadingOperationBinding { const b = this.object(value); if (typeof b['operationId'] !== 'string' || !Number.isSafeInteger(b['sequence']) || (b['sequence'] as number) <= 0 || typeof b['payloadFingerprint'] !== 'string' || !/^[0-9a-f]{64}$/.test(b['payloadFingerprint'])) throw new ReadingOperationPendingError('操作结果标识无效', this.lane.warm, true); return { operationId: b['operationId'], sequence: b['sequence'] as number, payloadFingerprint: b['payloadFingerprint'] }; }
   private async serial<T>(work: () => Promise<T>): Promise<T> { const prior = this.lane.tail; let release: (() => void) | undefined; this.lane.tail = new Promise<void>((resolve): void => { release = resolve; }); await prior; try { return await work(); } finally { release?.(); } }
 }
 export class BookmarkOperationIntentStore extends ReadingDomainIntent { constructor(runtime: ReadingGatewayRuntime, ownsRuntime?: () => boolean) { super(runtime, 'bookmark', ownsRuntime); } }

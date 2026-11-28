@@ -842,7 +842,7 @@ export struct ReaderControlAutoPageContent {
   }
 
   private headerMeta(kind: 'control' | 'details'): string {
-    if (kind === 'details') return '即时生效';
+    if (kind === 'details') return '';
     if (this.sourceOnly !== 'none' && this.sourceMinimumCurrent()) return this.sourceMinimum?.data.autoPageFacts?.status ?? readerControlAutoPageStatusLabel(this.status);
     return this.presentationPrepared()?.facts.autoPage?.status ?? readerControlAutoPageStatusLabel(this.status);
   }
@@ -865,7 +865,9 @@ export struct ReaderControlAutoPageContent {
             this.syncRunningPulse();
           });
       }
-      Text(this.headerMeta(kind)).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META.fontFamily as string).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme));
+      if (this.headerMeta(kind).length > 0) {
+        Text(this.headerMeta(kind)).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META.fontFamily as string).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme));
+      }
     }.width(this.headerActor(kind).width).height(this.headerActor(kind).height).alignItems(VerticalAlign.Center)
       .position({ x: this.headerActor(kind).x, y: this.headerActor(kind).y })
       .translate({ y: this.fullOnlyScrollTranslation() })

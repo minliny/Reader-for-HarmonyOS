@@ -1226,8 +1226,7 @@ export struct ReaderControlAppearanceContent {
       .zIndex(this.draggedFontId === font ? 3 : 1).enabled(this.fontInput(font))
       .accessibilityLevel(this.fontInput(font) ? 'auto' : 'no-hide-descendants')
       .hitTestBehavior(this.fontInput(font) ? HitTestMode.Default : HitTestMode.None)
-      .attributeModifier(new ReaderActionAccessibility(font === 'import' && this.importLayout === 'source-overlap-pending' ?
-        '原始设计重叠位置，仅供对照' : font === 'import' ? '导入自定义字体' :
+      .attributeModifier(new ReaderActionAccessibility(font === 'import' ? '导入自定义字体' :
         `切换到${readerAppearanceFontSlotLabel(this.displaySnapshot(), font)}${this.fontPreviewReady(font) ? '' : '，预览准备中'}`,
         this.fontInput(font), this.activeFont(font)))
       .onVisibleAreaChange([0, 0.25], (visible: boolean, ratio: number): void => {
@@ -1250,11 +1249,7 @@ export struct ReaderControlAppearanceContent {
     Stack({ alignContent: Alignment.TopStart }) {
       Row() {
         Text('排版库').fontFamily(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL.lineHeightFp as number).fontWeight(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
-          .attributeModifier(new ReaderAppearanceTextMaximum(this.minimumProfile() === undefined ? undefined : Math.max(1, (this.frame().sectionWidth - 8) / 2)))
-          .wordBreak(WordBreak.BREAK_WORD);
-        Blank();
-        Text('即时应用').fontFamily(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY.fontFamily).fontWeight(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY.fontWeight).fontSize(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY.lineHeightFp as number).fontColor(readerAppColor('app.appearance.layoutCaption', this.appThemeScheme))
-          .attributeModifier(new ReaderAppearanceTextMaximum(this.minimumProfile() === undefined ? undefined : Math.max(1, (this.frame().sectionWidth - 8) / 2)))
+          .attributeModifier(new ReaderAppearanceTextMaximum(this.minimumProfile() === undefined ? undefined : Math.max(1, this.frame().sectionWidth - 8)))
           .wordBreak(WordBreak.BREAK_WORD);
       }.width(Math.max(0, this.frame().sectionWidth - 8)).height(this.layoutHeaderHeight())
         .position({ x: 4, y: 10 });

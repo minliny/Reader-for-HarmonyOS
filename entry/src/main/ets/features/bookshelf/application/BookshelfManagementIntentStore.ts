@@ -92,7 +92,7 @@ export class BookshelfManagementIntentStore {
           throw new Error(this.rejection(receipt));
         }
         const value = qualify(method, intent.mutation.params, receipt.data);
-        if (!dispatched) throw new Error('书架管理回执缺少实际派发证据');
+        if (!dispatched) throw new Error('未收到书架操作的执行结果');
         evidence?.confirmed(); await this.finish(intent, receipt, 'confirmed'); return value;
       } catch (error) {
         if (error instanceof BookRequestNotDispatchedError && !dispatched) {
@@ -128,8 +128,8 @@ export class BookshelfManagementIntentStore {
           if (receipt === undefined) {
             this.state.canContinueOriginal = query.canApplySameOriginal;
             this.state.message = query.canApplySameOriginal ?
-              `${isBookshelfRemovalMethod(intent.mutation.method) ? '原删除' : '原分组'}操作尚未确认；可明确继续已保留的原操作，不会创建新标识` :
-              `${isBookshelfRemovalMethod(intent.mutation.method) ? '原删除' : '原分组'}操作尚无精确回执，已保留并阻断；当前列表不能确认此次写入`;
+              `${isBookshelfRemovalMethod(intent.mutation.method) ? '上次删除' : '上次分组'}操作尚未确认；可继续原操作` :
+              `${isBookshelfRemovalMethod(intent.mutation.method) ? '上次删除' : '上次分组'}操作结果暂无法确认，已暂停新操作`;
             if (!continueOriginal) return this.snapshot();
             if (!query.canApplySameOriginal) throw new Error(this.state.message);
             // Re-establish local fsync ACK before the same original admission.
@@ -138,7 +138,7 @@ export class BookshelfManagementIntentStore {
             const event = await this.owner.request('bookshelf.management.mutation.apply', this.params(intent), {
               canDispatch: (): boolean => this.current(admitted), onDispatch: (): void => { dispatched = true; } });
             receipt = await this.receipt(event.data, intent);
-            if (!dispatched) throw new Error('续原分组回执缺少实际派发证据');
+            if (!dispatched) throw new Error('未收到续办分组操作的执行结果');
           }
         }
         if (receipt.outcome === 'applied') qualify(intent.mutation.method, intent.mutation.params, receipt.data);
@@ -163,16 +163,16 @@ export class BookshelfManagementIntentStore {
       this.assertCurrent(admitted);
       const intent = await this.load();
       if (intent === undefined || intent.operationId !== operationId || !isBookshelfRemovalMethod(intent.mutation.method) ||
-        intent.terminal === undefined) throw new Error('原删除清理身份或精确回执已改变');
+        intent.terminal === undefined) throw new Error('待清理的删除记录已变化');
       const receipt = await this.receipt(intent.terminal, intent);
-      if (receipt.outcome !== 'applied') throw new Error('原删除未获 Core 确认，不能清理资产');
+      if (receipt.outcome !== 'applied') throw new Error('删除操作未生效，无法清理本地文件');
       this.pending(intent); this.state.confirmation = 'confirmed'; this.state.canContinueOriginal = true;
       try {
         this.assertCurrent(admitted); await cleanup(intent); this.assertCurrent(admitted);
         await this.clear(intent); this.state.blocked = false; this.state.canContinueOriginal = false; this.state.message = '';
       } catch (error) {
         this.state.blocked = true; this.state.canContinueOriginal = this.current(admitted);
-        this.state.message = `书籍已移出书架；原删除资产或记录清理未完成：${(error as Error).message}`;
+        this.state.message = `书籍已移出书架；本地文件或记录清理未完成：${(error as Error).message}`;
         throw error as Error;
       }
     });
@@ -185,23 +185,23 @@ export class BookshelfManagementIntentStore {
     if (headValue !== null) {
       const h = this.object(headValue);
       if (typeof h['operationId'] !== 'string' || !Number.isSafeInteger(h['sequence']) || (h['sequence'] as number) < 1)
-        throw new Error('书架管理head身份无效');
-      if (h['payloadFingerprint'] !== undefined && !this.fingerprint(h['payloadFingerprint'])) throw new Error('书架管理head指纹无效');
+        throw new Error('书架状态记录标识无效');
+      if (h['payloadFingerprint'] !== undefined && !this.fingerprint(h['payloadFingerprint'])) throw new Error('书架状态记录校验值无效');
       head = h as unknown as ManagementQuery['head'];
     }
-    if (typeof data['canApplySameOriginal'] !== 'boolean') throw new Error('书架管理续原操作资格缺失');
+    if (typeof data['canApplySameOriginal'] !== 'boolean') throw new Error('书架操作缺少续办状态');
     if (intent === undefined && (data['receipt'] !== null || data['canApplySameOriginal'] !== false))
-      throw new Error('书架管理head查询返回无归属回执或续写资格');
+      throw new Error('书架状态查询返回了异常结果');
     const receipt = data['receipt'] === null ? undefined : await this.receipt(this.object(data['receipt']), intent!);
     if (receipt !== undefined && (head === undefined || head.sequence < receipt.binding.sequence ||
       (head.sequence === receipt.binding.sequence && (head.operationId !== receipt.binding.operationId ||
         (head.payloadFingerprint !== undefined && head.payloadFingerprint !== receipt.binding.payloadFingerprint)))))
-      throw new Error('书架管理head与原回执不符');
+      throw new Error('书架状态记录与操作结果不符');
     // Core also permits an already exact-confirmed tuple's idempotent apply.
     // Receipt consumers settle that receipt without issuing another write.
     if (data['canApplySameOriginal'] === true && (intent === undefined ||
       (head?.sequence ?? 0) !== (receipt === undefined ? intent.sequence - 1 : intent.sequence)))
-      throw new Error('书架管理续原操作资格与实际流水不符');
+      throw new Error('书架续办状态与操作记录不符');
     return { head, receipt, canApplySameOriginal: data['canApplySameOriginal'] as boolean };
   }
   private async receipt(raw: JsonObject, intent: BookshelfManagementIntent): Promise<ManagementReceipt> {
@@ -209,10 +209,10 @@ export class BookshelfManagementIntentStore {
     if (b['operationId'] !== intent.operationId || b['sequence'] !== intent.sequence || !this.fingerprint(b['payloadFingerprint']) ||
       raw['method'] !== intent.mutation.method || !this.fingerprint(raw['ackFingerprint']) ||
       (raw['outcome'] !== 'applied' && raw['outcome'] !== 'rejected'))
-      throw new Error('书架管理回执与原完整操作身份不符');
+      throw new Error('书架操作结果与请求标识不符');
     this.object(raw['data']);
     if (raw['ackFingerprint'] !== await sha256Hex(JSON.stringify([raw['method'], raw['outcome'], raw['data']])))
-      throw new Error('书架管理原回执完整结果校验失败');
+      throw new Error('书架操作结果校验失败');
     return raw as unknown as ManagementReceipt;
   }
   private async finish(intent: BookshelfManagementIntent, receipt: ManagementReceipt,
@@ -226,20 +226,20 @@ export class BookshelfManagementIntentStore {
       await this.write(terminal);
       if (confirmation === 'confirmed' && isBookshelfRemovalMethod(intent.mutation.method)) {
         this.state.blocked = true; this.state.canContinueOriginal = true;
-        this.state.message = '书籍已移出书架；原删除资产与记录清理仍需完成';
+        this.state.message = '书籍已移出书架；本地文件与记录清理仍需完成';
       } else {
         await this.clear(terminal); this.state.blocked = false; this.state.message = '';
       }
     } catch (_) {
       this.state.blocked = true;
-      this.state.message = `${confirmation === 'confirmed' ? '原书架写入已确认' : 'Core 已明确拒绝原书架操作'}；记录清理尚未确认，请核对`;
+      this.state.message = `${confirmation === 'confirmed' ? '上次书架修改已生效' : '上次书架修改未执行'}；记录清理尚未确认，请核对`;
     }
   }
   private pending(intent: BookshelfManagementIntent): void {
     this.state = { confirmation: intent.terminal?.['outcome'] === 'applied' ? 'confirmed' :
       intent.terminal?.['outcome'] === 'rejected' ? 'undispatched' : 'unknown', blocked: true, canContinueOriginal: false,
-      message: isBookshelfRemovalMethod(intent.mutation.method) ? '原删除操作仍需核对，不能覆盖原内容或执行另一分组/删除写入' :
-        '原分组操作仍需核对，不能覆盖原内容或执行另一分组/删除写入',
+      message: isBookshelfRemovalMethod(intent.mutation.method) ? '上次删除操作尚未确认，暂不可执行其他书架操作' :
+        '上次分组操作尚未确认，暂不可执行其他书架操作',
       operationId: intent.operationId, sequence: intent.sequence, method: intent.mutation.method };
     if (intent.mutation.method === 'bookshelf.group.assign' || intent.mutation.method === 'bookshelf.remove') {
       this.state.sourceId = intent.mutation.params['sourceId'] as string;
@@ -273,10 +273,10 @@ export class BookshelfManagementIntentStore {
   private async clear(intent: BookshelfManagementIntent): Promise<void> {
     this.assertCurrent();
     if (BookshelfManagementIntentStore.warm === undefined || !this.same(BookshelfManagementIntentStore.warm, intent))
-      throw new Error('旧分组服务不能清除另一原操作');
+      throw new Error('旧分组状态不能清除当前操作');
     await this.replace(''); this.assertCurrent();
     if (BookshelfManagementIntentStore.warm === undefined || !this.same(BookshelfManagementIntentStore.warm, intent))
-      throw new Error('旧分组清理回执不能清除新原操作');
+      throw new Error('清理状态与当前操作不符');
     BookshelfManagementIntentStore.warm = undefined;
   }
   private async clearKnownNotDispatched(intent: BookshelfManagementIntent): Promise<void> {
@@ -304,16 +304,16 @@ export class BookshelfManagementIntentStore {
   private assertCurrent(admitted?: () => boolean): void { if (!this.current(admitted)) throw new Error('原分组服务已退役，保留记录由当前服务核对'); }
   private requireCapability(method: BookshelfManagementMethod): void {
     const capability = isBookshelfRemovalMethod(method) ? 'bookshelf.removalMutation.v1' : 'bookshelf.managementMutation.v1';
-    if (!this.owner.supportsCoreCapability(capability)) throw new Error('当前 Core 缺少书架原操作精确回执能力，已停止新写入');
+    if (!this.owner.supportsCoreCapability(capability)) throw new Error('当前版本暂不支持此书架操作');
   }
   private fingerprint(value: unknown): boolean { return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value); }
   private object(value: unknown): JsonObject {
-    if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('分组原操作回执结构无效'); return value as JsonObject;
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('书架操作结果格式无效'); return value as JsonObject;
   }
   private rejection(receipt: ManagementReceipt): string {
     const error = receipt.data['error'];
     return error !== null && typeof error === 'object' && typeof (error as JsonObject)['message'] === 'string' ?
-      (error as JsonObject)['message'] as string : 'Core 明确拒绝原分组操作';
+      (error as JsonObject)['message'] as string : '分组操作未生效';
   }
   private async serial<T>(work: () => Promise<T>): Promise<T> {
     const prior = BookshelfManagementIntentStore.tail; let release: (() => void) | undefined;

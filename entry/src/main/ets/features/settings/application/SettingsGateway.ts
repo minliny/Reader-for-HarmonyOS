@@ -178,7 +178,7 @@ export class SettingsGateway {
     if (typeof snapshot.autoCheckUpdate !== 'boolean' || typeof snapshot.tapBottomScrollTop !== 'boolean' ||
       typeof snapshot.reduceMotion !== 'boolean' || typeof snapshot.crashLog !== 'boolean' ||
       typeof snapshot.developerMode !== 'boolean' || typeof snapshot.wideNavigationRail !== 'boolean')
-      throw new Error('设置持久化数据格式异常');
+      throw new Error('设置数据格式异常');
     return snapshot;
   }
   private copySnapshot(snapshot: SettingsSnapshot): SettingsSnapshot {

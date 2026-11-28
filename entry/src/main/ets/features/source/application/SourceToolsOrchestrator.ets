@@ -236,14 +236,14 @@ export class SourceToolsOrchestrator {
     // list. Seed the first frame with it so ArkUI never renders a stale 0/0
     // header while the fresh Core read is in flight.
     this.snapshot.sources = seedSources.slice();
-    this.publish({ busy: true, statusMessage: '正在读取 Core 书源工具数据…',
+    this.publish({ busy: true, statusMessage: '正在读取书源…',
       readFacts: projectOperationFacts({ phase: 'loading', value: seedSources.length > 0 ? seedSources : undefined, generation: ++sourceToolsReceiptGeneration }) });
     this.enqueue(async (): Promise<void> => {
       await this.recoverOriginalSource(session,false);
       try {
         const sources = await this.gateway.loadSources(undefined, true);
         if (this.isCurrentSession(session)) {
-          this.publish({ sources, busy: false, statusMessage: '已读取 Core 数据', statusEvent: 'state',
+          this.publish({ sources, busy: false, statusMessage: '已读取书源', statusEvent: 'state',
             readFacts: projectOperationFacts({ phase: 'succeeded', value: sources, generation: ++sourceToolsReceiptGeneration }) });
         }
       } catch (error) {
@@ -323,7 +323,7 @@ export class SourceToolsOrchestrator {
     const current = (): boolean => this.presentationIdentity === presentation && this.isCurrentSession(session);
     this.enqueue(async (): Promise<void> => {
       if (!current() || AppStorage.get<boolean>('readerAppForeground') === false) return;
-      this.publishIfCurrent(session, { busy: true, statusMessage: '正在由 Core 导出书源…' });
+      this.publishIfCurrent(session, { busy: true, statusMessage: '正在导出书源…' });
       try {
         const exported = await this.gateway.exportBookSources(sourceIds, current);
         // Only the original foreground tools page may open the native picker.
@@ -526,7 +526,7 @@ export class SourceToolsOrchestrator {
       await this.performManagementWrite(session, async (): Promise<string> => {
         const deleted = await this.gateway.deleteSources(selection);
         return `已删除 ${deleted.deletedCount} 个书源` + (deleted.cookieCleanupFailures === 0 ? '' :
-          `；${deleted.cookieCleanupFailures} 个 Host 登录会话清理失败`);
+          `；${deleted.cookieCleanupFailures} 个登录会话清理失败`);
       });
     });
   }
@@ -594,7 +594,7 @@ export class SourceToolsOrchestrator {
       if (!this.isCurrentSession(session) || this.snapshot.editorReadback?.confirmation === 'unknown' ||
         sourceEditorReadbackPending(this.snapshot.editorReadback) ||
         this.snapshot.receipt?.receipt.confirmation === 'unknown') return;
-      this.publishIfCurrent(session, { busy: true, statusMessage: '正在由 Core 校验并保存…' });
+      this.publishIfCurrent(session, { busy: true, statusMessage: '正在校验并保存…' });
       // The save and the follow-up reload are two separate facts: once Core
       // has validated and persisted the edit, a list-refresh failure must not
       // be reported as "save failed". Persist failure still rejects below.
@@ -659,7 +659,7 @@ export class SourceToolsOrchestrator {
           editorReadback: projection.receipt,
           editorOperation: projection.facts,
           busy: false,
-          statusMessage: initialSave ? '书源已由 Core 校验并保存' : '已确认，当前读取结果可用',
+          statusMessage: initialSave ? '书源已保存' : '已确认，当前读取结果可用',
         });
         return;
       }
@@ -745,12 +745,12 @@ export class SourceToolsOrchestrator {
     const mode = health.mode === 'explore' ? '发现' : '搜索';
     const levels = health.levelsPassed.length === 0 ? '无通过级别' : health.levelsPassed.join('、');
     if (!health.available) {
-      const evidence = health.hostEvidenceCount === 0 ? 'Core 在发起网络前结束' :
-        `${health.hostEvidenceCount} 条同次 Host 网络证据`;
+      const evidence = health.hostEvidenceCount === 0 ? '未发起网络请求即结束' :
+        `${health.hostEvidenceCount} 条网络请求记录`;
       return `${mode}检测未通过（${levels}，${evidence}）：${health.failureReason ?? '未知错误'}`;
     }
-    return `${mode}检测 ${levels} 通过（${health.durationMs}ms）；trace=${health.traceId}，` +
-      `${health.hostEvidenceCount} 条同次 Host 网络证据`;
+    return `${mode}检测 ${levels} 通过（${health.durationMs}ms），` +
+      `${health.hostEvidenceCount} 条网络请求记录`;
   }
 
   private sourceName(sourceId: string): string {
@@ -872,7 +872,7 @@ export class SourceToolsOrchestrator {
         if (!this.isCurrentSession(session) || this.gateway.originalMutationSnapshot()?.generation !== generation) return;
         const recovered = await this.recoverOriginalSource(session, false, original.operationId);
         if (!await this.settleRecoveredEditor(session, recovered)) {
-          await this.reloadManagement(session, '已核对原书源回执');
+          await this.reloadManagement(session, '已核对书源状态');
         }
       });
       return;
@@ -888,11 +888,11 @@ export class SourceToolsOrchestrator {
       const read = this.snapshot.readFacts;
       if (receipt?.facts.generation === generation && receipt.facts.canRetry) {
         this.publishManagementReceipt(session, receipt.receipt.confirmation, 'reading');
-        await this.reloadManagement(session, '已读取 Core 数据');
+        await this.reloadManagement(session, '已刷新书源列表');
       } else if (read?.generation === generation && read.canRetry) {
         this.publishIfCurrent(session, { busy: true, readFacts: projectOperationFacts({ phase: 'loading',
           value: this.snapshot.sources, generation: ++sourceToolsReceiptGeneration }) });
-        await this.reloadManagement(session, '已读取 Core 数据');
+        await this.reloadManagement(session, '已刷新书源列表');
       }
     });
   }
@@ -960,7 +960,7 @@ export class SourceToolsOrchestrator {
         if (this.isAcceptedSession(session) && this.pendingOperations === 0 && this.snapshot.busy) {
           this.publish({ busy: false, readFacts: projectOperationFacts({ phase: 'cancelled',
             value: this.snapshot.sources, canRetry: true, generation: ++sourceToolsReceiptGeneration,
-            message: started ? '原页面已退役，操作结果未投影' : '原页面已退役，操作尚未派发' }) });
+            message: started ? '页面已切换，操作结果暂未更新' : '页面已切换，操作未提交' }) });
         }
       });
   }

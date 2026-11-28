@@ -329,9 +329,9 @@ export class ReaderDirectoryOperations {
         void host.reconcileOriginalBookmark(generation, original.identity, binding).then((result): void => {
           const current = this.ports.scene();
           if (!binding.current() || !current.foreground || identity !== this.presentationId(current) || result === 'rejected') return;
-          this.ports.feedback(result === 'confirmed' ? '原记录中的这一项书签操作已核实，本次未派发后续书签操作。' :
-            result === 'confirmedReadbackFailed' ? '这条原书签记录已核实，当前书签读取失败。请重新打开目录读取。' :
-            result === 'notDispatched' ? '这条原书签记录已核实未派发。' : '这条原书签记录尚未取得合格回执，可再次核对。');
+          this.ports.feedback(result === 'confirmed' ? '原记录中的书签操作已确认，本次未再执行新操作。' :
+            result === 'confirmedReadbackFailed' ? '书签操作已确认，当前书签读取失败，请重新打开目录。' :
+            result === 'notDispatched' ? '原书签操作未执行。' : '这条书签记录尚未确认，可再次核对。');
         });
         return;
       }
@@ -341,15 +341,15 @@ export class ReaderDirectoryOperations {
           operation === undefined || operation.generation !== generation || operation.recoveryAction !== undefined) return;
         if (operation.projection.receipt.confirmation === 'unknown') {
           this.ports.feedback(operation.canContinueOriginal === true ?
-            '书签原操作仍未确认，可重新核对或继续原操作' :
-            '书签原操作仍未确认，继续操作不可用，请查看核对提示');
+            '书签操作仍未确认，可重新核对或继续原操作' :
+            '书签操作仍未确认，请查看核对提示');
         } else if (operation.projection.receipt.confirmation === 'confirmed') {
           // The existing recovery surface owns the confirmed/readback-failure
           // feedback. Do not emit a second short message for that same fact.
           if (operation.projection.receipt.readback === 'failed') return;
           this.ports.feedback(operation.completion === 'partial' ?
-            '部分书签结果已核实，后续操作未派发' : '书签原操作已核实');
-        } else this.ports.feedback('书签原操作未派发');
+            '部分书签结果已确认，其余操作未继续' : '书签操作已确认');
+        } else this.ports.feedback('书签操作未提交');
       };
       const attempt = continueOriginal ? host.continueOriginal(generation, binding) : host.reconcile(generation, binding);
       void attempt.then((admitted: boolean): void => { if (admitted) reportResult(); }, reportResult);
@@ -369,13 +369,13 @@ export class ReaderDirectoryOperations {
           operation === undefined || operation.generation !== generation || operation.recoveryAction !== undefined) return;
         if (operation.projection.receipt.confirmation === 'unknown') {
           this.ports.feedback(operation.canContinueOriginal === true ?
-            '离线原操作仍未确认，可重新核对或继续原操作' :
-            '离线原操作仍未确认，继续操作不可用，请查看核对提示');
+            '离线操作仍未确认，可重新核对或继续原操作' :
+            '离线操作仍未确认，请查看核对提示');
         } else if (operation.projection.receipt.confirmation === 'confirmed') {
           if (operation.projection.receipt.readback === 'failed') return;
           this.ports.feedback(operation.materialization === 'failed' ?
-            '离线原操作已确认，缓存整理尚未完成' : '离线原操作已核实');
-        } else this.ports.feedback('离线原操作未派发');
+            '离线操作已确认，缓存清理尚未完成' : '离线操作已确认');
+        } else this.ports.feedback('离线操作未提交');
       };
       const attempt = continueOriginal ? host.continueOriginal(generation, binding) : host.reconcile(generation, binding);
       void attempt.then((admitted: boolean): void => { if (admitted) reportResult(); }, reportResult);

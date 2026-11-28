@@ -67,7 +67,7 @@ export struct RssOriginalRecoverySurface {
   build() {
     if (this.matchesScope()) {
       ForEach(this.identities(), (identity: string) => {
-        ReaderRecoveryNotice({ view: this.view(), actionLabel: '核对原操作回执',
+        ReaderRecoveryNotice({ view: this.view(), actionLabel: '核对操作结果',
           actionEnabled: this.current(identity), secondaryActionEnabled: this.canContinue(identity),
           secondaryActionLabel: this.qualified(identity) ? this.continuationLabel() : '',
           onReconcile: (): void => { if (this.current(identity)) this.onReconcileOriginal(this.expected(identity)); },

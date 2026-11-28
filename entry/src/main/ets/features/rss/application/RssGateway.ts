@@ -184,12 +184,12 @@ export class RssGateway {
     if (!this.supportsOriginalRss()) return {};
     const before=this.originalMutationSnapshot();
     if (before?.busy===true) {
-      if (retryOriginal) throw new Error('RSS 原操作仍在执行，不能重放');
+      if (retryOriginal) throw new Error('上次订阅操作仍在执行');
       return {original:before};
     }
-    if (retryOriginal && expected===undefined) throw new Error('继续 RSS 原操作需要精确原身份');
+    if (retryOriginal && expected===undefined) throw new Error('缺少待继续的操作记录');
     if (expected!==undefined && !this.isOriginalMutationCurrent(expected))
-      throw new Error('RSS 恢复动作已退役，未派发');
+      throw new Error('恢复操作已失效');
     let outcome: RssOriginalMutationOutcome | undefined;
     try {
       await RulesMutationOwner.forRuntime(this.runtimeOwner).recoverOriginal(current,
@@ -636,45 +636,45 @@ export class RssGateway {
       const source=this.requiredObject(params,'source');
       if (params['subscriptionId']!==undefined && subscription.subscriptionId!==params['subscriptionId'] ||
         subscription.feedUrl!==source['sourceUrl'] || source['enabled']!==undefined && subscription.enabled!==source['enabled'])
-        throw new Error('RSS 原保存回执与完整原内容不匹配');
+        throw new Error('订阅保存结果与内容不符');
       return subscription;
     }
     if (method==='rss-source.import') {
       this.nonNegativeInteger(data,'imported');
-      if (this.requiredBoolean(data,'replaceExisting')!==params['replaceExisting']) throw new Error('RSS 原导入回执不匹配');
+      if (this.requiredBoolean(data,'replaceExisting')!==params['replaceExisting']) throw new Error('RSS 导入结果与请求不符');
       return undefined;
     }
     if (method==='rss.subscription.persist') {
-      if (this.requiredString(data,'operation')!==params['operation']) throw new Error('RSS 原更新回执操作不匹配');
+      if (this.requiredString(data,'operation')!==params['operation']) throw new Error('订阅更新结果类型不符');
       const subscription=this.decodeSubscription(this.requiredObject(this.requiredObject(data,'data'),'subscription'));
       const original=this.requiredObject(params,'params');
       if (original['subscriptionId']!==undefined && subscription.subscriptionId!==original['subscriptionId'] ||
-        original['enabled']!==undefined && subscription.enabled!==original['enabled']) throw new Error('RSS 原更新回执身份不匹配');
+        original['enabled']!==undefined && subscription.enabled!==original['enabled']) throw new Error('订阅更新结果标识不符');
       return subscription;
     }
     if (method==='rss.subscription.remove') {
       this.requiredBoolean(data,'deleted');
-      if (this.requiredString(data,'subscriptionId')!==params['subscriptionId']) throw new Error('RSS 原删除回执身份不匹配');
+      if (this.requiredString(data,'subscriptionId')!==params['subscriptionId']) throw new Error('订阅删除结果不符');
       return undefined;
     }
     if (method==='rss.entry.read') {
       if (!this.requiredBoolean(data,'marked') || this.requiredString(data,'subscriptionId')!==params['subscriptionId'] ||
-        this.requiredString(data,'guid')!==params['guid'] || this.requiredBoolean(data,'read')!==params['read']) throw new Error('RSS 原已读回执身份不匹配');
+        this.requiredString(data,'guid')!==params['guid'] || this.requiredBoolean(data,'read')!==params['read']) throw new Error('已读标记结果不符');
       this.nonNegativeInteger(data,'unreadCount');return undefined;
     }
     if (method==='rss.favorite.persist') {
       const created=this.requiredBoolean(data,'created'),favorite=this.decodeFavorite(this.requiredObject(data,'favorite'));
       if (favorite.subscriptionId!==params['subscriptionId'] || favorite.guid!==params['guid'] || created && favorite.addedAt!==params['addedAt'])
-        throw new Error('RSS 原收藏回执身份不匹配');
+        throw new Error('收藏结果不符');
       return undefined;
     }
     if (method==='rss.favorite.remove') {
       this.requiredBoolean(data,'removed');
       if (this.requiredString(data,'subscriptionId')!==params['subscriptionId'] || this.requiredString(data,'guid')!==params['guid'])
-        throw new Error('RSS 原取消收藏回执身份不匹配');
+        throw new Error('取消收藏结果不符');
       return undefined;
     }
-    throw new Error('不是 RSS 有限原操作');
+    throw new Error('不支持的 RSS 操作');
   }
 
   private decodeSubscription(value: unknown, source?: JsonObject): RssSubscription {

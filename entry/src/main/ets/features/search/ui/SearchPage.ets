@@ -1733,9 +1733,9 @@ export struct SearchPage {
           ReaderPageState({ title: this.isStoppedEmpty() ? '搜索已停止' : '没有找到相关书籍', padded: false,
             message: this.hasIncompleteSearch() ? this.incompleteSearchMessage() : this.isStoppedEmpty()
             ? (searchedSourceCount() > 0
-              ? `已搜索 ${searchedSourceCount()} 个书源后停止,未找到「${keyword()}」的相关结果`
+              ? `已搜索 ${searchedSourceCount()} 个书源后停止，未找到「${keyword()}」的相关结果`
               : '停止前尚未返回结果，可继续搜索')
-            : `已搜索 ${searchedSourceCount()} 个书源,未找到「${keyword()}」的相关结果`,
+            : `已搜索 ${searchedSourceCount()} 个书源，未找到「${keyword()}」的相关结果`,
             leading: (): void => { this.searchStateIllustration(false); }, customActions: true,
             actionContent: (): void => { this.emptyStateActions(); } });
         }.width('100%').padding({ top: 50, bottom: this.searchBottomInset(40) });

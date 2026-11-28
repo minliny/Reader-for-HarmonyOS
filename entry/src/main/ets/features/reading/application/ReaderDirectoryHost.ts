@@ -158,7 +158,7 @@ export class ReaderDirectoryHost {
     const generation = ++this.generation;
     this.originalBookmarkIntent = JSON.parse(JSON.stringify(pending)) as ReadingOperationIntent;
     this.originalBookmarkState = { generation, identity: JSON.stringify([pending.params['operationId'], pending.params['sequence'], generation]),
-      busy: false, message: '旧版书签原操作记录缺少书名或作者，无法归入当前书籍。可核对这条原记录；本入口只核对原回执。' };
+      busy: false, message: '旧版书签记录缺少书名或作者，无法归入当前书籍，仅支持核对此记录。' };
   }
 
   blockingBookmarkBook(): ReadingOperationContext | undefined {

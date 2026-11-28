@@ -829,14 +829,14 @@ export struct ReaderControlReplaceContent {
           if (this.displayLayer() === 'editor') {
             this.editorFields(opening);
           } else if (this.displayLayer() === 'delete') {
-            Text(`删除“${this.deleteCandidate?.name ?? ''}”？此操作需要 Core 确认后才从列表移除。`)
+            Text(`确定删除“${this.deleteCandidate?.name ?? ''}”吗？`)
               .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
             this.textAction((): string => '确认删除', (): void => {
               const rule = this.deleteCandidate;
               if (rule !== undefined && this.readyInput()) this.perform(async (): Promise<void> => this.onDelete(rule), true);
             }, (): boolean => this.temporaryInputCurrent(opening) && this.readyInput());
           } else if (this.displayLayer() === 'import-confirm') {
-            Text('导入仅合并替换规则；相同ID会覆盖已有规则，其他规则集合不变。请保留导出备份。')
+            Text('导入将合并替换规则，相同规则将被覆盖。')
               .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
             this.textAction((): string => '选择文件并导入', (): void => { this.confirmImport(); },
               (): boolean => this.temporaryInputCurrent(opening) && this.readyInput());
@@ -880,8 +880,6 @@ export struct ReaderControlReplaceContent {
     this.editorFlag('作用于标题', (): boolean => this.draft.scopeTitle, (value: boolean): void => { this.draft.scopeTitle = value; }, opening);
     this.editorFlag('作用于正文', (): boolean => this.draft.scopeContent, (value: boolean): void => { this.draft.scopeContent = value; }, opening);
     this.editorFlag('作用于书源导入', (): boolean => this.draft.scopeSource, (value: boolean): void => { this.draft.scopeSource = value; }, opening);
-    Text('保存后规则生效；章节预览使用已保存规则。')
-      .fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_FIELDS_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_FIELDS_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
   }
   @Builder
   private editorText(label: string, value: () => string, change: (value: string) => void, opening: number) {

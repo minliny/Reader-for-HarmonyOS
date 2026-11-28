@@ -307,7 +307,7 @@ export struct LocalImportDialog {
               .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)
               .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)
               .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-            Text('支持多选 TXT、EPUB、MOBI、AZW3', this.selectionHintTextOptions)
+            Text('可多选文件', this.selectionHintTextOptions)
               .id(READER_LAYOUT_IMPORT_HINT_TEXT_ID)
               .customProperty(READER_LAYOUT_MOUNTED_TEXT_CONTROLLER, this.selectionHintTextOptions?.controller)
               .width('100%')
@@ -345,22 +345,23 @@ export struct LocalImportDialog {
             this.canSelectFiles()), 'nativeButton'))
         .onClick((): void => this.selectFiles());
 
-        Row({ space: TOK_SPACE_XS }) {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.import_info_theme_night') : $r('app.media.import_info')))
-            .width(13)
-            .height(13)
-            .margin({ top: 2 });
-          Text(this.selectionBlockedMessage.length > 0 ? this.selectionBlockedMessage :
-            this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。')
-            .layoutWeight(1)
-            .fontFamily(MESSAGE_BODY.fontFamily)
-            .fontWeight(MESSAGE_BODY.fontWeight)
-            .fontSize(MESSAGE_BODY.fontSizeFp)
-            .lineHeight(MESSAGE_BODY.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+        if (this.selectionBlockedMessage.length > 0 || this.failureMessage.length > 0) {
+          Row({ space: TOK_SPACE_XS }) {
+            Image((this.appThemeScheme === 'night' ? $r('app.media.import_info_theme_night') : $r('app.media.import_info')))
+              .width(13)
+              .height(13)
+              .margin({ top: 2 });
+            Text(this.selectionBlockedMessage.length > 0 ? this.selectionBlockedMessage : this.failureMessage)
+              .layoutWeight(1)
+              .fontFamily(MESSAGE_BODY.fontFamily)
+              .fontWeight(MESSAGE_BODY.fontWeight)
+              .fontSize(MESSAGE_BODY.fontSizeFp)
+              .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+              .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+          }
+          .width('100%')
+          .padding({ top: TOK_SPACE_MD });
         }
-        .width('100%')
-        .padding({ top: TOK_SPACE_MD });
 
       }
       .width('100%')
@@ -375,10 +376,6 @@ export struct LocalImportDialog {
         Column({ space: 16 }) {
           LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
             .enableLoading(this.foreground && !this.reduceMotion);
-          Text('请稍候，完成后将显示导入结果。')
-            .fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
-            .lineHeight(MESSAGE_BODY.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
         }.width('100%').padding({ left: 17, right: 17, top: 23, bottom: 14 });
       }.width('100%').constraintSize({ minHeight: 228 }).alignItems(HorizontalAlign.Start);
     }.width('100%').height(this.state === 'result' && this.measuredImportingHeight > 0 ? this.measuredImportingHeight : undefined)
