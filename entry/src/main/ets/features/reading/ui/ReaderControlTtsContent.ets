@@ -444,13 +444,18 @@ export struct ReaderControlTtsContent {
     }
     return this.cachedTextMinimum;
   }
-  private onMinimumIdentityChanged(): void { this.publishMinimumMeasurer(); }
+  private onMinimumIdentityChanged(): void {
+    if (this.sourceOnly !== 'none') return;
+    this.publishMinimumMeasurer();
+  }
   private onMinimumInputsChanged(): void {
+    if (this.sourceOnly !== 'none') { this.cachedProgress = -1; return; }
     this.settlePendingRate();
     this.cachedProgress = -1;
     this.publishMinimumMeasurer();
   }
   private onWindowMetricsChanged(): void {
+    if (this.sourceOnly !== 'none') { this.cachedProgress = -1; return; }
     this.onMinimumInputsChanged();
     const field = this.configField;
     if (this.fixedIsland || !this.configMounted || field === '' || field === 'manage') return;
@@ -517,7 +522,10 @@ export struct ReaderControlTtsContent {
       (this.editorInputCurrent?.() ?? this.fullInput());
     if (!this.fullInput() && !currentEditor) this.dismissConfiguration();
   }
-  aboutToAppear(): void { this.configMounted = this.sourceOnly === 'none'; this.publishMinimumMeasurer();
+  aboutToAppear(): void {
+    this.configMounted = this.sourceOnly === 'none';
+    if (this.sourceOnly !== 'none') return;
+    this.publishMinimumMeasurer();
     if (this.preparedMinimumRequired) this.onPreparedMinimumChanged();
   }
   aboutToDisappear(): void {
@@ -864,10 +872,20 @@ export struct ReaderControlTtsContent {
     }
   }
 
+  private cachedIslandPlaybackLayoutKey: string = '';
+  private cachedIslandPlaybackLayout: ReaderIslandPlaybackLayout | undefined = undefined;
+
   private islandPlaybackLayout(): ReaderIslandPlaybackLayout {
     this.readerWindowMetricsRevision;
-    return readerIslandTransportLayout(this.availableWidth, ReaderWindowCoordinator.metrics().systemFontScale,
-      Math.max(this.controlText('previous').length, this.controlText('next').length));
+    const scale = ReaderWindowCoordinator.metrics().systemFontScale;
+    const actionChars = Math.max(this.controlText('previous').length, this.controlText('next').length);
+    const key = `${this.readerWindowMetricsRevision}|${this.availableWidth}|${scale}|${actionChars}`;
+    if (key === this.cachedIslandPlaybackLayoutKey && this.cachedIslandPlaybackLayout !== undefined) {
+      return this.cachedIslandPlaybackLayout;
+    }
+    this.cachedIslandPlaybackLayoutKey = key;
+    this.cachedIslandPlaybackLayout = readerIslandTransportLayout(this.availableWidth, scale, actionChars);
+    return this.cachedIslandPlaybackLayout;
   }
 
   private islandPlaybackHeight(): number { return this.islandPlaybackLayout().height; }

@@ -328,10 +328,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.dialogContent::shared.dialog-surface",
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.recoveryDialogSurface::shared.dialog-surface",
       "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
       "owner": "LocalRecoveryPanel",
-      "member": "dialogContent",
+      "member": "recoveryDialogSurface",
       "family": "shared.dialog-surface",
       "category": "恢复包的口令录入以及导出、恢复和回退确认",
       "effectiveHost": "当前本地备份页或扩展备份与同步页的恢复包面板，弹层票据、打开代次与预览决定可用动作。",
@@ -1561,10 +1561,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/settings/ui/SettingsPage.ets#SettingsPage.resetDialog::shared.dialog-surface",
+      "id": "entry/src/main/ets/features/settings/ui/SettingsPage.ets#SettingsPage.resetDialogSurface::shared.dialog-surface",
       "file": "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
       "owner": "SettingsPage",
-      "member": "resetDialog",
+      "member": "resetDialogSurface",
       "family": "shared.dialog-surface",
       "category": "恢复设置前的确认",
       "effectiveHost": "当前通用设置页以独立确认代次和当前页面身份持有确认。",
@@ -1616,10 +1616,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets#SourceJourneySurface.listDialogCard::shared.page-state",
+      "id": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets#SourceJourneySurface.listDialogBody::shared.page-state",
       "file": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
       "owner": "SourceJourneySurface",
-      "member": "listDialogCard",
+      "member": "listDialogBody",
       "family": "shared.page-state",
       "category": "批量移动书源的分组目录读取状态",
       "effectiveHost": "当前书源管理列表的移动弹窗在读取 Core 分组目录时显示等待，读取失败时显示提示并通过弹窗动作重试。",

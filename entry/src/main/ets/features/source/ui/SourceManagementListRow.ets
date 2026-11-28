@@ -1319,8 +1319,8 @@ function SourceListBatchAction($$: SourceManagementListOwnerSlot, icon: Resource
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontColor($$.owner.batchActionInk(action));
     }
   }.layoutWeight(1).height('100%').padding(2)
-    .attributeModifier(new ReaderPressFeedback(Color.Transparent, $$.owner.host.presentation.appThemeScheme(), 24, 24, $$.owner.paint().batchSourceIds.length > 0))
-    .id(`reader-source-batch-${action}`).accessibilityText(label).enabled($$.owner.paint().batchSourceIds.length > 0)
+    .attributeModifier(new ReaderPressFeedback(Color.Transparent, $$.owner.host.presentation.appThemeScheme(), 24, 24, $$.owner.host.view.inputEnabled() && $$.owner.paint().batchSourceIds.length > 0))
+    .id(`reader-source-batch-${action}`).accessibilityText(label).enabled($$.owner.host.view.inputEnabled() && $$.owner.paint().batchSourceIds.length > 0)
     .opacity($$.owner.paint().batchSourceIds.length > 0 ? 1 : 0.45)
     .onClick((): void => {
       if ($$.owner.host.opening.managementInputIsCurrent() && $$.owner.host.presentation.batchMode() && $$.owner.paint().batchSourceIds.length > 0)

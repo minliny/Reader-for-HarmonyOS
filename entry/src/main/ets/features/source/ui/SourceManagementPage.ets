@@ -710,7 +710,7 @@ export struct SourceManagementPage {
       .id('reader-source-content')
       .width('100%')
       .height('100%')
-      .enabled(!this.groupOpen && !this.moreMenuOpen)
+      .enabled(this.inputEnabled && !this.groupOpen && !this.moreMenuOpen)
       .accessibilityLevel(this.groupOpen || this.moreMenuOpen ? 'no-hide-descendants' : 'auto')
       .hitTestBehavior(this.groupOpen || this.moreMenuOpen ? HitTestMode.None : HitTestMode.Default)
       .onTouch((event: TouchEvent): void => {
@@ -725,7 +725,7 @@ export struct SourceManagementPage {
       .id('reader-source-footer')
       .width('100%')
       .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-      .enabled(!this.groupOpen && !this.moreMenuOpen)
+      .enabled(this.inputEnabled && !this.groupOpen && !this.moreMenuOpen)
       .accessibilityLevel(this.groupOpen || this.moreMenuOpen ? 'no-hide-descendants' : 'auto')
       .hitTestBehavior(this.groupOpen || this.moreMenuOpen ? HitTestMode.None : HitTestMode.Default)
       .responseRegion(readerLayoutCarrierResponseRegion());
