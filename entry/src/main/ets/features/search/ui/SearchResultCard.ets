@@ -3,6 +3,7 @@ import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPress
 import { bookAuthorLabel } from '../../../app/library/BookAuthorMetadata';
 import { SEARCH_RESULT_GEOMETRY } from './SearchResultGeometry';
 import { searchBookSnapshot } from '../presentation/SearchBookSnapshot';
+import { formatSearchSourceSummary } from '../presentation/SearchSourceDisplay';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { SearchViewState } from '../presentation/SearchViewState';
 import { bookIntroText } from '../../../app/library/BookIntroText';
@@ -192,6 +193,22 @@ export struct SearchResultCard {
     };
   }
 
+  private displayLatestChapter(): string {
+    return (this.displayBook().latestChapterTitle ?? '').trim();
+  }
+
+  private showLatestChapter(): boolean {
+    return this.displayLatestChapter().length > 0;
+  }
+
+  private displayPrimarySource(): string {
+    return formatSearchSourceSummary(this.displayBook().sourceName, this.displaySourceCount()).primarySource;
+  }
+
+  private displayMultiSourceLabel(): string {
+    return formatSearchSourceSummary(this.displayBook().sourceName, this.displaySourceCount()).multiSourceLabel;
+  }
+
   build() {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Row({ space: SEARCH_RESULT_GEOMETRY.columnGap }) {
@@ -209,11 +226,20 @@ export struct SearchResultCard {
               coverHeight: this.coverHeight(),
               glyph: noCoverGlyph(this.displayBook().title),
               kindLabel: this.resultKindLabel(this.displayBook()),
+              cornerRadius: 6,
             });
           }
         }
         .width(this.coverWidth())
         .height(this.coverHeight())
+        .backgroundColor(readerAppColor(
+          this.group.coverUrl.length > 0 ? 'app.cover.placeholder' : 'TOK_META_BG',
+          this.appThemeScheme,
+        ))
+        .border(this.group.coverUrl.length > 0 ? {
+          width: 0.7,
+          color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme),
+        } : undefined)
         .borderRadius(6).clip(true);
 
         Column({ space: SEARCH_RESULT_GEOMETRY.metadataGap }) {
@@ -238,8 +264,8 @@ export struct SearchResultCard {
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-            if (!this.showResultIntro() && (this.displayBook().latestChapterTitle?.trim().length ?? 0) > 0) {
-              Text(this.displayBook().category === 'comic' ? `最新 · ${this.displayBook().latestChapterTitle}` : this.displayBook().latestChapterTitle)
+            if (this.showLatestChapter()) {
+              Text(this.displayBook().category === 'comic' ? `最新 · ${this.displayLatestChapter()}` : this.displayLatestChapter())
                 .width('100%')
                 .opacity(0.8)
                 .fontFamily(TYPE_SEARCH_RESULT_CHAPTER.fontFamily)
@@ -259,7 +285,7 @@ export struct SearchResultCard {
                 .fontSize(TYPE_SEARCH_RESULT_INTRO.fontSizeFp)
                 .lineHeight(TYPE_SEARCH_RESULT_INTRO.lineHeightFp as number)
                 .fontColor(readerAppColor('app.search.resultHint', this.appThemeScheme))
-                .maxLines(2)
+                .maxLines(this.showLatestChapter() ? 1 : 2)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
             }
           }
@@ -277,20 +303,24 @@ export struct SearchResultCard {
                 .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
                 .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1);
             } else {
-              if (this.displayBook().sourceName.length > 0) {
-                Text(this.displayBook().sourceName)
+              if (this.displayPrimarySource().length > 0) {
+                Text(this.displayPrimarySource())
                   .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
                   .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
                   .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                   .constraintSize({ maxWidth: '100%' }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+              }
+              if (this.displayPrimarySource().length > 0 && this.displayMultiSourceLabel().length > 0) {
                 Text('·').fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
                   .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
               }
-              Text(`发现 ${this.displaySourceCount()} 个来源`)
-                .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
-                .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
-                .fontColor(readerAppColor('app.search.discoveredSource', this.appThemeScheme))
-                .constraintSize({ maxWidth: '100%' }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+              if (this.displayMultiSourceLabel().length > 0) {
+                Text(this.displayMultiSourceLabel())
+                  .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+                  .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
+                  .fontColor(readerAppColor('app.search.discoveredSource', this.appThemeScheme))
+                  .constraintSize({ maxWidth: '100%' }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+              }
             }
             if (this.displayInBookshelf()) {
               Text('已在书架').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)

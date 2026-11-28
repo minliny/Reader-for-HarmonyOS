@@ -22,6 +22,7 @@ import { readerSearchControlHeight, readerSearchControlVisualHeight, readerSearc
 import { resolveSearchHeaderField, SearchHeaderFieldGeometry } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { readerSurfaceElevation, readerHeaderVeilBorder } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
@@ -30,7 +31,7 @@ import { motionSegment } from '../../../ui/foundation/MotionTimeline';
 import { motionAnimateParam, motionSpecGet, readerMotionStandardCurve, MotionSpecEntry } from '../../../ui/foundation/MotionSpec';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
-import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
+import { readerTransitionFrameSamplingEnabled, readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import type { ReaderSearchEditorEvent, ReaderSearchEditorObservation } from '../../../ui/controls/ReaderSearchField';
@@ -38,7 +39,7 @@ import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback'
 import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../../../ui/foundation/ReaderPressMotion';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
 import { TYPE_SEARCH_BOOK_PANEL_INPUT } from '../../../ui/foundation/ReaderTypography';
-import { ReaderSearchHistoryPanel, SearchHistoryMeasurements } from './ReaderSearchHistoryPanel';
+import { ReaderSearchHistoryPanel } from './ReaderSearchHistoryPanel';
 import { projectSearchHistoryPanel, SearchHistoryGeometry, SearchHistoryPanelLayout, SearchHistoryViewport } from './SearchHistoryGeometry';
 import type { ReaderSurfaceRect } from '../../../ui/layout/ReaderSurfaceRect';
 import { ReaderLibrarySearchModel, READER_LIBRARY_SEARCH_BACK_FOCUS_ID } from '../presentation/ReaderLibrarySearchModel';
@@ -153,7 +154,6 @@ export struct ReaderLibrarySearchSurface {
   @State private surfaceViewportHeight: number = -1;
   @State private measuredHistoryFeedback: number = 0;
   @State private measuredHistoryFeedbackKey: string = '';
-  private readonly historyMeasurements: SearchHistoryMeasurements = new SearchHistoryMeasurements();
   private historyProjectionKey: string = '';
   private lastCardSuppressed: boolean = false;
   private lastCardCoverageScope: string = '';
@@ -176,9 +176,6 @@ export struct ReaderLibrarySearchSurface {
   @State private historyHeight: number = 0;
   @State private displayedHistoryViewport: number = 0;
   @State private displayedHistoryLimit: number = 0;
-  @State private historyExpanded: boolean = false;
-  @State private historyResizeOpacity: number = 1;
-  private historyToggleRevision: number = 0;
   private historyResizeRevision: number = 0;
   private historyResizeHoldingCoverage: boolean = false;
   @State private searchMounted: boolean = false;
@@ -188,6 +185,47 @@ export struct ReaderLibrarySearchSurface {
   private historyOpeningField: string = '';
   private historyObservationKey: string = '';
   @State private searchActionPointer: number = -1;
+  private cachedHeaderMaterialKey: string = '';
+  private cachedHeaderMaterialModifier: ReaderImmersiveMaterialModifier | undefined = undefined;
+  private cachedBackdropScrimKey: string = '';
+  private cachedBackdropScrimModifier: ReaderModalScrimModifier | undefined = undefined;
+  private cachedRecoveryScrimKey: string = '';
+  private cachedRecoveryScrimModifier: ReaderModalScrimModifier | undefined = undefined;
+
+  private headerMaterialModifier(): ReaderImmersiveMaterialModifier {
+    const material = this.headerMaterial();
+    const key = material === undefined ? 'none' :
+      `${material.native ? 1 : 0}:${material.style}:${material.interactive ? 1 : 0}:${material.performanceMode ? 1 : 0}`;
+    if (this.cachedHeaderMaterialModifier !== undefined && this.cachedHeaderMaterialKey === key) {
+      return this.cachedHeaderMaterialModifier;
+    }
+    const modifier = new ReaderImmersiveMaterialModifier(material);
+    this.cachedHeaderMaterialKey = key;
+    this.cachedHeaderMaterialModifier = modifier;
+    return modifier;
+  }
+
+  private backdropScrimModifier(color: string | Color, nativeMaterial: boolean, active: boolean): ReaderModalScrimModifier {
+    const key = `${this.scheme}:${String(color)}:${nativeMaterial ? 1 : 0}:${active ? 1 : 0}:${this.appearancePreferences.override}:${this.appearancePreferences.renderMode}`;
+    if (this.cachedBackdropScrimModifier !== undefined && this.cachedBackdropScrimKey === key) {
+      return this.cachedBackdropScrimModifier;
+    }
+    const modifier = new ReaderModalScrimModifier(this.appearancePreferences, this.scheme, color, nativeMaterial, active);
+    this.cachedBackdropScrimKey = key;
+    this.cachedBackdropScrimModifier = modifier;
+    return modifier;
+  }
+
+  private recoveryScrimModifier(color: string | Color, nativeMaterial: boolean, active: boolean): ReaderModalScrimModifier {
+    const key = `${this.scheme}:${String(color)}:${nativeMaterial ? 1 : 0}:${active ? 1 : 0}:${this.appearancePreferences.override}:${this.appearancePreferences.renderMode}`;
+    if (this.cachedRecoveryScrimModifier !== undefined && this.cachedRecoveryScrimKey === key) {
+      return this.cachedRecoveryScrimModifier;
+    }
+    const modifier = new ReaderModalScrimModifier(this.appearancePreferences, this.scheme, color, nativeMaterial, active);
+    this.cachedRecoveryScrimKey = key;
+    this.cachedRecoveryScrimModifier = modifier;
+    return modifier;
+  }
 
   aboutToAppear(): void {
     this.raisedAppearanceEpoch += 1;
@@ -283,11 +321,6 @@ export struct ReaderLibrarySearchSurface {
     if (!this.mounted) return;
     const next = this.mode;
     const newEntry = this.activeIdentity !== this.identity || this.activeMounting !== this.mounting;
-    if (newEntry) {
-      this.historyExpanded = false;
-      this.historyResizeOpacity = 1;
-      this.historyToggleRevision += 1;
-    }
     if (next === this.currentMode) {
       this.activeNavigation = this.navigationGeneration;
       this.activeMounting = this.mounting;
@@ -305,7 +338,6 @@ export struct ReaderLibrarySearchSurface {
       return;
     }
     const previous = this.currentMode;
-    this.historyResizeOpacity = 1;
     this.searchActionPointer = -1;
     this.fromSurface = this.displayedSurfaceProgress;
     this.fromHistory = this.historyProgress();
@@ -339,7 +371,7 @@ export struct ReaderLibrarySearchSurface {
     else this.schedule(token);
   }
   private usesNativeTransition(): boolean {
-    return !readerTransitionsEnabled() && this.model.verification?.enabled() !== true;
+    return !readerTransitionFrameSamplingEnabled() && this.model.verification?.enabled() !== true;
   }
   private beginNativeTransition(token: number, deferFirstFrame: boolean): void {
     this.nativeSearchMotion = true;
@@ -500,7 +532,6 @@ export struct ReaderLibrarySearchSurface {
     this.elapsed = 0;
     if (this.mode === 'idle') {
       this.searchMounted = false;
-      this.historyExpanded = false;
     }
     if (this.mode !== 'input') {
       this.fieldFocused = false;
@@ -797,30 +828,11 @@ export struct ReaderLibrarySearchSurface {
       if (this.mounted && this.historyInteractive()) this.model.dispatchRetryHistory(owner);
     };
   }
-  private toggleHistoryAction(owner: number): () => void {
-    return (): void => {
-      if (!this.mounted || !this.historyInteractive() || !this.model.owns(owner) ||
-        this.model.historyStatus === 'loading') return;
-      const layout = this.historyLayout();
-      if (!layout.canToggle) return;
-      this.historyExpanded = !layout.expanded;
-      const toggleRevision = ++this.historyToggleRevision;
-      if (!this.reduceMotion) {
-        this.retargetHistoryViewport();
-        return;
+  private deleteHistoryAction(owner: number): (keyword: string) => void {
+    return (keyword: string): void => {
+      if (this.mounted && this.historyInteractive() && this.model.owns(owner)) {
+        this.model.dispatchDeleteHistory(owner, keyword);
       }
-      const generation = this.generation;
-      const context = this.getUIContext();
-      this.historyResizeOpacity = 0;
-      this.retargetHistoryViewport(true);
-      try {
-        context.postFrameCallback(new LibrarySearchFrame((): void => {
-          if (!this.mounted || generation !== this.generation || toggleRevision !== this.historyToggleRevision) return;
-          try {
-            context.animateTo(readerMotionReducedFadeParam(), (): void => { this.historyResizeOpacity = 1; });
-          } catch (_) { this.historyResizeOpacity = 1; }
-        }));
-      } catch (_) { this.historyResizeOpacity = 1; }
     };
   }
   private contentHeight(): number {
@@ -839,7 +851,7 @@ export struct ReaderLibrarySearchSurface {
     return readerPresentedHeaderBottom(bookshelfHeaderSpec().topInset,
       this.spec.barHeight(this.searchLaneHeight()) + 2 * this.spec.borderWidth);
   }
-  private historyLimit(): number { return Math.max(0, this.availableBottom() - this.historyBarBottom()); }
+  private historyLimit(): number { return Math.max(0, this.availableBottom() - this.historyBarBottom() - 12); }
   private captureHeader(height: number, key: number): void {
     if (!this.mounted || key !== this.measurementKey || !Number.isFinite(height) || height <= 0) return;
     const bottom = readerPresentedHeaderBottom(bookshelfHeaderSpec().topInset, height);
@@ -867,6 +879,9 @@ export struct ReaderLibrarySearchSurface {
   private laneTop(): number { return this.spec.barPaddingTop; }
   // The icon describes the current destination state. The closing track may
   // still retire the search content, but an idle bookshelf owns a search entry.
+  private submitButtonActive(): boolean {
+    return this.model.sweeping || this.model.canSubmit;
+  }
   private presentedSearch(): boolean { return this.mode !== 'idle'; }
   private actionInteractive(): boolean {
     return this.model.interactive && !this.model.panelOwnsInput && this.presentedSearch() && this.transitionKind !== 'back' &&
@@ -885,8 +900,7 @@ export struct ReaderLibrarySearchSurface {
       this.spec.panelInnerInset);
   }
   private historyLayout(): SearchHistoryPanelLayout {
-    return projectSearchHistoryPanel(this.model.history, this.historyGeometry(), this.historyExpanded, (keyword: string): number =>
-      this.historyMeasurements.measureControlWidth(this.getUIContext(), this.metricsRevision, keyword));
+    return projectSearchHistoryPanel(this.model.history, this.historyGeometry());
   }
   private historyFeedbackKey(): string {
     return JSON.stringify([this.metricsRevision, this.cardContentWidth(), this.model.historyStatus]);
@@ -1044,10 +1058,15 @@ export struct ReaderLibrarySearchSurface {
                   .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(13).fontWeight(FontWeight.Bold)
                   .lineHeight(18).halfLeading(true)
                   .minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale()))
-                  .fontColor(readerAppColor('TOK_ON_PRIMARY', this.scheme));
+                  .fontColor(readerAppColor(this.submitButtonActive() ? 'TOK_ON_PRIMARY' : 'TOK_MUTED', this.scheme));
               }.width(this.actionWidth()).height(this.searchActionVisualHeight())
-                .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_PRIMARY_DARK', this.scheme), this.scheme,
-                  this.searchActionVisualHeight() / 2, this.searchActionVisualHeight() / 2,
+                .border({
+                  width: this.submitButtonActive() ? 0 : TOK_BORDER_W,
+                  color: readerAppColor('app.border.control', this.scheme),
+                })
+                .attributeModifier(new ReaderPressFeedback(
+                  readerAppColor(this.submitButtonActive() ? 'TOK_PRIMARY_DARK' : 'TOK_PAPER', this.scheme),
+                  this.scheme, this.searchActionVisualHeight() / 2, this.searchActionVisualHeight() / 2,
                   this.actionInteractive(), this.searchActionPointer >= 0))
                 .scale(readerPressScale(this.actionInteractive() && this.searchActionPointer >= 0, this.reduceMotion))
                 .opacity(readerPressOpacity(this.actionInteractive() && this.searchActionPointer >= 0, this.reduceMotion))
@@ -1059,7 +1078,6 @@ export struct ReaderLibrarySearchSurface {
                 this.layoutInvariantHeaderStable() && (this.mode === 'results' ? this.resultsProgress() >= 1 : this.historyProgress() >= 1)
         ? { role: 'key-control', id: 'search-submit', unavailable: !this.model.canSubmit && !this.model.sweeping } as LayoutInvariantTag : undefined)
               .backgroundColor(Color.Transparent)
-              .opacity(this.model.sweeping || this.model.canSubmit ? 1 : .38)
               .enabled(this.actionInteractive())
               .hitTestBehavior(this.actionInteractive() ? HitTestMode.Default : HitTestMode.None)
               .accessibilityRole(AccessibilityRoleType.BUTTON)
@@ -1164,11 +1182,12 @@ export struct ReaderLibrarySearchSurface {
   @Builder
   private historyPanel(owner: number) {
     ReaderSearchHistoryPanel({ history: this.model.history, status: this.model.historyStatus,
+      emptyHint: this.model.emptyHistoryHint,
       layout: this.historyLayout(),
       observeActions: this.model.verification?.enabled() === true,
       onFeedbackHeight: this.historyFeedbackAction(owner),
       onClear: this.clearHistoryAction(owner), onRetry: this.retryHistoryAction(owner),
-      onSelect: this.historyAction(owner), onToggle: this.toggleHistoryAction(owner) });
+      onSelect: this.historyAction(owner), onDelete: this.deleteHistoryAction(owner) });
   }
   @Builder
   private header() {
@@ -1186,7 +1205,7 @@ export struct ReaderLibrarySearchSurface {
             .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
         }.width('100%').height(this.historyViewportHeight() * this.historyProgress()).clip(true)
           .id('reader-search-history-viewport')
-          .opacity(this.historyProgress() * this.reducedSearchOpacity * this.historyResizeOpacity)
+          .opacity(this.historyProgress() * this.reducedSearchOpacity)
           .enabled(this.historyInteractive())
           .hitTestBehavior(this.historyInteractive() ? HitTestMode.Default : HitTestMode.None)
           .accessibilityLevel(this.historyInteractive() ? 'auto' : 'no-hide-descendants');
@@ -1194,7 +1213,6 @@ export struct ReaderLibrarySearchSurface {
       }.width('100%')
         .borderRadius(Math.max(0, this.headerMaterialRadius() - this.spec.borderWidth)).clip(true);
     }.width('100%').clip(false)
-      .renderGroup(this.transitionKind !== 'none')
       .padding(this.headerMaterial()?.native ? this.spec.borderWidth : 0)
       .backgroundColor(this.headerMaterial()?.native ? Color.Transparent :
         readerAppColor('app.search.panelSurface', this.scheme))
@@ -1204,7 +1222,7 @@ export struct ReaderLibrarySearchSurface {
           this.headerVeil() ? readerHeaderVeilBorder(this.scheme) : this.panelBorderColor() })
       .borderRadius(this.headerMaterialRadius()).hitTestBehavior(HitTestMode.Default)
       .shadow(this.headerMaterial()?.native ? undefined : this.headerStackShadow())
-      .attributeModifier(new ReaderImmersiveMaterialModifier(this.headerMaterial()))
+      .attributeModifier(this.headerMaterialModifier())
       .onAreaChange(this.headerSurfaceAreaChange());
   }
   private headerStackShadow(): ShadowOptions {
@@ -1240,7 +1258,6 @@ export struct ReaderLibrarySearchSurface {
       }.width('100%').height(this.mode === 'input' && this.model.sourceRecoveryVisible ?
         this.surfaceHeight() : this.resultsProgress() > 0 ?
           this.headerBottom + this.contentHeight() * this.resultsProgress() : 0)
-        .renderGroup(this.transitionKind !== 'none')
         .clipShape(this.resultClip())
         .opacity(this.reducedSearchOpacity)
         .zIndex(2)
@@ -1251,19 +1268,19 @@ export struct ReaderLibrarySearchSurface {
           'auto' : 'no-hide-descendants');
       // Keep backdrop clicks behind the recovery actions while dimming the recovery surface.
       Stack().width('100%').height('100%')
-        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+        .attributeModifier(this.backdropScrimModifier(
           this.mode === 'input' && this.model.sourceRecoveryVisible ? Color.Transparent :
             readerAppColor('app.scrim.modal', this.scheme), this.headerMaterial()?.native === true,
           this.scrimProgress() > .01 && !(this.mode === 'input' && this.model.sourceRecoveryVisible)))
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
         .opacity(this.scrimProgress() * this.reducedSearchOpacity).zIndex(1)
         .hitTestBehavior(this.mode === 'input' && this.scrimProgress() > .01 ? HitTestMode.Default : HitTestMode.None)
         .onClick(this.backAction(this.identity, this.navigationGeneration, this.mounting));
       if (this.mode === 'input' && this.model.sourceRecoveryVisible) {
         Stack().id('reader-library-search-recovery-scrim').width('100%').height('100%')
-          .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+          .attributeModifier(this.recoveryScrimModifier(
             readerAppColor('app.scrim.modal', this.scheme), this.headerMaterial()?.native === true, this.scrimProgress() > .01))
-          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
           .opacity(this.scrimProgress() * this.reducedSearchOpacity).zIndex(3).hitTestBehavior(HitTestMode.None);
       }
       Column() {
