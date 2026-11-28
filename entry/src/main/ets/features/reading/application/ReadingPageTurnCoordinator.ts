@@ -39,6 +39,7 @@ export interface ReaderPageTurnSlideHost {
   publishOffset(offset: number): void;
   postFrame(next: () => void): void;
   finished(generation: number): void;
+  animateOffset?: (target: number, durationMs: number, onFinish: () => void) => (() => void) | undefined;
 }
 
 export interface ReaderPageTurnSlideOrigin {
@@ -156,6 +157,7 @@ export class ReadingPageTurnCoordinator<TLayout, TPage, TPrepared extends Reader
   private rapid: ReaderRapidPageTurnState = createReaderRapidPageTurnState();
   private pendingPointer: boolean = false;
   private slide: ReaderPageSettlementTimeline | undefined = undefined;
+  private slideCancel: (() => void) | undefined = undefined;
   private projection: ReaderFrozenPageTurnProjection<TLayout, TPage> | undefined = undefined;
   private admitted: TPrepared | undefined = undefined;
   private previous: TPrepared | undefined = undefined;
@@ -433,11 +435,37 @@ export class ReadingPageTurnCoordinator<TLayout, TPage, TPrepared extends Reader
   }
 
   hasSlide(): boolean { return this.slide !== undefined; }
-  cancelSlide(): void { this.slide = undefined; }
+  slidePosition(nowMs: number): number | undefined { return this.slide?.position(nowMs); }
+  cancelSlide(): void {
+    this.slide = undefined;
+    const cancel = this.slideCancel;
+    this.slideCancel = undefined;
+    cancel?.();
+  }
 
   startSlide(target: number, generation: number, origin: ReaderPageTurnSlideOrigin, host: ReaderPageTurnSlideHost): void {
-    this.slide = new ReaderPageSettlementTimeline(origin.offset, target, origin.width, origin.velocity, host.now(),
+    this.cancelSlide();
+    const slide = new ReaderPageSettlementTimeline(origin.offset, target, origin.width, origin.velocity, host.now(),
       Math.abs(this.rapid.pendingDelta) > 1 && origin.gestureUndecided);
+    this.slide = slide;
+    if (slide.durationMs <= 0) {
+      host.publishOffset(target);
+      this.slide = undefined;
+      host.finished(generation);
+      return;
+    }
+    if (host.animateOffset !== undefined) {
+      const cancel = host.animateOffset(target, slide.durationMs, (): void => {
+        if (this.slide !== slide || !host.mounted() || generation !== host.generation()) return;
+        this.slide = undefined;
+        this.slideCancel = undefined;
+        host.finished(generation);
+      });
+      if (cancel !== undefined) {
+        this.slideCancel = cancel;
+        return;
+      }
+    }
     this.advanceSlide(generation, host);
   }
 

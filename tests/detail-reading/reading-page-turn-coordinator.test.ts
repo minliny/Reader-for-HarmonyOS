@@ -287,3 +287,50 @@ test('bookmark rollback does not ask the horizontal renderer to acquire or settl
   assert.equal(coordinator.gestureAction({ ...gesture, owner: 'horizontalPage' }, slideRenderer), 'rollback');
   assert.equal(coordinator.gesturePresentationPhase('idle', false, true), undefined);
 });
+
+test('native animateOffset skips postFrame polling, exposes live slidePosition, and fences stale completions', () => {
+  const { coordinator } = fixture();
+  const postFrames: Array<() => void> = [];
+  const offsets: number[] = [];
+  const finished: number[] = [];
+  const nativeCalls: Array<{ target: number; durationMs: number; onFinish: () => void; cancelled: boolean }> = [];
+  let now = 100;
+  const host = {
+    mounted: () => true,
+    generation: () => coordinator.generation,
+    now: () => now,
+    publishOffset: (offset: number) => { offsets.push(offset); },
+    postFrame: (run: () => void) => { postFrames.push(run); },
+    finished: (generation: number) => { finished.push(generation); },
+    animateOffset: (target: number, durationMs: number, onFinish: () => void) => {
+      const record = { target, durationMs, onFinish, cancelled: false };
+      nativeCalls.push(record);
+      return () => { record.cancelled = true; };
+    },
+  };
+
+  coordinator.generation = 7;
+  coordinator.startSlide(-400, 7, { offset: -40, width: 400, velocity: 0, gestureUndecided: false }, host);
+  assert.equal(postFrames.length, 0);
+  assert.equal(nativeCalls.length, 1);
+  assert.equal(nativeCalls[0].target, -400);
+  assert.ok(nativeCalls[0].durationMs > 0);
+  assert.equal(coordinator.hasSlide(), true);
+
+  now = 100 + nativeCalls[0].durationMs / 2;
+  const mid = coordinator.slidePosition(now);
+  assert.ok(mid !== undefined && mid < -40 && mid > -400);
+
+  coordinator.cancelSlide();
+  assert.equal(nativeCalls[0].cancelled, true);
+  assert.equal(coordinator.hasSlide(), false);
+
+  coordinator.generation = 8;
+  coordinator.startSlide(0, 8, { offset: mid!, width: 400, velocity: 0, gestureUndecided: false }, host);
+  nativeCalls[0].onFinish();
+  assert.deepEqual(finished, []);
+  nativeCalls[1].onFinish();
+  assert.deepEqual(finished, [8]);
+  assert.equal(coordinator.hasSlide(), false);
+  assert.deepEqual(offsets, []);
+});

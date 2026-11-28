@@ -1,6 +1,6 @@
 import type { ReaderControlTransitionKind } from './ReaderControlSessionState.ts';
 
-export type ReaderControlNativeMotionMode = 'visibility' | 'directSheet' | 'moduleNavigate' | 'frameLoop';
+export type ReaderControlNativeMotionMode = 'visibility' | 'directSheet' | 'moduleNavigate' | 'morph' | 'frameLoop';
 
 /** Decides whether a control-panel transition runs via ArkUI animateTo or JS frame sampling. */
 export function readerControlNativeMotionMode(
@@ -15,5 +15,6 @@ export function readerControlNativeMotionMode(
   if (transitionKind === 'open' || transitionKind === 'dismiss') return 'visibility';
   if (directSheet || visualDirectSheet) return 'directSheet';
   if (fixedIslandMode && transitionKind === 'navigate') return 'moduleNavigate';
+  if (transitionKind === 'morph' || transitionKind === 'navigate') return 'morph';
   return 'frameLoop';
 }

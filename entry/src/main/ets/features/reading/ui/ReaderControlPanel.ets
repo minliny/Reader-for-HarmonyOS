@@ -536,12 +536,14 @@ export struct ReaderControlPanel {
         }
         .width(this.minimumHost.currentLayout().fullPanelWidth).height(this.motion.controlPanelHeight())
         .id('reader-control-motion-dock')
+        .renderGroup(this.motionPaint.visibilityAnimating ||
+          (this.motionPaint.visualDirectSheet && this.motionPaint.visualTransitionKind === 'navigate'))
         .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
           ? { role: 'modal-overlay', id: 'reading-controls', active: this.motionPaint.visualVisibilityProgress > 0,
             intercepts: this.currentFacts().geometry.inputEnabled && (this.motionPaint.visualVisibilityProgress > 0 || this.motionPaint.visualHeldPointerId >= 0) } as LayoutInvariantTag : undefined)
-        .translate({ x: this.minimumHost.currentLayout().isExpanded() ? this.motion.directSheetTranslation() : 0,
-          y: this.motion.layoutFrame().dock.translateY + (this.minimumHost.currentLayout().isExpanded() ? 0 : this.motion.directSheetTranslation()) })
-        .opacity(this.motion.layoutFrame().dock.opacity * (this.motion.directSheetVisible() && this.currentFacts().geometry.reduceMotion ? this.motionPaint.visualExpansionProgress : 1))
+        .translate({ x: this.motionPaint.directSheetTranslateX,
+          y: this.motionPaint.dockTranslateY + this.motionPaint.directSheetTranslateY })
+        .opacity(this.motionPaint.dockOpacity)
         .position({ x: this.motion.dockLeft(), y: this.motion.presentedDockTop() })
         .onTouch((event: TouchEvent): void => this.motion.onDockPlacementTouch(event))
         // A held pointer may reach the hidden endpoint before UP. Retiring
@@ -554,7 +556,7 @@ export struct ReaderControlPanel {
     .visibility(this.currentFacts().geometry.obscured ? Visibility.Hidden : Visibility.Visible)
     .width(this.minimumHost.currentLayout().viewportWidth)
     .height(this.minimumHost.currentLayout().viewportHeight)
-    .accessibilityLevel(this.motionPaint.visualVisibilityProgress > 0 || this.currentFacts().launch.sample !== undefined ? 'auto' : 'no-hide-descendants')
+    .accessibilityLevel(this.motionPaint.controlPresented || this.currentFacts().launch.sample !== undefined ? 'auto' : 'no-hide-descendants')
     .hitTestBehavior(HitTestMode.Transparent)
     .onAreaChange((_previous: Area, current: Area): void => {
       this.motion.panelAreaChanged(current);

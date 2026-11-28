@@ -188,6 +188,47 @@ export struct ReaderLibrarySearchSurface {
   private historyOpeningField: string = '';
   private historyObservationKey: string = '';
   @State private searchActionPointer: number = -1;
+  private cachedHeaderMaterialKey: string = '';
+  private cachedHeaderMaterialModifier: ReaderImmersiveMaterialModifier | undefined = undefined;
+  private cachedBackdropScrimKey: string = '';
+  private cachedBackdropScrimModifier: ReaderModalScrimModifier | undefined = undefined;
+  private cachedRecoveryScrimKey: string = '';
+  private cachedRecoveryScrimModifier: ReaderModalScrimModifier | undefined = undefined;
+
+  private headerMaterialModifier(): ReaderImmersiveMaterialModifier {
+    const material = this.headerMaterial();
+    const key = material === undefined ? 'none' :
+      `${material.native ? 1 : 0}:${material.style}:${material.interactive ? 1 : 0}:${material.performanceMode ? 1 : 0}`;
+    if (this.cachedHeaderMaterialModifier !== undefined && this.cachedHeaderMaterialKey === key) {
+      return this.cachedHeaderMaterialModifier;
+    }
+    const modifier = new ReaderImmersiveMaterialModifier(material);
+    this.cachedHeaderMaterialKey = key;
+    this.cachedHeaderMaterialModifier = modifier;
+    return modifier;
+  }
+
+  private backdropScrimModifier(color: string | Color, nativeMaterial: boolean, active: boolean): ReaderModalScrimModifier {
+    const key = `${this.scheme}:${String(color)}:${nativeMaterial ? 1 : 0}:${active ? 1 : 0}:${this.appearancePreferences.override}:${this.appearancePreferences.renderMode}`;
+    if (this.cachedBackdropScrimModifier !== undefined && this.cachedBackdropScrimKey === key) {
+      return this.cachedBackdropScrimModifier;
+    }
+    const modifier = new ReaderModalScrimModifier(this.appearancePreferences, this.scheme, color, nativeMaterial, active);
+    this.cachedBackdropScrimKey = key;
+    this.cachedBackdropScrimModifier = modifier;
+    return modifier;
+  }
+
+  private recoveryScrimModifier(color: string | Color, nativeMaterial: boolean, active: boolean): ReaderModalScrimModifier {
+    const key = `${this.scheme}:${String(color)}:${nativeMaterial ? 1 : 0}:${active ? 1 : 0}:${this.appearancePreferences.override}:${this.appearancePreferences.renderMode}`;
+    if (this.cachedRecoveryScrimModifier !== undefined && this.cachedRecoveryScrimKey === key) {
+      return this.cachedRecoveryScrimModifier;
+    }
+    const modifier = new ReaderModalScrimModifier(this.appearancePreferences, this.scheme, color, nativeMaterial, active);
+    this.cachedRecoveryScrimKey = key;
+    this.cachedRecoveryScrimModifier = modifier;
+    return modifier;
+  }
 
   aboutToAppear(): void {
     this.raisedAppearanceEpoch += 1;
@@ -1194,7 +1235,6 @@ export struct ReaderLibrarySearchSurface {
       }.width('100%')
         .borderRadius(Math.max(0, this.headerMaterialRadius() - this.spec.borderWidth)).clip(true);
     }.width('100%').clip(false)
-      .renderGroup(this.transitionKind !== 'none')
       .padding(this.headerMaterial()?.native ? this.spec.borderWidth : 0)
       .backgroundColor(this.headerMaterial()?.native ? Color.Transparent :
         readerAppColor('app.search.panelSurface', this.scheme))
@@ -1204,7 +1244,7 @@ export struct ReaderLibrarySearchSurface {
           this.headerVeil() ? readerHeaderVeilBorder(this.scheme) : this.panelBorderColor() })
       .borderRadius(this.headerMaterialRadius()).hitTestBehavior(HitTestMode.Default)
       .shadow(this.headerMaterial()?.native ? undefined : this.headerStackShadow())
-      .attributeModifier(new ReaderImmersiveMaterialModifier(this.headerMaterial()))
+      .attributeModifier(this.headerMaterialModifier())
       .onAreaChange(this.headerSurfaceAreaChange());
   }
   private headerStackShadow(): ShadowOptions {
@@ -1240,7 +1280,6 @@ export struct ReaderLibrarySearchSurface {
       }.width('100%').height(this.mode === 'input' && this.model.sourceRecoveryVisible ?
         this.surfaceHeight() : this.resultsProgress() > 0 ?
           this.headerBottom + this.contentHeight() * this.resultsProgress() : 0)
-        .renderGroup(this.transitionKind !== 'none')
         .clipShape(this.resultClip())
         .opacity(this.reducedSearchOpacity)
         .zIndex(2)
@@ -1251,7 +1290,7 @@ export struct ReaderLibrarySearchSurface {
           'auto' : 'no-hide-descendants');
       // Keep backdrop clicks behind the recovery actions while dimming the recovery surface.
       Stack().width('100%').height('100%')
-        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+        .attributeModifier(this.backdropScrimModifier(
           this.mode === 'input' && this.model.sourceRecoveryVisible ? Color.Transparent :
             readerAppColor('app.scrim.modal', this.scheme), this.headerMaterial()?.native === true,
           this.scrimProgress() > .01 && !(this.mode === 'input' && this.model.sourceRecoveryVisible)))
@@ -1261,7 +1300,7 @@ export struct ReaderLibrarySearchSurface {
         .onClick(this.backAction(this.identity, this.navigationGeneration, this.mounting));
       if (this.mode === 'input' && this.model.sourceRecoveryVisible) {
         Stack().id('reader-library-search-recovery-scrim').width('100%').height('100%')
-          .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+          .attributeModifier(this.recoveryScrimModifier(
             readerAppColor('app.scrim.modal', this.scheme), this.headerMaterial()?.native === true, this.scrimProgress() > .01))
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
           .opacity(this.scrimProgress() * this.reducedSearchOpacity).zIndex(3).hitTestBehavior(HitTestMode.None);

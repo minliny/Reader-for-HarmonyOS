@@ -1,6 +1,7 @@
 import type { UIContext } from '@ohos.arkui.UIContext';
 import type { AnimatorResult } from '@ohos.animator';
 import type { FrameNode } from '@ohos.arkui.node';
+import curves from '@ohos.curves';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerTransitionFrameSamplingEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
@@ -9,6 +10,11 @@ import { READER_LAUNCH_PROXY, READER_LAUNCH_SHARP } from '../../../ui/layout/Tra
 import { READER_SESSION_SOURCE_TRANSFER_DEADLINE_MS } from './ReaderSessionLaunchController';
 import type { ReaderSessionLaunchController, ReaderSessionLaunchTransaction } from './ReaderSessionLaunchController';
 import type { ReaderControlCapsuleVerification } from './ReaderControlCapsuleVerification';
+import {
+  READER_SESSION_LAUNCH_CONTROL_RELEASE_MS,
+  READER_SESSION_LAUNCH_DURATION_MS,
+  READER_SESSION_LAUNCH_FLIGHT_MS,
+} from './ReaderSessionLaunchTimeline';
 import { ReaderUIFrameCallback } from './ReaderUIFrameCallback';
 
 import type { ReaderSessionLaunchViewHost } from './ReaderSessionLaunchViewHost';
@@ -23,6 +29,8 @@ export class ReaderSessionLaunchEffects {
   private sessionLaunchExitGeneration: number = 0;
   private sessionLaunchExitAnimator: AnimatorResult | undefined = undefined;
   private sessionLaunchDeadlineTimer: number = -1;
+  private nativeLaunchToken: number = 0;
+  private nativeLaunchTimer: number = -1;
   private readonly controller: ReaderSessionLaunchController;
   private readonly verification: ReaderControlCapsuleVerification;
   private readonly host: ReaderSessionLaunchViewHost;
@@ -36,7 +44,22 @@ export class ReaderSessionLaunchEffects {
 
   invalidateExit(): void { this.sessionLaunchExitGeneration += 1; }
 
-  retireFrame(): void { this.sessionLaunchFramePending = false; }
+  retireFrame(): void {
+    this.sessionLaunchFramePending = false;
+    this.cancelNativeLaunch();
+  }
+
+  private clearNativeLaunchTimer(): void {
+    if (this.nativeLaunchTimer >= 0) {
+      clearTimeout(this.nativeLaunchTimer);
+      this.nativeLaunchTimer = -1;
+    }
+  }
+
+  private cancelNativeLaunch(): void {
+    this.nativeLaunchToken += 1;
+    this.clearNativeLaunchTimer();
+  }
 
   cancelExitAnimator(): void {
     const animator = this.sessionLaunchExitAnimator;
@@ -45,6 +68,7 @@ export class ReaderSessionLaunchEffects {
   }
 
   clearDeadline(): void {
+    this.cancelNativeLaunch();
     if (this.sessionLaunchDeadlineTimer >= 0) clearTimeout(this.sessionLaunchDeadlineTimer);
     this.sessionLaunchDeadlineTimer = -1;
   }
@@ -144,8 +168,62 @@ export class ReaderSessionLaunchEffects {
         this.host.updateWindow();
         this.host.drainPageTurn();
       }
+      if (!this.host.observing() && !readerTransitionFrameSamplingEnabled() && !this.host.reducedMotion()) {
+        this.startNativeLaunchChain(previous.generation, tick);
+        return;
+      }
     }
     this.scheduleFrame(previous.generation);
+  }
+
+  private startNativeLaunchChain(generation: number, startTickMs: number): void {
+    const token = ++this.nativeLaunchToken;
+    this.clearNativeLaunchTimer();
+    const stillActive = (): boolean => token === this.nativeLaunchToken && this.host.ready() &&
+      this.controller.isCurrent(generation) && this.host.layoutCurrent();
+    const runPhase = (
+      targetElapsedMs: number,
+      durationMs: number,
+      curve: Curve | curves.ICurve,
+      onPhaseDone: () => void,
+    ): void => {
+      if (!stillActive()) return;
+      let done = false;
+      const complete = (): void => {
+        if (done) return;
+        done = true;
+        this.clearNativeLaunchTimer();
+        if (stillActive()) onPhaseDone();
+      };
+      this.nativeLaunchTimer = setTimeout(complete, durationMs + 80);
+      try {
+        this.host.context().animateTo({ duration: durationMs, curve, onFinish: complete }, (): void => {
+          if (!stillActive()) return;
+          const next = this.controller.advance(generation, startTickMs + targetElapsedMs);
+          if (next !== undefined) this.host.publish(next);
+        });
+      } catch (_) {
+        if (stillActive()) {
+          const next = this.controller.advance(generation, startTickMs + targetElapsedMs);
+          if (next !== undefined) this.host.publish(next);
+        }
+        complete();
+      }
+    };
+    const phase1Ms = READER_SESSION_LAUNCH_CONTROL_RELEASE_MS;
+    const phase2Ms = READER_SESSION_LAUNCH_FLIGHT_MS - READER_SESSION_LAUNCH_CONTROL_RELEASE_MS;
+    const phase3Ms = READER_SESSION_LAUNCH_DURATION_MS - READER_SESSION_LAUNCH_FLIGHT_MS;
+    const standardCurve = curves.cubicBezierCurve(0.2, 0, 0, 1);
+    runPhase(READER_SESSION_LAUNCH_CONTROL_RELEASE_MS, phase1Ms, standardCurve, (): void => {
+      this.host.hideControl();
+      this.host.updateWindow();
+      runPhase(READER_SESSION_LAUNCH_FLIGHT_MS, phase2Ms, Curve.EaseOut, (): void => {
+        runPhase(READER_SESSION_LAUNCH_DURATION_MS, phase3Ms, standardCurve, (): void => {
+          this.host.drainPageTurn();
+          this.host.updateWindow();
+        });
+      });
+    });
   }
 
   private receivesLayout(context: UIContext, id: string): boolean {

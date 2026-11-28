@@ -1,4 +1,5 @@
 import type { UIContext } from '@ohos.arkui.UIContext';
+import curves from '@ohos.curves';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import type { ReadingSessionChapter } from '../application/ReadingChapterWindow';
@@ -119,6 +120,8 @@ export class ReaderPageTurnSettlementHost {
   private origin: ReaderPageTurnOrigin = 'manual';
   private followLease: ReaderTtsFollowLease | undefined = undefined;
   private frozenLayout: ReaderReadingLayoutSnapshot | undefined = undefined;
+  private nativeSlideToken: number = 0;
+  private nativeSlideTimer: number = -1;
 
   constructor(view: ReaderPageTurnSettlementView, progress: ReaderPageTurnSettlementProgress,
     effects: ReaderPageTurnSettlementEffects, deferred: ReaderPageTurnDeferredEffects) {
@@ -164,7 +167,59 @@ export class ReaderPageTurnSettlementHost {
       finished: (generation: number): void => {
         if (this.pageTurn.finishSlide(generation, this.view.lifecycle()) === 'rollback') this.finishRollback(generation);
       },
+      animateOffset: (target: number, durationMs: number, onFinish: () => void): (() => void) | undefined => {
+        const token = ++this.nativeSlideToken;
+        this.clearNativeSlideTimer();
+        const complete = (): void => {
+          if (token !== this.nativeSlideToken) return;
+          this.clearNativeSlideTimer();
+          onFinish();
+        };
+        try {
+          this.nativeSlideTimer = setTimeout(complete, durationMs + 80);
+          this.view.context().animateTo({
+            duration: durationMs,
+            curve: curves.cubicBezierCurve(0.22, 0.61, 0.36, 1),
+            onFinish: complete,
+          }, (): void => {
+            this.view.publish({ pageTurnOffsetX: target });
+          });
+          return (): void => {
+            if (token === this.nativeSlideToken) {
+              this.nativeSlideToken += 1;
+              this.clearNativeSlideTimer();
+            }
+          };
+        } catch (_) {
+          if (token === this.nativeSlideToken) {
+            this.nativeSlideToken += 1;
+            this.clearNativeSlideTimer();
+          }
+          return undefined;
+        }
+      },
     };
+  }
+
+  private clearNativeSlideTimer(): void {
+    if (this.nativeSlideTimer >= 0) {
+      clearTimeout(this.nativeSlideTimer);
+      this.nativeSlideTimer = -1;
+    }
+  }
+
+  cancelSlideAnimation(snapOffset?: number): void {
+    this.nativeSlideToken += 1;
+    this.clearNativeSlideTimer();
+    if (snapOffset !== undefined) {
+      try {
+        this.view.context().animateTo({ duration: 0 }, (): void => {
+          this.view.publish({ pageTurnOffsetX: snapOffset });
+        });
+      } catch (_) {
+        this.view.publish({ pageTurnOffsetX: snapOffset });
+      }
+    }
   }
 
   get layout(): ReaderReadingLayoutSnapshot | undefined { return this.frozenLayout; }
@@ -365,6 +420,8 @@ export class ReaderPageTurnSettlementHost {
 
   finishRollback(generation: number): void {
     if (generation !== this.pageTurn.generation) return;
+    this.nativeSlideToken += 1;
+    this.clearNativeSlideTimer();
     if (this.origin === 'ttsFollow' && this.followLease !== undefined) this.effects.speechFollowFailed(this.followLease);
     this.pageTurn.clearProjection();
     this.effects.finishPerformance('rollback');
@@ -410,6 +467,8 @@ export class ReaderPageTurnSettlementHost {
 
   finishPresentation(generation: number): void {
     if (generation !== this.pageTurn.generation) return;
+    this.nativeSlideToken += 1;
+    this.clearNativeSlideTimer();
     this.effects.finishPerformance('committed');
     this.effects.publishAutomaticStart(undefined);
     this.clearOrigin();
