@@ -1,4 +1,4 @@
-import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
+import type { ReaderAppColorRole } from '../foundation/ReaderAppColors';
 import {
   ReaderTextStyle, TYPE_SELECT_DEFAULT_VALUE, TYPE_SELECT_OPTION, TYPE_SELECT_OPTION_SELECTED,
   TYPE_SELECT_SOURCE_GROUP_VALUE, TYPE_SELECT_VALUE_SELECTED,
@@ -9,7 +9,7 @@ import {
 
 import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
 import { readerOverlayChoiceRowHeight } from '../layout/ReaderOverlayGeometry';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { ReaderActionAccessibility } from './ReaderActionAccessibility';
 

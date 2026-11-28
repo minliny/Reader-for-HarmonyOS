@@ -1,6 +1,6 @@
 import { PathShape } from '@ohos.arkui.shape';
 import { ReaderControlMotionPathCache, readerControlMotionClipPath } from './ReaderControlMotionPresentation';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { readerPressPointer } from '../../../ui/foundation/ReaderPressMotion';
 import { READER_SESSION_CAPSULE_RADIUS, READER_SESSION_CAPSULE_TOGGLE_ID, ReaderSessionCapsuleFrame, ReaderSessionCapsuleLeading,

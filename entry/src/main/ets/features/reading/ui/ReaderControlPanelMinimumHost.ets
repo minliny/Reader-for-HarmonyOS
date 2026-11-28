@@ -11,7 +11,7 @@ import {
   TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL, TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL,
   TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL,
 } from '../../../ui/foundation/ReaderTypography';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { ReaderBookIdentity } from '../presentation/ReaderBookmarkProjection';
 import { readerControlAppearanceMinimumFacts } from './ReaderControlAppearanceMinimum';
 import { readerControlAutoPageMinimumFacts } from './ReaderControlAutoPageMinimum';

@@ -1,6 +1,6 @@
 import type { RetainedShareFile } from '../../reading/application/ReaderShareActions';
 import type { ReadingBookDetail } from '../../reading/presentation/ReadingBookDetail';
-import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowTypes';
 import { ReadingEntryPresentation, remoteContentVerdictLabel } from '../../reading/presentation/ReadingEntryPresentation';
 import { BookshelfDetailPresentation } from '../presentation/BookshelfDetailPresentation';
 import { BookshelfMutationPresentation } from '../presentation/BookshelfMutationPresentation';

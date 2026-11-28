@@ -1,7 +1,7 @@
 import type { ReaderDirectoryTargetProof } from './ReaderDirectoryTargetProof';
 import { readingChapterTextIdentity, type ReadingDocumentRange } from './ReadingSurfaceLayoutMap.ts';
 import type { RemoteReadingPositionMigration } from './RemoteReadingPositionMigration';
-import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from './LocalReadingFlowTypes';
 
 /**
  * One materialized chapter consumed by the native reading session.

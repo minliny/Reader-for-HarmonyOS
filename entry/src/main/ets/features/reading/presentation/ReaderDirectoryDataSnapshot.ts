@@ -1,4 +1,4 @@
-import type { LocalReadingTocEntry, LocalReadingBookmark } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry, LocalReadingBookmark } from '../application/LocalReadingFlowTypes';
 
 /** One value snapshot per actual directory change. Only a numeric revision
  * crosses ArkUI @Prop; motion, scrolling and IME updates never recursively

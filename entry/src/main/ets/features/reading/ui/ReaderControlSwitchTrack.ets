@@ -1,4 +1,4 @@
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 
 /** Visual-only shared switch. The owning row retains business availability,
  * accessibility and its click callback; this child never starts an animation or

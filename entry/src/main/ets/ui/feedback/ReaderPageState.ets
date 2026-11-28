@@ -1,6 +1,6 @@
 import { LengthMetrics } from '@kit.ArkUI';
 import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_INLINE_STATE_SPACING } from '../foundation/ReaderMessageStyle';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { ReaderRecoveryAction } from './ReaderRecoveryAction';
 
 /** Content-state presentation only. The page retains loading/empty/failure

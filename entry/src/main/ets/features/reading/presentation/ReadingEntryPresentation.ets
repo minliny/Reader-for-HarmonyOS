@@ -8,7 +8,7 @@ import type { BookAcquisitionDetailProjection } from '../application/BookAcquisi
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import { diagnosticCodeOf } from '../../../app/LogPrivacy';
-import { LOCAL_SOURCE_ID, type LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import { LOCAL_SOURCE_ID, type LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { RemoteContentVerdict, RemoteReadingFailureKind } from '../application/RemoteContentAdmission';
 import type { RemoteReadingBookSeed, RemoteReadingSession, RemoteChapterCacheRefreshError } from '../application/RemoteReadingFlowGateway';
 import { readingEntrySeedForContentKind, readingSessionForCommittedSource } from './ReadingEntryDto';

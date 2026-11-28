@@ -1,5 +1,5 @@
 import type { ReadingInitialEntryGateway } from './ReadingSessionFlowGateway';
-import type { LocalReadingProgressState, LocalReadingToc, LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import type { LocalReadingProgressState, LocalReadingToc, LocalReadingTocEntry } from './LocalReadingFlowTypes';
 import type { ReadingEntrySnapshot as PreparedReadingEntry } from './ReadingEntryPreparation';
 import type { ReadingEntrySnapshot } from './ReadingEntrySnapshot';
 import type { ReadingParagraphBoundaryMode } from './ReadingParagraphProjection';

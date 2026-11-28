@@ -14,7 +14,7 @@ import { mangaDirectoryContextEntries, mangaDirectoryDownloadStatusWidth } from 
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryHeaderHeight, mangaDirectoryFullFlowFooter } from '../../manga/ui/MangaDirectoryVisual';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../presentation/ReadingDirectoryRecovery';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { registerReaderFonts, prepareMangaSheetFonts } from '../../../ui/foundation/ReaderFonts';
@@ -22,7 +22,7 @@ import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFra
 import { ReaderScrollLayout, readerScrollLayout } from '../../../ui/layout/ReaderScrollLayout';
 import { readerStableInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerStableInteractiveSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../../../ui/layout/SurfaceHorizontalGeometry';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import { projectReaderDirectoryEntries } from '../presentation/ReaderDirectoryProjection';
 import { ReaderDirectoryToolbar } from './ReaderDirectoryToolbar';
 import { ReaderDirectoryQuickActions, readerDirectoryQuickActionsHeight } from './ReaderDirectoryQuickActions';

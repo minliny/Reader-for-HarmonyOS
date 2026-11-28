@@ -1,5 +1,5 @@
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 
 /** Exact chapter-start anchor emitted by an empty directory bookmark marker. */
 export type ReaderDirectoryChapterStartBookmarkRequest = {

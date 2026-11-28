@@ -5,7 +5,7 @@ import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
 import inputMethod from '@ohos.inputMethod';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
-import { readerAppColor, type ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor, type ReaderAppColorRole } from '../foundation/ReaderAppColors';
 import { readerPaperActionIcon } from '../foundation/ReaderActionIconResources';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerMotionAnimateParam } from '../foundation/ReaderMotionPolicy';

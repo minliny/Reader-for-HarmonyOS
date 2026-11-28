@@ -11,7 +11,7 @@ import { projectOperationFacts, type OperationFacts } from '../../../app/ReaderO
 import type { RssSourceSnapshot } from '../presentation/RssPresentationContract';
 import type { RssRouteOperationProjection } from '../application/RssRouteOperationHost';
 import { TYPE_APP_SMALL_ACTION, TYPE_RSS_ENTRY_DESCRIPTION, TYPE_RSS_ENTRY_TITLE, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_SECTION_HEADING, TYPE_RSS_SOURCE_TITLE } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import {
   type RssItem,
   type RssSubscription,

@@ -1,4 +1,4 @@
-import type { LocalReadingAnchor } from './LocalReadingFlowGateway';
+import type { LocalReadingAnchor } from './LocalReadingFlowTypes';
 import type { ReaderProgressProducerHost, ReaderProgressProducerIntent } from './ReaderProgressProducerHost';
 import type { CoreReadingLayout } from './ReadingMeasurementFacts';
 import type { ReadingSessionCommittedProgress } from './ReadingSessionFlowGateway';

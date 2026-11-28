@@ -1,4 +1,4 @@
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { TYPE_FILE_IMPORT_ACTION, TYPE_FILE_IMPORT_CANCEL,

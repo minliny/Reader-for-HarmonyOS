@@ -1,4 +1,4 @@
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 /** TTS palette compatibility exports. Rendering reads the active app scheme. */
 export const TOK_TTS_INK = readerAppColor('TOK_TTS_INK', 'day');
 export const TOK_TTS_MUTED = readerAppColor('TOK_TTS_MUTED', 'day');

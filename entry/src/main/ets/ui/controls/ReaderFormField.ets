@@ -1,6 +1,6 @@
 import { ReaderFormFieldSpecId, resolveReaderFormFieldSpec } from './ReaderControlSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { ReaderEditingVisibility } from '../layout/ReaderEditingVisibility';
 import { ReaderEditableTarget, ReaderEditableInputModifier, ReaderEditableAreaModifier } from '../layout/ReaderEditableTarget';

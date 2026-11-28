@@ -14,7 +14,7 @@ import { LocalImportDialog } from '../../bookshelf/ui/LocalImportDialog';
 import type { LocalImportBatch } from '../../bookshelf/application/LocalBookImportGateway';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { MESSAGE_BODY, MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 
 type MessagePreviewScene = 'none' | 'toast' | 'notice' | 'notice-long' | 'notice-busy' |
   'page-loading' | 'page-empty' | 'page-failure' | 'dialog-normal' | 'dialog-danger' |

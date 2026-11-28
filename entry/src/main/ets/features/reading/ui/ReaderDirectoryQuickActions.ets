@@ -1,6 +1,6 @@
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 

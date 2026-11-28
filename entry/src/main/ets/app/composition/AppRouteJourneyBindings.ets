@@ -16,7 +16,7 @@ import {
 } from '../../features/manga/presentation/MangaPositionHydrator';
 import { MangaSourceLogin, type MangaSourceLoginScene } from '../../features/manga/presentation/MangaSourceLogin';
 import { FrameCallback } from '@kit.ArkUI';
-import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../ui/foundation/ReaderAppColors';
 import { BookshelfGroupPresentation } from '../../features/bookshelf/presentation/BookshelfGroupPresentation';
 import { LibrarySearchPresentation } from '../../features/search/presentation/LibrarySearchPresentation';
 import { ReaderRuntimeOwner } from '../ReaderRuntimeOwner';

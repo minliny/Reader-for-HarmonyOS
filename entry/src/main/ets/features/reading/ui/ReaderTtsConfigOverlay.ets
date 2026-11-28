@@ -16,7 +16,7 @@ import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView
 import { TYPE_READER_TTS_CHOICE_REGULAR, TYPE_READER_TTS_CHOICE_SELECTED, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_VOICE_REGULAR, TYPE_READER_TTS_VOICE_SELECTED } from '../../../ui/foundation/ReaderTypography';
 import { TYPE_READER_TTS_CONFIG_BUILD_LABEL, TYPE_READER_TTS_CONFIG_BUILD_STATUS, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE, TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS, TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE, type ReaderTextStyle } from '../../../ui/foundation/ReaderTypography';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { readerBeginTransition, readerTransitionFrameSamplingEnabled, readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_SURFACE_HINT, ReaderLayoutOverlayRoot }
   from '../../../ui/foundation/ReaderLayoutInvariantSignals';

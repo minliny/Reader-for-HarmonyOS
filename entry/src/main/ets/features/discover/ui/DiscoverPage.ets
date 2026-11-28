@@ -6,7 +6,7 @@ import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { TYPE_APP_SECTION_LABEL, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_LABEL, TYPE_DISCOVER_AUTHOR, TYPE_DISCOVER_CATEGORY, TYPE_DISCOVER_FILTER_LABEL, TYPE_DISCOVER_FILTER_VALUE, TYPE_DISCOVER_INTRO, TYPE_DISCOVER_RANK_TITLE, TYPE_DISCOVER_SOURCE_META, TYPE_DISCOVER_STATE_TITLE, TYPE_DISCOVER_STATUS } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { NoCoverCover } from '../../../ui/patterns/NoCoverCover';
 import { rememberBookCoverFailure } from '../../../app/library/BookCoverDisplay';
 import { BookCoverFailureCache } from '../../../app/library/BookCoverFailureCache';

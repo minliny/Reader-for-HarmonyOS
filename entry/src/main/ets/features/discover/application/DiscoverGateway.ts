@@ -1,5 +1,5 @@
 import type { JsonObject } from '@reader/core-harmony';
-import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
+import { currentRuntimeRequestPort, type ReaderRuntimeRequestPort } from '../../../app/ReaderRuntimePort';
 import { type ReaderSourceCategory } from '../../source/application/ReaderSourceCategory';
 
 export type DiscoverKind = {
@@ -30,9 +30,9 @@ export type DiscoverSource = {
  * Core resolves the pending http continuation before the promise settles).
  */
 export class DiscoverGateway {
-  private readonly runtimeOwner: ReaderRuntimeOwner;
+  private readonly runtimeOwner: ReaderRuntimeRequestPort;
 
-  constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
+  constructor(runtimeOwner: ReaderRuntimeRequestPort = currentRuntimeRequestPort()) {
     this.runtimeOwner = runtimeOwner;
   }
 

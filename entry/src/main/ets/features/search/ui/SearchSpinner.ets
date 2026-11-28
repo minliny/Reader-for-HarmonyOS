@@ -1,4 +1,4 @@
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 
 /** Restore the pre-repair platform LoadingProgress appearance and motion.
  * One retained component serves loading and streamed results; only native

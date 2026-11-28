@@ -1,5 +1,5 @@
 import { errorMessageOf } from '../../../app/ErrorMessage.ts';
-import type { LocalReadingToc, LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import type { LocalReadingToc, LocalReadingTocEntry } from './LocalReadingFlowTypes';
 import type { RemoteReadingSession } from './RemoteReadingFlowGateway';
 import { sameRemoteSessionEvidence } from './RemoteReadingEvidence.ts';
 import type { ReadingChapterWindow, ReadingSessionChapter } from './ReadingChapterWindow';

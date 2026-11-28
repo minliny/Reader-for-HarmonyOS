@@ -1,5 +1,5 @@
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { registerReaderFonts, prepareSourceSwitchNovelFonts, sourceSwitchNovelFontsReady } from '../../../ui/foundation/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';

@@ -1,4 +1,4 @@
-import type { LocalReadingAnchor, LocalReadingRetainedProgressReceipt, LocalReadingToc, LocalReadingTocEntry, LocalReadingLayout } from './LocalReadingFlowGateway';
+import type { LocalReadingAnchor, LocalReadingRetainedProgressReceipt, LocalReadingToc, LocalReadingTocEntry, LocalReadingLayout } from './LocalReadingFlowTypes';
 import type { ReaderDirectoryTargetProof } from './ReaderDirectoryTargetProof';
 
 /** Core-facing scalar facts only. SDK text/layout objects remain in the UI adapter. */

@@ -1,6 +1,6 @@
 import { BookRequestNotDispatchedError, type BookRequestOptions } from '../../../app/BookRequestScheduler';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
-import type { LocalReadingAnchor, LocalReadingLayout, LocalReadingProgress, LocalReadingProgressState } from './LocalReadingFlowGateway';
+import type { LocalReadingAnchor, LocalReadingLayout, LocalReadingProgress, LocalReadingProgressState } from './LocalReadingFlowTypes';
 import type { ReaderCoreErrorEvent } from '@reader/core-harmony';
 import type { ReadingProgressCheckpoint, ReadingProgressCheckpointIntent } from './ReadingProgressJournal';
 

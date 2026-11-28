@@ -2,7 +2,7 @@ import type { UIContext } from '@ohos.arkui.UIContext';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
-import type { LocalReadingToc, LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingToc, LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import { ReaderChineseConversionGateway, type ReaderChineseConversionMode } from '../application/ReaderChineseConversionGateway';
 import { ReadingAuxiliaryFlowBridge, type ReadingContentMutationGateway,
   type ReadingContentMutationPosition } from '../application/ReadingAuxiliaryFlowBridge';

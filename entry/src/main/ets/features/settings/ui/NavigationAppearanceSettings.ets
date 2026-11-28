@@ -7,7 +7,7 @@ import {
 } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { TYPE_SELECT_DEFAULT_VALUE } from '../../../ui/foundation/ReaderTypography';
 import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';

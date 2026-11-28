@@ -1,7 +1,7 @@
 import { MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 
 /** A brief footer revealed by an upward boundary pull.
  * The reading owner supplies release/preparation copy and the current theme. */

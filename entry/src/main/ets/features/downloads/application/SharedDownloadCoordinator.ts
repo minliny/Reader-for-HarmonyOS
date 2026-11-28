@@ -3,7 +3,7 @@ import type { ShelfBook } from '../../../app/ReaderCoreGateway';
 import type { ReadingGatewayRuntime } from '../../reading/application/ReadingGatewayRuntime';
 import { ReadingOfflineGateway, type ReadingOfflineProjectionFailureObserver,
   type ReadingOfflineProjectionFailureStage } from '../../reading/application/ReadingOfflineGateway';
-import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowTypes';
 import { RemoteReadingFlowGateway, type RemoteReadingSession, type RemoteReadingTocEntry } from '../../reading/application/RemoteReadingFlowGateway';
 import { MangaDownloadActionsGateway } from '../../manga/application/MangaDownloadActionsGateway';
 import { CacheClearOperationIntentStore } from '../../reading/application/ReadingOperationIntents';

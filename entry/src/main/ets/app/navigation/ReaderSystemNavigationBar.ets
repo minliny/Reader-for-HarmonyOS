@@ -2,7 +2,7 @@ import lazy { HdsTabs, hdsMaterial } from '@kit.UIDesignKit';
 import type { HdsTabsFloatingStyle } from '@kit.UIDesignKit';
 import { MAIN_TABS, readerMainTabIconResource, type MainTabDef } from './ReaderMainTabs';
 import type { ReaderNavigationAppearance, ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../HarmonyCapabilityPolicy';
-import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../ui/foundation/ReaderAppColors';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../../ui/surfaces/ReaderSurfaceMaterial';
 
 /** HDS renders the bounded navigation bar. The shell's routed page and its

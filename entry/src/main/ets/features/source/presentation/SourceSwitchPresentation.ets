@@ -5,7 +5,7 @@ import { acquisitionCandidateRank } from '../../../app/library/BookAcquisitionPr
 import { readBookAuthorIdentity } from '../../../app/library/BookAuthorMetadata';
 import { readBookSearchTiming } from '../../../app/library/BookSearchTiming';
 import type { SearchBook } from '../../search/application/SearchGateway';
-import { LOCAL_SOURCE_ID, type LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
+import { LOCAL_SOURCE_ID, type LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowTypes';
 import type { ReadingBookDetail } from '../../reading/presentation/ReadingBookDetail';
 import type { RemoteReadingBookSeed, RemoteReadingSession } from '../../reading/application/RemoteReadingFlowGateway';
 import type { ReadingEntryPresentation } from '../../reading/presentation/ReadingEntryPresentation';

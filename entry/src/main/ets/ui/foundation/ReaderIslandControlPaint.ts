@@ -1,4 +1,4 @@
-import type { ReaderAppColorRole } from './ReaderThemeRegistry.ts';
+import type { ReaderAppColorRole } from './ReaderAppColors.ts';
 
 export type ReaderIslandControlTone = 'normal' | 'selected' | 'stop' | 'marked';
 

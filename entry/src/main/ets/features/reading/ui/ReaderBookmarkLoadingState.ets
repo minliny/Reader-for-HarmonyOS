@@ -1,5 +1,5 @@
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 
 /**
  * Loading state for the bookmark tab: shown while the Core bookmark

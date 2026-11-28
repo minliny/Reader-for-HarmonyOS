@@ -15,7 +15,7 @@ import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface'
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
 import { ReaderBoundedSurfaceActions } from '../../../ui/surfaces/ReaderBoundedSurfaceActions';
 
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { FrameCallback } from '@kit.ArkUI';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,

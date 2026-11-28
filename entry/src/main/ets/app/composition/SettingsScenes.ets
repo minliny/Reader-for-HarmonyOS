@@ -7,7 +7,7 @@ import type { GeneralSettingsKey, SettingsSnapshot } from '../../features/settin
 import type { SettingsOperationProjection } from '../../features/settings/application/SettingsOrchestrator';
 import type { SettingsCacheCleanupSnapshot } from '../../features/settings/application/SettingsCacheCleanupOwner';
 import { SettingsPresentation, type SettingsRoute } from '../../features/settings/presentation/SettingsPresentation';
-import type { ReaderAppThemeMode } from '../../ui/foundation/ReaderThemeRegistry';
+import type { ReaderAppThemeMode } from '../../ui/foundation/ReaderAppColors';
 
 export type SettingsDestination = 'source' | 'rulesManagement' | 'sync' | 'bookshelfSettings' | 'downloads' | 'rss' | 'discover';
 

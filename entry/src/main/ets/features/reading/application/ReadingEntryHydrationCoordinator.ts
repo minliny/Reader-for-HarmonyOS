@@ -14,7 +14,7 @@ import { readingChapterLayoutMap, type ReadingSurfaceLayoutMap } from './Reading
 import { createRequestedRemoteReadingPositionContext, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration.ts';
 import type { ParagraphRange } from './ReadingMeasurementFacts';
 import type { ReadingParagraphBoundaryMode } from './ReadingParagraphProjection';
-import type { LocalReadingProgressState, LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import type { LocalReadingProgressState, LocalReadingTocEntry } from './LocalReadingFlowTypes';
 import type { ReadingEntrySnapshot } from './ReadingEntrySnapshot';
 import {
   loadInitialReading, restartPreparedReadingEntry, type InitialReadingSnapshot, type ReadingInitialChapterHost,

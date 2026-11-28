@@ -1,5 +1,5 @@
 import { ColorMetrics } from '@kit.ArkUI';
-import { readerAppColor } from './ReaderThemeRegistry';
+import { readerAppColor } from './ReaderAppColors';
 
 /** The theme's neutral ink overlay is composited above the current surface.
  * ArkUI owns press/release/cancel state; ColorMetrics owns alpha composition.

@@ -16,7 +16,7 @@ import { type SourceManagementScrollState } from '../presentation/SourceManageme
 import { type SourceV9Counts, type SourceV9ListAction, type SourceV9View } from '../presentation/SourceManagementV9';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import type { SourceManagementViewState, SourceToolsEntry } from '../presentation/SourceJourneyPresentation';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';

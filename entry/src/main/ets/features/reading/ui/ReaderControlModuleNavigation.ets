@@ -1,6 +1,6 @@
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { readerPressOpacity, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { TOK_BORDER_W, TOK_RADIUS_LG } from '../../../ui/foundation/ReaderTokens';
 import { TYPE_READER_CONTROL_SOURCE_ACTION, TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL } from '../../../ui/foundation/ReaderTypography';
 

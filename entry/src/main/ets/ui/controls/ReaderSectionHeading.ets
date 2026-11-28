@@ -1,4 +1,4 @@
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { TYPE_CARD_SECTION_HEADING, TYPE_SECTION_HEADING } from '../foundation/ReaderTypography';
 
 type ReaderSectionHeadingVariant = 'settings-section' | 'tool-card';

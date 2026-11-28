@@ -3,7 +3,7 @@ import {
 } from '../foundation/ReaderFontFamilies';
 import { prepareReaderFontFamily, readerFontFamilyReady } from '../foundation/ReaderFonts';
 import { TYPE_SHELF_COVER_PLACEHOLDER, TYPE_SHELF_SELECTION_AUTHOR_WIDE } from '../foundation/ReaderTypography';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import {
   computeNoCoverLayout,
   noCoverDisplayTitle,

@@ -1,4 +1,4 @@
-import type { LocalReadingDownloadState } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingDownloadState } from '../application/LocalReadingFlowTypes';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import type { ReaderReadingProgressHost } from './ReaderReadingProgressHost';
 import type { ReaderReadingMeasurementAdmissionHost } from './ReaderReadingMeasurementAdmissionHost';
@@ -62,7 +62,7 @@ import type { ReadingExitProgressCoordinator } from '../application/ReadingExitP
 import type { InitialReadingOpenRequest, InitialReadingSelection, InitialReadingSnapshot,
   ReadingInitialChapterHost } from '../application/ReadingInitialChapter';
 import { ReadingInteractiveChapterPreparation, type ReadingNearEndCatalogRequest } from '../application/ReadingInteractiveChapterPreparation';
-import type { LocalReadingProgressState, LocalReadingToc, LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingProgressState, LocalReadingToc, LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import { InitialReadingToc, type ParagraphRange } from '../application/ReadingMeasurementFacts';
 import { readingParagraphBoundaryMode, type ReadingParagraphBoundaryMode } from '../application/ReadingParagraphProjection';
 import type { ReadingPaginationKey, ReadingPaginationPrefixObservation } from '../application/ReadingPaginationIndex';

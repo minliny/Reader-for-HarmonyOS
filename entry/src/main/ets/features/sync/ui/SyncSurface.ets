@@ -1,7 +1,7 @@
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerEmptyPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { SyncPage } from './SyncPage';
 import { SyncPresentation } from '../presentation/SyncPresentation';
 import { TYPE_APP_ROW_DETAIL } from '../../../ui/foundation/ReaderTypography';

@@ -12,7 +12,7 @@ import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import {

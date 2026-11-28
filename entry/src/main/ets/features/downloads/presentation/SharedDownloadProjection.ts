@@ -1,5 +1,5 @@
 import type { ShelfBook, ShelfReadingPosition } from '../../../app/ReaderCoreGateway';
-import type { LocalReadingDownloadState } from '../../reading/application/LocalReadingFlowGateway';
+import type { LocalReadingDownloadState } from '../../reading/application/LocalReadingFlowTypes';
 import type { SharedDownloadExpectedChapter } from '../application/SharedDownloadCoordinator';
 
 export type DownloadContentKind = 'novel' | 'manga';

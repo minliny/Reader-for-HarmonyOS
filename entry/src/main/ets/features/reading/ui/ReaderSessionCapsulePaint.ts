@@ -1,4 +1,4 @@
-import { readerAppColor, type ReaderAppColorRole } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor, type ReaderAppColorRole } from '../../../ui/foundation/ReaderAppColors';
 
 type ReaderSessionCapsuleColor = 'surface' | 'border' | 'ink' | 'primary' | 'onPrimary';
 

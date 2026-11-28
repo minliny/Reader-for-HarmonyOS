@@ -1,6 +1,6 @@
 import { ReaderDirectoryRecoverySurface } from '../../reading/ui/ReaderDirectoryRecoverySurface';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';

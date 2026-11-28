@@ -1,5 +1,5 @@
 import type { ReadingSessionChapter } from '../application/ReadingChapterWindow';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 
 /** Bounded display text supplied by the current book's admitted adjacent chapter. */
 export class ReaderFacingChapter {

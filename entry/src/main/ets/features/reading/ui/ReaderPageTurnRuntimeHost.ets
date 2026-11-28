@@ -14,7 +14,7 @@ import type { ReadingPaginationKey } from '../application/ReadingPaginationIndex
 import type { ReaderPreparedPageSettlement } from '../application/ReaderPreparedPageSettlement';
 import type { ReadingSessionFlowGateway } from '../application/ReadingSessionFlowGateway';
 import type { ReadingSurfaceLayoutMap } from '../application/ReadingSurfaceLayoutMap';
-import type { LocalReadingProgress } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingProgress } from '../application/LocalReadingFlowTypes';
 import type { ReaderDeferredChapterSelection } from '../presentation/ReaderChapterSelectionOwner';
 import type { ReaderAutomaticPageStart, ReaderMaterializedChapterContext,
   PreparedReaderPageTurn } from '../presentation/ReaderPagePresentationModels';

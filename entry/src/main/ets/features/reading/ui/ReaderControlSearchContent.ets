@@ -15,7 +15,7 @@ import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { TYPE_READER_SNIPPET_INLINE_MATCH, TYPE_READER_SNIPPET_INLINE_REGULAR, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_SEARCH_FIELD_ACTION } from '../../../ui/foundation/ReaderTypography';
 
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,
   readerControlMotionVisibleRect, type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';

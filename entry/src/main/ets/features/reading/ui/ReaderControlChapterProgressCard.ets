@@ -2,7 +2,7 @@ import { ReaderAccessibilityActions, type ReaderAccessibleAction } from '../../.
 import { ReaderPaperMaterial } from '../../../ui/foundation/ReaderPaperMaterial';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import { readerPressOpacity, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { TYPE_READER_CONTROL_CHAPTER_TITLE, TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL,
   TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL } from '../../../ui/foundation/ReaderTypography';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';

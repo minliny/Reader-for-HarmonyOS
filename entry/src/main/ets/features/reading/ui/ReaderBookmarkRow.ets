@@ -1,6 +1,6 @@
 import { TYPE_READER_BOOKMARK_CHAPTER, TYPE_READER_BOOKMARK_EXCERPT, TYPE_READER_BOOKMARK_EXCERPT_LEGACY, TYPE_READER_BOOKMARK_META, TYPE_READER_BOOKMARK_PENDING, TYPE_READER_BOOKMARK_PENDING_LEGACY } from '../../../ui/foundation/ReaderTypography';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import type { ReaderBookmarkRowModel } from '../presentation/ReaderBookmarkProjection';
 import { sampleReaderControlBookmark, type ReaderControlBookmarkFrame,

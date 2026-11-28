@@ -1,4 +1,5 @@
 import { registerRuntimeOwnerAccessors } from './ReaderRuntimeIdentity';
+import { registerRuntimeRequestPort, type ReaderRuntimeRequestPort } from './ReaderRuntimePort';
 import { ReaderRuntimeImageResources, type MangaImagePriority } from './ReaderRuntimeImageResources';
 import { ReaderBundledBookSourceInstaller, type BundledSourceInstallSummary } from './ReaderBundledBookSourceInstaller';
 import { requireStorageProbeIdentity, requireCoreBuildIdentity, requireCoreStorageFormat,
@@ -87,7 +88,7 @@ export type ReaderLegacySnapshotRecovery = 'none' | 'unsupportedStorageFormat' |
  * Owns the one and only native Core runtime for the full application process.
  * Pages receive page state through gateways and never create or parse Core.
  */
-export class ReaderRuntimeOwner {
+export class ReaderRuntimeOwner implements ReaderRuntimeRequestPort {
   private static instance: ReaderRuntimeOwner | undefined = undefined;
 
   private readonly host: ReaderHostRegistry;
@@ -1404,3 +1405,4 @@ registerRuntimeOwnerAccessors(
   (): ReaderRuntimeOwner => ReaderRuntimeOwner.current(),
   (candidate: object): boolean => ReaderRuntimeOwner.isCurrent(candidate as ReaderRuntimeOwner),
 );
+registerRuntimeRequestPort((): ReaderRuntimeRequestPort => ReaderRuntimeOwner.current());

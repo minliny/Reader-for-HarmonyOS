@@ -1,5 +1,5 @@
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { READER_LAYOUT_SURFACE_HINT, ReaderLayoutOverlayRoot } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantSurfaceHint } from '../../../ui/layout/LayoutInvariantNativeAudit';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';

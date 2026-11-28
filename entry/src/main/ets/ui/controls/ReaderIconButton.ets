@@ -1,6 +1,6 @@
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../foundation/ReaderPressMotion';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { readerActionTouchRegion } from './ReaderActionAccessibility';
 import { ReaderIconButtonSpecId, resolveReaderIconButtonSpec } from './ReaderControlSpecs';
 

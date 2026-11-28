@@ -3,7 +3,7 @@ import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale } from './MangaDirectoryVisual';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
-import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowTypes';
 import { ReaderDirectoryList } from '../../reading/ui/ReaderDirectoryList';
 import { projectReaderDirectoryEntries } from '../../reading/presentation/ReaderDirectoryProjection';
 import { sameReaderDirectoryData, snapshotReaderDirectoryData } from '../../reading/presentation/ReaderDirectoryDataSnapshot';

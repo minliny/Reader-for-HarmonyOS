@@ -1,5 +1,5 @@
 import type { JsonObject } from '@reader/core-harmony';
-import type { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
+import type { ReaderRuntimeRequestPort } from '../../../app/ReaderRuntimePort';
 
 /** Read-only, exact-identity Core projection. No source/network acquisition. */
 export interface BookAcquisitionDetailFacts {
@@ -55,9 +55,9 @@ function flag(row: JsonObject, field: string): boolean | undefined {
 
 /** This gateway supplies typed cache data, never an inferred write receipt. */
 export class BookAcquisitionProjectionGateway {
-  private readonly owner: ReaderRuntimeOwner;
+  private readonly owner: ReaderRuntimeRequestPort;
 
-  constructor(owner: ReaderRuntimeOwner) { this.owner = owner; }
+  constructor(owner: ReaderRuntimeRequestPort) { this.owner = owner; }
 
   async load(sourceId: string, bookId: string,
     isCurrent: () => boolean): Promise<BookAcquisitionDetailProjection | undefined> {

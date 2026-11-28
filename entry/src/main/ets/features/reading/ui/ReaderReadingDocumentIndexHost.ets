@@ -1,5 +1,5 @@
 import type { ReaderAppearanceSnapshot } from '../application/ReaderAppearanceState';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { ReadingChapterWindow } from '../application/ReadingChapterWindow';
 import { createCoreReadingLayout, type CoreReadingLayout } from '../application/ReadingMeasurementFacts';
 import type { ReadingPaginationKey } from '../application/ReadingPaginationIndex';

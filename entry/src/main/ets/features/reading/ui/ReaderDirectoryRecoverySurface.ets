@@ -3,7 +3,7 @@ import { ReaderRecoveryGroup } from '../../../ui/feedback/ReaderRecoveryGroup';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery, type ReadingDirectoryMessageKind, type ReadingDirectoryRecoveryAction } from '../presentation/ReadingDirectoryRecovery';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 

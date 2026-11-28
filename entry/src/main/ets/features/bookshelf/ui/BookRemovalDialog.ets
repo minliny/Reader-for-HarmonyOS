@@ -3,7 +3,7 @@ import { ReaderLayoutOverlayRoot } from '../../../ui/foundation/ReaderLayoutInva
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderDialogSurface, DialogActionView } from '../../../ui/surfaces/ReaderDialogSurface';
 import { resolveDialogSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';

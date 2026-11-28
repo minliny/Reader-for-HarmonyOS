@@ -25,7 +25,7 @@ import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView
 import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../../ui/platform/ReaderNativeAlertOwner';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import {

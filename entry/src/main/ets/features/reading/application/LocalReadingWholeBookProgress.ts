@@ -2,7 +2,7 @@ import type {
   LocalReadingChapterContentMetric,
   LocalReadingContentMetrics,
   LocalReadingTocEntry,
-} from './LocalReadingFlowGateway';
+} from './LocalReadingFlowTypes';
 
 export type LocalReadingWholeBookAnchor = {
   chapterIndex: number;

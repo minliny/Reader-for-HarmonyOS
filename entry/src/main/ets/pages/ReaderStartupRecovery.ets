@@ -1,7 +1,7 @@
 import { ReaderStartupContentOwner, ReaderStartupContentState } from '../app/ReaderStartupContentOwner';
 import { ReaderPageState } from '../ui/feedback/ReaderPageState';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
-import { readerAppColor } from '../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../ui/foundation/ReaderAppColors';
 
 /** Minimal host when Index itself cannot be mounted. It uses the existing
  * error typography/action family and never reads or resets user data. */

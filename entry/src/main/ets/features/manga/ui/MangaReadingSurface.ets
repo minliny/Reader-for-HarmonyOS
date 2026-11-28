@@ -20,7 +20,7 @@ import { MangaSessionGateway } from '../application/MangaSessionGateway';
 import type { MangaChapterResult } from '../application/MangaContract';
 import { MangaSessionController } from '../application/MangaSessionController';
 import { MangaStripRow } from './MangaStripProjection';
-import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowTypes';
 import { MangaBookPresentation } from '../presentation/MangaBookPresentation';
 import type { MangaDownloadAction, MangaDownloadActionId } from '../application/MangaDownloadActionsGateway';
 import { type ActionSheetSpecId } from '../../../ui/surfaces/ReaderSurfaceSpecs';

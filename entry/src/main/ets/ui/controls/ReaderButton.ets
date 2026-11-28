@@ -4,7 +4,7 @@ import { readerSearchActionWidth, readerSearchControlHeight, readerSearchHistory
   SEARCH_CONTROL_MIN_TARGET, SEARCH_HISTORY_GAP } from '../foundation/ReaderSearchControlGeometry';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../foundation/ReaderPressMotion';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { TOK_BORDER_W, TOK_SPACE_XS } from '../foundation/ReaderTokens';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
 import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_SEGMENT_LABEL } from '../foundation/ReaderTypography';

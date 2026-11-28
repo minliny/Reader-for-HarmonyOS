@@ -2,7 +2,7 @@ import { readerPaperActionIcon } from '../foundation/ReaderActionIconResources';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
 import { TYPE_SOURCE_SWITCH_HEADING, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_FILE_IMPORT_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE } from '../foundation/ReaderTypography';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { SheetSurfaceSpec, DrawerSurfaceSpec, resolveSheetSpec, resolveDrawerSpec } from './ReaderSurfaceSpecs';
 import type { ReaderBoundedSurfaceId } from './ReaderBoundedSurface';

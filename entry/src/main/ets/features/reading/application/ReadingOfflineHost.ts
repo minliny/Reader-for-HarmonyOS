@@ -3,7 +3,7 @@ import type { RemoteReadingIdentity } from './RemoteReadingContract';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../../app/ReaderPersistedReceiptProjection';
-import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import type { LocalReadingTocEntry } from './LocalReadingFlowTypes';
 import { ReadingOfflineGateway, type ReadingOfflineBookProgress } from './ReadingOfflineGateway';
 import type { RemoteReadingSession } from './RemoteReadingFlowGateway';
 import { MangaDownloadActionsGateway, type MangaDownloadAction, type MangaDownloadActionId,

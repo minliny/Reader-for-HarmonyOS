@@ -1,5 +1,5 @@
 import { TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';

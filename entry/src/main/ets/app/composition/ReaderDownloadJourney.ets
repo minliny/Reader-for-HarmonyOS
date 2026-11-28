@@ -3,7 +3,7 @@ import type { ReaderRuntimeOwner } from '../ReaderRuntimeOwner';
 import type { DetailReturnRoute, ReaderNavigation, ReaderNavigationSnapshot, ReaderReturnContext } from '../navigation/ReaderNavigation';
 import { downloadBookFromReadingDetail, remoteReadingSeedForShelf } from '../../features/reading/presentation/ReadingBookDetail';
 import { readingEntrySeedForContentKind } from '../../features/reading/presentation/ReadingEntryDto';
-import { LOCAL_SOURCE_ID } from '../../features/reading/application/LocalReadingFlowGateway';
+import { LOCAL_SOURCE_ID } from '../../features/reading/application/LocalReadingFlowTypes';
 import type { RemoteReadingBookSeed } from '../../features/reading/application/RemoteReadingFlowGateway';
 import type { ReadingEntryPresentation } from '../../features/reading/presentation/ReadingEntryPresentation';
 import type { DownloadReadingEntry, SharedDownloadPresentation } from '../../features/downloads/presentation/SharedDownloadPresentation';

@@ -12,8 +12,8 @@ import { mangaDirectoryPresentation } from '../../manga/presentation/MangaDirect
 import { TYPE_READER_DIRECTORY_CURRENT_CAPTION, TYPE_READER_DIRECTORY_COLLAPSE, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_HEADING, TYPE_READER_DIRECTORY_POSITION_INTER, TYPE_READER_DIRECTORY_TAB, TYPE_SEARCH_DIRECTORY_INPUT } from '../../../ui/foundation/ReaderTypography';
 import { readerDirectoryScopeKey } from '../application/ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import { readerAppColor } from '../../../ui/foundation/ReaderAppColors';
+import type { LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
 import {
   TOK_SPACE_CONTROL_INLINE,

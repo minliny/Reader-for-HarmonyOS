@@ -3,7 +3,7 @@ import { ReaderDirectoryJumpProof } from '../application/ReaderDirectoryJumpProo
 import type { UIContext } from '@ohos.arkui.UIContext';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
-import type { LocalReadingContentMetrics, LocalReadingDownloadState, LocalReadingProgressState, LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingContentMetrics, LocalReadingDownloadState, LocalReadingProgressState, LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import { LocalReadingContentMetricIndex, validateContentMetricsAgainstToc } from '../application/LocalReadingWholeBookProgress';
 import { readMeasuredParagraphWindow, type ReadingChapterMeasurementProjection } from '../application/ReadingChapterMeasurementPreparation';
 import { prepareReadingChapterOpening, type ReadingChapterPositionUpdate } from '../application/ReadingChapterOpening';

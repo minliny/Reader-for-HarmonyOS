@@ -53,14 +53,29 @@ const readerKeys=['paperStart','paperEnd','ink','chromeMeta','statusBackground',
 for(const id of ids){const v=registry.reader[id];if(!schemes.includes(v.scheme)||!v.provenance)throw Error('READER_THEME_INVALID '+id); for(const role of readerKeys)argb(v.roles[role]);}
 if(!ids.includes('day')||!ids.includes('night'))throw Error('DEFAULT_THEME_MISSING');
 const header=`// Generated from Reader-UI/theme/registry.json. Do not edit.\n// SHA256 ${crypto.createHash('sha256').update(raw).digest('hex')}\n`;
-let code=header+`export type ReaderThemeScheme = 'day' | 'night';\nexport type ReaderAppThemeMode = ReaderThemeScheme | 'system';\nexport type ReaderThemeId = ${ids.map(JSON.stringify).join(' | ')};\nexport type ReaderAppColorRole = ${appRoles.map(JSON.stringify).join(' | ')};\n\n`;
-code+=`const DAY: Record<ReaderAppColorRole, string> = ${JSON.stringify(Object.fromEntries(appRoles.map(k=>[k,argb(registry.appRoles[k].day)])),null,2)};\n`;
-code+=`const NIGHT: Record<ReaderAppColorRole, string> = ${JSON.stringify(Object.fromEntries(appRoles.map(k=>[k,argb(registry.appRoles[k].night)])),null,2)};\n`;
-code+=`export function readerAppColor(role: ReaderAppColorRole, scheme: string): string {\n  return scheme === 'night' ? NIGHT[role] : DAY[role];\n}\n`;
-code+=`export interface ReaderThemeDefinition {\n  id: ReaderThemeId; scheme: ReaderThemeScheme; order: number; displayName: string;\n  paperStart: string; paperEnd: string; ink: string; chromeMeta: string;\n  statusBackground: string; statusForeground: string; swatch: string; selection: string; paperBack: string; turnShadow: string;\n  paperTexture: boolean; sourcePaperLighting: boolean;\n}\n`;
-code+=`export const READER_THEME_DEFINITIONS: ReaderThemeDefinition[] = ${JSON.stringify(ids.map(id=>{const d=registry.reader[id];return {id,scheme:d.scheme,order:d.order,displayName:d.displayName,...Object.fromEntries(readerKeys.map(k=>[k,argb(d.roles[k])])),...d.effects}}),null,2)};\n`;
-code+=`export function findReaderTheme(id: string): ReaderThemeDefinition | undefined {\n  return READER_THEME_DEFINITIONS.find((theme: ReaderThemeDefinition): boolean => theme.id === id);\n}\nexport function readerThemeDefinition(id: string): ReaderThemeDefinition {\n  return findReaderTheme(id) ?? READER_THEME_DEFINITIONS[0];\n}\n`;
-const outputs=[path.join(root,'Reader-for-HarmonyOS/entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts'),path.join(root,'Reader-UI/theme/ReaderThemeRegistry.ts')];
+const colorsDecls=`export type ReaderThemeScheme = 'day' | 'night';\nexport type ReaderAppThemeMode = ReaderThemeScheme | 'system';\nexport type ReaderAppColorRole = ${appRoles.map(JSON.stringify).join(' | ')};\n\n`+
+  `const DAY: Record<ReaderAppColorRole, string> = ${JSON.stringify(Object.fromEntries(appRoles.map(k=>[k,argb(registry.appRoles[k].day)])),null,2)};\n`+
+  `const NIGHT: Record<ReaderAppColorRole, string> = ${JSON.stringify(Object.fromEntries(appRoles.map(k=>[k,argb(registry.appRoles[k].night)])),null,2)};\n`+
+  `export function readerAppColor(role: ReaderAppColorRole, scheme: string): string {\n  return scheme === 'night' ? NIGHT[role] : DAY[role];\n}\n`;
+const registryBody=`export type ReaderThemeId = ${ids.map(JSON.stringify).join(' | ')};\n`+
+  `export interface ReaderThemeDefinition {\n  id: ReaderThemeId; scheme: ReaderThemeScheme; order: number; displayName: string;\n  paperStart: string; paperEnd: string; ink: string; chromeMeta: string;\n  statusBackground: string; statusForeground: string; swatch: string; selection: string; paperBack: string; turnShadow: string;\n  paperTexture: boolean; sourcePaperLighting: boolean;\n}\n`+
+  `export const READER_THEME_DEFINITIONS: ReaderThemeDefinition[] = ${JSON.stringify(ids.map(id=>{const d=registry.reader[id];return {id,scheme:d.scheme,order:d.order,displayName:d.displayName,...Object.fromEntries(readerKeys.map(k=>[k,argb(d.roles[k])])),...d.effects}}),null,2)};\n`+
+  `export function findReaderTheme(id: string): ReaderThemeDefinition | undefined {\n  return READER_THEME_DEFINITIONS.find((theme: ReaderThemeDefinition): boolean => theme.id === id);\n}\nexport function readerThemeDefinition(id: string): ReaderThemeDefinition {\n  return findReaderTheme(id) ?? READER_THEME_DEFINITIONS[0];\n}\n`;
+const harmonyColorsCode=header+colorsDecls;
+const harmonyRegistryCode=header+
+  `import { readerAppColor, type ReaderThemeScheme, type ReaderAppThemeMode, type ReaderAppColorRole } from './ReaderAppColors.ts';\n`+
+  `export { readerAppColor, type ReaderThemeScheme, type ReaderAppThemeMode, type ReaderAppColorRole };\n`+
+  registryBody;
+const uiRegistryCode=header+`export type ReaderThemeScheme = 'day' | 'night';\nexport type ReaderAppThemeMode = ReaderThemeScheme | 'system';\nexport type ReaderThemeId = ${ids.map(JSON.stringify).join(' | ')};\nexport type ReaderAppColorRole = ${appRoles.map(JSON.stringify).join(' | ')};\n\n`+
+  `const DAY: Record<ReaderAppColorRole, string> = ${JSON.stringify(Object.fromEntries(appRoles.map(k=>[k,argb(registry.appRoles[k].day)])),null,2)};\n`+
+  `const NIGHT: Record<ReaderAppColorRole, string> = ${JSON.stringify(Object.fromEntries(appRoles.map(k=>[k,argb(registry.appRoles[k].night)])),null,2)};\n`+
+  `export function readerAppColor(role: ReaderAppColorRole, scheme: string): string {\n  return scheme === 'night' ? NIGHT[role] : DAY[role];\n}\n`+
+  `export interface ReaderThemeDefinition {\n  id: ReaderThemeId; scheme: ReaderThemeScheme; order: number; displayName: string;\n  paperStart: string; paperEnd: string; ink: string; chromeMeta: string;\n  statusBackground: string; statusForeground: string; swatch: string; selection: string; paperBack: string; turnShadow: string;\n  paperTexture: boolean; sourcePaperLighting: boolean;\n}\n`+
+  `export const READER_THEME_DEFINITIONS: ReaderThemeDefinition[] = ${JSON.stringify(ids.map(id=>{const d=registry.reader[id];return {id,scheme:d.scheme,order:d.order,displayName:d.displayName,...Object.fromEntries(readerKeys.map(k=>[k,argb(d.roles[k])])),...d.effects}}),null,2)};\n`+
+  `export function findReaderTheme(id: string): ReaderThemeDefinition | undefined {\n  return READER_THEME_DEFINITIONS.find((theme: ReaderThemeDefinition): boolean => theme.id === id);\n}\nexport function readerThemeDefinition(id: string): ReaderThemeDefinition {\n  return findReaderTheme(id) ?? READER_THEME_DEFINITIONS[0];\n}\n`;
+const harmonyColorsOutput=path.join(root,'Reader-for-HarmonyOS/entry/src/main/ets/ui/foundation/ReaderAppColors.ts');
+const harmonyRegistryOutput=path.join(root,'Reader-for-HarmonyOS/entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const uiRegistryOutput=path.join(root,'Reader-UI/theme/ReaderThemeRegistry.ts');
 
 const selectionSource=fs.readFileSync(path.join(root,'Reader-UI/theme/ReaderThemeSelection.ts'),'utf8');
 const selectionOutput=path.join(root,'Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderThemeSelection.ts');
@@ -69,11 +84,15 @@ if(!selectionSource.includes(canonicalSelectionImport))throw Error('THEME_SELECT
 const selectionCode='// Generated copy of Reader-UI/theme/ReaderThemeSelection.ts. Do not edit.\n'+
   selectionSource.replace(canonicalSelectionImport,"from '../ui/foundation/ReaderThemeRegistry.ts';");
 if (check) {
-  for (const out of outputs) if (fs.readFileSync(out, 'utf8') !== code) throw Error('THEME_ADAPTER_STALE ' + out);
+  if (fs.readFileSync(harmonyColorsOutput, 'utf8') !== harmonyColorsCode) throw Error('THEME_ADAPTER_STALE ' + harmonyColorsOutput);
+  if (fs.readFileSync(harmonyRegistryOutput, 'utf8') !== harmonyRegistryCode) throw Error('THEME_ADAPTER_STALE ' + harmonyRegistryOutput);
+  if (fs.readFileSync(uiRegistryOutput, 'utf8') !== uiRegistryCode) throw Error('THEME_ADAPTER_STALE ' + uiRegistryOutput);
   if (fs.readFileSync(selectionOutput, 'utf8') !== selectionCode) throw Error('THEME_SELECTION_ADAPTER_STALE');
 } else {
   if (changedAliases.length > 0) fs.writeFileSync(source, raw);
-  for (const out of outputs) fs.writeFileSync(out, code);
+  fs.writeFileSync(harmonyColorsOutput, harmonyColorsCode);
+  fs.writeFileSync(harmonyRegistryOutput, harmonyRegistryCode);
+  fs.writeFileSync(uiRegistryOutput, uiRegistryCode);
   fs.writeFileSync(selectionOutput, selectionCode);
 }
 console.log(`Theme registry: ${appRoles.length} complete App roles × 2; ${ids.length} Reader palettes; canonical hash verified.`);

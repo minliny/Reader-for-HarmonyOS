@@ -6,7 +6,7 @@ import { motionAnimateParam, readerMotionStandardCurve } from '../../../ui/found
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerTransitionFrameSamplingEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { readerAppColor, readerThemeDefinition, type ReaderThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
-import type { LocalReadingBookmark, LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
+import type { LocalReadingBookmark, LocalReadingTocEntry } from '../application/LocalReadingFlowTypes';
 import type { ReaderAppearanceTheme } from '../application/ReaderAppearanceState';
 import type { ReaderSettingsSnapshot } from '../application/ReaderSettingsState';
 import type { ReadingSessionChapter } from '../application/ReadingChapterWindow';

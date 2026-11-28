@@ -177,7 +177,7 @@ import {
   type LocalReadingProgress,
   type LocalReadingProgressState,
   type LocalReadingTocEntry,
-} from '../application/LocalReadingFlowGateway';
+} from '../application/LocalReadingFlowTypes';
 import { ReadingSessionFlowGateway, type ReadingSessionCommittedProgress } from '../application/ReadingSessionFlowGateway';
 import type { ReadingEntrySnapshot } from '../application/ReadingEntryPreparation';
 import { type RemoteReadingFailureKind } from '../application/RemoteContentAdmission';

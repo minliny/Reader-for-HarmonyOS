@@ -1,5 +1,5 @@
 import { TOK_RADIUS_LG } from '../foundation/ReaderTokens';
-import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
+import type { ReaderAppColorRole } from '../foundation/ReaderAppColors';
 import type { ReaderSurfaceElevationKind } from './ReaderSurfaceSpecs';
 import { TOK_BORDER_W, TOK_CONTENT_MAX_W_TABLET, TOK_RADIUS_MD, TOK_SPACE_MD, TOK_SPACE_SM, TOK_SPACE_XS } from '../foundation/ReaderTokens';
 

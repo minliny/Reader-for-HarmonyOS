@@ -4,8 +4,8 @@ import { READER_LAYOUT_CLOSE_CONTROL, READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_S
 import type { LayoutInvariantSurfaceHint } from '../layout/LayoutInvariantNativeAudit';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../layout/SurfaceHorizontalGeometry';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../foundation/ReaderAppColors';
+import type { ReaderAppColorRole } from '../foundation/ReaderAppColors';
 import { readerPaperActionIcon } from '../foundation/ReaderActionIconResources';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerMotionAnimateParam } from '../foundation/ReaderMotionPolicy';

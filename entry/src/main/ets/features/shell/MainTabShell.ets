@@ -10,7 +10,7 @@ import { readerFloatingTabOccupiedHeight } from '../../ui/layout/ReaderFloatingB
 import { readerWindowMetrics } from '../../ui/foundation/ReaderWindowEnvironment';
 import { readerPresentedHeaderBottom, type ReaderStandardPageVariant } from '../../ui/layout/ReaderPageShell';
 import { ReaderFrameStyle, readerFrameStyle } from '../../ui/layout/ReaderFrameStyle';
-import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor } from '../../ui/foundation/ReaderAppColors';
 
 export type MainTabHeaderKind = 'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader';
 
