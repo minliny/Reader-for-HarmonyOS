@@ -7,7 +7,7 @@ import { readerLibraryHeaderContentHeight } from '../../entry/src/main/ets/ui/fo
 import { readerCompactSearchHeight, readerSearchActionWidth, readerSearchControlHeight,
   readerSearchControlVisualHeight, SEARCH_CAPSULE_EMPTY_CHROME, SEARCH_CAPSULE_HEIGHT }
   from '../../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts';
-import { projectSearchHistoryPanel, SearchHistoryGeometry }
+import { projectSearchHistoryPanel, SearchHistoryGeometry, SearchHistoryViewport }
   from '../../entry/src/main/ets/features/search/ui/SearchHistoryGeometry.ts';
 
 test('at standard text size both enclosing borders count towards the authored shelf height', () => {
@@ -52,7 +52,7 @@ test('shelf search wraps its action only when the compact query prompt no longer
   assert.deepEqual(resolveSearchHeaderField(compactLane, readerSearchActionWidth(false, 2),
     SEARCH_CAPSULE_EMPTY_CHROME, 28), { width: 230, stacked: true, shortPlaceholder: true });
   assert.deepEqual(resolveSearchHeaderField(340, readerSearchActionWidth(false, 2),
-    SEARCH_CAPSULE_EMPTY_CHROME, 28), { width: 250, stacked: false, shortPlaceholder: true });
+    SEARCH_CAPSULE_EMPTY_CHROME, 28), { width: 250, stacked: false, shortPlaceholder: false });
 });
 
 test('compact search border boxes grow only as needed for the full scaled line', () => {
@@ -63,30 +63,34 @@ test('compact search border boxes grow only as needed for the full scaled line',
   assert.equal(readerCompactSearchHeight(40, 18, 2), 40);
 });
 
-test('search history keeps its compact heading and spacing at both font scales', () => {
-  for (const [scale, headingHeight, fixedHeight] of [[1, 24, 60], [2, 48, 84]]) {
+test('search history keeps its compact heading, row height and spacing at both font scales', () => {
+  for (const [scale, headingHeight, fixedHeight, rowHeight] of [[1, 24, 54, 40], [2, 48, 78, 58]]) {
     const layout = new SearchHistoryGeometry(286, fixedHeight, scale, false);
     assert.equal(layout.headingHeight, headingHeight);
+    assert.equal(layout.rowHeight, rowHeight);
     assert.equal(layout.topInset, 12);
-    assert.equal(layout.headingGap, 10);
-    assert.equal(layout.bottomInset, 14);
+    assert.equal(layout.headingGap, 6);
+    assert.equal(layout.bottomInset, 12);
     assert.equal(layout.fixedHeight(), fixedHeight);
     assert.equal(new SearchHistoryGeometry(286, fixedHeight - 1, scale, false).headingVisible, false);
   }
 });
 
-test('overflowing history budgets the compact footer and keeps a complete folded row pair', () => {
-  const keywords = ['first', 'second', 'third'];
-  const fit = projectSearchHistoryPanel(keywords, new SearchHistoryGeometry(286, 166, 1, false),
-    false, () => 240);
-  assert.equal(fit.rows.length, 2);
-  assert.equal(fit.bodyViewport, 72);
-  assert.equal(fit.toggleInHeading, false);
-  assert.equal(fit.height, 166);
+test('search history admits up to 6 rows without scrolling and clamps safely when viewport shrinks', () => {
+  const keywords = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+  const full = projectSearchHistoryPanel(keywords, new SearchHistoryGeometry(336, 385, 1, false));
+  assert.deepEqual(full.items, ['one', 'two', 'three', 'four', 'five', 'six']);
+  assert.equal(full.height, 294);
 
-  const tight = projectSearchHistoryPanel(keywords, new SearchHistoryGeometry(286, 165, 1, false),
-    false, () => 240);
-  assert.equal(tight.rows.length, 2);
-  assert.equal(tight.toggleInHeading, true);
-  assert.equal(tight.height, 132);
+  const unbounded = projectSearchHistoryPanel(keywords, new SearchHistoryGeometry(336, 385, 1, false), true);
+  assert.deepEqual(unbounded.items, keywords);
+  assert.equal(unbounded.height, 374);
+
+  const tight = projectSearchHistoryPanel(keywords, new SearchHistoryGeometry(336, 200, 1, false));
+  assert.deepEqual(tight.items, ['one', 'two', 'three']);
+  assert.equal(tight.height, 174);
+
+  const viewport = new SearchHistoryViewport(full.height, 98, 483, 280, 120);
+  assert.equal(viewport.height, 294);
+  assert.equal(viewport.suppressContinueCard, false);
 });

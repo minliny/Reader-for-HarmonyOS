@@ -1920,7 +1920,7 @@
       "member": "configNotice",
       "family": "shared.recovery-notice",
       "category": "WebDAV 原配置保存待续办",
-      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板及原安全存储配置操作。",
+      "effectiveHost": "L0 设置「备份与恢复」页及扩展备份与同步页的 WebDAV 面板及原安全存储配置操作。",
       "retireRule": "以确切写入 UUID 续办。缺安全暂存时只接受哈希匹配的原配置。",
       "status": "registered-source-entry"
     },
@@ -1976,7 +1976,7 @@
       "member": "pendingNotice",
       "family": "shared.recovery-notice",
       "category": "原 WebDAV 发布待核对或已核对后的本机暂存待清理",
-      "effectiveHost": "当前扩展备份与同步页的 WebDAV 备份面板和安全配置代次，原包日志仍存在。",
+      "effectiveHost": "L0 设置「备份与恢复」页及扩展备份与同步页的 WebDAV 备份面板和安全配置代次，原包日志仍存在。",
       "retireRule": "核对只继续同一密文。读回确认后持久确认清理状态，本机清理成功才移除日志。配置或页面退役后拒绝旧按钮。",
       "status": "registered-source-entry"
     },
@@ -1987,7 +1987,7 @@
       "member": "localJournalNotice",
       "family": "shared.recovery-notice",
       "category": "WebDAV 本机备份或删除日志暂不可读",
-      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板及其保存配置代次。只阻塞依赖该日志的写操作。",
+      "effectiveHost": "L0 设置「备份与恢复」页及扩展备份与同步页的 WebDAV 面板及其保存配置代次。只阻塞依赖该日志的写操作。",
       "retireRule": "仅在当前面板代次重读原日志，由网关校验，保留已有日志。远端备份读取和恢复独立。",
       "status": "registered-source-entry"
     },
@@ -1998,7 +1998,7 @@
       "member": "localCleanupNotice",
       "family": "shared.recovery-notice",
       "category": "WebDAV 本机暂存清理失败",
-      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板与保存配置代次。暂存清理结果独立于配置读取。",
+      "effectiveHost": "L0 设置「备份与恢复」页及扩展备份与同步页的 WebDAV 面板与保存配置代次。暂存清理结果独立于配置读取。",
       "retireRule": "绑定面板打开代次及当前已提交配置。远端读取不取消本机清理，退页或配置变化停止旧回调。重试只处理已退役配置的本机暂存。",
       "status": "registered-source-entry"
     },
@@ -2009,7 +2009,7 @@
       "member": "processing",
       "family": "shared.page-state",
       "category": "书库备份配置读取与实际操作中",
-      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板当次读取、备份、隔离校验、退役退出或恢复。",
+      "effectiveHost": "L0 设置「备份与恢复」页及扩展备份与同步页的 WebDAV 面板当次连接测试、读取、备份、隔离校验、退役退出或恢复。",
       "retireRule": "当次操作结算或面板退役后移除，原备份及恢复日志继续由 gateway 持有。",
       "status": "registered-source-entry"
     },
@@ -2020,7 +2020,7 @@
       "member": "requestRestore",
       "family": "native.alert",
       "category": "通过 ReaderNativeAlertOwner 明确确认替换阅读库",
-      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板与其隔离校验的原预览。",
+      "effectiveHost": "L0 设置「备份与恢复」页及扩展备份与同步页的 WebDAV 面板与其隔离校验的原预览。",
       "retireRule": "原生按钮与原预览、配置和当次确认 lease 绑定。",
       "status": "registered-source-entry",
       "bridge": "owned-alert-native-callback"
@@ -2032,7 +2032,7 @@
       "member": "requestRestore",
       "family": "shared.alert-owner",
       "category": "覆盖当前阅读库前的确认",
-      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板和原预览。",
+      "effectiveHost": "L0 设置「备份与恢复」页及扩展备份与同步页的 WebDAV 面板和原预览。",
       "retireRule": "确认、取消或面板退役后结束 lease。新配置不能应用旧预览。",
       "status": "registered-source-entry"
     },
@@ -2042,8 +2042,8 @@
       "owner": "ReaderWebDavLibraryPanel",
       "member": "showMessage",
       "family": "shared.transient",
-      "category": "WebDAV 配置、备份校验和退役退出的结果短反馈",
-      "effectiveHost": "当前前景通用设置的 WebDAV 面板代次。",
+      "category": "WebDAV 连接测试、配置、备份校验和退役退出的结果短反馈",
+      "effectiveHost": "L0 设置「备份与恢复」页及扩展备份与同步页的前景 WebDAV 面板代次。",
       "retireRule": "新动作、换页或前景变化阻止旧短反馈。持续的中断和待核对由原日志及对应入口保留。",
       "status": "registered-source-entry"
     },
@@ -2054,7 +2054,7 @@
       "member": "statusReadFailed",
       "family": "shared.page-state",
       "category": "WebDAV 安全配置暂时无法读取",
-      "effectiveHost": "当前扩展备份与同步页的 WebDAV 面板，在没有可确认配置时展示读取失败。",
+      "effectiveHost": "L0 设置「备份与恢复」页及扩展备份与同步页的 WebDAV 面板，在没有可确认配置时展示读取失败。",
       "retireRule": "重新读取或面板退役清除，重试仍只读取配置。",
       "status": "registered-source-entry"
     },

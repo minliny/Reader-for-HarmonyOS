@@ -1,8 +1,9 @@
 import { LengthMetrics } from '@kit.ArkUI';
-import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
+import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { bookAuthorLabel } from '../../../app/library/BookAuthorMetadata';
 import { SEARCH_RESULT_GEOMETRY } from './SearchResultGeometry';
 import { searchBookSnapshot } from '../presentation/SearchBookSnapshot';
+import { formatSearchSourceSummary } from '../presentation/SearchSourceDisplay';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { SearchViewState } from '../presentation/SearchViewState';
 import { bookIntroText } from '../../../app/library/BookIntroText';
@@ -39,7 +40,11 @@ export struct SearchResultCard {
   @Prop @Watch('acceptDisplayFacts') queryRevision: number = 0;
   @Prop @Watch('acceptDisplayFacts') displayIdleRevision: number = 0;
   @Prop reduceMotion: boolean = false;
-  @State private pressPointer: number = -1;
+  @State private pressed: boolean = false;
+  private readonly delayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    if (key.length === 0) this.pressed = false;
+    else readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressed = true; });
+  });
   @Prop expandedLayout: boolean = false;
   @Prop cardWidth: number = 0;
   @Prop focusId: string = '';
@@ -59,7 +64,7 @@ export struct SearchResultCard {
     this.visibilityEpoch += 1;
     this.selectionEpoch += 1;
     this.pressedSelection = undefined;
-    this.pressPointer = -1;
+    this.delayedPress.cancel();
     this.displayVisible = false;
     this.acceptDisplayFacts();
   }
@@ -72,7 +77,7 @@ export struct SearchResultCard {
     this.displayedBookInput = undefined;
     this.selectionEpoch += 1;
     this.pressedSelection = undefined;
-    this.pressPointer = -1;
+    this.delayedPress.cancel();
   }
 
   private captureDisplayFacts(): SearchResultDisplayFacts {
@@ -91,7 +96,7 @@ export struct SearchResultCard {
       this.visibilityEpoch += 1;
       this.selectionEpoch += 1;
       this.pressedSelection = undefined;
-      this.pressPointer = -1;
+      this.delayedPress.cancel();
     }
     if (!changedQuery && (this.displayVisible || !this.canRefreshDisplay())) return;
     if (!changedQuery && this.displayedBookInput === this.group.book &&
@@ -192,6 +197,22 @@ export struct SearchResultCard {
     };
   }
 
+  private displayLatestChapter(): string {
+    return (this.displayBook().latestChapterTitle ?? '').trim();
+  }
+
+  private showLatestChapter(): boolean {
+    return this.displayLatestChapter().length > 0;
+  }
+
+  private displayPrimarySource(): string {
+    return formatSearchSourceSummary(this.displayBook().sourceName, this.displaySourceCount()).primarySource;
+  }
+
+  private displayMultiSourceLabel(): string {
+    return formatSearchSourceSummary(this.displayBook().sourceName, this.displaySourceCount()).multiSourceLabel;
+  }
+
   build() {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Row({ space: SEARCH_RESULT_GEOMETRY.columnGap }) {
@@ -209,11 +230,20 @@ export struct SearchResultCard {
               coverHeight: this.coverHeight(),
               glyph: noCoverGlyph(this.displayBook().title),
               kindLabel: this.resultKindLabel(this.displayBook()),
+              cornerRadius: 6,
             });
           }
         }
         .width(this.coverWidth())
         .height(this.coverHeight())
+        .backgroundColor(readerAppColor(
+          this.group.coverUrl.length > 0 ? 'app.cover.placeholder' : 'TOK_META_BG',
+          this.appThemeScheme,
+        ))
+        .border(this.group.coverUrl.length > 0 ? {
+          width: 0.7,
+          color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme),
+        } : undefined)
         .borderRadius(6).clip(true);
 
         Column({ space: SEARCH_RESULT_GEOMETRY.metadataGap }) {
@@ -238,8 +268,8 @@ export struct SearchResultCard {
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-            if (!this.showResultIntro() && (this.displayBook().latestChapterTitle?.trim().length ?? 0) > 0) {
-              Text(this.displayBook().category === 'comic' ? `最新 · ${this.displayBook().latestChapterTitle}` : this.displayBook().latestChapterTitle)
+            if (this.showLatestChapter()) {
+              Text(this.displayBook().category === 'comic' ? `最新 · ${this.displayLatestChapter()}` : this.displayLatestChapter())
                 .width('100%')
                 .opacity(0.8)
                 .fontFamily(TYPE_SEARCH_RESULT_CHAPTER.fontFamily)
@@ -259,7 +289,7 @@ export struct SearchResultCard {
                 .fontSize(TYPE_SEARCH_RESULT_INTRO.fontSizeFp)
                 .lineHeight(TYPE_SEARCH_RESULT_INTRO.lineHeightFp as number)
                 .fontColor(readerAppColor('app.search.resultHint', this.appThemeScheme))
-                .maxLines(2)
+                .maxLines(this.showLatestChapter() ? 1 : 2)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
             }
           }
@@ -277,20 +307,24 @@ export struct SearchResultCard {
                 .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
                 .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1);
             } else {
-              if (this.displayBook().sourceName.length > 0) {
-                Text(this.displayBook().sourceName)
+              if (this.displayPrimarySource().length > 0) {
+                Text(this.displayPrimarySource())
                   .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
                   .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
                   .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                   .constraintSize({ maxWidth: '100%' }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+              }
+              if (this.displayPrimarySource().length > 0 && this.displayMultiSourceLabel().length > 0) {
                 Text('·').fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
                   .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
               }
-              Text(`发现 ${this.displaySourceCount()} 个来源`)
-                .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
-                .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
-                .fontColor(readerAppColor('app.search.discoveredSource', this.appThemeScheme))
-                .constraintSize({ maxWidth: '100%' }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+              if (this.displayMultiSourceLabel().length > 0) {
+                Text(this.displayMultiSourceLabel())
+                  .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+                  .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
+                  .fontColor(readerAppColor('app.search.discoveredSource', this.appThemeScheme))
+                  .constraintSize({ maxWidth: '100%' }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+              }
             }
             if (this.displayInBookshelf()) {
               Text('已在书架').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
@@ -311,17 +345,16 @@ export struct SearchResultCard {
       .width(this.cardWidth)
       .padding({ top: SEARCH_RESULT_GEOMETRY.rowPadding, bottom: SEARCH_RESULT_GEOMETRY.rowPadding })
       .alignItems(VerticalAlign.Top)
-      .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
-      .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
-      .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
+      .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressed, this.reduceMotion))
+      .scale(readerPressScale(this.pressed, this.reduceMotion))
+      .opacity(readerPressOpacity(this.pressed, this.reduceMotion))
       .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('app.search.listRule', this.appThemeScheme) } });
     }
     .width(this.cardWidth).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
     .id(this.focusId)
     .onVisibleAreaChange([0], this.displayVisibilityHandler())
     .onTouch((event: TouchEvent): void => {
-      const next = readerPressPointer(event, this.pressPointer, this.mounted);
-      if (next !== this.pressPointer) readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressPointer = next; });
+      this.delayedPress.observe(event, this.focusId.length > 0 ? this.focusId : 'card', this.mounted);
       this.onCardTouch(event.type);
     })
     .onClick((event: ClickEvent): void => this.selectResult(event.source));

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   adoptReaderNavigationAppearance,
+  isReaderNativeChromeStyle,
   isReaderRealtimeBlurEnabled,
   probeHarmonyCapabilities,
   resolveReaderModalScrimSpec,
@@ -24,8 +25,8 @@ const api26Port: HarmonyCapabilityPort = {
 const nativePreferences: ReaderNavigationPreferences = { override: 'systemNative', renderMode: 'quality' };
 const api26Capabilities = probeHarmonyCapabilities(api26Port);
 const roleSpecs = [
-  ['chromeBar', 'thin', false],
-  ['floatingDock', 'thin', false],
+  ['chromeBar', 'regular', false],
+  ['floatingDock', 'regular', false],
   ['sessionCapsule', 'ultraThin', true],
   ['controlPanel', 'thick', false],
   ['popoverMenu', 'thick', false],
@@ -55,16 +56,18 @@ test('API 23 and rejected API 26 checks never call the immersive material probe'
   assert.equal(calls, 0);
 });
 
-test('six surface roles use the requested thickness and light interaction in day and night', () => {
+test('six surface roles use the requested thickness and light interaction in day and night, while navigationBar stays frosted glass', () => {
   for (const scheme of ['day', 'night']) {
     for (const [role, style, interactive] of roleSpecs) {
       assert.deepEqual(resolveReaderSurfaceMaterial(role, nativePreferences, api26Capabilities, scheme, scheme),
-        { native: true, style, interactive, performanceMode: false }, `${role} in ${scheme}`);
+        { native: true, frosted: false, style, interactive, performanceMode: false }, `${role} in ${scheme}`);
     }
+    assert.deepEqual(resolveReaderSurfaceMaterial('navigationBar', nativePreferences, api26Capabilities, scheme, scheme),
+      { native: false, frosted: true, style: 'regular', interactive: false, performanceMode: false }, `navigationBar in ${scheme}`);
   }
 });
 
-test('each failed gate returns all surface roles and navigation to the unified appearance', () => {
+test('each failed gate falls back from native to frosted glass in native quality mode', () => {
   const unsupported = probeHarmonyCapabilities({ ...api26Port, surfaceMaterial: () => false });
   const cases = [
     [nativePreferences, unsupported, 'day', 'day'],
@@ -78,8 +81,11 @@ test('each failed gate returns all surface roles and navigation to the unified a
     for (const [role] of roleSpecs) {
       const decision = resolveReaderSurfaceMaterial(role, preferences, capabilities, app, system);
       assert.equal(decision.native, false, role);
+      assert.equal(decision.frosted, true, role);
       assert.equal(decision.performanceMode, false, role);
     }
+    assert.deepEqual(resolveReaderSurfaceMaterial('navigationBar', preferences, capabilities, app, system),
+      { native: false, frosted: true, style: 'regular', interactive: false, performanceMode: false });
   }
   assert.equal(adoptReaderNavigationAppearance('immersive', 'unified', true), 'unified');
   assert.equal(adoptReaderNavigationAppearance('unified', 'immersive', true), 'unified');
@@ -91,19 +97,26 @@ test('ArkUI can paint the Reader navigation renderer without HDS immersive suppo
   assert.equal(resolveReaderSurfaceMaterial('chromeBar', nativePreferences, capabilities, 'day', 'day').native, true);
 });
 
-test('appearance and render mode form a two by two matrix for all surface roles', () => {
+test('appearance and render mode form a 3-tier matrix across API 26 and non-API 26 hardware', () => {
+  const api24Capabilities = probeHarmonyCapabilities({ ...api26Port, distributionVersion: () => 60101, api26: () => false });
   for (const override of ['unset', 'systemNative'] as const) {
     for (const renderMode of ['quality', 'performance'] as const) {
       const preferences: ReaderNavigationPreferences = { override, renderMode };
       const quality = renderMode === 'quality';
       const native = override === 'systemNative' && quality;
+      const frostedFallback = override === 'systemNative' && quality;
       assert.equal(isReaderRealtimeBlurEnabled(preferences), quality);
+      assert.equal(isReaderNativeChromeStyle(preferences), override === 'systemNative');
       assert.equal(resolveReaderNavigationAppearance(preferences, api26Capabilities, 'day', 'day'), native ? 'immersive' : 'unified');
       for (const [role, style, interactive] of roleSpecs) {
         const material = resolveReaderSurfaceMaterial(role, preferences, api26Capabilities, 'day', 'day');
-        assert.deepEqual(material, { native, style, interactive, performanceMode: !quality }, role);
+        assert.deepEqual(material, { native, frosted: false, style, interactive, performanceMode: !quality }, `${role} api26`);
         assert.equal(shouldBlurBackdrop(preferences, material.native), quality && !native, role);
+        const fallbackMaterial = resolveReaderSurfaceMaterial(role, preferences, api24Capabilities, 'day', 'day');
+        assert.deepEqual(fallbackMaterial, { native: false, frosted: frostedFallback, style, interactive, performanceMode: !quality }, `${role} api24`);
       }
+      assert.deepEqual(resolveReaderSurfaceMaterial('navigationBar', preferences, api26Capabilities, 'day', 'day'),
+        { native: false, frosted: frostedFallback, style: 'regular', interactive: false, performanceMode: !quality });
     }
   }
 });

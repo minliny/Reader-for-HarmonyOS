@@ -16,6 +16,7 @@ import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerSc
 import { ReaderLibrarySearchModel, READER_LIBRARY_SEARCH_BACK_FOCUS_ID } from '../presentation/ReaderLibrarySearchModel';
 import { SearchViewState, type SearchContentType } from '../presentation/SearchViewState';
 import { SearchPublication } from '../presentation/SearchPublication';
+import { formatSearchInitialEmptyHint } from '../presentation/SearchSourceDisplay';
 import type { SearchEntrySourceReadObservation, SearchPresentation } from '../presentation/SearchPresentation';
 import type { SearchBook } from '../application/SearchGateway';
 import type { ShelfBook } from '../../../app/ReaderCoreGateway';
@@ -136,6 +137,7 @@ export struct SearchPage {
   onStop: () => void = (): void => {};
   onClearHistory: () => void = (): void => {};
   onRetryHistory: () => void = (): void => {};
+  onDeleteHistory: (keyword: string) => void = (_keyword: string): void => {};
   onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string, focusKey?: string) => void =
     (_book: SearchBook, _variants: SearchBook[]): void => {};
   onVisibleGroups: (groups: SearchBook[][]) => void = (_groups: SearchBook[][]): void => {};
@@ -411,6 +413,9 @@ export struct SearchPage {
     model.onHistory = (keyword: string): void => {
       if (this.surfaceInputCurrent()) this.submitSearch(keyword);
     };
+    model.onDeleteHistory = (keyword: string): void => {
+      if (this.surfaceInputCurrent()) this.onDeleteHistory(keyword);
+    };
     model.activate(this.surfaceOwner);
     this.publishSurface();
   }
@@ -423,6 +428,12 @@ export struct SearchPage {
     // History owns an independent revision and remains publishable while a query is retained.
     model.history = presentation.history ?? [];
     model.historyStatus = presentation.historyStatus;
+    const entryRead = this.publication.entrySourceReadAt(this.publicationRevision);
+    const sources = this.publication.sourcesAt(this.publicationRevision);
+    const enabledCount = entryRead?.outcome === 'ready' && entryRead.sourceCount !== undefined
+      ? entryRead.sourceCount
+      : (sources.length > 0 ? sources.length : undefined);
+    model.emptyHistoryHint = formatSearchInitialEmptyHint(enabledCount);
     model.hasSession = this.hasSearchSession();
     model.sourceRecoveryVisible = presentation.kind === 'sourceRequired' || presentation.kind === 'sourceLoadError';
     const sourceReadPending = presentation.kind === 'initial' &&

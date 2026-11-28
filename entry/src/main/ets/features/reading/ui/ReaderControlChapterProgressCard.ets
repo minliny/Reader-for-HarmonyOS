@@ -145,7 +145,9 @@ export struct ReaderControlChapterProgressCard {
           .opacity(readerPressOpacity(this.quickOrModulePress === 'bookmark', this.reduceMotion))
           .border({ width: 1, color: readerAppColor(this.pageBookmarkStatus === 'bookmarked' ? 'TOK_READ_PRIMARY' :
             'app.border.readerConfig', this.appScheme) });
-      }.id('novel-bookmark-pill').width(this.bookmarkWidth).height(Math.max(44, this.bookmarkHeight))
+      }.id('novel-bookmark-pill').width(this.bookmarkWidth).height(this.bookmarkHeight)
+        .responseRegion({ x: 0, y: -(Math.max(0, 44 - this.bookmarkHeight) / 2),
+          width: '100%', height: Math.max(44, this.bookmarkHeight) })
         .padding(0).backgroundColor(Color.Transparent)
         .accessibilityText(this.pageBookmarkStatus === 'bookmarked' ? '已加书签，点击移除' : '加书签')
         .enabled(this.bookmarkInputEnabled)
@@ -160,11 +162,12 @@ export struct ReaderControlChapterProgressCard {
     Row() {
       // 进度百分比 Inter Regular 9 (固定 26.23 宽容器, 使 slider 起点对齐 Figma)。
       Text(`${Math.round(this.progressPercent)}%`)
-        .width(this.progressLabelWidth)
+        .width(Math.max(32, this.progressLabelWidth))
         .fontFamily(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontFamily)
         .fontWeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontWeight)
-        .fontSize(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontSizeFp)
-        .lineHeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.lineHeightFp as number)
+        .fontSize(11)
+        .lineHeight(15)
+        .fontFeature('"tnum" 1')
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
         .maxLines(1);
 

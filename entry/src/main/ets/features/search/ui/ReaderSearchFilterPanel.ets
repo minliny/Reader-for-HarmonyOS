@@ -2,6 +2,7 @@ import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceR
 import type { MeasureOptions } from '@ohos.measure';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { ReaderRecessedSegmentRail, type ReaderRecessedSegmentOption } from '../../../ui/controls/ReaderRecessedSegmentRail';
 import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
 import { TYPE_APP_FILTER_OPTION } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -114,6 +115,27 @@ export struct ReaderSearchFilterPanel {
     return index === 0 ? '全部类型' : (index === 1 ? '小说' : '漫画');
   }
   private sourceGroup(index: number): string { return index === 0 ? '全部' : (index === 1 ? '本地' : '在线'); }
+  private contentRailOptions(): ReaderRecessedSegmentOption[] {
+    const types: SearchContentType[] = ['全部类型', '小说', '漫画'];
+    return types.map((typeValue: SearchContentType): ReaderRecessedSegmentOption => ({
+      id: typeValue,
+      label: typeValue === '全部类型' ? '全部' : typeValue,
+      elementId: `search-content-type-${typeValue}`,
+      accessibilityText: this.selectedType === typeValue ? `当前内容:${typeValue}` : `筛选内容:${typeValue}`,
+    }));
+  }
+  private sourceRailOptions(): ReaderRecessedSegmentOption[] {
+    const groups: string[] = ['全部', '本地', '在线'];
+    return groups.map((groupValue: string): ReaderRecessedSegmentOption => ({
+      id: groupValue,
+      label: groupValue,
+      elementId: groupValue === '在线' ? 'reader-search-filter-online' : '',
+      accessibilityText: this.selectedGroup === groupValue ? `当前来源:${groupValue}` : `筛选来源:${groupValue}`,
+    }));
+  }
+  private railHeight(): number {
+    return Math.max(34, this.sheetGeometry().choiceHeight);
+  }
   @Builder
   private groupChip(label: string, index: number, identity: string) {
     ReaderButton({ scheme: this.scheme, specId: 'search-filter-option', label, primary: this.selectedGroup === label,
@@ -153,14 +175,43 @@ export struct ReaderSearchFilterPanel {
     }.alignItems(HorizontalAlign.Start);
   }
   @Builder
+  private choiceRail(isContent: boolean, identity: string) {
+    ReaderRecessedSegmentRail({
+      options: isContent ? this.contentRailOptions() : this.sourceRailOptions(),
+      selectedId: isContent ? this.selectedType : this.sourceGroupSelected(),
+      accessibilityGroupLabel: isContent ? '内容' : '来源',
+      trackHeight: this.railHeight(),
+      pillShape: true,
+      onSelect: (value: string): void => {
+        if (!this.accepts(identity)) return;
+        if (isContent) this.onType(value as SearchContentType, identity);
+        else this.onGroup(value, identity);
+      },
+    });
+  }
+  private sourceGroupSelected(): string {
+    return this.selectedGroup;
+  }
+  @Builder
   private optionGroup(label: string, isContent: boolean, identity: string) {
     if (this.sheetGeometry().stackedLabels) {
       Column({ space: this.sheetGeometry().groupGap }) {
-        this.groupLabel(label); this.choiceRows(isContent, identity);
+        this.groupLabel(label);
+        if (this.sheetGeometry().choiceRows.length === 1) {
+          Row() { this.choiceRail(isContent, identity); }.width(this.sheetGeometry().innerWidth);
+        } else {
+          this.choiceRows(isContent, identity);
+        }
       }.width(this.sheetGeometry().innerWidth).alignItems(HorizontalAlign.Start);
     } else {
       Row({ space: this.sheetGeometry().labelGap }) {
-        this.groupLabel(label); this.choiceRows(isContent, identity);
+        this.groupLabel(label);
+        if (this.sheetGeometry().choiceRows.length === 1) {
+          Row() { this.choiceRail(isContent, identity); }
+            .width(Math.max(0, this.sheetGeometry().innerWidth - this.sheetGeometry().labelWidth - this.sheetGeometry().labelGap));
+        } else {
+          this.choiceRows(isContent, identity);
+        }
       }.width(this.sheetGeometry().innerWidth).alignItems(VerticalAlign.Center);
     }
   }

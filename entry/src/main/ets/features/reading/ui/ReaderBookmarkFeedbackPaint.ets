@@ -1,26 +1,45 @@
 import { MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
+import { findReaderTheme, readerThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
 import { READER_BOOKMARK_TRIGGER_VP } from '../presentation/ReaderPageBookmarkModel';
+import {
+  readerBookmarkWellHeight,
+  readerBookmarkWellOpacity,
+  readerBookmarkWellTint,
+} from '../presentation/ReaderBookmarkWellPaint';
+import { ReaderPaperBackground } from './ReaderPaperBackground';
 
 export interface ReaderBookmarkPaperWellInput {
   paperTop: number;
   offset: number;
   paperColor: string;
   day: boolean;
+  theme: string;
+  viewportWidth: number;
+  viewportHeight: number;
+  expanded: boolean;
 }
 
 @Builder
 export function ReaderBookmarkPaperWell($$: ReaderBookmarkPaperWellInput) {
-  Stack()
-    .width('100%').height($$.paperTop + $$.offset + 18)
+  Stack({ alignContent: Alignment.TopStart }) {
+    if (findReaderTheme($$.theme) !== undefined && $$.viewportWidth > 0 && $$.viewportHeight > 0) {
+      ReaderPaperBackground({
+        theme: readerThemeDefinition($$.theme).id,
+        expanded: $$.expanded,
+      })
+        .width($$.viewportWidth).height($$.viewportHeight);
+    }
+  }
+    .width('100%').height(readerBookmarkWellHeight($$.paperTop, $$.offset))
     .position({ x: 0, y: 0 })
     .backgroundColor($$.paperColor)
+    .clip(true)
     .id('reader-bookmark-paper-base').hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
   Stack()
-    .width('100%').height($$.offset + 18)
-    .position({ x: 0, y: $$.paperTop })
-    .backgroundColor($$.day ?
-      '#172B241D' : '#57000000')
-    .opacity(Math.min(1, $$.offset / 10))
+    .width('100%').height(readerBookmarkWellHeight($$.paperTop, $$.offset))
+    .position({ x: 0, y: 0 })
+    .backgroundColor(readerBookmarkWellTint($$.day))
+    .opacity(readerBookmarkWellOpacity($$.offset))
     .id('reader-bookmark-paper-well').hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
   Stack()
     .width('100%').height(Math.min(12, $$.offset))

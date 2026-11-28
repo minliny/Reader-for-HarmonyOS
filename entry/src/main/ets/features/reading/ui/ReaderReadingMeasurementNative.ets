@@ -76,7 +76,7 @@ function nativeBodyPunctuationOverflow(): boolean {
     const preferred = i18n.System.getAppPreferredLanguage();
     const language = preferred.length === 0 || preferred === 'default' ? i18n.System.getSystemLanguage() : preferred;
     const locale = new Intl.Locale(language).maximize();
-    return locale.language === 'zh' && locale.script === 'Hans';
+    return locale.language === 'zh';
   } catch (_) {
     return false;
   }

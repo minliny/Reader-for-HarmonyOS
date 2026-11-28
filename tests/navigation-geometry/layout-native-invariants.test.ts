@@ -285,6 +285,66 @@ test('R12 rejects inflated empty area without any authored tag height', () => {
   assert.deepEqual(result.violations.map(issue => issue.rule), ['R12']);
 });
 
+test('R12 catches historical control-island, chip, inset and stretched-cover size regressions and passes Paper & Pine 2.0', () => {
+  const phoneViewport = rect(0, 0, 365.7, 809.1);
+  const badControl = gate({
+    viewport: phoneViewport,
+    density: [
+      { specId: 'reader-control-island-quick', id: 'reader-control-motion-dock',
+        bounds: rect(12.3, 418.3, 341.4, 372), contentBounds: rect(12.3, 418.3, 341.4, 372), maxChildGap: 60.6 },
+      { specId: 'source-status-chip', id: 'reader-source-status-all', bounds: rect(19.1, 162.9, 78.3, 44) },
+      { specId: 'source-footer-action', id: 'source-back:1:import:footer', bounds: rect(138, 741.1, 211.7, 44) },
+      { specId: 'bookshelf-viewport-inset', id: 'reader.bookshelf.viewport:0',
+        bounds: rect(19, 39.1, 327.7, 770), insetLeft: 19, insetRight: 19, viewportWidth: 365.7 },
+      { specId: 'download-book-cover', id: 'dl-cover', bounds: rect(16, 286.6, 48, 90) },
+    ],
+  });
+  assert.deepEqual(badControl.violations.map(issue => issue.nodeId), [
+    'reader-control-motion-dock',
+    'reader-source-status-all',
+    'source-back:1:import:footer',
+    'reader.bookshelf.viewport:0',
+    'dl-cover',
+  ]);
+
+  const goodPhone = gate({
+    viewport: phoneViewport,
+    density: [
+      { specId: 'reader-control-island-quick', id: 'reader-control-motion-dock',
+        bounds: rect(12.3, 460.3, 341.4, 330), contentBounds: rect(12.3, 460.3, 341.4, 330), maxChildGap: 21.1 },
+      { specId: 'reader-control-chapter-card', id: 'reader-control-chapter-progress-card', bounds: rect(25.4, 574.3, 267.4, 108) },
+      { specId: 'reader-control-bookmark-lane', id: 'reader-control-chapter-bookmark-lane', bounds: rect(26.3, 611.1, 265.7, 34) },
+      { specId: 'reader-control-grabber', id: 'reader-control-island-grabber', bounds: rect(165.1, 471.4, 36, 4) },
+      { specId: 'source-status-chip', id: 'reader-source-status-all', bounds: rect(16, 162.9, 79.7, 28) },
+      { specId: 'source-footer-action', id: 'source-back:1:import:footer', bounds: rect(138, 745.1, 211.7, 40) },
+      { specId: 'bookshelf-viewport-inset', id: 'reader.bookshelf.viewport:0',
+        bounds: rect(16, 39.1, 333.7, 770), insetLeft: 16, insetRight: 16, viewportWidth: 365.7 },
+      { specId: 'download-book-cover', id: 'dl-cover', bounds: rect(16, 286.6, 48, 66) },
+    ],
+  });
+  assert.deepEqual(goodPhone.violations, []);
+  assert.deepEqual(goodPhone.missing, []);
+  assert.ok(goodPhone.observedRules.includes('R12'));
+
+  // Phone outer inset check does not reject centered max-width frames on wide tablet canvases (>= 600vp),
+  // and fontScale 1.6 permits scaled chip growth without false failures.
+  const tabletLargeFont = evaluateLayoutInvariants({
+    safeTopVp: 30, fontScale: 1.6, nodes: [], scanComplete: true,
+    requiresHeader: false, requiresControl: false, requiresFirstContent: false,
+    modalOpen: false, recoveryPending: false, checkRecovery: false,
+    native: {
+      viewport: rect(0, 0, 800, 1000), safeViewport: rect(0, 30, 800, 950),
+      nodes: [], complete: true, dockBounds: [], expectDock: false, surfaces: [], features: [],
+      density: [
+        { specId: 'bookshelf-viewport-inset', id: 'reader.bookshelf.viewport:0',
+          bounds: rect(80, 30, 640, 970), insetLeft: 80, insetRight: 80, viewportWidth: 800 },
+        { specId: 'source-status-chip', id: 'reader-source-status-all', bounds: rect(80, 160, 110, 37) },
+      ],
+    },
+  });
+  assert.deepEqual(tabletLargeFont.violations, []);
+});
+
 test('R13 scans untagged child text, image, and painted waveform geometry', () => {
   const result = gate({ nodes: [
     leaf('Text', 'wrapped', rect(12, 60, 140, 15), { textClipped: true }),

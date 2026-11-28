@@ -161,9 +161,10 @@ export struct ReaderIslandSwitchRow {
         }).flexShrink(0);
       }.width('100%').alignItems(VerticalAlign.Center)
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-    }.id(this.nativeId).width('100%').constraintSize({ minHeight: READER_ISLAND_TARGET_VP })
-      .padding({ left: 10, right: 10, top: 4, bottom: 4 }).opacity(1)
-      .attributeModifier(new ReaderIslandControlFrame(this.scheme, this.actionReady))
+    }.id(this.nativeId).width('100%').constraintSize({ minHeight: 40 })
+      .padding({ left: 2, right: 2, top: 4, bottom: 4 }).opacity(1)
+      .backgroundColor(Color.Transparent)
+      .responseRegion({ x: 0, y: -2, width: '100%', height: READER_ISLAND_TARGET_VP })
       .enabled(this.actionReady)
       .accessibilityRole(AccessibilityRoleType.SWITCH).accessibilitySelected(this.value)
       .accessibilityText(this.accessibleLabel || this.label)

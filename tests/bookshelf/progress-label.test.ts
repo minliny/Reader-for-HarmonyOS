@@ -30,3 +30,21 @@ test('the shared label preserves unread and distinguishes a measured zero from a
     }), label);
   }
 });
+
+test('listSecondary displays latest chapter for both local and online books', () => {
+  const localEpub: ShelfBook = {
+    ...localBook, kind: 'epub', chapterCount: 32, lastChapter: '尾声 归途',
+  };
+  assert.equal(ShelfBookPresentation.listSecondary(localEpub), '最新 尾声 归途');
+  assert.equal(ShelfBookPresentation.listSecondary({ ...localEpub, lastChapter: '  尾声 归途  ' }), '最新 尾声 归途');
+  assert.equal(ShelfBookPresentation.listSecondary({ ...localEpub, lastChapter: undefined }), '');
+  assert.equal(ShelfBookPresentation.listSecondary({ ...localEpub, lastChapter: '   ' }), '');
+
+  const onlineBook: ShelfBook = {
+    sourceId: 'https://source.example', bookId: 'online-book', title: '在线小说', author: '', addedAt: 1,
+    contentKind: 'text', lastChapter: '第 100 章',
+  };
+  assert.equal(ShelfBookPresentation.listSecondary(onlineBook), '最新 第 100 章');
+  assert.equal(ShelfBookPresentation.listSecondary({ ...onlineBook, lastChapter: undefined }), '');
+  assert.equal(ShelfBookPresentation.listSecondary({ ...onlineBook, lastChapter: '   ' }), '');
+});

@@ -857,7 +857,7 @@ export struct ReaderControlAppearanceContent {
             this.islandTurn('none');
           }.width('100%');
         }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
-      }.id('reader-control-font-grid').width('100%').padding({ bottom: 2 });
+      }.id('reader-control-font-grid').width('100%').padding({ bottom: 10 });
     }.id('reader-control-module-appearance').width(this.availableWidth).height(this.availableHeight)
       .enabled(this.currentInputEnabled()).enableScrollInteraction(this.draggedFontId === '')
       .scrollBar(BarState.Auto).edgeEffect(EdgeEffect.None).clip(true)

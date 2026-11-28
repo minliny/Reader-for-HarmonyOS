@@ -151,7 +151,7 @@ export class ReaderControlQuickHomeOwner {
   chapterTitleLaneHeight(): number { return Math.max(36, this.homeMetric('chapterTitleHeight', 34)); }
 
   bookmarkLaneHeight(): number {
-    return Math.max(44, this.bookmarkPillHeight() + 4, this.homeMetric('actionLabelHeight', 13) + 16);
+    return Math.max(34, this.bookmarkPillHeight() + 6, this.homeMetric('actionLabelHeight', 13) + 12);
   }
 
   bookmarkPillWidth(): number {
@@ -160,7 +160,7 @@ export class ReaderControlQuickHomeOwner {
   }
 
   bookmarkPillHeight(): number {
-    return Math.max(28, Math.ceil(15 * Math.max(1, this.host.geometry.fontScale())) + 10);
+    return Math.max(24, Math.ceil(15 * Math.max(1, this.host.geometry.fontScale())) + 6);
   }
 
   progressLaneHeight(): number { return Math.max(36, this.homeMetric('progressHeight', 50) - 14); }
@@ -562,7 +562,7 @@ function ReaderControlBrightnessRailContent($$: ReaderQuickHomeBuilderInput) {
   .height($$.quick.brightnessContentHeight())
   .alignItems(HorizontalAlign.Center)
   .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', $$.quick.host.geometry.scheme()))
-  .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', $$.quick.host.geometry.scheme()) })
+  .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', $$.quick.host.geometry.scheme()) })
   .borderRadius(Math.min(READER_CONTROL_BRIGHTNESS_RAIL_WIDTH, $$.quick.brightnessContentHeight()) / 2)
   .clip($$.quick.brightnessRequiresChildClip());
 }

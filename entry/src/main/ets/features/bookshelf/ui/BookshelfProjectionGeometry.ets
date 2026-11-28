@@ -84,7 +84,7 @@ export function gridProgressLabelValue(book: ShelfBook): string {
 }
 
 export function gridBookCardHeightValue(
-  book: ShelfBook,
+  _book: ShelfBook,
   contentWidth: number,
   expandedLayout: boolean,
   systemFontScale: number,
@@ -93,7 +93,7 @@ export function gridBookCardHeightValue(
     contentWidth,
     expandedLayout,
     systemFontScale,
-    gridProgressLabelValue(book).length > 0,
+    false,
     BOOKSHELF_GRID_TITLE_LINES,
   ).cardHeight;
 }
@@ -113,13 +113,6 @@ export function buildBookshelfProjectionMetrics(
     false,
     BOOKSHELF_GRID_TITLE_LINES,
   );
-  const frameWithProgress = bookshelfGridFrame(
-    contentWidth,
-    expandedLayout,
-    systemFontScale,
-    true,
-    BOOKSHELF_GRID_TITLE_LINES,
-  );
   return resolveBookshelfProjectionMetrics({
     contentWidth,
     expandedLayout,
@@ -127,7 +120,7 @@ export function buildBookshelfProjectionMetrics(
     gridCoverHeight: frameNoProgress.coverHeight,
     gridColumnGap: frameNoProgress.columnGap,
     gridCardHeightNoProgress: frameNoProgress.cardHeight,
-    gridCardHeightWithProgress: frameWithProgress.cardHeight,
+    gridCardHeightWithProgress: frameNoProgress.cardHeight,
     listCoverWidth,
     listContentHeight,
     listRowHeight,

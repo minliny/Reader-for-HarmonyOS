@@ -274,8 +274,8 @@ export struct RssSubscriptionManagementPage {
       }.backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
         .border({ width: { left: TOK_BORDER_W, right: TOK_BORDER_W, top: repeatItem.index === 0 ? TOK_BORDER_W : 0,
           bottom: repeatItem.index === this.items.length - 1 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
-        .borderRadius({ topLeft: repeatItem.index === 0 ? 8 : 0, topRight: repeatItem.index === 0 ? 8 : 0,
-          bottomLeft: repeatItem.index === this.items.length - 1 ? 8 : 0, bottomRight: repeatItem.index === this.items.length - 1 ? 8 : 0 });
+        .borderRadius({ topLeft: repeatItem.index === 0 ? 14 : 0, topRight: repeatItem.index === 0 ? 14 : 0,
+          bottomLeft: repeatItem.index === this.items.length - 1 ? 14 : 0, bottomRight: repeatItem.index === this.items.length - 1 ? 14 : 0 });
     })
     .key((item: RssSubscriptionManagementItem): string => `rss-management-${item.subscriptionId}`)
     .virtualScroll({ reusable: true });
@@ -409,11 +409,9 @@ export struct RssSubscriptionManagementPage {
       this.expandedSubscriptionId = item.subscriptionId;
     }
     setTimeout((): void => {
-      this.pageScroller.scrollTo({
-        xOffset: 0,
-        yOffset: index * 56,
-        animation: false,
-      });
+      try {
+        this.pageScroller.scrollToIndex(index, false);
+      } catch (_) {}
     }, 0);
   }
 

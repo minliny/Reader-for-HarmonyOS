@@ -44,6 +44,11 @@ export struct LibrarySearchResults {
       },
       onClearHistory: (): void => { if (this.inputCurrent()) this.presentation.host.clearHistory(); },
       onRetryHistory: (): void => { if (this.inputCurrent()) this.presentation.host.retryHistory(); },
+      onDeleteHistory: (keyword: string): void => {
+        if (this.inputCurrent()) {
+          void this.presentation.host.deleteHistory(keyword).catch((): void => {});
+        }
+      },
       onSelectResult: (book: SearchBook, variants: SearchBook[], cover?: string, focusKey?: string): void => {
         if (this.inputCurrent()) this.onResult(book, variants, cover, focusKey);
       },

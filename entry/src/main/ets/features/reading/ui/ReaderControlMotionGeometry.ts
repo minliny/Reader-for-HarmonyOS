@@ -22,7 +22,7 @@ export const READER_CONTROL_MR1_TOP_BAR_TRANSLATE_Y = -8;
 export const READER_CONTROL_MOTION_QUICK_CONTENT_VERTICAL_RESERVE = 140;
 export const READER_CONTROL_MOTION_FULL_CONTENT_VERTICAL_RESERVE = 70;
 export const READER_CONTROL_MOTION_CONTENT_INSET_MAX = 13;
-export const READER_CONTROL_MOTION_QUICK_CONTENT_HORIZONTAL_RESERVE = 52;
+export const READER_CONTROL_MOTION_QUICK_CONTENT_HORIZONTAL_RESERVE = 48;
 export const READER_CONTROL_MOTION_HEADER_TOP = 19;
 export const READER_CONTROL_MOTION_HEADER_HEIGHT = 30;
 export const READER_CONTROL_MOTION_CONTENT_SURFACE_TOP = 57;
@@ -243,14 +243,17 @@ export class ReaderControlMotionFrameCache {
       expansionProgress: island === 'legacy' ? progress : 0 },
       readerControlMotionBounds(width, height, gap, island === 'legacy' ? quickHeight : height, contentBudget));
     if (island === 'module') {
-      const top = frame.header.y + frame.header.height + 6;
-      frame.header.opacity = 1;
-      frame.content = actor(frame.header.x, top, frame.header.width, Math.max(0, frame.navigation.y - top - 6), 1);
+      const top = frame.shell.y + 26;
+      frame.header.opacity = 0;
+      frame.content = actor(frame.header.x, top, frame.header.width, Math.max(0, frame.navigation.y - top - 13), 1);
       frame.contentSurface.opacity = 0;
       frame.brightness.opacity = 0;
     } else if (island === 'home') {
-      frame.content.height = Math.min(frame.content.height, Math.max(0, frame.navigation.y - frame.content.y - 6));
-      frame.brightness.height = Math.min(frame.brightness.height, frame.content.height);
+      const top = frame.shell.y + 26;
+      const available = Math.max(0, frame.navigation.y - top - 13);
+      const height = Math.min(Math.max(frame.content.height, 194), available);
+      frame.content = actor(frame.content.x, top, frame.content.width, height, frame.content.opacity);
+      frame.brightness = actor(frame.brightness.x, top, frame.brightness.width, height, frame.brightness.opacity);
     }
     if (reduced) {
       frame.topBar.translateY = 0;

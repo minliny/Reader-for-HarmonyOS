@@ -14,6 +14,7 @@ import type { ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabili
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import { readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerOverlayListHeight, readerOverlayPanel } from '../../../ui/layout/ReaderOverlayGeometry';
 import { projectSourceManagementV9, sourceV9Supports, type SourceV9Counts, type SourceV9ListAction, type SourceV9Projection } from '../presentation/SourceManagementV9';
@@ -764,7 +765,7 @@ export function SourceManagementSearchField($$: SourceManagementFiltersOwnerSlot
       }, (identity: string): string => identity);
     }
     .layoutWeight(1)
-    .height($$.owner.results.filterHeight());
+    .constraintSize({ minHeight: $$.owner.results.filterHeight() });
 
     SourceFilterGroupFilter({ owner: $$.owner });
   }
@@ -788,14 +789,16 @@ export function SourceManagementCategoryFilter($$: SourceManagementFiltersOwnerS
         Text(category === 'all' ? '全部' : readerSourceCategoryLabel(category as ReaderSourceCategory),
           category === 'all' ? $$.owner.typography.options('category/all', '全部') : undefined)
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
-          .fontSize(12).maxLines(1)
+          .fontSize(12).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontColor(readerAppColor($$.owner.paint().categoryValue === category ? 'app.sourceUi.primary' : 'app.sourceUi.muted', $$.owner.host.presentation.appThemeScheme()));
-      }.layoutWeight(1).height('100%').padding(2).borderRadius(8)
+      }.layoutWeight(1)
+        .constraintSize({ minHeight: readerScaledControlHeight(28, 16, $$.owner.host.native.fontScale()) })
+        .padding(2).borderRadius(8)
         .attributeModifier(new ReaderPressFeedback($$.owner.paint().categoryValue === category ?
           readerAppColor('TOK_CARD_BG', $$.owner.host.presentation.appThemeScheme()) : Color.Transparent, $$.owner.host.presentation.appThemeScheme(), 8))
         .shadow(readerSurfaceElevation($$.owner.paint().categoryValue === category ? 'card' : 'embedded', $$.owner.host.presentation.appThemeScheme()))
         .animation($$.owner.host.presentation.reduceMotion() ? undefined : readerMotionAnimateParam('app.control.press', false))
-        .responseRegion({ x: 0, y: -8, width: '100%', height: 44 })
+        .responseRegion(readerUnionTouchRegion('100%', readerScaledControlHeight(28, 16, $$.owner.host.native.fontScale())))
         .accessibilityText(`书源类型，${category === 'all' ? '全部' : readerSourceCategoryLabel(category as ReaderSourceCategory)}`)
         .accessibilitySelected($$.owner.paint().categoryValue === category)
         .id(`source-category-${category}`)
@@ -807,7 +810,8 @@ export function SourceManagementCategoryFilter($$: SourceManagementFiltersOwnerS
         });
     }, (category: string): string => category);
   }.id('reader-source-category-filter').width($$.owner.host.native.contentFrame().width)
-    .height(32).padding(2).borderRadius(10).margin({ top: 12 })
+    .constraintSize({ minHeight: readerScaledControlHeight(32, 16, $$.owner.host.native.fontScale()) })
+    .padding(2).borderRadius(10).margin({ top: 12 })
     .backgroundColor(readerAppColor('app.sourceUi.field', $$.owner.host.presentation.appThemeScheme()));
 }
 
@@ -831,10 +835,11 @@ function SourceFilterChip($$: SourceManagementFiltersOwnerSlot, label: string, v
       .textOverflow({ overflow: TextOverflow.Ellipsis })
       .fontColor(readerAppColor($$.owner.paint().statusValue === label ? 'app.sourceUi.onPrimary' : 'app.sourceUi.muted', $$.owner.host.presentation.appThemeScheme()));
   }.id(`reader-source-status-${verificationId}`).layoutWeight(1)
-    .height(32).padding({ left: 2, right: 2 })
+    .constraintSize({ minHeight: readerScaledControlHeight(28, 15, $$.owner.host.native.fontScale()) })
+    .padding({ left: 4, right: 4 })
     .attributeModifier(new ReaderPressFeedback(readerAppColor($$.owner.paint().statusValue === label ? 'app.sourceUi.primary' :
-      'TOK_CARD_BG', $$.owner.host.presentation.appThemeScheme()), $$.owner.host.presentation.appThemeScheme(), 16))
-    .responseRegion({ x: 0, y: -6, width: '100%', height: 44 })
+      'TOK_CARD_BG', $$.owner.host.presentation.appThemeScheme()), $$.owner.host.presentation.appThemeScheme(), 14))
+    .responseRegion(readerUnionTouchRegion('100%', readerScaledControlHeight(28, 15, $$.owner.host.native.fontScale())))
     .border({ width: TOK_BORDER_W, color: $$.owner.paint().statusValue === label ?
       readerAppColor('app.sourceUi.primary', $$.owner.host.presentation.appThemeScheme()) : readerAppColor('app.sourceUi.border', $$.owner.host.presentation.appThemeScheme()) })
     .accessibilityText(`书源状态，${label}，${$$.owner.statusCount(verificationId)} 项`).accessibilitySelected($$.owner.paint().statusValue === label)
@@ -865,6 +870,6 @@ function SourceFilterGroupFilter($$: SourceManagementFiltersOwnerSlot) {
   }
   .id('reader-source-group-filter')
   .width($$.owner.groupSelectWidth())
-  .height(40)
+  .constraintSize({ minHeight: $$.owner.results.filterHeight() })
   .alignItems(VerticalAlign.Center);
 }

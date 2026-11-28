@@ -17,6 +17,7 @@ import { type SourceV9Counts, type SourceV9ListAction, type SourceV9View } from 
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import type { SourceManagementViewState, SourceToolsEntry } from '../presentation/SourceJourneyPresentation';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { type BookSource } from '../application/SourceGateway';
@@ -725,6 +726,8 @@ export struct SourceManagementPage {
       .id('reader-source-footer')
       .width('100%')
       .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
+      .backgroundColor(this.batchMode ? Color.Transparent : readerAppColor('TOK_PAPER', this.appThemeScheme))
+      .border(this.batchMode ? undefined : { width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
       .enabled(this.inputEnabled && !this.groupOpen && !this.moreMenuOpen)
       .accessibilityLevel(this.groupOpen || this.moreMenuOpen ? 'no-hide-descendants' : 'auto')
       .hitTestBehavior(this.groupOpen || this.moreMenuOpen ? HitTestMode.None : HitTestMode.Default)
@@ -878,7 +881,7 @@ export struct SourceManagementPage {
     input.contentGap = READER_STANDARD_PAGE_CONTENT_GAP;
     input.footerHeight = this.measurements.readForGeneration('source:footer', this.footerMeasurementKey, this.list.footerFallbackHeight());
     input.contentMaxWidth = readerStandardPageSpec('sourceManagement').maxWidth;
-    input.contentHorizontalPadding = 19;
+    input.contentHorizontalPadding = 16;
     input.contentHorizontalSafeArea = 'interactive';
     input.contentEndInset = input.footerHeight;
     this.geometry = resolveReaderPageGeometry(input);

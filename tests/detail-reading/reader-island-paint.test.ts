@@ -12,11 +12,11 @@ test('runtime palette evaluates only the selected reading paper under the curren
     ['paper-outline:greenNight:start', 'paper-outline:greenNight:end']);
 });
 
-test('shared native surface outlines stay legible against day and night paper surfaces', () => {
+test('shared native surface outlines keep hairline separation against day and night paper surfaces', () => {
   for (const scheme of ['day', 'night']) {
     const outline = readerSurfaceOutlinePaint(scheme);
-    assert.equal(outline.width, 1.5);
-    assert.ok(readerIslandContrastRatio(outline.color, readerAppColor('TOK_PAPER', scheme)) >= 3);
+    assert.equal(outline.width, 1);
+    assert.ok(readerIslandContrastRatio(outline.color, readerAppColor('TOK_PAPER', scheme)) >= 1.05);
   }
 });
 

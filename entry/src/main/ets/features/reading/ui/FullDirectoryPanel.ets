@@ -29,6 +29,8 @@ import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { projectReaderDirectoryEntries } from '../presentation/ReaderDirectoryProjection';
 import {
@@ -107,6 +109,9 @@ export struct FullDirectoryPanel {
   }
   @StorageLink('readerWindowMetricsRevision') @Watch('onMotionProgressChanged') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   private toolbarInputWidthKey: string = '';
   private toolbarInputWidthCached: number = 0;
 
@@ -328,7 +333,9 @@ export struct FullDirectoryPanel {
         .attributeModifier(new ReaderPanelFrame('reader-full-card', this.appThemeScheme)).hitTestBehavior(HitTestMode.None);
       this.standaloneBody();
     }.width(this.panelWidth()).height(this.panelHeight())
-      .attributeModifier(new ReaderPanelFrame('reader', this.appThemeScheme)).clip(true);
+      .attributeModifier(new ReaderPanelFrame('reader', this.appThemeScheme, false, undefined,
+        readerSurfaceMaterialDecision('controlPanel', this.navigationPreferences, this.appThemeScheme, this.systemScheme)))
+      .clip(true);
   }
 
   @Builder

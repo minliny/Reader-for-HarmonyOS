@@ -1,7 +1,7 @@
 import { asset } from '@kit.AssetStoreKit';
 import { util } from '@kit.ArkTS';
 import type { BusinessError } from '@kit.BasicServicesKit';
-import { isReaderTtsCredentialAliasForConfig } from '../../features/reading/application/ReaderOnlineTtsProfile.ts';
+import { isReaderTtsCredentialAliasForConfig } from '../contracts/ReaderOnlineTtsProfile.ts';
 
 // AssetStore add/addSync accepts 1–1024 UTF-8 bytes in a single SECRET.
 const MAX_CREDENTIAL_BYTES = 1024;

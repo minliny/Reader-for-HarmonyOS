@@ -43,8 +43,7 @@ export struct BookshelfMoreActionSheet {
       new ReaderMenuActionView(this.actionToken('downloads'), '下载管理', true,
         readerActionIcon('download', this.appThemeScheme)),
       new ReaderMenuActionView(this.actionToken('settings'), '书架设置', true,
-        this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_settings_theme_night') :
-          $r('app.media.bookshelf_more_settings')),
+        readerActionIcon('settings', this.appThemeScheme)),
       new ReaderMenuActionView(this.actionToken('management'), '书架数据管理', true,
         readerActionIcon('folder', this.appThemeScheme)),
     ];

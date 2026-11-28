@@ -17,6 +17,8 @@ import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAcce
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
@@ -37,6 +39,7 @@ import {
 } from '../../../ui/foundation/ReaderWindowMetrics';
 import {
   TOK_BORDER_W,
+  TOK_SCREEN_INSET,
 } from '../../../ui/foundation/ReaderTokens';
 
 import { isReaderLocalTxtFormat } from '../application/ReaderDirectoryNavigation';
@@ -76,6 +79,9 @@ let fullDirectoryBackGeneration = 0;
 export struct ReaderFullDirectory {
   @Prop reduceMotion: boolean = false;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @StorageLink('readerWindowChromeUnderlayColor') private chromeUnderlayColor: string =
     readerAppColor('app.window.background', 'day');
 
@@ -403,7 +409,8 @@ export struct ReaderFullDirectory {
       }
     }.width(this.panelWidth()).height(this.panelViewportHeight())
       .position({ x: this.panelLeft(), y: this.panelTop() })
-      .attributeModifier(new ReaderPanelFrame('reader', this.appThemeScheme)).clip(true)
+      .attributeModifier(new ReaderPanelFrame('reader', this.appThemeScheme, false, undefined,
+        readerSurfaceMaterialDecision('controlPanel', this.navigationPreferences, this.appThemeScheme, this.systemScheme))).clip(true)
       .visibility(this.directoryRulesVisible ? Visibility.Visible : Visibility.None)
       .enabled(this.directoryRulesVisible && this.interactive)
       .accessibilityLevel(this.directoryRulesVisible && this.interactive ? 'auto' : 'no-hide-descendants')
@@ -892,12 +899,12 @@ export struct ReaderFullDirectory {
     const expanded = this.usesExpandedLayout();
     if (this.catalogContext === 'detail') {
       input.contentMaxWidth = expanded ? 720 : Number.MAX_SAFE_INTEGER;
-      input.contentHorizontalPadding = 18;
+      input.contentHorizontalPadding = TOK_SCREEN_INSET;
       input.contentHorizontalSafeArea = 'interactive';
     } else {
-      input.contentMaxWidth = expanded ? 720 : 364;
-      input.contentLeftGap = expanded ? 27 : 12;
-      input.contentRightGap = expanded ? 13 : 12;
+      input.contentMaxWidth = 720;
+      input.contentLeftGap = expanded ? 27 : TOK_SCREEN_INSET;
+      input.contentRightGap = expanded ? 13 : TOK_SCREEN_INSET;
       input.contentAlignment = expanded ? 'right' : 'center';
     }
     this.geometry = resolveReaderPageGeometry(input);

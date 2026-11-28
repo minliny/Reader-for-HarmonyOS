@@ -10,7 +10,7 @@ import {
   TYPE_SETTINGS_SELECT_PHONE_CANCEL,
   TYPE_SETTINGS_SELECT_TITLE,
 } from '../../../ui/foundation/ReaderTypography';
-import { PopupSurfaceSpec, readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { PopupSurfaceSpec, READER_GLASS_BLUR_VP, READER_HEAVY_GLASS_BLUR_VP, readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerNativeSurfaceOutline,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
@@ -144,9 +144,12 @@ export struct SettingsSelectOverlay {
           }
         }.width('100%')
           .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? `reader-settings-select-phone:${this.field}` : '')
-          .backgroundEffect(undefined)
-          .backgroundColor(Color.Transparent)
-          .border({ width: 0, color: Color.Transparent })
+          .backgroundEffect(this.panelMaterial('modalSheet').frosted ?
+            { radius: READER_HEAVY_GLASS_BLUR_VP, color: readerAppColor('app.surface.glassHeavy', this.appThemeScheme) } : undefined)
+          .backgroundColor(this.panelMaterial('modalSheet').native || this.panelMaterial('modalSheet').frosted ?
+            Color.Transparent : readerAppColor('app.bookshelf.sheetSurface', this.appThemeScheme))
+          .border(this.panelMaterial('modalSheet').native ? { width: 0, color: Color.Transparent } :
+            { width: { top: 1 }, color: readerAppColor('app.border.modalHighlight', this.appThemeScheme) })
           .borderRadius(PHONE_SHEET_CORNERS)
           .clip(true)
           .shadow(this.panelMaterial('modalSheet').native ? undefined : readerSurfaceElevation('sheet', this.appThemeScheme))
@@ -213,8 +216,7 @@ export struct SettingsSelectOverlay {
         .height(this.phoneCancelHeight())
         .padding(0)
         .border({ width: 1, color: readerAppColor('app.border.control', this.appThemeScheme) })
-        .attributeModifier(new ReaderPressFeedback(this.panelMaterial('modalSheet').native ? Color.Transparent :
-          readerAppColor('app.surface.menuSolid', this.appThemeScheme),
+        .attributeModifier(new ReaderPressFeedback(readerAppColor('app.surface.menuSolid', this.appThemeScheme),
           this.appThemeScheme, PHONE_RADIUS, PHONE_RADIUS, this.ownsOpening(identity)))
         .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText('取消')
         .onClick((): void => this.dismiss(identity));
@@ -225,10 +227,6 @@ export struct SettingsSelectOverlay {
       left: PHONE_HORIZONTAL_INSET,
       right: PHONE_HORIZONTAL_INSET,
       bottom: PHONE_BOTTOM_INSET,
-    })
-    .linearGradient(this.panelMaterial('modalSheet').native ? undefined : {
-      angle: 180,
-      colors: [[readerAppColor('app.surface.selectWarm', this.appThemeScheme), 0], [readerAppColor('app.surface.selectGradientEnd', this.appThemeScheme), 1]],
     })
     .borderRadius(PHONE_SHEET_CORNERS);
   }
@@ -241,8 +239,7 @@ export struct SettingsSelectOverlay {
       }, (option: string): string => `settings-phone-option-${this.field}-${option}`);
     }.width('100%')
       .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? 'reader-settings-select-options' : '')
-      .backgroundColor(this.panelMaterial('modalSheet').native ? Color.Transparent :
-        readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+      .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
       .border({ width: 1, color: readerAppColor('app.border.control', this.appThemeScheme) })
       .borderRadius(PHONE_RADIUS).clip(true);
   }
@@ -271,8 +268,9 @@ export struct SettingsSelectOverlay {
     }
     .width(this.tabletFrame().width).height(this.tabletFrame().height).scrollBar(BarState.Auto)
     .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? `reader-settings-select-tablet:${this.field}` : '')
-    .backgroundEffect(undefined)
-    .backgroundColor(this.panelMaterial('popoverMenu').native ? Color.Transparent :
+    .backgroundEffect(this.panelMaterial('popoverMenu').frosted ?
+      { radius: READER_GLASS_BLUR_VP, color: readerAppColor('app.surface.glassHeavy', this.appThemeScheme) } : undefined)
+    .backgroundColor(this.panelMaterial('popoverMenu').native || this.panelMaterial('popoverMenu').frosted ? Color.Transparent :
       readerAppColor(this.tabletSpec().surfaceBackgroundRole, this.appThemeScheme))
     .border(this.panelMaterial('popoverMenu').native ? { width: 0, color: Color.Transparent } :
       { width: this.tabletSpec().borderWidth, color: readerAppColor(this.tabletSpec().surfaceBorderRole, this.appThemeScheme) })

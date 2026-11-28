@@ -5,11 +5,12 @@ import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { ReaderPostLayoutFrame } from '../layout/ReaderPostLayoutFrame';
 import { TOK_BORDER_W, TOK_RADIUS_PILL, TOK_SPACE_XS } from '../foundation/ReaderTokens';
 import { TYPE_MAIN_TAB_LABEL } from '../foundation/ReaderTypography';
-import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
+import { readerSurfaceElevation, READER_GLASS_BLUR_VP } from '../surfaces/ReaderSurfaceSpecs';
 import { readerPageAreaLength } from '../layout/ReaderPageShell';
 import { readerFloatingTabBarHeight, readerMainTabItemHeight } from '../layout/ReaderFloatingBarMetrics';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../layout/ReaderRaisedShape';
-import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision }
+  from '../../app/HarmonyCapabilityPolicy';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 
 export interface ReaderBottomTabItem {
@@ -75,8 +76,10 @@ export struct ReaderBottomTabBar {
         .width(this.surfaceWidth)
         .constraintSize({ minHeight: readerFloatingTabBarHeight(this.fontScale) })
         .padding(TOK_SPACE_XS + (this.material().native ? TOK_BORDER_W : 0))
-        .backgroundEffect(undefined)
-        .backgroundColor(this.material().native ? Color.Transparent : readerAppColor('app.navigation.floatingSurface', this.scheme))
+        .backgroundEffect(this.material().frosted ?
+          { radius: READER_GLASS_BLUR_VP, color: readerAppColor('app.header.veilSurfaceScrolled', this.scheme) } : undefined)
+        .backgroundColor(this.material().frosted ?
+          Color.Transparent : readerAppColor('app.navigation.floatingSurface', this.scheme))
         .border(this.material().native ? { width: 0, color: Color.Transparent } :
           { width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
         .borderRadius(this.materialRadius())
@@ -93,7 +96,7 @@ export struct ReaderBottomTabBar {
   }
 
   private material(): ReaderSurfaceMaterialDecision {
-    return readerSurfaceMaterialDecision('chromeBar', this.navigationPreferences, this.scheme, this.systemScheme);
+    return readerSurfaceMaterialDecision('navigationBar', this.navigationPreferences, this.scheme, this.systemScheme);
   }
 
   @Builder

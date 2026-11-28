@@ -32,7 +32,8 @@ import { ReaderModalScrimModifier, readerSurfaceMaterialDecision } from '../../.
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
 import { resolveDialogSpec, resolveDrawerSpec, readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { readerDynamicSurfaceWidth, readerSurfaceMaxHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerDynamicSurfaceWidth, readerScaledControlHeight, readerScaledWidth, readerSurfaceMaxHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { TOK_CONTENT_MAX_W_TABLET } from '../../../ui/foundation/ReaderTokens';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import type { SharedDownloadUiAction, SharedDownloadUiBookTarget, SharedDownloadUiIntent } from '../presentation/SharedDownloadUiContract';
@@ -731,8 +732,10 @@ export class SharedDownloadSheetsOwner {
   }
 
   storageSelectWidth(): number {
-    const available = Math.max(0, this.view.frame.metrics().windowRect.width - DOWNLOAD_VISUAL.sheetBodySide * 2 - DOWNLOAD_VISUAL.storageSettingsGap);
-    return Math.min(DOWNLOAD_VISUAL.storageSelectWidth * this.view.frame.fontScale(), available / 2);
+    const hostWidth = Math.min(TOK_CONTENT_MAX_W_TABLET,
+      this.view.frame.layout.pageViewportWidth() > 0 ? this.view.frame.layout.pageViewportWidth() : this.view.frame.metrics().windowRect.width);
+    const available = Math.max(0, hostWidth - DOWNLOAD_VISUAL.sheetBodySide * 2 - DOWNLOAD_VISUAL.storageSettingsGap);
+    return Math.min(readerScaledWidth(116, this.view.frame.fontScale(), 196), available * 0.55);
   }
 
   sheetSafeLeft(): number { return readerPageSafeLeft(this.view.frame.metrics(), this.view.frame.mount.pageOriginX(), true); }
@@ -890,7 +893,7 @@ interface DownloadSheetSurfaceInput {
 function DownloadSheetSurface(owner: SharedDownloadSheetsOwner, input: DownloadSheetSurfaceInput) {
   Column({ space: 0 }) {
     DownloadSheetContent(owner, { opening: input.opening });
-  }.width('100%').constraintSize({ maxHeight: owner.sheetMaxHeight() })
+  }.width('100%').constraintSize({ maxWidth: TOK_CONTENT_MAX_W_TABLET, maxHeight: owner.sheetMaxHeight() })
     .padding({ left: owner.sheetSafeLeft(), right: owner.sheetSafeRight() })
     .backgroundColor(readerAppColor('app.surface.menuSolid', owner.view.frame.scheme()))
     .borderRadius({ topLeft: DOWNLOAD_VISUAL.sheetRadius, topRight: DOWNLOAD_VISUAL.sheetRadius }).clip(true)
@@ -1331,10 +1334,14 @@ function DownloadRangeBoundInput(owner: SharedDownloadSheetsOwner, input: Downlo
     .onDisAppear((): void => (input.start ? owner.rangeStartTarget : owner.rangeEndTarget).unmount(owner.rangeInputId(input.start, input.opening, input.revision)))
     .layoutWeight(1).type(InputType.Number)
     .enabled(owner.paint().rangeDraft.catalog !== undefined && !owner.paint().rangeDraft.catalogChanged)
-    .height(sharedDownloadControlHeight(owner.view.frame.fontScale(), DOWNLOAD_VISUAL.searchHeight, DOWNLOAD_VISUAL.controlLineHeight, DOWNLOAD_VISUAL.searchPaddingY * 2))
+    .constraintSize({ minHeight: readerScaledControlHeight(40, DOWNLOAD_VISUAL.controlLineHeight, owner.view.frame.fontScale()) })
+    .borderRadius(10)
+    .border({ width: DOWNLOAD_VISUAL.borderWidth, color: readerAppColor('TOK_LINE_STRONG', owner.view.frame.scheme()) })
+    .padding({ left: 12, right: 12 })
+    .placeholderColor(readerAppColor('TOK_MUTED', owner.view.frame.scheme()))
     .fontFamily(TYPE_DOWNLOAD_CONTROL.fontFamily).fontWeight(TYPE_DOWNLOAD_CONTROL.fontWeight)
     .fontSize(TYPE_DOWNLOAD_CONTROL.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CONTROL.lineHeightFp as number)
-    .fontColor(downloadVisualColor('ink', owner.view.frame.scheme())).backgroundColor(downloadVisualColor('soft', owner.view.frame.scheme()))
+    .fontColor(downloadVisualColor('ink', owner.view.frame.scheme())).backgroundColor(readerAppColor('TOK_SURFACE_FIELD', owner.view.frame.scheme()))
     .onChange((value: string): void => owner.updateRangeBound(value, input.start, input.opening, input.revision));
 }
 

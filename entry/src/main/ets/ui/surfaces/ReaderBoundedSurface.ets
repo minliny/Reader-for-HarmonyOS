@@ -98,24 +98,30 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       instance.width('100%').padding({ bottom: spec.contentBottom });
       return;
     }
-    const spec = resolvePopupSpec('tts-config-manager');
+    const spec = resolvePopupSpec(this.id === 'tts-config-picker' ? 'tts-config-picker' : 'tts-config-manager');
+    const radius = spec.borderRadius;
     const density = readerWindowMetrics().densityPixels;
-    instance.width(this.width).height(height)
-      .backgroundColor(readerAppColor(spec.surfaceBackgroundRole, this.scheme))
-      .border({ width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) })
-      .borderRadius(this.id === 'tts-config-picker' ? 14 : spec.borderRadius)
-      .constraintSize({ maxWidth: '100%', maxHeight }).shadow({
-        radius: (this.id === 'tts-config-picker' ? 36 : spec.shadowRadius) * density,
-        color: readerAppColor(this.id === 'tts-config-picker' ? 'app.shadow.readerConfigSecondary' : spec.surfaceShadowRole, this.scheme),
-        offsetY: (this.id === 'tts-config-picker' ? 14 : spec.shadowOffsetY) * density,
-      }).clip(true);
+    instance.width(this.width).height(height).constraintSize({ maxWidth: '100%', maxHeight });
+    this.applyMaterialFrame(instance,
+      { radius: this.id === 'tts-config-picker' ? READER_GLASS_BLUR_VP : READER_HEAVY_GLASS_BLUR_VP,
+        color: readerAppColor('app.surface.glassHeavy', this.scheme) },
+      { width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) },
+      readerNativeSurfaceOutline(this.scheme, radius),
+      {
+        radius: spec.shadowRadius * density,
+        color: readerAppColor(spec.surfaceShadowRole, this.scheme),
+        offsetY: spec.shadowOffsetY * density,
+      },
+      readerAppColor(spec.surfaceBackgroundRole, this.scheme));
+    instance.borderRadius(radius).clip(true);
   }
 
-  private applyMaterialFrame(instance: CommonAttribute, _background: BackgroundEffectOptions,
-    border: BorderOptions | undefined, outline: OutlineOptions, shadow?: ShadowOptions): void {
+  private applyMaterialFrame(instance: CommonAttribute, background: BackgroundEffectOptions,
+    border: BorderOptions | undefined, outline: OutlineOptions, shadow?: ShadowOptions, solidBackground?: string): void {
     const native = this.material?.native === true;
-    instance.backgroundEffect(undefined)
-      .backgroundColor(native ? Color.Transparent : readerAppColor('TOK_SURFACE_SOLID', this.scheme))
+    const frosted = !native && this.material?.frosted === true;
+    instance.backgroundEffect(frosted ? background : undefined)
+      .backgroundColor(native || frosted ? Color.Transparent : (solidBackground ?? readerAppColor('TOK_SURFACE_SOLID', this.scheme)))
       .border(native ? { width: 0, color: Color.Transparent } : border)
       .shadow(native ? undefined : shadow);
     applyReaderImmersiveMaterial(instance, this.material);
@@ -195,8 +201,9 @@ export struct ReaderBoundedSurface {
   }
 
   private frameModifier(): AttributeModifier<CommonAttribute> {
-    const role = this.specId === 'source-switch-window' ? 'popoverMenu' :
-      this.specId === 'source-switch-drawer' || this.specId === 'reader-action-sheet' ? 'modalSheet' : undefined;
+    const role = this.specId === 'source-switch-window' || this.specId === 'tts-config-picker' ? 'popoverMenu' :
+      this.specId === 'source-switch-drawer' || this.specId === 'reader-action-sheet' || this.specId === 'tts-config-manager' ?
+        'modalSheet' : undefined;
     const effectiveScheme = this.scheme === 'auto' ? this.appThemeScheme : this.scheme;
     return new ReaderBoundedFrameModifier(this.specId, this.surfaceWidth, this.surfaceHeight,
       effectiveScheme, this.placement, this.maxSurfaceHeight, this.safeInsets,

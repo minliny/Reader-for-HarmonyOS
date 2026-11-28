@@ -3,6 +3,7 @@ import { ReaderEditingVisibility } from '../../ui/layout/ReaderEditingVisibility
 import { ReaderEditingScrollBinding } from '../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderButton } from '../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../ui/controls/ReaderFormField';
+import { ReaderPasteButton } from '../../ui/controls/ReaderPasteButton';
 import { ReaderTransientFeedback } from '../../ui/feedback/ReaderTransientFeedback';
 import { ReaderClipboardDraftPaste, readerClipboardPasteMessage,
   type ReaderClipboardPasteProblem } from '../../platform/clipboard/ReaderClipboardHost';
@@ -177,9 +178,11 @@ export struct JsonImportDialog {
             .fontWeight(TYPE_FORM_ACTION.fontWeight)
             .fontSize(TYPE_FORM_ACTION.fontSizeFp)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-          PasteButton()
-            .enabled(this.foreground && this.inputIsCurrent())
-            .onClick((_event: ClickEvent, result: PasteButtonOnClickResult): void => this.pasteUrlDraft(result));
+          ReaderPasteButton({
+            scheme: this.appThemeScheme,
+            actionEnabled: this.foreground && this.inputIsCurrent(),
+            onPaste: (result: PasteButtonOnClickResult): void => this.pasteUrlDraft(result),
+          });
         }.width('100%');
         ForEach([this.urlInputRevision], (revision: number): void => {
           ReaderFormField({ editingHost: this.editingHost, isEditable: this.inputIsCurrent(), scheme: this.appThemeScheme, specId: 'form-url', text: this.urlDraft,

@@ -3,7 +3,8 @@ import preferences from '@ohos.data.preferences';
 import util from '@ohos.util';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { JsonObject } from '@reader/core-harmony';
-import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
+import type { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
+import { getCurrentRuntimeOwner, isCurrentRuntimeOwner } from '../../../app/ReaderRuntimeIdentity';
 import { ReadingRecordIntent, ReadingRecordRecoveryError, type ReadingRecord, type ReadingRecordReceipt, type ReadingRecordRecoveryState } from './ReaderReadingRecordState';
 
 const READING_RECORD_PREFERENCES_NAME = 'reader_read_record_host_v1';
@@ -50,16 +51,16 @@ export class ReadingRecordGateway {
   private lastError: string = '';
   private lastConfirmedReadAt: number = 0;
 
-  constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
+  constructor(runtimeOwner: ReaderRuntimeOwner = getCurrentRuntimeOwner() as ReaderRuntimeOwner) {
     this.runtimeOwner = runtimeOwner;
-    if (ReaderRuntimeOwner.isCurrent(runtimeOwner)) ReadingRecordGateway.currentReceiver = this;
+    if (isCurrentRuntimeOwner(runtimeOwner)) ReadingRecordGateway.currentReceiver = this;
   }
 
   /** Called by the UI clock. Ownership moves now; persistence and exact Core
    * acknowledgement happen in the Runtime lane after this UI turn returns. */
   handoff(intent: ReadingRecordIntent): void {
     if (this.acceptedObjects.has(intent)) return;
-    if (!this.stopped && ReaderRuntimeOwner.isCurrent(this.runtimeOwner) &&
+    if (!this.stopped && isCurrentRuntimeOwner(this.runtimeOwner) &&
       ReadingRecordGateway.retiredMemory.includes(intent)) {
       // This exact object already transferred via the predecessor carry lane.
       // Wake adoption rather than admitting a second copy before load finishes.
@@ -68,14 +69,14 @@ export class ReadingRecordGateway {
       return;
     }
     this.checkUnassignedIntent(intent);
-    if (this.stopped || !ReaderRuntimeOwner.isCurrent(this.runtimeOwner)) {
+    if (this.stopped || !isCurrentRuntimeOwner(this.runtimeOwner)) {
       // Component retirement can follow Runtime close. Transfer synchronously
       // to an already-running successor (which also wakes its existing drain),
       // or retain it for the next owner's normal v1/v2 recovery. Never enqueue
       // new work on the stopped Native runtime or clear elapsed time ownerless.
       const receiver = ReadingRecordGateway.currentReceiver;
       if (receiver !== undefined && receiver !== this && !receiver.stopped &&
-        ReaderRuntimeOwner.isCurrent(receiver.runtimeOwner)) receiver.handoff(intent);
+        isCurrentRuntimeOwner(receiver.runtimeOwner)) receiver.handoff(intent);
       else ReadingRecordGateway.retiredMemory.push(intent);
       this.acceptedObjects.add(intent);
       return;
@@ -457,7 +458,7 @@ export class ReadingRecordGateway {
   }
 
   private assertCurrent(): void {
-    if (this.stopped || !ReaderRuntimeOwner.isCurrent(this.runtimeOwner)) throw new ReadingRecordRecoveryError('pending', '阅读时长服务已退役，核对未完成；请由当前服务继续核对。');
+    if (this.stopped || !isCurrentRuntimeOwner(this.runtimeOwner)) throw new ReadingRecordRecoveryError('pending', '阅读时长服务已退役，核对未完成；请由当前服务继续核对。');
   }
 
   private checkIntent(journal: ReadingRecordJournal, intent: ReadingRecordIntent): void {

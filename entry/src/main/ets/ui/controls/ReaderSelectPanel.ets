@@ -1,6 +1,6 @@
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
-import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
+import { READER_GLASS_BLUR_VP, readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerNativeSurfaceOutline,
   readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 import { FrameCallback } from '@kit.ArkUI';
@@ -329,8 +329,10 @@ export struct ReaderSelectPanel {
     .height(this.panelHeight())
     .padding(this.variant === 'appearanceLibrary' ? 3 : 0)
     .zIndex(10)
-    .backgroundEffect(undefined)
-    .backgroundColor(this.panelMaterial().native || this.menuHeaderHeight > 0 ? Color.Transparent : this.panelBackgroundColor())
+    .backgroundEffect(this.panelMaterial().frosted && this.menuHeaderHeight === 0 ?
+      { radius: READER_GLASS_BLUR_VP, color: readerAppColor('app.surface.glassHeavy', this.appThemeScheme) } : undefined)
+    .backgroundColor(this.panelMaterial().native || this.panelMaterial().frosted || this.menuHeaderHeight > 0 ?
+      Color.Transparent : this.panelBackgroundColor())
     .border(this.panelMaterial().native ? { width: 0, color: Color.Transparent } :
       { width: this.menuHeaderHeight > 0 ? 0 : TOK_BORDER_W, color: this.panelBorderColor() })
     .borderRadius(this.panelRadius())
@@ -354,7 +356,9 @@ export struct ReaderSelectPanel {
       .id(`${this.selectionId}:frame`)
       .width('100%').height(this.searchablePaintHeight())
       .position({ x: 0, y: SOURCE_GROUP_SELECT_PAINT_INSET })
-      .backgroundColor(this.panelMaterial().native ? Color.Transparent : this.panelBackgroundColor())
+      .backgroundEffect(this.panelMaterial().frosted ?
+        { radius: READER_GLASS_BLUR_VP, color: readerAppColor('app.surface.glassHeavy', this.appThemeScheme) } : undefined)
+      .backgroundColor(this.panelMaterial().native || this.panelMaterial().frosted ? Color.Transparent : this.panelBackgroundColor())
       .border(this.panelMaterial().native ? { width: 0, color: Color.Transparent } :
         { width: TOK_BORDER_W, color: this.panelBorderColor() })
       .borderRadius(SOURCE_GROUP_SELECT_RADIUS)

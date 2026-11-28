@@ -1086,7 +1086,7 @@ function MangaBottomControls($$: MangaBottomControlsInput) {
 function MangaFooterAction(host: MangaReaderChrome, icon: () => Resource, label: string, panel: string) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Column() {
-        Stack({ alignContent: Alignment.Center }) { Image(icon()).width(14).height(14); }
+        Stack({ alignContent: Alignment.Center }) { Image(icon()).width(18).height(18); }
           .width(30).height(28).accessibilityLevel('no');
         Text(label).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(12).lineHeight(18).halfLeading(true).fontColor(host.inkColor(host.floatingChromeScheme('floatingDock'))).maxLines(1);
       }.width('100%').justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');

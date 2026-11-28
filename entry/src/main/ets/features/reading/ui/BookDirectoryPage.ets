@@ -37,6 +37,7 @@ import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries,
 import { mangaDirectoryEntryRows, type MangaDirectoryLayoutRow } from '../../manga/ui/MangaDirectoryLayout';
 import { MangaDirectoryEntryRow } from '../../manga/ui/MangaDirectoryEntryRow';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
+import { TOK_SCREEN_INSET } from '../../../ui/foundation/ReaderTokens';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { ReaderNativeSlotMeasurement } from '../../../ui/layout/ReaderNativeSlotMeasurement';
@@ -1033,7 +1034,7 @@ export struct BookDirectoryPage {
     input.footerHeight = this.mangaFlowFooter() ? 0 : this.mangaFooterHeight();
     input.contentGap = visual.contentTop - visual.headerHeight - visual.headerSafeGap + this.mangaToolsHeight;
     input.contentMaxWidth = visual.contentWidthMax;
-    input.contentHorizontalPadding = 18;
+    input.contentHorizontalPadding = TOK_SCREEN_INSET;
     input.contentEndInset = this.mangaListBottomClearance();
     this.geometry = resolveReaderPageGeometry(input);
   }

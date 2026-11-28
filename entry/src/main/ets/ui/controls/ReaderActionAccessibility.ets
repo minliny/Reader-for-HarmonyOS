@@ -44,3 +44,9 @@ export function readerActionTouchRegion(width: number | string, height: number |
     height: typeof height === 'number' ? Math.max(READER_ACTION_MIN_TARGET, height) : height,
   };
 }
+
+/** Union of the component's own 100% bounds and a minimum 44vp touch target so
+ * enlarged font scales never shrink the hit region smaller than the control. */
+export function readerUnionTouchRegion(width: number | string, height: number | string): Rectangle[] {
+  return [{ x: 0, y: 0, width: '100%', height: '100%' }, readerActionTouchRegion(width, height)];
+}

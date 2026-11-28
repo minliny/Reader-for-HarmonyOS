@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { sampleReaderControlMotionComposition } from '../../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts';
+import {
+  READER_CONTROL_REGULAR_DOCK_HEIGHT,
+} from '../../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts';
+import {
+  sampleReaderControlMotionComposition,
+} from '../../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts';
 import { ReaderPageSettlementTimeline } from '../../entry/src/main/ets/features/reading/application/ReaderPageSettlementTimeline.ts';
 import { buildReaderSessionLaunchGeometry, sampleReaderSessionLaunch }
   from '../../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts';
@@ -247,7 +252,8 @@ test('the reading session launch releases its controls and source before settlin
 });
 
 test('control expansion moves the brightness rail offscreen and hides it in full mode', () => {
-  const bounds = { width: 390, fullHeight: 736, quickHeight: 330, bottomGap: 0 };
+  assert.equal(READER_CONTROL_REGULAR_DOCK_HEIGHT, 330);
+  const bounds = { width: 390, fullHeight: 736, quickHeight: READER_CONTROL_REGULAR_DOCK_HEIGHT, bottomGap: 0 };
   const quick = sampleReaderControlMotionComposition(
     { expansionProgress: 0, visibilityProgress: 1 }, bounds);
   const full = sampleReaderControlMotionComposition(
@@ -257,13 +263,13 @@ test('control expansion moves the brightness rail offscreen and hides it in full
 
   assert.equal(quick.shell.y, 406);
   assert.equal(quick.content.height, 190);
-  assert.equal(quick.content.width, 312);
+  assert.equal(quick.content.width, 316);
   assert.equal(quick.content.y, 435);
   assert.equal(quick.contentSurface.y, 463);
   assert.equal(quick.contentSurface.height, 666);
   assert.equal(quick.navigation.y, 643);
   assert.equal(quick.navigation.opacity, 1);
-  assert.equal(quick.brightness.width, 46);
+  assert.equal(quick.brightness.width, 38);
   approx(bounds.width - quick.brightness.x - quick.brightness.width, 13.56);
   assert.equal(quick.brightness.y, 435);
 

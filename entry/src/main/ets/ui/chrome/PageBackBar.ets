@@ -1,4 +1,4 @@
-import { isReaderRealtimeBlurEnabled } from '../../app/HarmonyCapabilityPolicy';
+import { isReaderNativeChromeStyle, isReaderRealtimeBlurEnabled } from '../../app/HarmonyCapabilityPolicy';
 import { READER_LAYOUT_DEBUG_BUILD } from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
@@ -6,7 +6,14 @@ import { readerLayoutCarrierResponseRegion } from '../layout/ReaderPageNativeAtt
 import { DIRECTORY_CHROME_VISUAL as visual, mangaDirectoryScale, mangaDirectoryHeaderHeight } from '../foundation/ReaderDirectoryChromeVisual';
 import { MangaDirectoryPressFeedback } from '../foundation/MangaDirectoryPressFeedback';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { readerSurfaceElevation, readerHeaderVeilMaterial, readerHeaderVeilBorder } from '../surfaces/ReaderSurfaceSpecs';
+import {
+  readerHeaderVeilBorder,
+  readerHeaderVeilMaterial,
+  readerNativeScrolledHeaderDivider,
+  readerNativeScrolledHeaderMaterial,
+  readerNativeScrolledHeaderSolid,
+  readerSurfaceElevation,
+} from '../surfaces/ReaderSurfaceSpecs';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../layout/ReaderRaisedShape';
 import { readerPageAreaLength } from '../layout/ReaderPageShell';
 import { readerActionTouchRegion } from '../controls/ReaderActionAccessibility';
@@ -22,7 +29,12 @@ import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP, APP_HEADER
   DOWNLOAD_HEADER_ACTION_WIDTH, DOWNLOAD_HEADER_ACTION_HEIGHT } from '../foundation/ReaderHeaderMetrics';
 import { readerScaledBarHeight } from '../foundation/ReaderSurfaceResolvers';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
-import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
+import {
+  defaultNavigationPreferences,
+  READER_NO_SHADOW,
+  ReaderImmersiveMaterialModifier,
+  readerSurfaceMaterialDecision,
+} from '../surfaces/ReaderSurfaceMaterial';
 
 const DOWNLOAD_HEADER_SLOT_WIDTH = 80;
 const DOWNLOAD_HEADER_PADDING_Y = 3;
@@ -159,25 +171,31 @@ export struct PageBackBar {
     }
     .width('100%')
     .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
-        ? { role: this.floating ? 'floating-header' : 'fixed-header', id: 'page-back-bar',
+        ? { role: this.effectiveFloating() ? 'floating-header' : 'fixed-header', id: 'page-back-bar',
           expectedHeightVp: this.barHeight(), expectedTopGapVp: this.layoutExpectedTopGapVp >= 0
-            ? this.layoutExpectedTopGapVp : this.floating ? APP_FLOATING_HEADER_TOP_GAP : 0 } as LayoutInvariantTag : undefined)
+            ? this.layoutExpectedTopGapVp : this.effectiveFloating() ? APP_FLOATING_HEADER_TOP_GAP : 0 } as LayoutInvariantTag : undefined)
     .constraintSize({ minHeight: this.barHeight() })
     .padding({ left: this.leftInset(), right: this.rightInset(), top: this.verticalInset(), bottom: this.verticalInset() })
     .alignItems(VerticalAlign.Center)
-    .backgroundEffect(this.veil() && !this.surfaceMaterial()?.native && isReaderRealtimeBlurEnabled(this.navigationAppearance) ?
-      readerHeaderVeilMaterial(this.scrolled, this.appThemeScheme) : undefined)
+    .backgroundEffect(this.nativeChrome() ?
+      (this.scrolled && isReaderRealtimeBlurEnabled(this.navigationAppearance) ?
+        readerNativeScrolledHeaderMaterial(this.appThemeScheme) : undefined) :
+      (this.surfaceMaterial()?.frosted === true ?
+        readerHeaderVeilMaterial(this.scrolled, this.appThemeScheme) : undefined))
     .backgroundColor(this.panelBackground())
-    .border({ width: this.surfaceMaterial()?.native || !this.framed() ? 0 :
-      this.variant === 'mangaDirectory' ? visual.borderWidth : 1,
-      color: this.surfaceMaterial()?.native ? Color.Transparent : this.veil() ?
-        readerHeaderVeilBorder(this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
+    .border(this.nativeChrome() ?
+      (this.scrolled ? { width: { bottom: 1 }, color: readerNativeScrolledHeaderDivider(this.appThemeScheme) } :
+        { width: 0, color: Color.Transparent }) :
+      { width: this.surfaceMaterial()?.native || !this.framed() ? 0 :
+        this.variant === 'mangaDirectory' ? visual.borderWidth : 1,
+        color: this.surfaceMaterial()?.native ? Color.Transparent : this.veil() ?
+          readerHeaderVeilBorder(this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(this.panelRadius())
     .clip(this.variant === 'download' && this.elevation === 'fixed' && !this.veil() && this.surface === 'solid')
-    .shadow(this.surfaceMaterial()?.native ? undefined :
-      readerSurfaceElevation(this.raised() ? 'raised' : this.elevation === 'floating' ? 'floating' : 'fixed', this.appThemeScheme))
+    .shadow(this.nativeChrome() ? READER_NO_SHADOW : this.surfaceMaterial()?.native ? undefined :
+      readerSurfaceElevation(this.raised() ? 'raised' : this.effectiveFloating() && this.elevation === 'floating' ? 'floating' : 'fixed', this.appThemeScheme))
     .attributeModifier(new ReaderImmersiveMaterialModifier(this.surfaceMaterial()))
-    .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion(this.veil() || this.surface === 'solid'))
+    .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion(this.nativeChrome() || this.veil() || this.surface === 'solid'))
     .onTouch((): void => {})
     .onAreaChange(this.panelAreaChangeHandler());
   }
@@ -215,13 +233,19 @@ export struct PageBackBar {
     }.width(DOWNLOAD_HEADER_SLOT_WIDTH);
   }
 
-  private framed(): boolean { return this.floating || this.variant === 'download'; }
-  private multilineTitle(): boolean { return this.variant === 'standard' && !this.floating; }
+  private nativeChrome(): boolean {
+    return this.variant === 'standard' && this.floating && isReaderNativeChromeStyle(this.navigationAppearance);
+  }
+  private effectiveFloating(): boolean { return this.floating && !this.nativeChrome(); }
+  private framed(): boolean { return this.effectiveFloating() || this.variant === 'download'; }
+  private multilineTitle(): boolean { return this.variant === 'standard' && !this.effectiveFloating(); }
   private adaptsTitleSize(): boolean { return this.multilineTitle() && this.fontScale() > 1; }
   private standardTitleHeightLimit(): number { return APP_HEADER_BAR_HEIGHT * 2; }
   private verticalInset(): number { return this.variant === 'download' ? DOWNLOAD_HEADER_PADDING_Y : 0; }
-  private raised(): boolean { return this.variant === 'standard' && this.elevation === 'raised'; }
-  private veil(): boolean { return this.floating || (this.variant === 'standard' && this.material === 'veil'); }
+  private raised(): boolean { return this.variant === 'standard' && this.elevation === 'raised' && !this.nativeChrome(); }
+  private veil(): boolean {
+    return this.effectiveFloating() || (!this.nativeChrome() && this.variant === 'standard' && this.material === 'veil');
+  }
 
   private surfaceMaterial(): ReaderSurfaceMaterialDecision | undefined {
     return this.veil() ?
@@ -229,8 +253,15 @@ export struct PageBackBar {
   }
 
   private panelBackground(): ResourceColor {
-    const solid = this.veil() ? !isReaderRealtimeBlurEnabled(this.navigationAppearance) : this.surface === 'solid';
-    return solid ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent;
+    if (this.nativeChrome()) {
+      return this.scrolled && !isReaderRealtimeBlurEnabled(this.navigationAppearance) ?
+        readerNativeScrolledHeaderSolid(this.appThemeScheme) : Color.Transparent;
+    }
+    if (this.veil()) {
+      return this.surfaceMaterial()?.native !== true && this.surfaceMaterial()?.frosted !== true ?
+        readerAppColor('app.navigation.floatingSurface', this.appThemeScheme) : Color.Transparent;
+    }
+    return this.surface === 'solid' ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent;
   }
 
   private backIconResource(): Resource {
@@ -243,12 +274,12 @@ export struct PageBackBar {
   }
 
   private requestedRadius(): number {
-    return this.variant === 'download' ? DOWNLOAD_HEADER_RADIUS : this.floating ? this.barHeight() / 2 : 0;
+    return this.variant === 'download' ? this.barHeight() / 2 : this.effectiveFloating() ? this.barHeight() / 2 : 0;
   }
 
   private raisedShapeIdentity(): string {
     return JSON.stringify(['page-back', this.appearanceEpoch, this.readerWindowMetricsRevision,
-      this.variant, this.floating, this.elevation, this.barHeight(), this.requestedRadius()]);
+      this.variant, this.effectiveFloating(), this.elevation, this.barHeight(), this.requestedRadius()]);
   }
 
   private currentRaisedShape(): ReaderRaisedShape | undefined {
@@ -299,9 +330,12 @@ export struct PageBackBar {
   }
 
   private barHeight(): number {
-    if (this.variant === 'download') return DOWNLOAD_HEADER_HEIGHT;
+    if (this.variant === 'download') {
+      return readerScaledBarHeight(DOWNLOAD_HEADER_HEIGHT,
+        TYPE_DOWNLOAD_HEADER_TITLE.lineHeightFp ?? 24, this.fontScale(), DOWNLOAD_HEADER_PADDING_Y);
+    }
     if (this.variant === 'mangaDirectory') return mangaDirectoryHeaderHeight(this.mangaFontScale());
-    return this.floating
+    return this.effectiveFloating()
       ? readerScaledBarHeight(this.minimumBarHeightVp > 0 ? this.minimumBarHeightVp : APP_FLOATING_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0)
       : Math.min(this.standardTitleHeightLimit(),
         readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0));
@@ -310,7 +344,7 @@ export struct PageBackBar {
   private leftInset(): number {
     if (this.variant === 'mangaDirectory') return visual.headerPadding;
     // The floating frame's parent owns cutouts; keep internal slots symmetric.
-    if (this.floating || this.variant === 'download') return 9;
+    if (this.effectiveFloating() || this.variant === 'download') return 9;
     if (this.readerWindowMetricsRevision < 0) {
       return 20;
     }
@@ -319,7 +353,7 @@ export struct PageBackBar {
 
   private rightInset(): number {
     if (this.variant === 'mangaDirectory') return visual.headerPadding;
-    if (this.floating || this.variant === 'download') return 9;
+    if (this.effectiveFloating() || this.variant === 'download') return 9;
     if (this.readerWindowMetricsRevision < 0) {
       return 20;
     }

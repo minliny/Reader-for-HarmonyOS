@@ -117,6 +117,10 @@ export interface LayoutInvariantDensityAudit {
   id: string;
   bounds?: LayoutInvariantRect;
   contentBounds?: LayoutInvariantRect;
+  insetLeft?: number;
+  insetRight?: number;
+  maxChildGap?: number;
+  viewportWidth?: number;
 }
 
 export interface LayoutInvariantFeatureAssertion {
@@ -183,6 +187,14 @@ interface LayoutDensitySpec {
   maxHeight: number;
   lineGrowth: number;
   maximumGap: number;
+  minWidth?: number;
+  maxWidth?: number;
+  expectedInsetX?: number;
+  insetTolerance?: number;
+  maxInternalGap?: number;
+  minAspectRatio?: number;
+  maxAspectRatio?: number;
+  strict?: boolean;
 }
 
 // Independent design values. Measured and tagged nodes never author their own R12 limits.
@@ -192,6 +204,22 @@ const DENSITY_SPECS: LayoutDensitySpec[] = [
   { id: 'tts-choice-content', minHeight: 0, maxHeight: 1200, lineGrowth: 240, maximumGap: 36 },
   { id: 'settings-home-group', minHeight: 50, maxHeight: 202, lineGrowth: 104, maximumGap: 28 },
   { id: 'source-import-review', minHeight: 32, maxHeight: 112, lineGrowth: 70, maximumGap: 24 },
+  { id: 'bookshelf-viewport-inset', minHeight: 200, maxHeight: 2000, lineGrowth: 0, maximumGap: 2000, expectedInsetX: 16, insetTolerance: 1.5, strict: true },
+  { id: 'bookshelf-view-pill', minHeight: 28, maxHeight: 31, lineGrowth: 0, maximumGap: 31, minWidth: 29, maxWidth: 31, strict: true },
+  { id: 'bookshelf-filter-toggle', minHeight: 33, maxHeight: 35, lineGrowth: 0, maximumGap: 35, minWidth: 33, maxWidth: 35, strict: true },
+  { id: 'reader-control-island-quick', minHeight: 326, maxHeight: 334, lineGrowth: 0, maximumGap: 334, maxInternalGap: 26, strict: true },
+  { id: 'reader-control-chapter-card', minHeight: 104, maxHeight: 112, lineGrowth: 24, maximumGap: 112, strict: true },
+  { id: 'reader-control-bookmark-lane', minHeight: 32, maxHeight: 36, lineGrowth: 12, maximumGap: 36, strict: true },
+  { id: 'reader-control-grabber', minHeight: 3, maxHeight: 5, lineGrowth: 0, maximumGap: 5, minWidth: 34, maxWidth: 38, strict: true },
+  { id: 'settings-single-row', minHeight: 50, maxHeight: 54, lineGrowth: 24, maximumGap: 54, strict: true },
+  { id: 'settings-two-line-row', minHeight: 56, maxHeight: 62, lineGrowth: 36, maximumGap: 62, strict: true },
+  { id: 'reader-toggle', minHeight: 24, maxHeight: 28, lineGrowth: 0, maximumGap: 28, minWidth: 42, maxWidth: 46, strict: true },
+  { id: 'source-filter-block', minHeight: 80, maxHeight: 160, lineGrowth: 40, maximumGap: 160, expectedInsetX: 16, insetTolerance: 1.5, strict: true },
+  { id: 'source-status-chip', minHeight: 26, maxHeight: 30, lineGrowth: 14, maximumGap: 30, strict: true },
+  { id: 'source-footer-action', minHeight: 38, maxHeight: 42, lineGrowth: 16, maximumGap: 42, strict: true },
+  { id: 'download-book-cover', minHeight: 64, maxHeight: 68, lineGrowth: 0, maximumGap: 68, minWidth: 46, maxWidth: 50, minAspectRatio: 0.68, maxAspectRatio: 0.78, strict: true },
+  { id: 'detail-inline-source-action', minHeight: 30, maxHeight: 34, lineGrowth: 14, maximumGap: 34, strict: true },
+  { id: 'detail-preview-row', minHeight: 44, maxHeight: 48, lineGrowth: 22, maximumGap: 48, strict: true },
 ];
 
 function validRect(rect?: LayoutInvariantRect): boolean {
@@ -354,17 +382,49 @@ function checkDensity(sample: LayoutInvariantNativeSample, fontScale: number | u
   for (const measurement of sample.density) {
     const spec = DENSITY_SPECS.find((item: LayoutDensitySpec): boolean => item.id === measurement.specId);
     const frame = measurement.bounds;
-    const content = measurement.contentBounds;
+    const content = measurement.contentBounds ?? (spec !== undefined && spec.maximumGap >= spec.maxHeight ? frame : undefined);
     if (spec === undefined || frame === undefined || content === undefined || !validRect(frame) || !validRect(content) ||
       fontScale === undefined || !Number.isFinite(fontScale) || fontScale <= 0) {
       result.missing.push(`R12:density:${measurement.id}`);
       continue;
     }
     if (!result.observedRules.includes('R12')) result.observedRules.push('R12');
+    const reasons: string[] = [];
+    const heightTol = spec.strict === true ? 0.1 : 2;
     const maxHeight = spec.maxHeight + spec.lineGrowth * Math.max(0, fontScale - 1);
     const free = frame.height - content.height;
-    if (frame.height < spec.minHeight - 2 || frame.height > maxHeight + 2 || free > spec.maximumGap + 2 || !contains(frame, content)) {
-      add(result.violations, 'R12', measurement.id, `height=${frame.height} limit=${spec.minHeight}–${maxHeight} free=${free}`);
+    if (frame.height < spec.minHeight - heightTol || frame.height > maxHeight + heightTol ||
+      free > spec.maximumGap + 2 || !contains(frame, content)) {
+      reasons.push(`height=${frame.height} limit=${spec.minHeight}-${maxHeight} free=${free}`);
+    }
+    if (fontScale <= 1.05) {
+      if ((spec.minWidth !== undefined && frame.width < spec.minWidth - 0.5) ||
+        (spec.maxWidth !== undefined && frame.width > spec.maxWidth + 0.5)) {
+        reasons.push(`width=${frame.width} limit=${spec.minWidth ?? 0}-${spec.maxWidth ?? 'inf'}`);
+      }
+      if (spec.minAspectRatio !== undefined || spec.maxAspectRatio !== undefined) {
+        const ratio = frame.height > 0 ? frame.width / frame.height : 0;
+        if ((spec.minAspectRatio !== undefined && ratio < spec.minAspectRatio) ||
+          (spec.maxAspectRatio !== undefined && ratio > spec.maxAspectRatio)) {
+          reasons.push(`ratio=${ratio.toFixed(3)} limit=${spec.minAspectRatio ?? 0}-${spec.maxAspectRatio ?? 'inf'}`);
+        }
+      }
+    }
+    if (spec.maxInternalGap !== undefined && measurement.maxChildGap !== undefined &&
+      Number.isFinite(measurement.maxChildGap) && measurement.maxChildGap > spec.maxInternalGap + 2) {
+      reasons.push(`gap=${measurement.maxChildGap} limit<=${spec.maxInternalGap}`);
+    }
+    const viewportWidth = measurement.viewportWidth ?? sample.viewport?.width ?? 0;
+    if (spec.expectedInsetX !== undefined && viewportWidth > 0 && viewportWidth < 600 &&
+      measurement.insetLeft !== undefined && measurement.insetRight !== undefined) {
+      const tol = spec.insetTolerance ?? 1.5;
+      if (Math.abs(measurement.insetLeft - spec.expectedInsetX) > tol ||
+        Math.abs(measurement.insetRight - spec.expectedInsetX) > tol) {
+        reasons.push(`inset=(${measurement.insetLeft},${measurement.insetRight}) expected=${spec.expectedInsetX}±${tol}`);
+      }
+    }
+    if (reasons.length > 0) {
+      add(result.violations, 'R12', measurement.id, reasons.join('; '));
     }
   }
 }

@@ -1,5 +1,5 @@
 import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
-import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
+import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { TYPE_READER_DIRECTORY_TITLE, TYPE_READER_DIRECTORY_TITLE_INTER } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -12,7 +12,11 @@ import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from './Rea
 @Component
 export struct ReaderDirectoryChapterRow {
   @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
-  @State private pressPointer: number = -1;
+  @State private pressedKey: string = '';
+  private readonly delayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    if (key.length === 0) this.pressedKey = '';
+    else readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressedKey = key; });
+  });
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('clearPress') entry: LocalReadingTocEntry;
   @Prop rowHeight: number = 44;
@@ -35,11 +39,10 @@ export struct ReaderDirectoryChapterRow {
 
   aboutToDisappear(): void { this.clearPress(); }
 
-  private clearPress(): void { this.pressPointer = -1; }
+  private clearPress(): void { this.delayedPress.cancel(); }
 
   private observeChapterPress(event: TouchEvent, enabled: boolean): void {
-    const next = readerPressPointer(event, this.pressPointer, enabled && this.canActOnEntry?.(this.entry) !== false);
-    if (next !== this.pressPointer) readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressPointer = next; });
+    this.delayedPress.observe(event, 'row', enabled && this.canActOnEntry?.(this.entry) !== false);
   }
 
   private bookmarkActionEnabled(): boolean {
@@ -109,9 +112,9 @@ export struct ReaderDirectoryChapterRow {
       .padding({ left: this.previewNested ? 26 : 10, right: 10, top: 10, bottom: 10 })
       .border({ width: { bottom: 0.5 }, color: { bottom: readerAppColor('TOK_CHAPTER_DIVIDER', this.appThemeScheme) } })
       .backgroundColor(readerPressSurface(this.entry.navigable === false ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent,
-        this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
-      .borderRadius(this.entry.navigable === false ? 8 : 0).scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
-      .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion));
+        this.appThemeScheme, this.pressedKey === 'row', this.reduceMotion))
+      .borderRadius(this.entry.navigable === false ? 8 : 0).scale(readerPressScale(this.pressedKey === 'row', this.reduceMotion))
+      .opacity(readerPressOpacity(this.pressedKey === 'row', this.reduceMotion));
     }.width('100%')
       .attributeModifier(new ReaderActionAccessibility(this.previewActionLabel(), this.previewEnabled))
       .onTouch((event: TouchEvent): void => this.observeChapterPress(event, this.previewEnabled))
@@ -143,9 +146,9 @@ export struct ReaderDirectoryChapterRow {
           this.chapterTitle();
         }
       }.width('100%').height(this.rowHeight).borderRadius(6)
-        .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
-        .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
-        .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion));
+        .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressedKey === 'row', this.reduceMotion))
+        .scale(readerPressScale(this.pressedKey === 'row', this.reduceMotion))
+        .opacity(readerPressOpacity(this.pressedKey === 'row', this.reduceMotion));
       }.layoutWeight(1).height(this.rowHeight).accessibilityText(readerDirectoryAccessibilityText(this.entry))
         .id(this.selectionFocusId)
         .enabled(this.entry.navigable !== false)
@@ -161,8 +164,11 @@ export struct ReaderDirectoryChapterRow {
         }.width(44).height(Math.max(44, this.rowHeight))
           .responseRegion(readerActionTouchRegion(44, Math.max(44, this.rowHeight)))
           .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 6, 6,
-            this.downloadActionEnabled())).accessibilityText(this.downloadActionLabel())
+            this.downloadActionEnabled(), this.pressedKey === 'download', false)).accessibilityText(this.downloadActionLabel())
           .enabled(this.downloadActionEnabled())
+          .onTouch((event: TouchEvent): void => {
+            this.delayedPress.observe(event, 'download', this.downloadActionEnabled() && this.canActOnEntry?.(this.entry) !== false);
+          })
           .onClick((): void => {
             if (this.downloadActionEnabled() && this.canActOnEntry?.(this.entry) !== false) this.onDownloadChapter(this.entry.index);
           });
@@ -176,9 +182,12 @@ export struct ReaderDirectoryChapterRow {
           .padding(0)
           .attributeModifier(new ReaderPressFeedback(this.variant === 'standalone' && (this.entry.bookmarks?.length ?? 0) > 0 ?
             readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent, this.appThemeScheme, 6, 6,
-            this.bookmarkActionEnabled()))
+            this.bookmarkActionEnabled(), this.pressedKey === 'bookmark', false))
           .margin({ right: this.variant === 'standalone' ? 5 : 0 }).accessibilityText(this.bookmarkActionLabel())
           .enabled(this.bookmarkActionEnabled())
+          .onTouch((event: TouchEvent): void => {
+            this.delayedPress.observe(event, 'bookmark', this.bookmarkActionEnabled() && this.canActOnEntry?.(this.entry) !== false);
+          })
           .onClick((): void => this.marker());
       }
     }.width('100%').height(this.rowHeight).borderRadius(6)

@@ -160,7 +160,14 @@ function headerIcon(scene: ReaderControlHeaderScene): Resource {
 
 @Builder
 export function ReaderControlHeaderGrabCap($$: ReaderControlHeaderInput) {
-  Stack()
+  Stack({ alignContent: Alignment.Center }) {
+    if (grabCapFrame($$.scene).height >= 8) {
+      Row()
+        .width(36).height(4).borderRadius(2)
+        .backgroundColor(readerAppColor('TOK_READ_HANDLE', $$.scene.read().scheme()))
+        .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+    }
+  }
     .id('reader-control-motion-grab-cap')
     .width(grabCapFrame($$.scene).width).height(grabCapFrame($$.scene).height)
     .position({ x: grabCapFrame($$.scene).x, y: grabCapFrame($$.scene).y })

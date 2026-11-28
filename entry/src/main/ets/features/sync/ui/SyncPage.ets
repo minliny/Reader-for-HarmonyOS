@@ -524,10 +524,9 @@ export struct SyncPage {
               .fontColor(readerAppColor('app.text.syncBadge', this.appThemeScheme))
               .maxLines(1);
           }
-          .constraintSize({ minWidth: 64 })
+          .constraintSize({ minWidth: 64, minHeight: 24 })
           .padding({ left: 8, right: 8 })
-          .constraintSize({ minHeight: 24 })
-          .borderRadius(6)
+          .borderRadius(8)
           .backgroundColor(readerAppColor('app.sync.badgeSurface', this.appThemeScheme));
 
           Text(this.snapshot.history[index]?.timestamp ?? '')
@@ -563,7 +562,7 @@ export struct SyncPage {
       }
       .width('100%')
       .constraintSize({ minHeight: 85 })
-      .padding({ left: 13, right: 13, top: TOK_SPACE_SM })
+      .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING, top: TOK_SPACE_SM })
       .alignItems(HorizontalAlign.Start);
     }
   }

@@ -16,7 +16,7 @@ import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwit
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility, readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerNativeSurfaceOutline,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
@@ -250,7 +250,7 @@ export struct LocalBookDetail {
       actionLabel: this.book.contentKind === undefined && !this.catalogBusy ? '重试' : '',
       onAction: (): void => {
         if (this.acceptsDetailInput() && this.book.contentKind === undefined && !this.catalogBusy) this.onRetryCatalog();
-      } }).width('100%').padding({ left: 18, right: 18, top: this.geometry.content.startInset });
+      } }).width('100%').padding({ left: 16, right: 16, top: this.geometry.content.startInset });
   }
 
   build() {
@@ -841,7 +841,8 @@ export struct LocalBookDetail {
               .attributeModifier(this.detailPaintFeedback('TOK_PAPER', 999, 'source', this.sourceSwitchEnabled && !this.removing))
               .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
               .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-          }.constraintSize({ minWidth: 44, minHeight: 44 }).flexShrink(0)
+          }.constraintSize({ minWidth: 44, minHeight: 32 }).flexShrink(0)
+            .responseRegion(readerUnionTouchRegion('100%', 32))
             .padding(0).backgroundColor(Color.Transparent).borderRadius(999)
             .id(sourceSwitchTriggerFocusId(this.book.sourceId, this.book.bookId, 'detail-source'))
             .enabled(this.sourceSwitchEnabled && !this.removing)
@@ -1029,7 +1030,7 @@ export struct LocalBookDetail {
           Image(this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))
             .width(wide ? 13 : 14).height(wide ? 13 : 14);
         }
-      }.width('100%').constraintSize({ minHeight: wide ? 40 : 44 }).padding({ left: wide ? 12 : 14, right: wide ? 12 : 14 })
+      }.width('100%').constraintSize({ minHeight: wide ? 40 : 46 }).padding({ left: wide ? 12 : 14, right: wide ? 12 : 14 })
         .scale(readerPressScale(this.detailPressedAction === `chapter:${entry.index}`, this.appReduceMotion))
         .opacity(readerPressOpacity(this.detailPressedAction === `chapter:${entry.index}`, this.appReduceMotion))
         .animation(readerPressAnimation(this.appReduceMotion))
@@ -1165,7 +1166,7 @@ export struct LocalBookDetail {
           .textAlign(TextAlign.Center).accessibilityLevel('no');
         }.layoutWeight(1)
           .id(READER_DETAIL_PRIMARY_ACTION)
-          .constraintSize({ minHeight: 44 })
+          .height(44).constraintSize({ minHeight: 44 })
           .padding(0).borderRadius(999)
           .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
         ? { role: 'key-control', id: 'detail-read', busy: this.removing || this.catalogBusy,
@@ -1191,7 +1192,7 @@ export struct LocalBookDetail {
           .accessibilityLevel('no');
         }.width(this.dockSecondaryWidth())
           .id(`reader-detail-shelf-action:${this.shelfActionLabel()}`)
-          .constraintSize({ minHeight: 44 })
+          .height(44).constraintSize({ minHeight: 44 })
           .padding(0).borderRadius(999)
           .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
         ? { role: 'key-control', id: 'detail-shelf', busy: this.shelfAction().busy, unavailable: !this.detailBookAvailable() } as LayoutInvariantTag : undefined)
@@ -1308,12 +1309,12 @@ export struct LocalBookDetail {
     input.headerTop = this.headerSpec.headerTop(stableSafeTop);
     const minimumHeaderHeight = manga ? mangaDirectoryHeaderHeight(this.mangaFontScale()) : this.headerSpec.barHeight;
     input.headerHeight = Math.max(minimumHeaderHeight, this.measurements.readForGeneration('detail:header', this.measurementKey, minimumHeaderHeight));
-    input.headerInsetLeft = Math.max(8, this.safeLeft());
-    input.headerInsetRight = Math.max(8, this.safeRight());
+    input.headerInsetLeft = Math.max(14, this.safeLeft());
+    input.headerInsetRight = Math.max(14, this.safeRight());
     input.contentGap = manga ? visual.contentTop - visual.headerHeight - this.headerSpec.topGap : this.headerSpec.contentGap;
     input.contentUnderlap = 0;
     input.contentMaxWidth = manga ? visual.contentWidthMax : TOK_CONTENT_MAX_W_TABLET;
-    input.contentHorizontalPadding = manga ? 20 : 18;
+    input.contentHorizontalPadding = 16;
     const dock = this.dockFrame(resolveReaderPageGeometry(input).content.frame);
     const restingDockHeight = this.restingDockHeight(dock.width);
     input.footerBottom = readerStableInteractiveSafeBottom(metrics) + (manga ? visual.detailDockBottom : DETAIL_DOCK_BOTTOM_GAP);

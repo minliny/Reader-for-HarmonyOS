@@ -5,6 +5,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
 import { applyVmJourneyProfile, journeys } from './lib/vm-journey-cases.mjs';
+import { auditDumpLayout } from './lib/layout-size-budget-audit.mjs';
 import { renderVisualReview } from './lib/vm-visual-review.mjs';
 import { layoutReports, layoutReceiptProblem, matchesVmEnvironment, matchingTransitions, records, shareReports,
   supportedVmDimensions, transitionReceiptProblem, transitionReports, transitionWatermark, verticalSwipeLane,
@@ -212,8 +213,12 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
     do {
       const raw = await capture('dumpLayout');
       const afterLog = await layoutLog();
+      let parsedRawTree;
       let afterRoot;
-      try { afterRoot = appTree(JSON.parse(raw.content.toString('utf8'))); }
+      try {
+        parsedRawTree = JSON.parse(raw.content.toString('utf8'));
+        afterRoot = appTree(parsedRawTree);
+      }
       catch (error) { lastReason = error.message; await delay(180); continue; }
       const observed = afterLog.sample;
       const present = (outcome.all ?? []).every(selector => matchingNodes(afterRoot, selector).length > 0);
@@ -238,8 +243,25 @@ async function runJourney(id, run, candidate, options, outputDir, profile, relat
         if (textValues !== undefined) step.matchedText = textValues[0]?.[0];
         if (orderedPoints !== undefined) step.orderedNativeCenters = orderedPoints;
         if (outcome.filmstrip) step.transitionCaptures = transitionCaptures;
+        const rawRootBounds = nativeBounds(parsedRawTree?.attributes?.bounds);
+        const density = rawRootBounds && observed.environment?.widthVp > 0
+          ? (rawRootBounds[2] - rawRootBounds[0]) / observed.environment.widthVp
+          : undefined;
+        let sizeProblem;
+        if ((observed.environment?.fontScale ?? 1) <= 1.05 &&
+            (observed.environment?.widthVp ?? 0) > 0 &&
+            observed.environment.widthVp < 600 &&
+            observed.modalOpen !== true) {
+          const sizeAudit = auditDumpLayout(parsedRawTree, { source: description, density });
+          if (sizeAudit.status !== 'UNSUPPORTED') {
+            step.sizeAudit = sizeAudit;
+            if (sizeAudit.status === 'FAIL') {
+              sizeProblem = `尺寸预算违规: ${sizeAudit.violations.map(v => `${v.label}(${v.actual})`).join('; ')}`;
+            }
+          }
+        }
         lastStep = step;
-        const problems = [layoutReceiptProblem(observed, outcome)].filter(Boolean);
+        const problems = [layoutReceiptProblem(observed, outcome), sizeProblem].filter(Boolean);
         let waitingForTransition = false;
         if (expectations.length) {
           const transition = sampledTransition ?? await transitionLog();

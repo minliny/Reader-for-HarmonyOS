@@ -16,7 +16,9 @@ import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderK
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
-import { readerReadableFontScale } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { TOK_SCREEN_INSET } from '../../../ui/foundation/ReaderTokens';
+import { readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import type { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
@@ -42,7 +44,7 @@ const GROUP_MEMBER_INSET = 10;
 const GROUP_MEMBER_GAP = 6;
 const GROUP_TITLE_GAP = 8;
 const GROUP_TITLE_BUDGET = 132;
-const GROUP_MEMBER_CHROME_WIDTH = 34 + GROUP_TITLE_GAP + 44 + 44 + 2 * GROUP_MEMBER_GAP;
+const GROUP_MEMBER_CHROME_WIDTH = 34 + GROUP_TITLE_GAP + 28 + 44 + 2 * GROUP_MEMBER_GAP;
 
 interface GroupRow {
   id: string;
@@ -553,7 +555,7 @@ export struct SourceV9GroupsPage {
     applyReaderStandardFloatingHeader(input);
     input.contentGap = READER_STANDARD_PAGE_CONTENT_GAP;
     input.contentMaxWidth = readerStandardPageSpec('sourceManagement').maxWidth;
-    input.contentHorizontalPadding = 19;
+    input.contentHorizontalPadding = TOK_SCREEN_INSET;
     input.contentHorizontalSafeArea = 'interactive';
     input.contentEndInset = readerStandardPageContentEndInset('sourceManagement', metrics);
     return resolveReaderPageGeometry(input);
@@ -682,15 +684,18 @@ export struct SourceV9GroupsPage {
     height: number = 32, size: number = 12, controlId: string = '') {
     Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Text(label).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontColor(this.actionInk(tone))
-        .fontSize(size).minFontSize(9).maxFontSize(size).maxLines(1)
+        .fontSize(size).minFontSize(10).maxFontSize(size).maxLines(1)
         .heightAdaptivePolicy(TextHeightAdaptivePolicy.LAYOUT_CONSTRAINT_FIRST)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
-    }.height(height).padding({ left: height < 30 ? 7 : 12, right: height < 30 ? 7 : 12 })
+    }.constraintSize({ minHeight: readerScaledControlHeight(height, 16, this.fontScale()) })
+      .padding({ left: height < 30 ? 7 : 12, right: height < 30 ? 7 : 12, top: 2, bottom: 2 })
       .id(controlId).accessibilityText(label)
-      .attributeModifier(new ReaderPressFeedback(this.actionSurface(tone), this.scheme, height / 2, height / 2, enabled))
+      .attributeModifier(new ReaderPressFeedback(this.actionSurface(tone), this.scheme,
+        readerScaledControlHeight(height, 16, this.fontScale()) / 2,
+        readerScaledControlHeight(height, 16, this.fontScale()) / 2, enabled))
       .border({ width: tone === 'neutral' ? 1 : 0, color: this.color('TOK_LINE_STRONG') })
       .opacity(enabled ? 1 : 0.45).enabled(enabled).flexShrink(0)
-      .responseRegion({ y: -(44 - height) / 2, height: 44 })
+      .responseRegion(readerUnionTouchRegion('100%', readerScaledControlHeight(height, 16, this.fontScale())))
       .onClick((): void => { if (enabled && this.pageEditable()) run(); });
   }
 
@@ -788,7 +793,7 @@ export struct SourceV9GroupsPage {
             actionEnabled: this.pageEditable(), label: `${source.name}，检测`,
             controlId: `reader-source-v9-group-source-check-${source.sourceId}`,
             onTap: (): void => this.checkMember(source.sourceId) });
-        }.width(44).height(44).flexShrink(0).clip(false);
+        }.width(28).height(28).flexShrink(0).clip(false);
         if (!this.memberActionsStacked()) this.memberActions(source);
         ReaderToggle({ checkedColor: this.color('app.sourceUi.primary'), value: source.enabled, inputIdentity: source.sourceId,
           actionEnabled: this.pageEditable(), accessibilityLabel: `启用${source.name}`,
@@ -914,7 +919,8 @@ export struct SourceV9GroupsPage {
 
   @Builder
   private field(value: string, placeholder: string, emit: (value: string) => void) {
-    TextInput({ text: value, placeholder }).width('100%').height(40).borderRadius(10)
+    TextInput({ text: value, placeholder }).width('100%')
+      .constraintSize({ minHeight: readerScaledControlHeight(40, 18, this.fontScale()) }).borderRadius(10)
       .border({ width: 1, color: this.color('TOK_LINE_STRONG') })
       .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(13).fontColor(this.color('TOK_INK'))
       .placeholderColor(this.color('app.sourceUi.muted')).backgroundColor(this.color('app.sourceUi.field'))
@@ -992,7 +998,8 @@ export struct SourceV9GroupsPage {
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13)
           .fontColor(this.color(id === undefined ? 'app.sourceUi.primary' : 'TOK_INK'));
       }.width('100%');
-    }.width('100%').height(44).padding({ left: 12, right: 12 })
+    }.width('100%').constraintSize({ minHeight: readerScaledControlHeight(44, 18, this.fontScale()) })
+      .padding({ left: 12, right: 12, top: 6, bottom: 6 })
       .attributeModifier(new ReaderPressFeedback(this.color(id === undefined ? 'app.sourceUi.selected' : 'app.sourceUi.field'),
         this.scheme, 22, 22, this.dialogEditable()))
       .enabled(this.dialogEditable()).accessibilityText(label).accessibilitySelected(this.target === id)

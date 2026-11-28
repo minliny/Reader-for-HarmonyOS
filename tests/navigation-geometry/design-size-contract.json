@@ -1,0 +1,311 @@
+{
+  "schemaVersion": 1,
+  "specName": "墨纸青松 2.0",
+  "designSource": "Reader-UI/design/harmonyos-ui-redesign/reader-harmonyos-ui-redesign.html",
+  "narrowViewportWidthVp": 365.7,
+  "defaultDensityPxPerVp": 3.5,
+  "theme": {
+    "day": {
+      "TOK_PAPER": "#FFECE5D8",
+      "TOK_CARD_BG": "#FFF9F6F0",
+      "TOK_SURFACE_ELEVATED": "#FFFFFDF9",
+      "TOK_PRIMARY_DARK": "#FF1F3D31",
+      "TOK_INK": "#FF1D1B18",
+      "TOK_READ_PRIMARY": "#FF1F3D31",
+      "TOK_READ_SURFACE": "#FFFFFAF4"
+    },
+    "night": {
+      "TOK_PAPER": "#FF0F1110",
+      "TOK_CARD_BG": "#FF1B1F1C",
+      "TOK_SURFACE_ELEVATED": "#FF272C28",
+      "TOK_PRIMARY_DARK": "#FF7BB094",
+      "TOK_INK": "#FFECE8E0",
+      "TOK_READ_PRIMARY": "#FF7BB094",
+      "TOK_READ_SURFACE": "#FF212622"
+    },
+    "distinctSurfacePairs": [
+      ["TOK_PAPER", "TOK_CARD_BG"],
+      ["TOK_CARD_BG", "TOK_SURFACE_ELEVATED"],
+      ["TOK_PAPER", "TOK_PRIMARY_DARK"]
+    ]
+  },
+  "constants": {
+    "TOK_SCREEN_INSET": 16,
+    "READER_CONTROL_REGULAR_DOCK_HEIGHT": 330,
+    "READER_CONTROL_BRIGHTNESS_RAIL_WIDTH": 38,
+    "READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT": 108,
+    "SOURCE_ROW_ICON_WIDTH": 34,
+    "downloadVisual": {
+      "contentSide": 16,
+      "searchHeight": 38,
+      "bookPaddingY": 12,
+      "coverWidth": 48,
+      "coverHeight": 66,
+      "bookMinHeight": 66,
+      "coverRadius": 5
+    },
+    "sourceSwitchVisual": {
+      "normalSideInset": 16,
+      "bookPaddingY": 6,
+      "columnHeight": 32
+    },
+    "sourceManagement": {
+      "rowMaxMinHeightInlineAt366": 60,
+      "footerHeight": 40
+    }
+  },
+  "dumpLayoutBudgets": {
+    "bookshelf": [
+      {
+        "id": "bookshelf.viewportInset",
+        "label": "书架内容区左右边距",
+        "match": { "id": "reader.bookshelf.viewport:0" },
+        "insetX": 16,
+        "insetTolerance": 1.5,
+        "severity": "BLOCK"
+      },
+      {
+        "id": "bookshelf.topBarInset",
+        "label": "书架悬浮顶栏边距",
+        "match": { "parentOfId": "reader-bookshelf-search-bar" },
+        "insetX": 14,
+        "insetTolerance": 1.5,
+        "severity": "BLOCK"
+      },
+      {
+        "id": "bookshelf.viewCoverPill",
+        "label": "视图切换封面钮",
+        "match": { "id": "reader-bookshelf-view-cover" },
+        "width": [29, 31],
+        "height": [28, 31],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "bookshelf.viewListPill",
+        "label": "视图切换列表钮",
+        "match": { "id": "reader-bookshelf-view-list" },
+        "width": [29, 31],
+        "height": [28, 31],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "bookshelf.filterToggle",
+        "label": "书架筛选圆钮",
+        "match": { "id": "reader-bookshelf-filter-toggle" },
+        "width": [33, 35],
+        "height": [33, 35],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "bookshelf.continueReadButton",
+        "label": "继续阅读「阅读」按钮",
+        "match": { "parentOfText": "阅读", "ancestorIdPrefix": "reader.bookshelf.continue-card:" },
+        "width": [56, 72],
+        "height": [34, 38],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "bookshelf.progressBar",
+        "label": "书架进度条高度",
+        "match": { "type": "Progress", "minYVp": 100 },
+        "height": [3.5, 4.5],
+        "severity": "BLOCK"
+      }
+    ],
+    "readerControlQuick": [
+      {
+        "id": "readerControl.dockHeight",
+        "label": "控制岛快捷态总高度",
+        "match": { "id": "reader-control-motion-dock" },
+        "height": [326, 334],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "readerControl.chapterProgressCard",
+        "label": "章节进度卡片高度",
+        "match": { "id": "reader-control-chapter-progress-card" },
+        "height": [104, 112],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "readerControl.chapterBookmarkLane",
+        "label": "书签操作区高度",
+        "match": { "id": "reader-control-chapter-bookmark-lane" },
+        "height": [32, 36],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "readerControl.islandGrabber",
+        "label": "顶部抓手指示条",
+        "match": { "id": "reader-control-island-grabber" },
+        "required": true,
+        "width": [34, 38],
+        "height": [3, 5],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "readerControl.quickToDockDeadGap",
+        "label": "快捷区至底栏垂直空隙",
+        "match": { "verticalGapFromId": "reader-control-quick-content-surface", "toId": "reader-control-entry-autoPage" },
+        "maxGap": 26,
+        "severity": "BLOCK"
+      }
+    ],
+    "settingsHome": [
+      {
+        "id": "settingsHome.groupInset",
+        "label": "设置分组左右边距",
+        "match": { "idPrefix": "reader-settings-home-group:" },
+        "insetX": 16,
+        "insetTolerance": 1.5,
+        "severity": "BLOCK"
+      },
+      {
+        "id": "settingsHome.iconBadge",
+        "label": "设置图标徽章尺寸",
+        "match": { "ruleKind": "settingsHomeBadge" },
+        "width": [31, 33],
+        "height": [31, 33],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "settingsHome.singleLineRow",
+        "label": "设置单行条目高度",
+        "match": { "idIn": ["reader-settings-source-management", "reader-settings-rules-management"] },
+        "height": [50, 54],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "settingsHome.twoLineRow",
+        "label": "设置双行条目高度",
+        "match": { "idIn": ["reader-settings-general"] },
+        "height": [56, 62],
+        "severity": "BLOCK"
+      }
+    ],
+    "generalSettings": [
+      {
+        "id": "generalSettings.cardInset",
+        "label": "通用设置卡片左右边距",
+        "match": { "ruleKind": "generalSettingsCardRow" },
+        "insetX": 16,
+        "insetTolerance": 1.8,
+        "severity": "BLOCK"
+      },
+      {
+        "id": "generalSettings.toggleSize",
+        "label": "通用设置开关尺寸",
+        "match": { "idPrefix": "reader-toggle:" },
+        "width": [42, 46],
+        "height": [24, 28],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "generalSettings.segmentedControlWidth",
+        "label": "通用设置分段控件宽度",
+        "match": { "ruleKind": "generalSettingsSegmentedRow" },
+        "width": [160, 164],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "generalSettings.cleanupButton",
+        "label": "行内「清理」胶囊高度",
+        "match": { "parentOfText": "清理", "type": "Button" },
+        "height": [30, 34],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "generalSettings.singleLineSwitchRow",
+        "label": "通用设置单行开关条目高度",
+        "match": { "ruleKind": "generalSettingsSwitchButton" },
+        "height": [50, 54],
+        "severity": "BLOCK"
+      }
+    ],
+    "sourceManagement": [
+      {
+        "id": "sourceManagement.filterBlockInset",
+        "label": "书源筛选区左右边距",
+        "match": { "id": "reader-source-filter-block" },
+        "insetX": 16,
+        "insetTolerance": 1.5,
+        "severity": "BLOCK"
+      },
+      {
+        "id": "sourceManagement.statusChips",
+        "label": "书源状态筛选胶囊高度",
+        "match": { "idIn": ["reader-source-status-all", "reader-source-status-enabled", "reader-source-status-disabled", "reader-source-status-error"] },
+        "height": [26, 30],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "sourceManagement.sourceRows",
+        "label": "书源列表行高与边距",
+        "match": { "ruleKind": "sourceListRow" },
+        "height": [52, 62],
+        "insetX": 16,
+        "insetTolerance": 1.5,
+        "severity": "BLOCK"
+      },
+      {
+        "id": "sourceManagement.toggleSize",
+        "label": "书源开关尺寸",
+        "match": { "idPrefix": "reader-toggle:" },
+        "width": [42, 46],
+        "height": [24, 28],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "sourceManagement.footerButtons",
+        "label": "书源底部操作按钮高度",
+        "match": { "idSuffixIn": [":tools:footer", ":import:footer"] },
+        "height": [38, 42],
+        "severity": "BLOCK"
+      }
+    ],
+    "downloads": [
+      {
+        "id": "downloads.searchInput",
+        "label": "下载搜索框高度",
+        "match": { "idPrefix": "reader-editable-target:" },
+        "height": [36, 40],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "downloads.bookRowInset",
+        "label": "下载列表行左右边距",
+        "match": { "idPrefix": "reader-download:book-title:" },
+        "insetX": 16,
+        "insetTolerance": 1.5,
+        "severity": "BLOCK"
+      },
+      {
+        "id": "downloads.bookCover",
+        "label": "下载列表书籍封面尺寸与比例",
+        "match": { "ruleKind": "downloadBookCover" },
+        "width": [46, 50],
+        "height": [64, 68],
+        "aspectRatio": [0.68, 0.78],
+        "severity": "BLOCK"
+      }
+    ],
+    "bookDetail": [
+      {
+        "id": "bookDetail.inlineSourceButton",
+        "label": "书籍详情行内「换源」按钮高度",
+        "match": { "idSuffix": "\"detail-source\"]", "type": "Button" },
+        "height": [30, 34],
+        "severity": "BLOCK"
+      },
+      {
+        "id": "bookDetail.chapterPreviewRows",
+        "label": "书籍详情目录预览行高与边距",
+        "match": { "idPrefix": "reader-detail-preview-", "type": "Button" },
+        "height": [44, 48],
+        "insetX": 16,
+        "insetTolerance": 2.0,
+        "severity": "BLOCK"
+      }
+    ]
+  }
+}

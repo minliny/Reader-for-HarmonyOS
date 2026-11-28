@@ -2,7 +2,7 @@ import { deviceInfo } from '@kit.BasicServicesKit';
 import lazy { GestureHandlingResolution, NoneActionProposal } from '@kit.ArkUI';
 import type { BaseGestureHandlingProposal } from '@kit.ArkUI';
 import { readerHarmonyCapabilities } from '../../app/HarmonyCapabilityProbe';
-import type { ReaderSmartGesture, ReaderSmartGestureAction } from '../../features/reading/application/ReaderSmartGesturePolicy';
+import type { ReaderSmartGesture, ReaderSmartGestureAction } from '../contracts/ReaderSmartGesturePolicy';
 
 export interface HarmonySmartGestureCallbacks {
   decide: (gesture: ReaderSmartGesture) => ReaderSmartGestureAction;

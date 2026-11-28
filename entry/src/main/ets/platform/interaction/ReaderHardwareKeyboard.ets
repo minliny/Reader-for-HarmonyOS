@@ -1,6 +1,6 @@
 import { KeyCode } from '@kit.InputKit';
 import { ReaderKeyboardBoundary, ReaderKeyboardShortcut, ReaderShortcutKey, readerKeyboardShortcut } from
-  '../../features/reading/application/ReaderKeyboardShortcuts';
+  '../contracts/ReaderKeyboardShortcuts';
 
 function shortcutKey(code: number): ReaderShortcutKey {
   switch (code) {

@@ -31,11 +31,6 @@ export class ShelfBookPresentation {
   }
 
   static listSecondary(book: ShelfBook): string {
-    if (book.sourceId === 'local') {
-      const source = this.source(book);
-      const count = book.chapterCount;
-      return count !== undefined && Number.isSafeInteger(count) && count > 0 ? `${source} · 共 ${count} 章` : source;
-    }
     const latest = this.latestChapter(book);
     return latest === NO_LATEST_CHAPTER ? '' : `最新 ${latest}`;
   }

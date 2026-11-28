@@ -6,7 +6,7 @@ import lazy { systemShare } from '@kit.ShareKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerHostCacheDirectory } from '../../app/diagnostics/ReaderPublicFixtureScope';
 import { readerVmJourneyDocumentsEnabled } from '../../app/diagnostics/ReaderVmJourneyDocuments';
-import type { ReaderShareFile, ReaderShareImage, ReaderShareRecord, SystemSharePort, SystemShareResult } from '../../features/reading/application/ReaderShareActions';
+import type { ReaderShareFile, ReaderShareImage, ReaderShareRecord, SystemSharePort, SystemShareResult } from '../contracts/ReaderShareHostContract';
 
 const SHARE_COPY_TTL_SECONDS = 24 * 60 * 60;
 const SHARE_DISMISS_SETTLE_MS = 250;

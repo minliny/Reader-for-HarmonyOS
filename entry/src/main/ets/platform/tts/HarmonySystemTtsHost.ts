@@ -10,11 +10,11 @@ import {
   type ReaderTtsHostProbe,
   type ReaderTtsHostSpeakRequest,
   type ReaderTtsNativeSpeakPoint,
-} from '../../features/reading/application/ReaderTtsHostContract';
+} from '../contracts/ReaderTtsHostContract';
 import {
   isReaderTtsVoiceInstalled,
   type ReaderTtsVoiceOption,
-} from '../../features/reading/application/ReaderTtsPreferencesState';
+} from '../contracts/ReaderTtsVoiceContract';
 
 const LOG_DOMAIN = 0x5244;
 const DEFAULT_LANGUAGE = 'zh-CN';

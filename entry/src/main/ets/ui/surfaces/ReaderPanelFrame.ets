@@ -1,4 +1,4 @@
-import { readerSurfaceElevation } from './ReaderSurfaceSpecs';
+import { READER_HEAVY_GLASS_BLUR_VP, readerSurfaceElevation } from './ReaderSurfaceSpecs';
 import { DIRECTORY_CHROME_VISUAL, mangaDirectoryColor } from '../foundation/ReaderDirectoryChromeVisual';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
@@ -43,9 +43,12 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
       }
       case 'reader': {
         const native = this.material?.native === true;
-        const paint = readerReadingPanelPaint(this.scheme, native);
+        const frosted = !native && this.material?.frosted === true;
+        const paint = readerReadingPanelPaint(this.scheme, native || frosted);
         if (!native) applyReaderImmersiveMaterial(instance, this.material, true, true);
-        instance.backgroundEffect(undefined).backgroundColor(paint.surface ?? Color.Transparent)
+        instance.backgroundEffect(frosted ?
+          { radius: READER_HEAVY_GLASS_BLUR_VP, color: readerAppColor('app.surface.glassHeavy', this.scheme) } : undefined)
+          .backgroundColor(paint.surface ?? Color.Transparent)
           .borderRadius(TOK_RADIUS_XL);
         if (native) applyReaderImmersiveMaterial(instance, this.material, paint.nativeShadow, true);
         // Native material controls border and shadow on its node. The independent
@@ -95,9 +98,15 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
       instance.backgroundEffect(undefined).backgroundColor(Color.Transparent);
       applyReaderImmersiveMaterial(instance, this.material, true, true);
       instance.outline(outline);
+    } else if (this.material?.frosted) {
+      applyReaderImmersiveMaterial(instance, this.material, true, true);
+      instance.backgroundEffect({
+        radius: READER_HEAVY_GLASS_BLUR_VP,
+        color: readerAppColor('app.surface.glassHeavy', this.scheme),
+      }).backgroundColor(Color.Transparent).border(border).shadow(shadow).outline(undefined);
     } else {
       applyReaderImmersiveMaterial(instance, this.material, true, true);
-      instance.backgroundColor(background).border(border).shadow(shadow).outline(undefined);
+      instance.backgroundEffect(undefined).backgroundColor(background).border(border).shadow(shadow).outline(undefined);
     }
   }
 

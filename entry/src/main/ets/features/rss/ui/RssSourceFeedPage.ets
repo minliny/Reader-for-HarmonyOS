@@ -166,7 +166,7 @@ export struct RssSourceFeedPage {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-    .borderRadius(8);
+    .borderRadius(14);
   }
 
   private canRefresh(): boolean {
@@ -224,8 +224,8 @@ export struct RssSourceFeedPage {
       }.backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
         .border({ width: { left: TOK_BORDER_W, right: TOK_BORDER_W, top: repeatItem.index === 0 ? TOK_BORDER_W : 0,
           bottom: repeatItem.index === this.items.length - 1 ? TOK_BORDER_W : 0 }, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-        .borderRadius({ topLeft: repeatItem.index === 0 ? 8 : 0, topRight: repeatItem.index === 0 ? 8 : 0,
-          bottomLeft: repeatItem.index === this.items.length - 1 ? 8 : 0, bottomRight: repeatItem.index === this.items.length - 1 ? 8 : 0 });
+        .borderRadius({ topLeft: repeatItem.index === 0 ? 14 : 0, topRight: repeatItem.index === 0 ? 14 : 0,
+          bottomLeft: repeatItem.index === this.items.length - 1 ? 14 : 0, bottomRight: repeatItem.index === this.items.length - 1 ? 14 : 0 });
     })
     .key((item: RssItem): string =>
       `rss-source-item-${item.subscriptionId.length}:${item.subscriptionId}-${item.guid.length}:${item.guid}`)
@@ -239,8 +239,7 @@ export struct RssSourceFeedPage {
         .width(7)
         .height(7)
         .backgroundColor(item().read ? readerAppColor('app.feed.unreadDot', this.appThemeScheme) : readerAppColor('app.action.fill', this.appThemeScheme))
-        .borderRadius(3.5)
-        .margin({ top: 25 });
+        .borderRadius(3.5);
 
       Column({ space: 3 }) {
         Text(item().title)
@@ -277,7 +276,7 @@ export struct RssSourceFeedPage {
     }
     .width('100%')
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: TOK_SPACE_CONTROL_INLINE, bottom: TOK_SPACE_CONTROL_INLINE })
-    .alignItems(VerticalAlign.Top)
+    .alignItems(VerticalAlign.Center)
     .border({ width: { top: index() > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
     .onClick((): void => this.onSelectItem(item()));
   }

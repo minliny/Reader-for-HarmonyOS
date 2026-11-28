@@ -12,7 +12,8 @@ import { ReaderIslandAction, ReaderIslandControlFrame, ReaderIslandSwitchRow, re
 import { READER_ISLAND_PLAYBACK_INSET_X, READER_ISLAND_PLAYBACK_INSET_Y, READER_ISLAND_PLAYBACK_ACTION_GAP,
   READER_ISLAND_PLAYBACK_STATUS_GAP, type ReaderIslandPlaybackLayout } from './ReaderIslandPlaybackLayout';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
-import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderActionAccessibility, readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
+import { readerReadableFontScale, readerScaledWidth } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { ReaderControlQuickBack } from './ReaderControlQuickBack';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionClipRects, readerControlMotionClipPath,
@@ -575,7 +576,9 @@ export struct ReaderControlAutoPageContent {
               Text('每页停留').layoutWeight(1).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
                 .fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
               this.islandStep('speed', -1);
-              Text(`${this.effectiveSpeedSeconds()} 秒`).id(this.speedActorId('current')).width(52).textAlign(TextAlign.Center)
+              Text(`${this.effectiveSpeedSeconds()} 秒`).id(this.speedActorId('current'))
+                .constraintSize({ minWidth: readerScaledWidth(52, readerReadableFontScale(this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale), 96) })
+                .textAlign(TextAlign.Center)
                 .fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
               this.islandStep('speed', 1);
             }.width('100%');
@@ -584,13 +587,13 @@ export struct ReaderControlAutoPageContent {
                 max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, step: 1 })
                 .id(this.speedActorId('slider'))
                 .attributeModifier(new ReaderPaperMaterial())
-                .width('100%').height(44)
+                .width('100%').height(34)
+                .responseRegion(readerUnionTouchRegion('100%', 34))
                 .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
-                .trackColor(readerAppColor('app.readerIsland.controlBorder', this.appScheme))
+                .trackColor(readerAppColor('TOK_TTS_TRACK', this.appScheme))
                 .enabled(this.sharedInput()).accessibilityText('自动翻页间隔')
                 .onChange((value: number, mode: SliderChangeMode): void => this.changeSpeedSlider(value, mode));
-            }.width('100%')
-              .attributeModifier(new ReaderIslandControlFrame(this.appScheme, this.sharedInput(), 'normal', 8, false));
+            }.width('100%');
           }.width('100%').padding({ left: 10, right: 10, bottom: 8 })
             .attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
           Column() {
@@ -608,7 +611,7 @@ export struct ReaderControlAutoPageContent {
               onChange: (value: boolean): void => { if (this.currentInputEnabled()) this.onFollowHighlightChange(value); },
             });
           }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
-        }.width('100%').padding({ bottom: 2 });
+        }.width('100%').padding({ bottom: 10 });
       }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).edgeEffect(EdgeEffect.None)
           .onDidScroll((): void => this.reportMorphActor());
     }.id('reader-control-module-autoPage').width(this.availableWidth).height(this.availableHeight)

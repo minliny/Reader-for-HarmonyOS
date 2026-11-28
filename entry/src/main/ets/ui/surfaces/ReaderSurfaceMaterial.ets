@@ -5,6 +5,8 @@ import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_NATIVE_MATERIAL } from '../fou
 import { readerAppColor, type ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 import { readerSurfaceOutlinePaint } from './ReaderReadingPanelPaint';
 import {
+  isReaderNativeChromeStyle,
+  isReaderRealtimeBlurEnabled,
   normalizeReaderNavigationPreferences,
   resolveReaderSurfaceMaterial,
   type ReaderImmersiveStyleName,
@@ -51,7 +53,8 @@ const materialFallbackPaint: WeakMap<ReaderSurfaceMaterialDecision, string> =
 
 function materialFallbackRole(role: ReaderSurfaceMaterialRole): ReaderAppColorRole {
   switch (role) {
-    case 'chromeBar': return 'TOK_PAPER';
+    case 'navigationBar': return 'app.navigation.floatingSurface';
+    case 'chromeBar': return 'app.navigation.floatingSurface';
     case 'floatingDock': return 'app.surface.dock';
     case 'sessionCapsule': return 'app.sessionCapsule.surface';
     case 'controlPanel': return 'TOK_READ_SURFACE';
@@ -82,23 +85,28 @@ export function readerSurfaceMaterialDecision(
   systemScheme: string,
 ): ReaderSurfaceMaterialDecision {
   const decision = resolveReaderSurfaceMaterial(role, preferences, readerHarmonyCapabilities(), appScheme, systemScheme);
-  if (!decision.native) return decision;
-  // Callers choose opaque fallback paint from this decision. Admit native
-  // material only after its optional SDK constructor has succeeded.
-  try {
+  if (decision.native) {
+    let admitted = false;
     if (deviceInfo.distributionOSApiVersion >= 260000) {
-      if (deviceInfo.apiAvailable('26.0.0') && readerImmersiveMaterial(decision) !== undefined) {
-        materialFallbackPaint.set(decision, readerAppColor(materialFallbackRole(role), appScheme));
-        return decision;
+      try {
+        admitted = deviceInfo.apiAvailable('26.0.0') && readerImmersiveMaterial(decision) !== undefined;
+      } catch (_) {
+        admitted = false;
       }
     }
-  } catch (_) { /* Preserve the caller's normal surface paint. */ }
-  return {
-    native: false,
-    style: decision.style,
-    interactive: decision.interactive,
-    performanceMode: decision.performanceMode,
-  };
+    if (admitted) {
+      materialFallbackPaint.set(decision, readerAppColor(materialFallbackRole(role), appScheme));
+      return decision;
+    }
+    return {
+      native: false,
+      frosted: isReaderNativeChromeStyle(preferences) && isReaderRealtimeBlurEnabled(preferences),
+      style: decision.style,
+      interactive: decision.interactive,
+      performanceMode: decision.performanceMode,
+    };
+  }
+  return decision;
 }
 
 function readerImmersiveMaterial(

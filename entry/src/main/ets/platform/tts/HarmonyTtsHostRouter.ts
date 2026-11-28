@@ -3,8 +3,8 @@ import {
   type ReaderTtsHostEvent,
   type ReaderTtsHostProbe,
   type ReaderTtsHostSpeakRequest,
-} from '../../features/reading/application/ReaderTtsHostContract.ts';
-import type { ReaderTtsVoiceOption } from '../../features/reading/application/ReaderTtsPreferencesState';
+} from '../contracts/ReaderTtsHostContract.ts';
+import type { ReaderTtsVoiceOption } from '../contracts/ReaderTtsVoiceContract.ts';
 import { ReaderStartupTrace } from '../../app/ReaderStartupTrace.ts';
 import type {
   ReaderTtsMediaSessionBridge,

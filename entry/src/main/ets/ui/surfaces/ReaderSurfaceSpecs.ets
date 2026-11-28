@@ -107,6 +107,21 @@ export function readerHeaderVeilBorder(scheme: string): string {
   return readerAppColor(HEADER_VEIL_SPEC.borderRole, scheme);
 }
 
+export function readerNativeScrolledHeaderMaterial(scheme: string): BackgroundEffectOptions {
+  return {
+    radius: HEADER_VEIL_SPEC.scrolledBlurRadius,
+    color: scheme === 'night' ? '#E61B1F1C' : '#E0ECE5D8',
+  };
+}
+
+export function readerNativeScrolledHeaderSolid(scheme: string): string {
+  return readerAppColor(scheme === 'night' ? 'TOK_CARD_BG' : 'TOK_PAPER', scheme);
+}
+
+export function readerNativeScrolledHeaderDivider(scheme: string): string {
+  return readerAppColor('TOK_LINE_STRONG', scheme);
+}
+
 export const READER_GLASS_BLUR_VP = 20;
 export const READER_HEAVY_GLASS_BLUR_VP = 24;
 const READER_BOTTOM_SHEET_RADIUS_VP = 24;
@@ -283,9 +298,9 @@ const DIALOG_ACTION_RADIUS = 999;
 // Confirmation and form owners retain focus, keyboard bounds and admission.
 const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
   'source-v9-check': new DialogSurfaceSpec({
-    maxWidth: 460, edgeGap: 14, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
-    padding: 14, borderRadius: 14,
-    backgroundRole: 'TOK_CARD_BG', hasShadow: true, hasBorder: true,
+    maxWidth: 392, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
+    padding: 19, borderRadius: DIALOG_RADIUS,
+    backgroundRole: 'TOK_SURFACE_ELEVATED', hasShadow: true, hasBorder: true,
     headerFontSize: 17, headerFontFamily: 'ReaderNotoSansSCUIBold', headerTextAlign: TextAlign.Start,
     headerLineHeight: 24, headerGap: 9, bodyActionsGap: 10, bodyActionsOwnMargin: 0,
     actionsLayout: 'row', actionHeight: 44, actionBorderRadius: DIALOG_ACTION_RADIUS, actionUsesPressFeedback: true,
@@ -616,7 +631,7 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     surfaceShadowRole: 'TOK_SS_WINDOW_BORDER',
     pointerFillRole: 'TOK_SS_WINDOW_BG',
     pointerStrokeRole: 'TOK_SS_WINDOW_BORDER',
-    actionTextRole: 'TOK_SS_FOOTER_TEXT',
+    actionTextRole: 'TOK_MUTED',
     dividerRole: 'TOK_SS_WINDOW_BORDER',
     actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 0, actionLineHeight: 0,
   }),

@@ -13,7 +13,7 @@ export interface ReaderSurfaceOutlinePaint {
 }
 
 export function readerSurfaceOutlinePaint(scheme: string): ReaderSurfaceOutlinePaint {
-  return { color: readerAppColor('TOK_LINE_STRONG', scheme), width: 1.5 };
+  return { color: readerAppColor('TOK_LINE_STRONG', scheme), width: 1 };
 }
 
 export function readerReadingPanelPaint(scheme: string, nativeMaterial: boolean): ReaderReadingPanelPaint {

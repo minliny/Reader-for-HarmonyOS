@@ -110,6 +110,7 @@ export struct ReaderSearchField {
   @StorageLink('readerWindowMetricsRevision') @Watch('editingGeometryChanged') private readerWindowMetricsRevision: number = 0;
 
   @Prop sourceV9Chrome: boolean = false;
+  @Prop surfaceRole: '' | 'card' = '';
   @Prop variant: ReaderSearchFieldVariant = 'bookPanel';
   @Prop mode: ReaderSearchFieldMode = 'submit';
   @Prop @Watch('revealBookInputCaret') text: string = '';
@@ -539,7 +540,6 @@ export struct ReaderSearchField {
   @Builder
   private bookEditorLane() {
     Row() {
-      this.magnifier();
       TextInput({ placeholder: this.placeholder, text: this.text, controller: this.bookInputController })
         .id('reader-book-search-input')
         // This gates programmatic focus. Native TextInput taps still open the keyboard.
@@ -811,6 +811,7 @@ export struct ReaderSearchField {
   }
 
   private fieldBackgroundColor(): string {
+    if (this.surfaceRole === 'card') return readerAppColor('TOK_CARD_BG', this.effectiveScheme());
     return readerAppColor(this.readingPalette ? 'app.surface.readerInput' :
       this.formChrome() ? 'app.sourceUi.field' : 'TOK_SURFACE_FIELD', this.effectiveScheme());
   }
@@ -820,6 +821,7 @@ export struct ReaderSearchField {
   }
 
   private fieldBorderColor(): string {
+    if (this.surfaceRole === 'card') return readerAppColor('app.border.control', this.effectiveScheme());
     return readerAppColor(this.readingPalette ? 'app.border.readerConfig' :
       this.formChrome() ? 'TOK_LINE_STRONG' : 'TOK_LINE', this.effectiveScheme());
   }

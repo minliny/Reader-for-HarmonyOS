@@ -1,4 +1,4 @@
-import { isReaderRealtimeBlurEnabled } from '../../app/HarmonyCapabilityPolicy';
+import { readerHarmonyApi24 } from '../../app/HarmonyCapabilityProbe';
 import { readerFontFamilyReady } from '../foundation/ReaderFonts';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
@@ -58,7 +58,8 @@ export class ReaderReadingTopBarTitle implements AttributeModifier<TextAttribute
   }
 
   applyNormalAttribute(instance: TextAttribute): void {
-    instance.maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+    instance.maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+      .ellipsisMode(!this.primary && readerHarmonyApi24() ? EllipsisMode.CENTER : EllipsisMode.END);
     if (this.variant === 'manga') {
       instance.fontFamily(this.primary ? READER_FONT_NOTO_SANS_SC_UI_BOLD : READER_FONT_NOTO_SANS_SC_UI_REGULAR)
         .fontWeight(this.primary ? FontWeight.Bold : FontWeight.Regular);
@@ -136,10 +137,9 @@ export struct ReaderReadingTopBar {
         .alignItems(VerticalAlign.Center).enabled(this.inputEnabled)
         .borderRadius(Math.max(0, this.resolvedHeight() / 2 - 1)).clip(this.variant === 'manga');
     }.width(this.barWidth).height(this.resolvedHeight())
-      .backgroundColor(!this.materialDecision().native && (!this.blurEnabled || !isReaderRealtimeBlurEnabled(this.navigationPreferences)) ?
-        readerAppColor('TOK_READ_SURFACE', this.scheme) : Color.Transparent)
-      .backgroundEffect(this.materialDecision().native || !this.blurEnabled || !isReaderRealtimeBlurEnabled(this.navigationPreferences) ?
-        undefined : readerHeaderVeilMaterial(true, this.scheme))
+      .backgroundColor(this.materialDecision().native || this.materialDecision().frosted ?
+        Color.Transparent : readerAppColor('TOK_READ_SURFACE', this.scheme))
+      .backgroundEffect(this.materialDecision().frosted ? readerHeaderVeilMaterial(true, this.scheme) : undefined)
       .border(this.materialDecision().native ? { width: 0, color: Color.Transparent } :
         { width: 1, color: readerHeaderVeilBorder(this.scheme) })
       .borderRadius(this.resolvedHeight() / 2)

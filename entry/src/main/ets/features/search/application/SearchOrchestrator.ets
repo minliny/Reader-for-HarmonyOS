@@ -804,14 +804,15 @@ export class SearchOrchestrator {
     const revision = ++this.historyRevision;
     const current = (): boolean => this.isCurrentSession(session) && revision === this.historyRevision;
     this.historyClearing = false;
-    this.historyStatus = 'loading';
-    this.presentEntryHistory(this.entryHistory);
     try {
       await this.enqueueHistoryWrite(async (): Promise<void> => {
         await this.gateway.deleteHistory(word);
         this.entryHistory = this.entryHistory.filter((value: string): boolean => value !== word);
       });
-      if (current()) this.loadEntryHistory(false);
+      if (current()) {
+        this.historyStatus = 'ready';
+        this.presentEntryHistory(this.entryHistory);
+      }
     } catch (error) {
       // Read back facts without replaying the mutation. The future delete UI
       // still receives the original rejection; a read is not a write ACK.

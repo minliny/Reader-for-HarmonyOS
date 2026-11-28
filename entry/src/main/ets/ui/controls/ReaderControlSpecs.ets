@@ -3,6 +3,7 @@ import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 import { readerIslandControlPaint } from '../foundation/ReaderIslandControlPaint';
 import { SEARCH_CONTROL_MIN_TARGET, SEARCH_HISTORY_HORIZONTAL_PADDING, SEARCH_HISTORY_VISUAL_HEIGHT } from '../foundation/ReaderSearchControlGeometry';
 import { MESSAGE_ACTION } from '../foundation/ReaderMessageStyle';
+import { SOURCE_FOOTER_ACTION_HEIGHT } from '../../features/source/presentation/SourceManagementLayout';
 import {
   TYPE_APP_FILTER_OPTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_DISCOVER_CATEGORY, TYPE_SYNC_BACKUP_ACTION,
   ReaderTextStyle, ReaderInheritedTextStyle, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_PLACEHOLDER, TYPE_FORM_HINT, TYPE_SOURCE_TOOLS_ACTION,
@@ -42,9 +43,9 @@ const MANGA_DOCK_STEP_ICON: ReaderIconButtonSpec = { boxSize: 44, paintSize: 32,
   iconSize: 20, radius: 16, pressedRadius: 16 };
 const READER_CHAPTER_STEP_ICON: ReaderIconButtonSpec = { boxSize: 34, iconSize: 20, radius: 999, pressedRadius: 999, pressFeedback: false };
 const FORM_PRIMARY_ICON: ReaderIconButtonSpec = { boxSize: 40, iconSize: 18, radius: 12, pressedRadius: 12 };
-const SHELF_VIEW_SEGMENT_ICON: ReaderIconButtonSpec = { boxSize: 44, paintSize: 28, iconSize: 15, radius: 14,
+const SHELF_VIEW_SEGMENT_ICON: ReaderIconButtonSpec = { boxSize: 30, paintSize: 28, iconSize: 15, radius: 14,
   pressedRadius: 14 };
-const SHELF_SECTION_ICON: ReaderIconButtonSpec = { boxSize: 44, paintSize: 34, iconSize: 15, radius: 17, pressedRadius: 17,
+const SHELF_SECTION_ICON: ReaderIconButtonSpec = { boxSize: 34, paintSize: 34, iconSize: 15, radius: 17, pressedRadius: 17,
   restingFill: 'TOK_CARD_BG', restingBorder: 'TOK_LINE', activeFill: 'TOK_PRIMARY_SOFT', activeBorder: 'TOK_PRIMARY_BORDER' };
 const SHELF_LIST_MORE_ICON: ReaderIconButtonSpec = { boxSize: 20, iconSize: 18, radius: 10, pressedRadius: 10 };
 export function resolveReaderIconButtonSpec(id: ReaderIconButtonSpecId): ReaderIconButtonSpec {
@@ -320,7 +321,7 @@ SOURCE_MANAGEMENT_LOGIN.radius = 7; SOURCE_MANAGEMENT_LOGIN.fixedWidth = 44; SOU
 SOURCE_MANAGEMENT_LOGIN.centerText = true; SOURCE_MANAGEMENT_LOGIN.maxLines = 1; SOURCE_MANAGEMENT_LOGIN.disabledOpacity = 1;
 SOURCE_MANAGEMENT_LOGIN.secondarySurface = 'TOK_CARD_BG'; SOURCE_MANAGEMENT_LOGIN.secondaryBorder = 'app.border.sourceGroup';
 const SOURCE_MANAGEMENT_MANAGE: ReaderButtonSpec = copyReaderButtonSpec();
-SOURCE_MANAGEMENT_MANAGE.text = TYPE_FORM_LABEL_ACTION; SOURCE_MANAGEMENT_MANAGE.height = 44;
+SOURCE_MANAGEMENT_MANAGE.text = TYPE_FORM_LABEL_ACTION; SOURCE_MANAGEMENT_MANAGE.height = SOURCE_FOOTER_ACTION_HEIGHT;
 SOURCE_MANAGEMENT_MANAGE.radius = 999; SOURCE_MANAGEMENT_MANAGE.stacked = false; SOURCE_MANAGEMENT_MANAGE.centerText = true;
 SOURCE_MANAGEMENT_MANAGE.maxLines = 1; SOURCE_MANAGEMENT_MANAGE.disabledOpacity = 0.45;
 SOURCE_MANAGEMENT_MANAGE.secondarySurface = 'TOK_CARD_BG'; SOURCE_MANAGEMENT_MANAGE.secondaryBorder = 'TOK_LINE';

@@ -149,8 +149,6 @@ export const TYPE_SEARCH_RSS_HINT = new ReaderTextStyle(
 
 // Approved 2026-10-28 static search hierarchy. These App metadata roles use
 // the same registered static UI family as the input; reader body roles stay separate.
-export const TYPE_SEARCH_RESULT_COVER_TITLE = new ReaderTextStyle(
-  READER_FONT_NOTO_SANS_SC_UI_BOLD, 700, 9, 11.7, undefined, 'system', 'figmaNode');
 export const TYPE_SEARCH_RESULT_TITLE = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC_UI_BOLD, 700, 16, 24, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_RESULT_AUTHOR = new ReaderTextStyle(

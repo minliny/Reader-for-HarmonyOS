@@ -8,6 +8,7 @@ import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFra
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { ReaderDelayedRowPress } from '../../../ui/foundation/ReaderPressMotion';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
@@ -29,7 +30,7 @@ import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
 import { bookCoverDisplayUrl, rememberBookCoverFailure } from '../../../app/library/BookCoverDisplay';
 import { BookCoverFailureCache } from '../../../app/library/BookCoverFailureCache';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
+import { TOK_BORDER_W, TOK_CONTENT_RAIL_W_TABLET, TOK_SCREEN_INSET } from '../../../ui/foundation/ReaderTokens';
 import { DEFAULT_BOOKSHELF_VIEW } from '../application/BookshelfViewMode';
 
 const GRID_ROW_GAP = 12;
@@ -59,6 +60,10 @@ export struct BookshelfMultiSelectPage {
   onRemoveSelected: (keys: string[]) => void = (_keys: string[]): void => {};
   @State private viewportWidth: number = 0;
   @State private selectedKeys: string[] = [];
+  @State private pressedBookKey: string = '';
+  private readonly delayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    this.pressedBookKey = key;
+  });
   @State private failedCoverUrls: string[] = BookCoverFailureCache.snapshotUrls();
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
   @State private measurementKey: number = 0;
@@ -89,6 +94,7 @@ export struct BookshelfMultiSelectPage {
 
   aboutToDisappear(): void {
     this.mounted = false;
+    this.delayedPress.cancel();
     this.headerFontPreparationGeneration += 1;
     this.listTextFontGeneration += 1;
     this.measurements.clear();
@@ -168,7 +174,8 @@ export struct BookshelfMultiSelectPage {
     .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
     .contentEndOffset(readerScrollEndOffset(this.scrollLayout()))
     .alignListItem(ListItemAlign.Center)
-    .scrollBar(BarState.Off);
+    .scrollBar(BarState.Off)
+    .onScrollStart((): void => this.delayedPress.cancel());
     }
   }
 
@@ -253,7 +260,7 @@ export struct BookshelfMultiSelectPage {
     available: () => boolean = (): boolean => true) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Text(label())
-        .constraintSize({ minWidth: 72 }).maxLines(1)
+        .constraintSize({ minWidth: 84 }).maxLines(1)
         .fontFamily(TYPE_SHELF_SELECTION_ACTION.fontFamily)
         .fontWeight(TYPE_SHELF_SELECTION_ACTION.fontWeight)
         .fontSize(TYPE_SHELF_SELECTION_ACTION.fontSizeFp)
@@ -262,7 +269,7 @@ export struct BookshelfMultiSelectPage {
         .textAlign(TextAlign.Center).padding({ left: 8, right: 8 })
         .accessibilityLevel('no');
     }
-    .constraintSize({ minWidth: 72, minHeight: READER_ACTION_MIN_TARGET }).flexShrink(0)
+    .constraintSize({ minWidth: 84, minHeight: READER_ACTION_MIN_TARGET }).flexShrink(0)
     .padding(0).attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_CARD_BG', this.appThemeScheme), this.appThemeScheme, 999, 999,
       this.selectionInputEnabled() && available()))
     .enabled(this.selectionInputEnabled() && available())
@@ -276,13 +283,15 @@ export struct BookshelfMultiSelectPage {
     Column({ space: 6 }) {
       Stack({ alignContent: Alignment.BottomEnd }) {
         if (this.hasCover(this.currentBook(book))) {
-          Image(this.coverUrl(this.currentBook(book)) as string)
-            .width(this.cardWidth())
-            .height(this.coverHeight())
-            .objectFit(ImageFit.Cover)
-            .borderRadius(8)
-            .shadow(readerSurfaceElevation('cover', this.appThemeScheme))
-            .onError(this.coverErrorHandler(this.coverUrl(this.currentBook(book))));
+          ForEach([this.coverUrl(this.currentBook(book)) ?? ''], (url: string): void => {
+            Image(url)
+              .width(this.cardWidth())
+              .height(this.coverHeight())
+              .objectFit(ImageFit.Cover)
+              .borderRadius(8)
+              .shadow(readerSurfaceElevation('cover', this.appThemeScheme))
+              .onError(this.coverErrorHandler(url));
+          }, (url: string): string => url);
         } else {
           NoCoverCover({ coverWidth: this.cardWidth(), coverHeight: this.coverHeight(),
             glyph: noCoverGlyph(this.currentBook(book).title), kindLabel: ShelfBookPresentation.contentLabel(this.currentBook(book)) });
@@ -291,7 +300,13 @@ export struct BookshelfMultiSelectPage {
         this.selectionBadge(book, 4);
       }
       .width(this.cardWidth())
-      .height(this.coverHeight());
+      .height(this.coverHeight())
+      .backgroundColor(readerAppColor(
+        this.hasCover(this.currentBook(book)) ? 'app.cover.placeholder' : 'TOK_META_BG',
+        this.appThemeScheme,
+      ))
+      .borderRadius(8)
+      .clip(true);
 
       Text(this.currentBook(book).title)
         .width(this.cardWidth())
@@ -317,6 +332,9 @@ export struct BookshelfMultiSelectPage {
     .height(this.cardHeight())
     .alignItems(HorizontalAlign.Start)
     .attributeModifier(this.selectionRowAction(book))
+    .onTouch((event: TouchEvent): void => {
+      this.delayedPress.observe(event, this.bookKey(book), this.selectionInputEnabled());
+    })
     .onClick((): void => this.toggleBook(book));
   }
 
@@ -406,8 +424,8 @@ export struct BookshelfMultiSelectPage {
     input.footerInsetLeft = input.headerInsetLeft;
     input.footerInsetRight = input.headerInsetRight;
     input.footerHeight = this.removeBarClearance();
-    input.contentMaxWidth = this.isWide() ? 622 : 351;
-    input.contentHorizontalPadding = this.isWide() ? 20 : 7.5;
+    input.contentMaxWidth = TOK_CONTENT_RAIL_W_TABLET;
+    input.contentHorizontalPadding = TOK_SCREEN_INSET;
     input.contentHorizontalSafeArea = 'interactive';
     input.contentGap = 12;
     input.contentNativeEndInset = input.footerHeight;
@@ -480,7 +498,8 @@ export struct BookshelfMultiSelectPage {
     const selected = this.isSelected(book);
     const enabled = this.selectionInputEnabled();
     return new ReaderActionAccessibility(`${this.currentBook(book).title}，${selected ? '已选择' : '未选择'}`, enabled, selected,
-      true, new ReaderPressFeedback(surface, this.appThemeScheme, 14, 14, enabled));
+      true, new ReaderPressFeedback(surface, this.appThemeScheme, 14, 14, enabled,
+        this.pressedBookKey === this.bookKey(book), false));
   }
 
   private currentBook(snapshot: ShelfBook): ShelfBook {
@@ -515,20 +534,28 @@ export struct BookshelfMultiSelectPage {
     Row({ space: BOOKSHELF_LIST_DETAILS_GAP }) {
       Stack({ alignContent: Alignment.BottomEnd }) {
         if (this.hasCover(this.currentBook(book))) {
-          Image(this.coverUrl(this.currentBook(book)) as string)
-            .width(BOOKSHELF_LIST_COVER_WIDTH)
-            .height(this.listContentHeight())
-            .objectFit(ImageFit.Cover)
-            .borderRadius(6)
-            .onError(this.coverErrorHandler(this.coverUrl(this.currentBook(book))));
+          ForEach([this.coverUrl(this.currentBook(book)) ?? ''], (url: string): void => {
+            Image(url)
+              .width(BOOKSHELF_LIST_COVER_WIDTH)
+              .height(this.listContentHeight())
+              .objectFit(ImageFit.Cover)
+              .borderRadius(6)
+              .onError(this.coverErrorHandler(url));
+          }, (url: string): string => url);
         } else {
           NoCoverCover({ coverWidth: BOOKSHELF_LIST_COVER_WIDTH, coverHeight: this.listContentHeight(), glyph: noCoverGlyph(this.currentBook(book).title),
-            kindLabel: ShelfBookPresentation.contentLabel(this.currentBook(book)) });
+            kindLabel: ShelfBookPresentation.contentLabel(this.currentBook(book)), cornerRadius: 6 });
         }
         this.selectionBadge(book, 2);
       }
       .width(BOOKSHELF_LIST_COVER_WIDTH)
-      .height(this.listContentHeight());
+      .height(this.listContentHeight())
+      .backgroundColor(readerAppColor(
+        this.hasCover(this.currentBook(book)) ? 'app.cover.placeholder' : 'TOK_META_BG',
+        this.appThemeScheme,
+      ))
+      .borderRadius(6)
+      .clip(true);
       ShelfBookListDetails({
         book: this.currentBook(book), textFrame: this.listTextFrame(), targetHeight: this.listContentHeight(),
       }).layoutWeight(1).constraintSize({ minWidth: 0 });
@@ -539,6 +566,9 @@ export struct BookshelfMultiSelectPage {
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .alignItems(VerticalAlign.Center)
     .attributeModifier(this.selectionRowAction(book, readerAppColor('TOK_CARD_BG', this.appThemeScheme)))
+    .onTouch((event: TouchEvent): void => {
+      this.delayedPress.observe(event, this.bookKey(book), this.selectionInputEnabled());
+    })
     .onClick((): void => this.toggleBook(book));
   }
 
@@ -550,8 +580,9 @@ export struct BookshelfMultiSelectPage {
       }
     }
     .width(22).height(22).margin({ right: inset, bottom: inset })
-    .backgroundColor(this.isSelected(book) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.surface.menuSolid', this.appThemeScheme))
-    .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('app.border.control', this.appThemeScheme) })
+    .backgroundColor(this.isSelected(book) ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) :
+      readerAppColor('TOK_SURFACE_TRANSLUCENT', this.appThemeScheme))
+    .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(11).shadow(readerSurfaceElevation('control', this.appThemeScheme));
   }
 

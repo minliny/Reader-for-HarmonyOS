@@ -147,17 +147,13 @@ export const TOK_RADIUS_PILL = 999;
 // ----------------------------------------------------------------------------
 // Responsive — 响应式参数 (内容屏边距 / 内容最大宽度)
 // ----------------------------------------------------------------------------
-// HarmonyOS calibration: 屏边距 19 (Figma 变量 screen/padding=16, 但节点实测用 19。
-// 该值为节点实测/校准值, 非正式 Figma Variable 来源, 与 TOK_ON_* 等 Variable 绑定区分)。
-export { TOK_SCREEN_INSET } from './ReaderLayoutTokens';
-// Figma: 内容列宽 (Phone 390−2×19)
-export const TOK_CONTENT_MAX_W_PHONE = 352;
-// Figma: 内容列宽 — 子页档 (无左 rail, 19px 边距; 实测 SourceMgmt 722 / Sync·BookDetail·WebDAV 720)。
-// 兼作大屏 maxWidth cap。区别于 rail 档 620。
-export const TOK_CONTENT_MAX_W_TABLET = 720;
-// Figma: 内容列宽 — rail 档 (主 tab 带左侧 BottomNav rail, 实测 Bookshelf/Discover/RSS 内容列 620)。
-// Discover 代码原 722 为 bug, 已纠正到 620。
-export const TOK_CONTENT_RAIL_W_TABLET = 620;
+// 墨纸青松 2.0 屏边距 16；手机端由 TOK_SCREEN_INSET 约束实际可用列宽，不再死锁 352。
+export {
+  TOK_SCREEN_INSET,
+  TOK_CONTENT_MAX_W_PHONE,
+  TOK_CONTENT_MAX_W_TABLET,
+  TOK_CONTENT_RAIL_W_TABLET,
+} from './ReaderLayoutTokens';
 
 // ----------------------------------------------------------------------------
 // State — 状态色 (危险 / 成功)
@@ -215,10 +211,6 @@ export const TOK_READ_IMMERSIVE_META_NIGHT = readerThemeDefinition('paperNight')
 export const TOK_SS_WINDOW_BG = readerAppColor('TOK_SS_WINDOW_BG', 'day');
 // Figma: source-switch window border rgba(155,132,102,0.24)
 export const TOK_SS_WINDOW_BORDER = readerAppColor('TOK_SS_WINDOW_BORDER', 'day');
-// Figma: source-switch muted text  排序/关闭字形次级文字
-export const TOK_SS_MUTED = readerAppColor('TOK_SS_MUTED', 'day');
-// Figma: source-switch footer count text  底部书源计数
-export const TOK_SS_FOOTER_TEXT = readerAppColor('TOK_SS_FOOTER_TEXT', 'day');
 // Figma: source-switch close button pill rgba(238,230,219,0.42)
 export const TOK_SS_CLOSE_BG = readerAppColor('TOK_SS_CLOSE_BG', 'day');
 // Figma: source-switch sort pill rgba(155,132,102,0.10)

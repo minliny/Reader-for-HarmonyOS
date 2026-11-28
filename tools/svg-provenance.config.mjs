@@ -459,7 +459,7 @@ export const svgActionForegroundRecipes = [
   ['close', 'download_visual_close'], ['refresh', 'download_visual_retry'],
   ['download', 'download_visual_download'], ['storage', 'download_visual_storage'],
   ['more', 'download_visual_more'], ['source', 'reader_directory_switch'],
-  ['import', 'bookshelf_more_import'],
+  ['import', 'bookshelf_more_import'], ['settings', 'bookshelf_more_settings'],
 ].flatMap(([kind, baseFile]) => ['day', 'night'].map(scheme => ({
   file: `reader_action_${kind}${scheme === 'night' ? '_theme_night' : ''}`,
   baseFile, scheme, paletteRole: 'TOK_DOWNLOAD_GREEN_INK',

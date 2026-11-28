@@ -439,9 +439,17 @@ export struct DiscoverPage {
             .onError(this.coverErrorHandler(this.coverUrl(book), this.presentation.operation?.generation ?? 0));
         } else {
           NoCoverCover({ coverWidth: 52, coverHeight: 74, glyph: this.currentBook(book).name,
-            kindLabel: readerSourceCategoryLabel(this.currentBook(book).category) });
+            kindLabel: readerSourceCategoryLabel(this.currentBook(book).category), cornerRadius: 4 });
         }
       }
+      .width(52)
+      .height(74)
+      .backgroundColor(readerAppColor(
+        this.coverUrl(book).length > 0 ? 'app.cover.placeholder' : 'TOK_META_BG',
+        this.appThemeScheme,
+      ))
+      .borderRadius(4)
+      .clip(true)
 
       Column({ space: TOK_SPACE_ROW_BLOCK }) {
         Text(this.currentBook(book).name)

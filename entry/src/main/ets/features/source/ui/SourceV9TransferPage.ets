@@ -13,7 +13,10 @@ import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResourc
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
-import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerReadableFontScale, readerScaledControlHeight, readerScaledWidth } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET } from '../../../ui/foundation/ReaderTokens';
+import { readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderPasteButton } from '../../../ui/controls/ReaderPasteButton';
 import { readerAppColor, type ReaderAppColorRole } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import type { ReaderRectVp, ReaderWindowMetricsSnapshot } from '../../../ui/foundation/ReaderWindowMetrics';
@@ -85,7 +88,7 @@ type TransferPasteField = 'url' | 'paste' | 'subscriptionUrl';
 
 const TRANSFER_FOOTER_TOP = 8;
 const TRANSFER_BODY_TAIL = 12;
-const TRANSFER_MAX_WIDTH = 640;
+const TRANSFER_MAX_WIDTH = TOK_CONTENT_MAX_W_TABLET;
 const TRANSFER_HEADER_ACTION_WIDTH = 80;
 const IMPORT_STEP_LABELS: string[] = ['选择来源', '校验与检测', '完成'];
 const IMPORT_ORIGINS: SourceV9SegmentChoice[] = [
@@ -431,8 +434,16 @@ export struct SourceV9TransferPage {
     return this.color('app.sourceUi.field');
   }
 
-  private touchRegion(height: number): Rectangle {
-    return { x: 0, y: Math.min(0, (height - 44) / 2), width: '100%', height: Math.max(44, height) };
+  private touchRegion(height: number): Rectangle[] {
+    return readerUnionTouchRegion('100%', height);
+  }
+
+  private fontScale(): number {
+    return readerReadableFontScale(this.windowRevision < 0 ? 1 : readerWindowMetrics().systemFontScale);
+  }
+
+  private scaledHeight(baseHeight: number, lineHeight: number = 16): number {
+    return readerScaledControlHeight(baseHeight, lineHeight, this.fontScale());
   }
 
   private stepTransition(): TransitionEffect {
@@ -460,7 +471,7 @@ export struct SourceV9TransferPage {
     applyReaderStandardFloatingHeader(input);
     input.contentGap = READER_STANDARD_PAGE_CONTENT_GAP;
     input.contentMaxWidth = TRANSFER_MAX_WIDTH;
-    input.contentHorizontalPadding = 19;
+    input.contentHorizontalPadding = TOK_SCREEN_INSET;
     input.contentHorizontalSafeArea = 'interactive';
     input.footerBottom = readerFloatingBarBottomInset(metrics, TRANSFER_BODY_TAIL);
     if (this.paneHeight > 0) {
@@ -538,7 +549,7 @@ export struct SourceV9TransferPage {
   private header() {
     if (this.pane === 'subscriptions') {
       PageBackBar({ floating: true, centered: true, elevation: 'floating', title: '书源订阅',
-        trailingWidthVp: TRANSFER_HEADER_ACTION_WIDTH, balancedCenteredSlots: true,
+        trailingWidthVp: readerScaledWidth(TRANSFER_HEADER_ACTION_WIDTH, this.fontScale(), 120), balancedCenteredSlots: true,
         backFocusId: 'reader-source-v9-transfer-back', onBack: (): void => this.back(),
         trailing: (): void => { this.subscriptionsCreateAction(); },
       });
@@ -573,11 +584,12 @@ export struct SourceV9TransferPage {
   @Builder
   private action(label: string, tone: TransferButtonTone, enabled: boolean, run: () => void,
     height: number = 32, width: number | undefined = undefined, weight: number | undefined = undefined, id: string = '') {
-    Button(label, { type: ButtonType.Capsule, stateEffect: false }).id(id).height(height).width(width).layoutWeight(weight)
-      .padding({ left: 12, right: 12 }).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
+    Button(label, { type: ButtonType.Capsule, stateEffect: false }).id(id)
+      .constraintSize({ minHeight: this.scaledHeight(height) }).width(width).layoutWeight(weight)
+      .padding({ left: 12, right: 12, top: 2, bottom: 2 }).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
       .fontColor(this.toneInk(tone)).attributeModifier(new ReaderPressFeedback(this.toneSurface(tone),
-        this.scheme, height / 2, height / 2, enabled))
-      .enabled(enabled).opacity(enabled ? 1 : 0.45).responseRegion(this.touchRegion(height))
+        this.scheme, this.scaledHeight(height) / 2, this.scaledHeight(height) / 2, enabled))
+      .enabled(enabled).opacity(enabled ? 1 : 0.45).responseRegion(this.touchRegion(this.scaledHeight(height)))
       .onClick((): void => { if (enabled && this.inputCurrent()) run(); });
   }
 
@@ -592,7 +604,8 @@ export struct SourceV9TransferPage {
   private field(title: string, value: string, placeholder: string, emit: (value: string) => void) {
     Column({ space: 5 }) {
       this.label(title, 12, 'TOK_MUTED', true);
-      TextInput({ text: value, placeholder }).height(40).width('100%').borderRadius(10)
+      TextInput({ text: value, placeholder })
+        .constraintSize({ minHeight: this.scaledHeight(40, 18) }).width('100%').borderRadius(10)
         .border({ width: 1, color: this.color('TOK_LINE_STRONG') })
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(13)
         .fontColor(this.color('TOK_INK')).placeholderColor(this.color('TOK_MUTED'))
@@ -670,12 +683,13 @@ export struct SourceV9TransferPage {
               Image(readerActionIcon('check', this.scheme)).width(11).height(11)
                 .fillColor(this.color('app.sourceUi.onPrimary')).accessibilityLevel('no');
             } else {
-              Text(String(index + 1)).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(11)
+              Text(String(index + 1)).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(11).maxFontScale(1.2)
                 .fontColor(this.state.importStep === index + 1 ? this.color('app.sourceUi.onPrimary') : this.color('TOK_MUTED'));
             }
           }.width(20).height(20).borderRadius(10).flexShrink(0)
             .backgroundColor(this.state.importStep >= index + 1 ? this.primary() : this.color('app.sourceUi.field'));
-          this.label(label, 11.5, this.state.importStep === index + 1 ? 'TOK_INK' : 'TOK_MUTED', true);
+          Text(label).fontSize(11.5).fontColor(this.color(this.state.importStep === index + 1 ? 'TOK_INK' : 'TOK_MUTED'))
+            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
           if (index < 2) {
             Blank().layoutWeight(1).height(1)
               .color(this.state.importStep > index + 1 ? this.primary() : this.color('TOK_LINE_STRONG'));
@@ -688,9 +702,11 @@ export struct SourceV9TransferPage {
 
   @Builder
   private pasteDraftButton(field: TransferPasteField) {
-    PasteButton()
-      .enabled(this.canPasteDraft(field))
-      .onClick((_event: ClickEvent, result: PasteButtonOnClickResult): void => this.onPasteDraft(field, result));
+    ReaderPasteButton({
+      scheme: this.scheme,
+      actionEnabled: this.canPasteDraft(field),
+      onPaste: (result: PasteButtonOnClickResult): void => this.onPasteDraft(field, result),
+    });
   }
 
   @Builder
@@ -772,7 +788,7 @@ export struct SourceV9TransferPage {
       Row({ space: 6 }) {
         ForEach(KEYWORDS, (word: string): void => {
           this.action(word, this.checkKeyword === word ? 'primary' : 'neutral', this.editable(),
-            (): void => { this.checkKeyword = this.checkKeyword === word ? '' : word; }, 28);
+            (): void => { this.checkKeyword = this.checkKeyword === word ? '' : word; }, 32);
         }, (word: string): string => word);
       }.width('100%');
     }
@@ -943,10 +959,14 @@ export struct SourceV9TransferPage {
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(11).maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .fontColor(this.color(origin === '历史' ? 'TOK_MUTED' : report.available ? 'app.status.good' : 'app.sourceUi.danger'));
-    }.height(28).constraintSize({ minWidth: 44, maxWidth: 100 }).padding({ left: 8, right: 8 }).flexShrink(0)
+    }.constraintSize({
+      minWidth: 44,
+      maxWidth: readerScaledWidth(100, this.fontScale(), 150),
+      minHeight: this.scaledHeight(28, 15),
+    }).padding({ left: 8, right: 8, top: 2, bottom: 2 }).flexShrink(0)
       .attributeModifier(new ReaderPressFeedback(this.color(origin === '历史' ? 'app.sourceUi.field' : report.available ? 'app.status.goodSoft' :
-        'app.sourceUi.dangerSurface'), this.scheme, 14, 14, this.inputCurrent()))
-      .responseRegion({ x: 0, y: -8, width: '100%', height: 44 })
+        'app.sourceUi.dangerSurface'), this.scheme, this.scaledHeight(28, 15) / 2, this.scaledHeight(28, 15) / 2, this.inputCurrent()))
+      .responseRegion(this.touchRegion(this.scaledHeight(28, 15)))
       .enabled(this.inputCurrent()).opacity(this.inputCurrent() ? 1 : 0.45)
       .onClick((): void => this.showReport(origin === '历史' ? name + ' · 历史报告' : name, report));
   }
@@ -1108,7 +1128,7 @@ export struct SourceV9TransferPage {
               this.label(item.confirmed ? '已确认' : '待核对', 11, item.confirmed ? 'app.status.good' : 'TOK_MUTED');
             }.width('100%');
           }, (item: SourceV9PartialApplyItem): string => item.key);
-        }.width('100%').alignItems(HorizontalAlign.Start).padding(8).borderRadius(8)
+        }.width('100%').alignItems(HorizontalAlign.Start).padding(8).borderRadius(10)
           .backgroundColor(this.color('app.sourceUi.field'));
       }, (detail: SourceV9PartialApplyDetail): string => String(detail.subscriptionId));
     }.width('100%').alignItems(HorizontalAlign.Start).padding(12).borderRadius(14)

@@ -12,7 +12,7 @@ import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../..
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
-import { READER_ACTION_MIN_TARGET, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
+import { READER_ACTION_MIN_TARGET, readerActionTouchRegion, readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
@@ -196,7 +196,7 @@ struct SourceSwitchNovelRow {
     // ArkUI overlays its thumb; reserve the shared bar plus its platform inset
     // and rounding inside the full-width row, keeping the divider unchanged.
     }.width('100%').height(this.rowHeight).padding({ top: SOURCE_SWITCH_VISUAL.rowPaddingY, bottom: SOURCE_SWITCH_VISUAL.rowPaddingY,
-      right: SOURCE_SWITCH_VISUAL.scrollbarWidth + 5 })
+      right: SOURCE_SWITCH_VISUAL.scrollbarWidth + 9 })
       .backgroundColor(readerPressSurface(this.selected ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent,
         this.appThemeScheme, this.pressed, this.reduceMotion))
       .scale(readerPressScale(this.pressed, this.reduceMotion))
@@ -989,7 +989,7 @@ export struct SourceSwitchWindow {
     Row({ space: 2 }) {
       this.sortOption('延迟优先', false);
       this.sortOption('最新章优先', true);
-    }.padding({ left: 2, right: 2 }).constraintSize({ minHeight: 44 }).flexShrink(1).borderRadius(22)
+    }.padding(3).constraintSize({ minHeight: 40 }).flexShrink(1).borderRadius(20)
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
       .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
       .opacity(this.filterInputCurrent() ? 1 : .45)
@@ -1003,7 +1003,8 @@ export struct SourceSwitchWindow {
         .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontSizeFp)
         .lineHeight(TYPE_SOURCE_SWITCH_NOVEL_ACTION.lineHeightFp).halfLeading(true)
         .fontColor(readerAppColor(this.latestFirst === latestFirst ? 'TOK_GREEN' : 'TOK_MUTED', this.appThemeScheme))
-        .maxLines(2).textAlign(TextAlign.Center).padding({ top: 6, bottom: 6, left: 10, right: 10 }).borderRadius(16)
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Center)
+        .padding({ top: 5, bottom: 5, left: 10, right: 10 }).borderRadius(16)
         .backgroundColor(readerPressSurface(this.latestFirst === latestFirst ?
           readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent,
           this.appThemeScheme, this.filterPressedAction === this.sortPressKey(latestFirst), this.reduceMotion))
@@ -1011,7 +1012,8 @@ export struct SourceSwitchWindow {
         .opacity(readerPressOpacity(this.filterPressedAction === this.sortPressKey(latestFirst), this.reduceMotion))
         .border({ width: this.latestFirst === latestFirst ? 1 : 0, color: readerAppColor('TOK_PRIMARY_BORDER', this.appThemeScheme) })
         .accessibilityLevel('no');
-    }.padding(0).constraintSize({ minWidth: 44, minHeight: 44 }).flexShrink(1).backgroundColor(Color.Transparent)
+    }.padding(0).constraintSize({ minWidth: 44, minHeight: 34 }).flexShrink(1).backgroundColor(Color.Transparent)
+      .responseRegion(readerUnionTouchRegion('100%', 34))
       .enabled(this.filterInputCurrent())
       .accessibilityText(`排序：${label}`).accessibilitySelected(this.latestFirst === latestFirst)
       .onTouch((event: TouchEvent): void => this.observeFilterPress(event, this.sortPressKey(latestFirst), this.filterInputCurrent()))

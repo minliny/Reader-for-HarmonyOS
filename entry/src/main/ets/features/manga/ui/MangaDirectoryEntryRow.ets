@@ -1,4 +1,4 @@
-import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
+import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from './MangaDirectoryVisual';
 import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
@@ -17,7 +17,19 @@ import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM
 @Component
 export struct MangaDirectoryEntryRow {
   @State private pressEntryIndex: number = -1;
-  private pressPointer: number = -1;
+  @State private pressedKey: string = '';
+  private readonly delayedPress: ReaderDelayedRowPress = new ReaderDelayedRowPress((key: string): void => {
+    const index = key.startsWith('entry:') ? Number(key.slice(6)) : -1;
+    if (key.length === 0) {
+      this.pressedKey = '';
+      this.pressEntryIndex = -1;
+    } else {
+      readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => {
+        this.pressedKey = key;
+        this.pressEntryIndex = Number.isInteger(index) ? index : -1;
+      });
+    }
+  });
   @Prop @Watch('clearPress') row: MangaDirectoryLayoutRow = { kind: 'row', columns: 1, startIndex: 0, entries: [], labels: [] };
   @Prop presentation: Map<number, MangaDirectoryRowPresentation> = new Map<number, MangaDirectoryRowPresentation>();
   @Prop scheme: string = 'day';
@@ -36,7 +48,7 @@ export struct MangaDirectoryEntryRow {
 
   aboutToDisappear(): void { this.clearPress(); }
 
-  private clearPress(): void { this.pressEntryIndex = -1; this.pressPointer = -1; }
+  private clearPress(): void { this.delayedPress.cancel(); }
 
   private rowActionEnabled(entry: LocalReadingTocEntry): boolean {
     if (!this.interactionEnabled) return false;
@@ -46,11 +58,7 @@ export struct MangaDirectoryEntryRow {
   }
 
   private observePress(event: TouchEvent, entry: LocalReadingTocEntry): void {
-    if (this.pressEntryIndex >= 0 && this.pressEntryIndex !== entry.index) return;
-    const next = readerPressPointer(event, this.pressPointer, this.rowActionEnabled(entry));
-    if (next === this.pressPointer) return;
-    this.pressPointer = next;
-    readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressEntryIndex = next < 0 ? -1 : entry.index; });
+    this.delayedPress.observe(event, `entry:${entry.index}`, this.rowActionEnabled(entry));
   }
 
   /** ForEach retains its keyed Builder arguments. Only their canonical index
@@ -146,9 +154,13 @@ export struct MangaDirectoryEntryRow {
           .width(grid ? 12 : 15).height(grid ? 12 : 15).accessibilityLevel('no');
       }.width(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 44).height(grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 :
         Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))
-        .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.scheme, 0, 0, this.interactionEnabled))
+        .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.scheme, 0, 0,
+          this.interactionEnabled, this.pressedKey === `dl:${entry.index}`, false))
         .accessibilityText(`管理${this.title(entry)}下载`)
         .enabled(this.interactionEnabled)
+        .onTouch((event: TouchEvent): void => {
+          this.delayedPress.observe(event, `dl:${entry.index}`, this.interactionEnabled && this.downloadable(entry));
+        })
         .onClick((): void => {
           const current = this.liveEntry(entry);
           if (current !== undefined && this.interactionEnabled && this.downloadable(current)) this.onDownloadEntry(current);

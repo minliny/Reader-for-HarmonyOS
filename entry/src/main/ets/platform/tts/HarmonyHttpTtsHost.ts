@@ -9,13 +9,13 @@ import {
   type ReaderTtsHostEvent,
   type ReaderTtsHostProbe,
   type ReaderTtsHostSpeakRequest,
-} from '../../features/reading/application/ReaderTtsHostContract';
+} from '../contracts/ReaderTtsHostContract';
 import {
   ReaderHttpTtsGateway,
   type ReaderHttpTtsRuntime,
   type ReaderHttpTtsRequestDescriptor,
-} from '../../features/reading/application/ReaderHttpTtsGateway';
-import { isReaderTtsCredentialAliasForConfig } from '../../features/reading/application/ReaderOnlineTtsProfile';
+} from './ReaderHttpTtsGateway';
+import { isReaderTtsCredentialAliasForConfig } from '../contracts/ReaderOnlineTtsProfile';
 import { ReaderTtsCredentialStore } from './ReaderTtsCredentialStore';
 import { HttpExecuteHost } from '../network/HttpExecuteHost';
 import { isCrossOriginSensitiveHeader } from '../network/HttpTransportPolicy';

@@ -1,4 +1,5 @@
 import { TOK_SPACE_CONTROL_INLINE, TOK_SPACE_ROW_BLOCK } from '../foundation/ReaderTokens';
+import { SOURCE_FOOTER_ACTION_HEIGHT } from '../../features/source/presentation/SourceManagementLayout';
 import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 import { ReaderTextStyle, ReaderInheritedTextStyle, TYPE_FORM_LABEL_ACTION, TYPE_APP_SMALL_ACTION,
   TYPE_DISCOVER_FILTER_LABEL, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_FORM_COMPACT_ACTION, TYPE_RSS_LINK_ACTION } from '../foundation/ReaderTypography';
@@ -71,7 +72,7 @@ VIEW_ALL.outerHit = false; VIEW_ALL.responseOffset = -8;
 const SOURCE_ADD: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 SOURCE_ADD.text = TYPE_FORM_LABEL_ACTION; SOURCE_ADD.textRole = 'TOK_ON_PRIMARY';
 SOURCE_ADD.surfaceRole = 'TOK_PRIMARY_DARK'; SOURCE_ADD.iconSize = 16; SOURCE_ADD.gap = 8;
-SOURCE_ADD.rowHeight = undefined; SOURCE_ADD.horizontalPadding = undefined; SOURCE_ADD.radius = 999;
+SOURCE_ADD.rowHeight = SOURCE_FOOTER_ACTION_HEIGHT; SOURCE_ADD.horizontalPadding = undefined; SOURCE_ADD.radius = 999;
 SOURCE_ADD.surfaceOnHit = true; SOURCE_ADD.equalLayout = true;
 const DISCOVER_APPLY: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 DISCOVER_APPLY.text = TYPE_DISCOVER_FILTER_LABEL; DISCOVER_APPLY.textRole = 'TOK_ON_PRIMARY';

@@ -52,7 +52,7 @@ import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
-import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderActionAccessibility, readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { PathShape } from '@ohos.arkui.shape';
 import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observeReaderControlMorphScroll,
   readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,
@@ -845,19 +845,20 @@ export struct ReaderControlTtsContent {
                     max: this.displayState().totalSlices - 1, step: 1 })
                     .id('reader-control-tts-seek-slider')
                     .attributeModifier(new ReaderPaperMaterial())
-                    .width('100%').height(44).selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
-                    .trackColor(readerAppColor('app.readerIsland.controlBorder', this.appScheme))
+                    .width('100%').height(34)
+                    .responseRegion(readerUnionTouchRegion('100%', 34))
+                    .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
+                    .trackColor(readerAppColor('TOK_TTS_TRACK', this.appScheme))
                     .enabled(this.sharedInput()).accessibilityText('跳转朗读句子')
                     .onChange((value: number, mode: SliderChangeMode): void => this.changeSeekSlider(value, mode));
-                }.width('100%')
-                  .attributeModifier(new ReaderIslandControlFrame(this.appScheme, this.sharedInput(), 'normal', 8, false));
+                }.width('100%');
               }.width('100%').padding(8)
                 .attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
             }
             this.islandRate();
             this.islandTimer();
             this.islandAudio();
-          }.width('100%').padding({ bottom: 2 });
+          }.width('100%').padding({ bottom: 10 });
         }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).edgeEffect(EdgeEffect.None)
           .onDidScroll((): void => this.reportMorphActor());
       }.width('100%').height('100%').enabled(this.configField === '' && this.currentInputEnabled())
@@ -971,12 +972,13 @@ export struct ReaderControlTtsContent {
         Slider({ value: this.effectiveRate(), min: READER_TTS_RATE_MIN, max: READER_TTS_RATE_MAX, step: READER_TTS_RATE_STEP })
           .id('reader-control-tts-rate-slider')
           .attributeModifier(new ReaderPaperMaterial())
-          .width('100%').height(44).selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
+          .width('100%').height(34)
+          .responseRegion(readerUnionTouchRegion('100%', 34))
+          .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
           .enabled(this.sharedInput())
-          .trackColor(readerAppColor('app.readerIsland.controlBorder', this.appScheme))
+          .trackColor(readerAppColor('TOK_TTS_TRACK', this.appScheme))
           .accessibilityText('朗读语速').onChange((value: number, mode: SliderChangeMode): void => this.changeRateSlider(value, mode));
-      }.width('100%')
-        .attributeModifier(new ReaderIslandControlFrame(this.appScheme, this.sharedInput(), 'normal', 8, false));
+      }.width('100%');
     }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
   }
 

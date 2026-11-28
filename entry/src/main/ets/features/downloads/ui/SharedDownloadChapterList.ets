@@ -1,7 +1,8 @@
 import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
-import { readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
+import { readerActionTouchRegion, readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
+import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { DOWNLOAD_VISUAL, downloadVisualColor } from './SharedDownloadVisualSpec';
 import { TYPE_DOWNLOAD_META, TYPE_DOWNLOAD_TAG, TYPE_DOWNLOAD_BOOK_TITLE, TYPE_DOWNLOAD_META_LINE, TYPE_DOWNLOAD_CHAPTER_TITLE } from './DownloadTypography';
@@ -448,8 +449,12 @@ function DownloadChapterGroup(owner: SharedDownloadChapterListOwner, input: Down
       Button({ type: ButtonType.Normal }) {
         Text('选择本卷').fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
           .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true).fontColor(sharedDownloadPrimaryInk(owner.view.frame.scheme()));
-      }.constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget, minWidth: DOWNLOAD_VISUAL.touchTarget }).padding({ left: DOWNLOAD_VISUAL.progressGap, right: 0,
+      }.constraintSize({
+        minHeight: readerScaledControlHeight(28, 16, owner.view.frame.fontScale()),
+        minWidth: DOWNLOAD_VISUAL.touchTarget,
+      }).padding({ left: DOWNLOAD_VISUAL.progressGap, right: 0,
         top: DOWNLOAD_VISUAL.textActionPaddingY, bottom: DOWNLOAD_VISUAL.textActionPaddingY })
+        .responseRegion(readerUnionTouchRegion('100%', readerScaledControlHeight(28, 16, owner.view.frame.fontScale())))
         .backgroundColor(Color.Transparent).borderRadius(0)
         .onClick((): void => {
           const currentBook = owner.view.books.eventBook(input.book, input.ownerGeneration);
@@ -491,12 +496,14 @@ function DownloadChapterRow(owner: SharedDownloadChapterListOwner, input: Downlo
         space: { main: LengthMetrics.vp(DOWNLOAD_VISUAL.statusGap), cross: LengthMetrics.vp(DOWNLOAD_VISUAL.statusGap) } }) {
         Text(input.chapter().title).fontFamily(TYPE_DOWNLOAD_CHAPTER_TITLE.fontFamily).fontWeight(TYPE_DOWNLOAD_CHAPTER_TITLE.fontWeight)
           .fontSize(TYPE_DOWNLOAD_CHAPTER_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_CHAPTER_TITLE.lineHeightFp as number).halfLeading(true)
+          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontColor(downloadVisualColor(!input.chapter().localComplete && input.chapter().queueState === 'inProgress' ? 'green' : 'ink', owner.view.frame.scheme())).flexGrow(1).flexShrink(0).flexBasis(owner.chapterTextMinimum())
           .id(sharedDownloadFocusKey(owner.chapterReadingFocusKey(input.chapter(), 'title'))).focusable(!owner.view.frame.mount.managing())
           .accessibilityRole(AccessibilityRoleType.BUTTON)
           .accessibilityText(`打开章节：${input.chapter().title}，${input.book().title}`)
           .accessibilityLevel(owner.view.frame.mount.managing() ? 'no' : 'yes')
-          .constraintSize({ minWidth: owner.chapterTextMinimum(), maxWidth: '100%', minHeight: DOWNLOAD_VISUAL.touchTarget })
+          .constraintSize({ minWidth: owner.chapterTextMinimum(), maxWidth: '100%' })
+          .responseRegion(readerUnionTouchRegion('100%', readerScaledControlHeight(20, 18, owner.view.frame.fontScale())))
           .onClick((): void => { if (!owner.view.frame.mount.managing()) owner.showReadTarget(input.book(), input.chapter(), input.ownerGeneration); });
         if (sharedDownloadCurrentChapter(input.book())?.key === input.chapter().key) {
           Text('当前阅读').fontFamily(TYPE_DOWNLOAD_TAG.fontFamily).fontWeight(TYPE_DOWNLOAD_TAG.fontWeight)
@@ -517,7 +524,10 @@ function DownloadChapterRow(owner: SharedDownloadChapterListOwner, input: Downlo
       Button({ type: ButtonType.Normal }) {
         Text(owner.chapterButtonLabel(input.chapter())).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
           .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true).fontColor(sharedDownloadPrimaryInk(owner.view.frame.scheme()));
-      }.constraintSize({ minHeight: DOWNLOAD_VISUAL.touchTarget, minWidth: DOWNLOAD_VISUAL.touchTarget })
+      }.constraintSize({
+        minHeight: readerScaledControlHeight(DOWNLOAD_VISUAL.chapterActionHeight, 16, owner.view.frame.fontScale()),
+        minWidth: DOWNLOAD_VISUAL.touchTarget,
+      }).responseRegion(readerUnionTouchRegion('100%', readerScaledControlHeight(DOWNLOAD_VISUAL.chapterActionHeight, 16, owner.view.frame.fontScale())))
         .id(input.chapter().localComplete ? sharedDownloadFocusKey(owner.chapterReadingFocusKey(input.chapter(), 'action')) : '')
         .fontColor(sharedDownloadPrimaryInk(owner.view.frame.scheme()))
         .backgroundColor(downloadVisualColor('soft', owner.view.frame.scheme()))

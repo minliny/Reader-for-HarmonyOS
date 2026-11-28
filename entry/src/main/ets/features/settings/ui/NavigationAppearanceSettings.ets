@@ -1,5 +1,9 @@
-import type {
-  ReaderNavigationOverride, ReaderNavigationPreferenceChange, ReaderNavigationPreferences, ReaderRenderMode,
+import {
+  isReaderNativeChromeStyle,
+  type ReaderNavigationOverride,
+  type ReaderNavigationPreferenceChange,
+  type ReaderNavigationPreferences,
+  type ReaderRenderMode,
 } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
@@ -7,7 +11,7 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { TYPE_SELECT_DEFAULT_VALUE } from '../../../ui/foundation/ReaderTypography';
 import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
-import { defaultNavigationPreferences, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { defaultNavigationPreferences } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 
 export function readerRenderModeLabel(mode: ReaderRenderMode): string {
   return mode === 'performance' ? '性能优先' : '效果优先';
@@ -18,7 +22,6 @@ export struct NavigationAppearanceSettings {
   @StorageProp('readerNavigationAppearancePreferences')
   private preferences: ReaderNavigationPreferences = defaultNavigationPreferences();
   @StorageProp('readerAppScheme') private appScheme: string = 'day';
-  @StorageProp('readerSystemScheme') private systemScheme: string = 'day';
   @Prop generation: number = 0;
   @Prop actionEnabled: boolean = false;
   onChange: (change: ReaderNavigationPreferenceChange, generation: number) => void =
@@ -76,20 +79,19 @@ export struct NavigationAppearanceSettings {
   }
 
   private nativeToggleEnabled(): boolean {
-    return this.actionEnabled && this.preferences.renderMode !== 'performance';
+    return this.actionEnabled;
   }
 
   private nativeToggleValue(): boolean {
-    return this.preferences.override === 'systemNative' && this.preferences.renderMode !== 'performance';
+    return isReaderNativeChromeStyle(this.preferences);
   }
 
   private appearanceSummary(): string {
-    if (this.preferences.renderMode === 'performance') return '性能优先模式下沿用默认外观';
-    if (this.preferences.override === 'systemNative' &&
-      !readerSurfaceMaterialDecision('chromeBar', this.preferences, this.appScheme, this.systemScheme).native) {
-      return '当前系统或主题下沿用默认外观';
+    if (isReaderNativeChromeStyle(this.preferences)) {
+      return this.preferences.renderMode === 'performance' ?
+        '原生无框顶栏、实底浮层与整页搜索' : '原生无框顶栏、原生/雾面浮层与整页搜索';
     }
-    return '导航栏与浮层优先使用系统材质';
+    return '关闭时使用统一实底栏与弹窗；开启后启用无框顶栏、原生材质与整页搜索';
   }
 
   private toggleOverride(generation: number): void {

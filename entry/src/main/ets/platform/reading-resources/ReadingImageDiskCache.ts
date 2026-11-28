@@ -7,7 +7,7 @@ import { canonicalReadingImageBaseUrl } from '../../common/ReadingImageIdentity'
 import {
   assertReadingOfflineWriteCapacity,
   ReadingOfflineMaterializationError,
-} from '../../features/reading/application/ReadingOfflineContract';
+} from '../contracts/ReadingOfflineContract';
 import {
   CACHE_FORMAT_VERSION,
   LEGACY_CACHE_FORMAT_VERSION,

@@ -8,11 +8,12 @@ import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 
-const SHELF_SECTION_ACTION_SIZE = 44;
+const SHELF_SECTION_ACTION_SIZE = 30;
 const SHELF_SECTION_TRACK_HEIGHT = 34;
 const SHELF_SECTION_TRACK_INSET = 3;
 const SHELF_SECTION_PILL_HEIGHT = SHELF_SECTION_TRACK_HEIGHT - 2 * SHELF_SECTION_TRACK_INSET;
-const SHELF_SECTION_PILL_WIDTH = SHELF_SECTION_ACTION_SIZE - 2 * SHELF_SECTION_TRACK_INSET;
+const SHELF_SECTION_PILL_WIDTH = 30;
+const SHELF_FILTER_SIZE = 34;
 type BookshelfSectionAction = 'bookshelf_grid' | 'bookshelf_list' | 'bookshelf_filter';
 
 /** The font-scaled shelf section header shared by the populated list and the empty
@@ -67,16 +68,16 @@ export struct BookshelfSectionHeader {
       }.layoutWeight(1).constraintSize({ minWidth: 0 }).opacity(this.titleOpacity);
 
       if (this.actionsEnabled) {
-        Row({ space: TOK_SPACE_XS }) {
+        Row({ space: 6 }) {
           this.viewModeSegments();
           this.filterButton();
         }
-        .height(SHELF_SECTION_ACTION_SIZE)
+        .height(SHELF_FILTER_SIZE)
         .opacity(this.actionsOpacity);
       }
     }
     .width(this.contentWidth)
-    .constraintSize({ minHeight: Math.max(this.actionsEnabled ? 44 : 0, readerScaledControlHeight(38, TYPE_APP_SECTION_LABEL.lineHeightFp as number,
+    .constraintSize({ minHeight: Math.max(this.actionsEnabled ? 44 : 0, readerScaledControlHeight(34, TYPE_APP_SECTION_LABEL.lineHeightFp as number,
       this.windowRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale)) })
     .alignItems(VerticalAlign.Center);
   }
@@ -84,14 +85,32 @@ export struct BookshelfSectionHeader {
   @Builder
   private viewModeSegments() {
     Stack({ alignContent: Alignment.Center }) {
+      // Bottom rim catchlight beneath the recessed groove.
       Row().width('100%').height(SHELF_SECTION_TRACK_HEIGHT).borderRadius(SHELF_SECTION_TRACK_HEIGHT / 2)
-        .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
-        .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+        .translate({ y: 0.75 })
+        .backgroundColor(readerAppColor(this.appThemeScheme === 'night' ? 'TOK_LINE' : 'TOK_SURFACE_ELEVATED', this.appThemeScheme))
+        .opacity(this.appThemeScheme === 'night' ? 1 : 0.85)
         .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+      // Recessed groove track (darker than page canvas with subtle top inner shade).
+      Row().width('100%').height(SHELF_SECTION_TRACK_HEIGHT).borderRadius(SHELF_SECTION_TRACK_HEIGHT / 2)
+        .clip(true)
+        .backgroundColor(readerAppColor('app.segment.surface', this.appThemeScheme))
+        .linearGradient({
+          direction: GradientDirection.Bottom,
+          colors: [
+            [readerAppColor(this.appThemeScheme === 'night' ? 'app.segment.border' : 'app.chrome.raisedShadowAmbient', this.appThemeScheme), 0.0],
+            [readerAppColor('app.surface.transparent', this.appThemeScheme), 0.36],
+          ],
+        })
+        .border({ width: 0.75, color: readerAppColor('app.segment.border', this.appThemeScheme) })
+        .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+      // Elevated sliding thumb inside the groove.
       Stack({ alignContent: Alignment.Start }) {
         Row().width(SHELF_SECTION_PILL_WIDTH).height(SHELF_SECTION_PILL_HEIGHT)
           .borderRadius(SHELF_SECTION_PILL_HEIGHT / 2)
-          .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+          .backgroundColor(readerAppColor('app.segment.selected', this.appThemeScheme))
+          .border({ width: 0.5, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+          .shadow(this.thumbShadow())
           .translate({ x: this.pillLane * SHELF_SECTION_ACTION_SIZE })
           .opacity(this.pillOpacity).accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
       }.width('100%').height(SHELF_SECTION_PILL_HEIGHT)
@@ -100,9 +119,20 @@ export struct BookshelfSectionHeader {
       Row() {
         this.sectionAction('bookshelf_grid', 'reader-bookshelf-view-cover');
         this.sectionAction('bookshelf_list', 'reader-bookshelf-view-list');
-      }.height(SHELF_SECTION_ACTION_SIZE);
-    }.width(SHELF_SECTION_ACTION_SIZE * 2).height(SHELF_SECTION_ACTION_SIZE)
+      }.height(SHELF_SECTION_TRACK_HEIGHT).padding({ left: SHELF_SECTION_TRACK_INSET, right: SHELF_SECTION_TRACK_INSET });
+    }.width(SHELF_SECTION_ACTION_SIZE * 2 + SHELF_SECTION_TRACK_INSET * 2).height(SHELF_SECTION_TRACK_HEIGHT)
       .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  private thumbShadow(): ShadowOptions {
+    const observed = this.windowRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().densityPixels;
+    const density = Number.isFinite(observed) && observed > 0 ? observed : 1;
+    return {
+      radius: 3.5 * density,
+      color: readerAppColor('app.shadow.cover', this.appThemeScheme),
+      offsetX: 0,
+      offsetY: 1.5 * density,
+    };
   }
 
   private currentPillLane(): number { return this.viewMode === 'cover' ? 0 : 1; }
@@ -142,11 +172,11 @@ export struct BookshelfSectionHeader {
     Stack({ alignContent: Alignment.TopStart }) {
       this.sectionAction('bookshelf_filter', 'reader-bookshelf-filter-toggle');
       Row().width(6).height(6).borderRadius(3)
-        .position({ x: 29, y: 9 })
+        .position({ x: 24, y: 6 })
         .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
         .opacity(this.hasActiveFilters && !this.filterExpanded ? 1 : 0)
         .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
-    }.width(SHELF_SECTION_ACTION_SIZE).height(SHELF_SECTION_ACTION_SIZE)
+    }.width(SHELF_FILTER_SIZE).height(SHELF_FILTER_SIZE)
       .hitTestBehavior(HitTestMode.Transparent);
   }
 

@@ -1,13 +1,28 @@
+import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderRecessedSegmentRail, type ReaderRecessedSegmentOption } from '../../../ui/controls/ReaderRecessedSegmentRail';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerPressOpacity, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { TOK_BORDER_W, TOK_SPACE_MD, TOK_SPACE_XS } from '../../../ui/foundation/ReaderTokens';
 import { TYPE_APP_INHERITED_BODY, TYPE_SHELF_FILTER_LABEL } from '../../../ui/foundation/ReaderTypography';
 
+const BOOKSHELF_CONTENT_FILTER_OPTIONS: ReaderRecessedSegmentOption[] = [
+  { id: 'all', label: '全部', elementId: 'reader-bookshelf-filter-content-all', accessibilityText: '内容类型：全部' },
+  { id: 'text', label: '小说', elementId: 'reader-bookshelf-filter-content-text', accessibilityText: '内容类型：小说' },
+  { id: 'manga', label: '漫画', elementId: 'reader-bookshelf-filter-content-manga', accessibilityText: '内容类型：漫画' },
+];
+
+const BOOKSHELF_SOURCE_FILTER_OPTIONS: ReaderRecessedSegmentOption[] = [
+  { id: 'all', label: '全部', elementId: 'reader-bookshelf-filter-source-all', accessibilityText: '来源：全部' },
+  { id: 'local', label: '本地', elementId: 'reader-bookshelf-filter-source-local', accessibilityText: '来源：本地' },
+  { id: 'online', label: '在线', elementId: 'reader-bookshelf-filter-source-online', accessibilityText: '来源：在线' },
+];
+
 @Component
 export struct BookshelfFilterContent {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private windowRevision: number = 0;
 
   @Prop navigation: number = 0;
   @Prop contentFilter: string = 'all';
@@ -25,6 +40,11 @@ export struct BookshelfFilterContent {
 
   private hasActiveFilters(): boolean {
     return this.contentFilter !== 'all' || this.sourceFilter !== 'all';
+  }
+
+  private systemFontScale(): number {
+    const scale = this.windowRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    return Number.isFinite(scale) && scale > 0 ? scale : 1;
   }
 
   @Builder
@@ -65,7 +85,7 @@ export struct BookshelfFilterContent {
   }
 
   build() {
-    Column({ space: 4 }) {
+    Column({ space: 8 }) {
       Row({ space: TOK_SPACE_MD }) {
         Text('筛选').fontFamily(TYPE_APP_INHERITED_BODY.fontFamily)
           .fontWeight(TYPE_APP_INHERITED_BODY.fontWeight)
@@ -98,22 +118,68 @@ export struct BookshelfFilterContent {
           new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 22), 'nativeButton'))
         .onClick((): void => this.onCloseFilter());
       }.width('100%');
-      Text('内容类型').width('100%').fontFamily(TYPE_APP_INHERITED_BODY.fontFamily)
-        .fontWeight(TYPE_APP_INHERITED_BODY.fontWeight).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-        this.filterChip('content', 'all', '全部');
-        this.filterChip('content', 'text', '小说');
-        this.filterChip('content', 'manga', '漫画');
-      }.width('100%');
-      Text('来源').width('100%').fontFamily(TYPE_APP_INHERITED_BODY.fontFamily)
-        .fontWeight(TYPE_APP_INHERITED_BODY.fontWeight).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-        this.filterChip('source', 'all', '全部');
-        this.filterChip('source', 'local', '本地');
-        this.filterChip('source', 'online', '在线');
-      }.width('100%');
-    }.width('100%');
+
+      if (this.systemFontScale() < 1.75) {
+        Row({ space: 8 }) {
+          Text('类型')
+            .constraintSize({ minWidth: Math.ceil(2 * 12 * this.systemFontScale() + 10) })
+            .fontFamily(TYPE_APP_INHERITED_BODY.fontFamily)
+            .fontWeight(TYPE_APP_INHERITED_BODY.fontWeight)
+            .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+          Row() {
+            ReaderRecessedSegmentRail({
+              options: BOOKSHELF_CONTENT_FILTER_OPTIONS,
+              selectedId: this.contentFilter,
+              accessibilityGroupLabel: '内容类型',
+              trackHeight: 34,
+              pillShape: true,
+              onSelect: (value: string): void => this.onSelectFilter('content', value),
+            });
+          }.layoutWeight(1);
+        }.width('100%').alignItems(VerticalAlign.Center);
+
+        Row({ space: 8 }) {
+          Text('来源')
+            .constraintSize({ minWidth: Math.ceil(2 * 12 * this.systemFontScale() + 10) })
+            .fontFamily(TYPE_APP_INHERITED_BODY.fontFamily)
+            .fontWeight(TYPE_APP_INHERITED_BODY.fontWeight)
+            .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+          Row() {
+            ReaderRecessedSegmentRail({
+              options: BOOKSHELF_SOURCE_FILTER_OPTIONS,
+              selectedId: this.sourceFilter,
+              accessibilityGroupLabel: '来源',
+              trackHeight: 34,
+              pillShape: true,
+              onSelect: (value: string): void => this.onSelectFilter('source', value),
+            });
+          }.layoutWeight(1);
+        }.width('100%').alignItems(VerticalAlign.Center);
+      } else {
+        Text('内容类型').width('100%').fontFamily(TYPE_APP_INHERITED_BODY.fontFamily)
+          .fontWeight(TYPE_APP_INHERITED_BODY.fontWeight).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
+          this.filterChip('content', 'all', '全部');
+          this.filterChip('content', 'text', '小说');
+          this.filterChip('content', 'manga', '漫画');
+        }.width('100%');
+        Text('来源').width('100%').fontFamily(TYPE_APP_INHERITED_BODY.fontFamily)
+          .fontWeight(TYPE_APP_INHERITED_BODY.fontWeight).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
+          this.filterChip('source', 'all', '全部');
+          this.filterChip('source', 'local', '本地');
+          this.filterChip('source', 'online', '在线');
+        }.width('100%');
+      }
+    }
+    .width('100%')
+    .padding(12)
+    .borderRadius(14)
+    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) });
   }
 }

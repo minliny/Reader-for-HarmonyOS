@@ -21,7 +21,7 @@ export interface SettingsNavigationGroup {
 export function settingsNavigationGroups(syncEnabled: boolean = isReaderProductSurfaceEnabled('sync')): SettingsNavigationGroup[] {
   const backup: SettingsNavigationItem = syncEnabled ?
     { id: 'sync', label: '备份与同步', icon: 'settings_row_sync' } :
-    { id: 'backup', label: '本地备份与恢复', icon: 'settings_row_sync' };
+    { id: 'backup', label: '备份与恢复', icon: 'settings_row_sync' };
   return [
     { id: 'interface', label: '通用与界面', items: [
       { id: 'general', label: '通用设置', icon: 'settings_row_general', actionId: 'reader-settings-general' },

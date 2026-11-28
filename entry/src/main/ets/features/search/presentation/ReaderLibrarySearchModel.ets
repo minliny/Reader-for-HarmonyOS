@@ -1,4 +1,5 @@
 import type { SearchHistoryStatus } from './SearchPresentation';
+import { formatSearchInitialEmptyHint } from './SearchSourceDisplay';
 import type { ReaderUIVerificationChannel } from '../../../app/diagnostics/ReaderUIVerificationProbe';
 
 export const READER_LIBRARY_SEARCH_BACK_FOCUS_ID: string = 'reader-library-search-back';
@@ -16,6 +17,7 @@ export class ReaderLibrarySearchModel {
   keyword: string = '';
   history: string[] = [];
   historyStatus: SearchHistoryStatus | undefined = undefined;
+  emptyHistoryHint: string = formatSearchInitialEmptyHint(undefined);
   hasSession: boolean = false;
   sourceRecoveryVisible: boolean = false;
   /** Pending until the current entry owner can choose native focus versus editing. */
@@ -37,6 +39,7 @@ export class ReaderLibrarySearchModel {
   onClearHistory: () => void = (): void => {};
   onRetryHistory: () => void = (): void => {};
   onHistory: (value: string) => void = (_value: string): void => {};
+  onDeleteHistory: (keyword: string) => void = (_keyword: string): void => {};
   private owner: number = 0;
   private inputBack: (() => boolean) | undefined;
   private inputFocusReady: ((owner: number) => void) | undefined;
@@ -76,6 +79,7 @@ export class ReaderLibrarySearchModel {
   dispatchClearHistory(owner: number): void { if (this.acceptsHeaderInput(owner)) this.onClearHistory(); }
   dispatchRetryHistory(owner: number): void { if (this.acceptsHeaderInput(owner)) this.onRetryHistory(); }
   dispatchHistory(owner: number, value: string): void { if (this.acceptsHeaderInput(owner)) this.onHistory(value); }
+  dispatchDeleteHistory(owner: number, keyword: string): void { if (this.acceptsHeaderInput(owner)) this.onDeleteHistory(keyword); }
   release(owner: number): void {
     if (this.owner !== owner) return;
     this.owner = 0;
@@ -89,5 +93,6 @@ export class ReaderLibrarySearchModel {
     this.onClearHistory = (): void => {};
     this.onRetryHistory = (): void => {};
     this.onHistory = (_value: string): void => {};
+    this.onDeleteHistory = (_keyword: string): void => {};
   }
 }

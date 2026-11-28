@@ -73,7 +73,7 @@ export struct RssSubscriptionEditorPage {
       .padding(TOK_SPACE_SM)
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(8);
+      .borderRadius(14);
     this.operationRecovery();
     Column({ space: TOK_SPACE_MD }) {
       this.editorField('订阅名称', (): string => this.snapshot.title, '留空时默认使用订阅地址',
@@ -158,7 +158,7 @@ export struct RssSubscriptionEditorPage {
     .padding(TOK_SPACE_MD)
     .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(10);
+    .borderRadius(14);
   }
 
 

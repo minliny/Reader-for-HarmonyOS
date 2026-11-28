@@ -4,7 +4,7 @@ import util from '@ohos.util';
 import type { BusinessError } from '@ohos.base';
 import { readMangaAtomicPayload } from './MangaAtomicPayloadPort';
 import { canonicalReadingImageBaseUrl } from '../../common/ReadingImageIdentity';
-import { ReadingOfflineMaterializationError } from '../../features/reading/application/ReadingOfflineContract';
+import { ReadingOfflineMaterializationError } from '../contracts/ReadingOfflineContract';
 import {
   CACHE_FORMAT_VERSION,
   FILE_SYSTEM_NO_SPACE_ERROR,

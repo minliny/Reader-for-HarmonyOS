@@ -1,42 +1,30 @@
 import type { ReadingBookDetail } from '../presentation/ReadingBookDetail';
-
-export interface ReaderShareText {
-  kind: 'text' | 'link';
-  text: string;
-  title?: string;
-  description?: string;
-}
-
-export interface ReaderShareFile {
-  kind: 'file';
-  path: string;
-  hash: string;
-  extension: string;
-  title: string;
-}
-
-export interface ReaderShareImage {
-  kind: 'image';
-  path: string;
-  title: string;
-}
+import type {
+  ReaderShareText,
+  ReaderShareFile,
+  ReaderShareImage,
+  ReaderShareRecord,
+  SystemShareResult,
+  SystemSharePort,
+} from '../../../platform/contracts/ReaderShareHostContract.ts';
+export type {
+  ReaderShareText,
+  ReaderShareFile,
+  ReaderShareImage,
+  ReaderShareRecord,
+  SystemShareResult,
+  SystemSharePort,
+};
 
 export interface ReaderQuoteCardCopy {
   path: string;
   release: () => Promise<void>;
 }
 
-export type ReaderShareRecord = ReaderShareText | ReaderShareFile | ReaderShareImage;
-export type SystemShareResult = 'shown' | 'dismissed' | 'unavailable' | 'unsafe';
 export type ReaderShareResult = SystemShareResult | 'copied' | 'fileCopied' | 'quoteCopied' | 'quoteFailed' |
   'copyFailed' | 'unsafeFile' | 'retired';
 export type RetainedShareFile = (bookId: string, current: () => boolean) => Promise<string | undefined>;
 export type ReaderQuoteCardAction = (text: string, anchor: string, current: () => boolean) => Promise<ReaderShareResult>;
-
-export interface SystemSharePort {
-  publicLink(value: string): string | undefined;
-  show(record: ReaderShareRecord, current: () => boolean): Promise<SystemShareResult>;
-}
 
 export function readerOriginalBookExtension(book: ReadingBookDetail): string | undefined {
   const kind = book.kind?.trim().toLowerCase();
