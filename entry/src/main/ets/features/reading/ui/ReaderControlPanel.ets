@@ -201,7 +201,7 @@ export struct ReaderControlPanel {
     topBarOpacity: (): number => this.motionPaint.topBarOpacity,
     topBarPresented: (): boolean => this.motionPaint.visualVisibilityProgress > 0,
     topBarAnimating: (): boolean => this.motionPaint.visibilityAnimating,
-    topBarBlurEnabled: (): boolean => false,
+    topBarBlurEnabled: (): boolean => true,
     guardAction: (action: () => void): (() => void) => this.motion.controlActionHandler(action),
     onIntent: (intent: ReaderControlIntent): ReaderControlIntentResult => this.onIntent(intent),
     syncProgressInput: (): void => this.quickHome.syncProgressInput(),
@@ -369,12 +369,11 @@ export struct ReaderControlPanel {
   }
 
   private shellFrameModifier(visible: boolean): ReaderPanelFrame {
-    const native = visible && this.surfaceMaterial('controlPanel').native;
-    const key = `${this.appScheme}:${visible}:${native}:${this.navigationPreferences.override}:${this.navigationPreferences.renderMode}`;
+    const material = visible ? this.surfaceMaterial('controlPanel') : undefined;
+    const key = `${this.appScheme}:${this.systemScheme}:${visible}:${material?.native === true}:${material?.frosted === true}:${this.navigationPreferences.override}:${this.navigationPreferences.renderMode}`;
     if (this.cachedShellFrame === undefined || this.cachedShellKey !== key) {
       this.cachedShellKey = key;
-      this.cachedShellFrame = new ReaderPanelFrame('reader', this.appScheme, false, undefined,
-        visible ? this.surfaceMaterial('controlPanel') : undefined);
+      this.cachedShellFrame = new ReaderPanelFrame('reader', this.appScheme, false, undefined, material);
     }
     return this.cachedShellFrame;
   }

@@ -180,7 +180,7 @@ export struct PageBackBar {
     .backgroundEffect(this.nativeChrome() ?
       (this.scrolled && isReaderRealtimeBlurEnabled(this.navigationAppearance) ?
         readerNativeScrolledHeaderMaterial(this.appThemeScheme) : undefined) :
-      (this.veil() && !this.surfaceMaterial()?.native && isReaderRealtimeBlurEnabled(this.navigationAppearance) ?
+      (this.surfaceMaterial()?.frosted === true ?
         readerHeaderVeilMaterial(this.scrolled, this.appThemeScheme) : undefined))
     .backgroundColor(this.panelBackground())
     .border(this.nativeChrome() ?
@@ -258,7 +258,7 @@ export struct PageBackBar {
         readerNativeScrolledHeaderSolid(this.appThemeScheme) : Color.Transparent;
     }
     if (this.veil()) {
-      return !isReaderRealtimeBlurEnabled(this.navigationAppearance) ?
+      return this.surfaceMaterial()?.native !== true && this.surfaceMaterial()?.frosted !== true ?
         readerAppColor('app.navigation.floatingSurface', this.appThemeScheme) : Color.Transparent;
     }
     return this.surface === 'solid' ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent;

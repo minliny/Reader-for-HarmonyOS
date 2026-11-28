@@ -12,7 +12,7 @@
       "TOK_PRIMARY_DARK": "#FF1F3D31",
       "TOK_INK": "#FF1D1B18",
       "TOK_READ_PRIMARY": "#FF1F3D31",
-      "TOK_READ_SURFACE": "#F5FFFAF4"
+      "TOK_READ_SURFACE": "#FFFFFAF4"
     },
     "night": {
       "TOK_PAPER": "#FF0F1110",
@@ -21,7 +21,7 @@
       "TOK_PRIMARY_DARK": "#FF7BB094",
       "TOK_INK": "#FFECE8E0",
       "TOK_READ_PRIMARY": "#FF7BB094",
-      "TOK_READ_SURFACE": "#F5212622"
+      "TOK_READ_SURFACE": "#FF212622"
     },
     "distinctSurfacePairs": [
       ["TOK_PAPER", "TOK_CARD_BG"],

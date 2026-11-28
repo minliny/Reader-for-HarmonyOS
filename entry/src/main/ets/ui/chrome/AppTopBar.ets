@@ -112,10 +112,10 @@ export struct AppTopBar {
     .constraintSize({ minHeight: this.barHeight(), maxWidth: this.effectiveFloating() ? 580 : undefined })
     .padding({ left: this.effectiveFloating() ? 9 : this.leftInset(), right: this.effectiveFloating() ? 9 : this.rightInset(), top: this.effectiveFloating() ? 0 : 6 })
     .alignItems(VerticalAlign.Center)
-    .backgroundEffect(this.effectiveFloating() && !this.surfaceMaterial()?.native && isReaderRealtimeBlurEnabled(this.navigationAppearance) ?
+    .backgroundEffect(this.surfaceMaterial()?.frosted === true ?
       readerHeaderVeilMaterial(false, this.appThemeScheme) : undefined)
     .backgroundColor(this.nativeChrome() ? Color.Transparent :
-      (this.effectiveFloating() && !isReaderRealtimeBlurEnabled(this.navigationAppearance)) ?
+      (this.effectiveFloating() && this.surfaceMaterial()?.native !== true && this.surfaceMaterial()?.frosted !== true) ?
         readerAppColor('app.navigation.floatingSurface', this.appThemeScheme) :
         (!this.floating && this.surface === 'solid') ?
           readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent)

@@ -9,7 +9,7 @@ import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../found
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { ReaderRectVp } from '../foundation/ReaderWindowMetrics';
 import { readerOverlayViewport } from '../layout/ReaderOverlayGeometry';
-import { readerSurfaceElevation, resolveSheetSpec, type SheetSpecId, type SheetSurfaceSpec } from './ReaderSurfaceSpecs';
+import { READER_HEAVY_GLASS_BLUR_VP, readerSurfaceElevation, resolveSheetSpec, type SheetSpecId, type SheetSurfaceSpec } from './ReaderSurfaceSpecs';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerNativeSurfaceOutline,
   readerSurfaceMaterialDecision } from './ReaderSurfaceMaterial';
 
@@ -200,8 +200,10 @@ export struct ReaderBottomSheet {
     }.id(this.transitionNativeId()).width(Math.min(this.surfaceWidth, this.spec().maxWidth, this.frameViewport().width))
       .renderGroup(!this.opened || !this.visible)
       .constraintSize({ maxHeight: this.frameViewport().height })
-      .backgroundEffect(undefined)
-      .backgroundColor(this.frameMaterial().native ? Color.Transparent : readerAppColor(this.spec().hostBackgroundRole, this.scheme))
+      .backgroundEffect(this.frameMaterial().frosted ?
+        { radius: READER_HEAVY_GLASS_BLUR_VP, color: readerAppColor('app.surface.glassHeavy', this.scheme) } : undefined)
+      .backgroundColor(this.frameMaterial().native || this.frameMaterial().frosted ?
+        Color.Transparent : readerAppColor(this.spec().hostBackgroundRole, this.scheme))
       .border(this.frameMaterial().native ? { width: 0, color: Color.Transparent } :
         { width: { top: this.spec().hostBorderWidth }, color: readerAppColor(this.spec().hostBorderRole, this.scheme) })
       .borderRadius({ topLeft: this.spec().borderRadius, topRight: this.spec().borderRadius })

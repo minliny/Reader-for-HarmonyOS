@@ -10,6 +10,7 @@ import { measureReaderControlText } from './ReaderControlTextMeasurement';
 import { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } from './ReaderPageChromeLayout';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 import { applyReaderImmersiveMaterial, defaultNavigationPreferences, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { READER_GLASS_BLUR_VP } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 
 const AUTO_PAGE_CAPSULE_MIN_WIDTH = 96;
 const TTS_CAPSULE_MIN_WIDTH = 94;
@@ -112,10 +113,18 @@ export class ReaderSessionCapsuleFrame implements AttributeModifier<CommonAttrib
       applyReaderImmersiveMaterial(instance, this.material);
       return;
     }
-    const fill = readerSessionCapsuleColor('surface', this.scheme, this.surface);
     applyReaderImmersiveMaterial(instance, undefined);
-    new ReaderPressFeedback(fill, this.scheme, READER_SESSION_CAPSULE_RADIUS,
-      READER_SESSION_CAPSULE_RADIUS, true, this.pressed).applyNormalAttribute(instance);
+    if (this.material?.frosted === true) {
+      instance.backgroundEffect({
+        radius: READER_GLASS_BLUR_VP,
+        color: readerAppColor('app.header.veilSurfaceScrolled', this.scheme),
+      }).backgroundColor(Color.Transparent).borderRadius(READER_SESSION_CAPSULE_RADIUS);
+    } else {
+      const fill = readerSessionCapsuleColor('surface', this.scheme, this.surface);
+      instance.backgroundEffect(undefined);
+      new ReaderPressFeedback(fill, this.scheme, READER_SESSION_CAPSULE_RADIUS,
+        READER_SESSION_CAPSULE_RADIUS, true, this.pressed).applyNormalAttribute(instance);
+    }
     instance.border({ width: 1, color: readerSessionCapsuleColor('border', this.scheme, this.border) })
       .shadow({ radius: READER_SESSION_CAPSULE_SHADOW.radius * this.density,
         color: this.shadow.length > 0 ? this.shadow : readerAppColor('app.shadow.menu', this.scheme),

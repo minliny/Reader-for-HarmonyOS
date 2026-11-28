@@ -1,5 +1,5 @@
 // Generated from Reader-UI/theme/registry.json. Do not edit.
-// SHA256 6ad44b1566418574dfc0e0ca1546080e276a53390b30775fac6dcd6c93b29db5
+// SHA256 db347e4638524dbb3b7951e3e774048d6e7fc2792a4b98853707a96350a77e00
 export type ReaderThemeScheme = 'day' | 'night';
 export type ReaderAppThemeMode = ReaderThemeScheme | 'system';
 export type ReaderThemeId = "day" | "warm" | "night" | "warmNight" | "paper" | "green" | "paperNight" | "greenNight";
@@ -68,7 +68,7 @@ const DAY: Record<ReaderAppColorRole, string> = {
   "TOK_READ_INK": "#FF332C25",
   "TOK_READ_MUTED": "#FF5B5046",
   "TOK_READ_PRIMARY": "#FF1F3D31",
-  "TOK_READ_SURFACE": "#F5FFFAF4",
+  "TOK_READ_SURFACE": "#FFFFFAF4",
   "TOK_READ_UNREAD": "#FF9A8E80",
   "TOK_ROW_DIVIDER": "#1A5C4F3F",
   "TOK_SETTING_ACTION_BG": "#171F3D31",
@@ -509,7 +509,7 @@ const DAY: Record<ReaderAppColorRole, string> = {
   "app.surface.glass": "#E0FDFAF4",
   "app.surface.glassHeavy": "#F0FBF8F2",
   "app.surface.menuSolid": "#FFFFFDF9",
-  "app.surface.readerConfig": "#F5FFFAF4",
+  "app.surface.readerConfig": "#FFFFFAF4",
   "app.surface.readerInput": "#B3F2EADE",
   "app.surface.selectGradientEnd": "#C7FBF6EE",
   "app.surface.selectWarm": "#C7FBF6EE",
@@ -612,7 +612,7 @@ const NIGHT: Record<ReaderAppColorRole, string> = {
   "TOK_READ_INK": "#FFECE8E0",
   "TOK_READ_MUTED": "#FFA6A196",
   "TOK_READ_PRIMARY": "#FF7BB094",
-  "TOK_READ_SURFACE": "#F5212622",
+  "TOK_READ_SURFACE": "#FF212622",
   "TOK_READ_UNREAD": "#FF747067",
   "TOK_ROW_DIVIDER": "#17ECE8E0",
   "TOK_SETTING_ACTION_BG": "#247BB094",
@@ -1053,7 +1053,7 @@ const NIGHT: Record<ReaderAppColorRole, string> = {
   "app.surface.glass": "#E0222723",
   "app.surface.glassHeavy": "#F01F2320",
   "app.surface.menuSolid": "#FF272C28",
-  "app.surface.readerConfig": "#F5212622",
+  "app.surface.readerConfig": "#FF212622",
   "app.surface.readerInput": "#B8343B35",
   "app.surface.selectGradientEnd": "#DB292F2A",
   "app.surface.selectWarm": "#DB292F2A",

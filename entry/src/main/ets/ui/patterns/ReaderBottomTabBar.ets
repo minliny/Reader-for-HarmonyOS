@@ -9,7 +9,7 @@ import { readerSurfaceElevation, READER_GLASS_BLUR_VP } from '../surfaces/Reader
 import { readerPageAreaLength } from '../layout/ReaderPageShell';
 import { readerFloatingTabBarHeight, readerMainTabItemHeight } from '../layout/ReaderFloatingBarMetrics';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../layout/ReaderRaisedShape';
-import { isReaderRealtimeBlurEnabled, type ReaderNavigationPreferences, type ReaderSurfaceMaterialDecision }
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision }
   from '../../app/HarmonyCapabilityPolicy';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 
@@ -76,9 +76,9 @@ export struct ReaderBottomTabBar {
         .width(this.surfaceWidth)
         .constraintSize({ minHeight: readerFloatingTabBarHeight(this.fontScale) })
         .padding(TOK_SPACE_XS + (this.material().native ? TOK_BORDER_W : 0))
-        .backgroundEffect(!this.material().native && isReaderRealtimeBlurEnabled(this.navigationPreferences) ?
+        .backgroundEffect(this.material().frosted ?
           { radius: READER_GLASS_BLUR_VP, color: readerAppColor('app.header.veilSurfaceScrolled', this.scheme) } : undefined)
-        .backgroundColor(this.material().native || isReaderRealtimeBlurEnabled(this.navigationPreferences) ?
+        .backgroundColor(this.material().frosted ?
           Color.Transparent : readerAppColor('app.navigation.floatingSurface', this.scheme))
         .border(this.material().native ? { width: 0, color: Color.Transparent } :
           { width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
@@ -96,7 +96,7 @@ export struct ReaderBottomTabBar {
   }
 
   private material(): ReaderSurfaceMaterialDecision {
-    return readerSurfaceMaterialDecision('chromeBar', this.navigationPreferences, this.scheme, this.systemScheme);
+    return readerSurfaceMaterialDecision('navigationBar', this.navigationPreferences, this.scheme, this.systemScheme);
   }
 
   @Builder

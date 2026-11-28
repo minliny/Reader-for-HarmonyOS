@@ -24,7 +24,6 @@ import {
 } from './ReaderControlLayoutRebase';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { READER_HEAVY_GLASS_BLUR_VP } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { isReaderRealtimeBlurEnabled } from '../../../app/HarmonyCapabilityPolicy';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerNativeSurfaceOutline,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
@@ -688,10 +687,9 @@ export struct ReaderControlMotionStage {
           .width(this.frame().shell.width).height(this.frame().shell.height)
           .position({ x: 0, y: this.frame().shell.y })
           .backgroundColor(this.frame().visibility > 0 && this.shellMaterial()?.native !== true &&
-            !isReaderRealtimeBlurEnabled(this.navigationPreferences) ? readerAppColor('TOK_READ_SURFACE', this.appScheme) : Color.Transparent)
-          .backgroundEffect(this.frame().visibility > 0 && this.shellMaterial()?.native !== true &&
-            isReaderRealtimeBlurEnabled(this.navigationPreferences) ? {
-            radius: READER_HEAVY_GLASS_BLUR_VP, color: readerAppColor('TOK_READ_SURFACE', this.appScheme),
+            this.shellMaterial()?.frosted !== true ? readerAppColor('TOK_READ_SURFACE', this.appScheme) : Color.Transparent)
+          .backgroundEffect(this.frame().visibility > 0 && this.shellMaterial()?.frosted === true ? {
+            radius: READER_HEAVY_GLASS_BLUR_VP, color: readerAppColor('app.surface.glassHeavy', this.appScheme),
           } : undefined)
           .borderRadius(24)
           .border(this.shellMaterial()?.native === true ? { width: 0, color: Color.Transparent } :

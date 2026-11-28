@@ -78,7 +78,7 @@ export struct ReaderSystemNavigationBar {
 
   private railMaterial(): ReaderSurfaceMaterialDecision | undefined {
     return this.appearance === 'immersive' ?
-      readerSurfaceMaterialDecision('chromeBar', this.navigationAppearance, this.scheme, this.systemScheme) : undefined;
+      readerSurfaceMaterialDecision('navigationBar', this.navigationAppearance, this.scheme, this.systemScheme) : undefined;
   }
 
   private selectedIndex(): number {

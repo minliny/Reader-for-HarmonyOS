@@ -2,11 +2,12 @@ export type ReaderNavigationOverride = 'unset' | 'systemNative';
 export type ReaderRenderMode = 'quality' | 'performance';
 export type ReaderNativeNavigationMaterial = 'unavailable' | 'adaptive' | 'immersive';
 export type ReaderNavigationAppearance = 'unified' | 'adaptive' | 'immersive';
-export type ReaderSurfaceMaterialRole = 'chromeBar' | 'floatingDock' | 'sessionCapsule' | 'controlPanel' | 'popoverMenu' | 'modalSheet';
+export type ReaderSurfaceMaterialRole = 'navigationBar' | 'chromeBar' | 'floatingDock' | 'sessionCapsule' | 'controlPanel' | 'popoverMenu' | 'modalSheet';
 export type ReaderImmersiveStyleName = 'ultraThin' | 'thin' | 'regular' | 'thick' | 'ultraThick';
 
 export interface ReaderSurfaceMaterialDecision {
   readonly native: boolean;
+  readonly frosted: boolean;
   readonly style: ReaderImmersiveStyleName;
   readonly interactive: boolean;
   readonly performanceMode: boolean;
@@ -117,9 +118,10 @@ function surfaceMaterialSpecForRole(role: ReaderSurfaceMaterialRole): { style: R
   switch (role) {
     case 'sessionCapsule':
       return { style: 'ultraThin', interactive: true };
+    case 'navigationBar':
     case 'chromeBar':
     case 'floatingDock':
-      return { style: 'thin', interactive: false };
+      return { style: 'regular', interactive: false };
     case 'controlPanel':
     case 'popoverMenu':
       return { style: 'thick', interactive: false };
@@ -136,8 +138,12 @@ export function resolveReaderSurfaceMaterial(
   systemScheme: string,
 ): ReaderSurfaceMaterialDecision {
   const spec = surfaceMaterialSpecForRole(role);
+  const native = role !== 'navigationBar' &&
+    canUseImmersiveSurfaceMaterial(preferences, capabilities, appScheme, systemScheme);
+  const frosted = !native && isReaderNativeChromeStyle(preferences) && isReaderRealtimeBlurEnabled(preferences);
   return {
-    native: canUseImmersiveSurfaceMaterial(preferences, capabilities, appScheme, systemScheme),
+    native,
+    frosted,
     style: spec.style,
     interactive: spec.interactive,
     performanceMode: preferences.renderMode === 'performance',

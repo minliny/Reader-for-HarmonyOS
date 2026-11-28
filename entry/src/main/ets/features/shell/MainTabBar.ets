@@ -4,7 +4,7 @@ import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
 import { ReaderRaisedSurface } from '../../ui/surfaces/ReaderRaisedSurface';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../../ui/surfaces/ReaderSurfaceMaterial';
 import { READER_GLASS_BLUR_VP } from '../../ui/surfaces/ReaderSurfaceSpecs';
-import { isReaderRealtimeBlurEnabled, type ReaderNavigationPreferences, type ReaderSurfaceMaterialDecision }
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision }
   from '../../app/HarmonyCapabilityPolicy';
 import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
 import { registerReaderShelfFonts } from '../../ui/foundation/ReaderFonts';
@@ -75,9 +75,9 @@ export struct MainTabBar {
     .padding(MAIN_TAB_RAIL_PADDING + (this.material().native ? TOK_BORDER_W : 0))
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundEffect(!this.material().native && isReaderRealtimeBlurEnabled(this.navigationPreferences) ?
+    .backgroundEffect(this.material().frosted ?
       { radius: READER_GLASS_BLUR_VP, color: readerAppColor('app.header.veilSurfaceScrolled', this.appThemeScheme) } : undefined)
-    .backgroundColor(this.material().native || isReaderRealtimeBlurEnabled(this.navigationPreferences) ?
+    .backgroundColor(this.material().frosted ?
       Color.Transparent : readerAppColor('app.navigation.floatingSurface', this.appThemeScheme))
     .border(this.material().native ? { width: 0, color: Color.Transparent } :
       { width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) })
@@ -90,7 +90,7 @@ export struct MainTabBar {
   }
 
   private material(): ReaderSurfaceMaterialDecision {
-    return readerSurfaceMaterialDecision('chromeBar', this.navigationPreferences, this.appThemeScheme, this.systemScheme);
+    return readerSurfaceMaterialDecision('navigationBar', this.navigationPreferences, this.appThemeScheme, this.systemScheme);
   }
 
   private recordRaisedSurface(vertical: boolean, area: Area): void {

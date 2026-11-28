@@ -5,6 +5,8 @@ import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_NATIVE_MATERIAL } from '../fou
 import { readerAppColor, type ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 import { readerSurfaceOutlinePaint } from './ReaderReadingPanelPaint';
 import {
+  isReaderNativeChromeStyle,
+  isReaderRealtimeBlurEnabled,
   normalizeReaderNavigationPreferences,
   resolveReaderSurfaceMaterial,
   type ReaderImmersiveStyleName,
@@ -51,6 +53,7 @@ const materialFallbackPaint: WeakMap<ReaderSurfaceMaterialDecision, string> =
 
 function materialFallbackRole(role: ReaderSurfaceMaterialRole): ReaderAppColorRole {
   switch (role) {
+    case 'navigationBar': return 'app.navigation.floatingSurface';
     case 'chromeBar': return 'app.navigation.floatingSurface';
     case 'floatingDock': return 'app.surface.dock';
     case 'sessionCapsule': return 'app.sessionCapsule.surface';
@@ -82,15 +85,28 @@ export function readerSurfaceMaterialDecision(
   systemScheme: string,
 ): ReaderSurfaceMaterialDecision {
   const decision = resolveReaderSurfaceMaterial(role, preferences, readerHarmonyCapabilities(), appScheme, systemScheme);
-  // ArkUI uiMaterial.ImmersiveMaterial leaves floating surfaces completely
-  // see-through without Paper & Pine frosted backdrop tinting on API 26 hardware.
-  // Keep quality realtime blur on the unified Paper & Pine backgroundEffect path.
-  return {
-    native: false,
-    style: decision.style,
-    interactive: decision.interactive,
-    performanceMode: decision.performanceMode,
-  };
+  if (decision.native) {
+    let admitted = false;
+    if (deviceInfo.distributionOSApiVersion >= 260000) {
+      try {
+        admitted = deviceInfo.apiAvailable('26.0.0') && readerImmersiveMaterial(decision) !== undefined;
+      } catch (_) {
+        admitted = false;
+      }
+    }
+    if (admitted) {
+      materialFallbackPaint.set(decision, readerAppColor(materialFallbackRole(role), appScheme));
+      return decision;
+    }
+    return {
+      native: false,
+      frosted: isReaderNativeChromeStyle(preferences) && isReaderRealtimeBlurEnabled(preferences),
+      style: decision.style,
+      interactive: decision.interactive,
+      performanceMode: decision.performanceMode,
+    };
+  }
+  return decision;
 }
 
 function readerImmersiveMaterial(

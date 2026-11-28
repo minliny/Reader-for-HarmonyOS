@@ -89,9 +89,9 @@ export struct NavigationAppearanceSettings {
   private appearanceSummary(): string {
     if (isReaderNativeChromeStyle(this.preferences)) {
       return this.preferences.renderMode === 'performance' ?
-        '原生无框顶栏、滚动实底分隔与整页搜索' : '原生无框顶栏、滚动雾面分隔与整页搜索';
+        '原生无框顶栏、实底浮层与整页搜索' : '原生无框顶栏、原生/雾面浮层与整页搜索';
     }
-    return '开启后改用无框标题、滚动显栏与整页搜索';
+    return '关闭时使用统一实底栏与弹窗；开启后启用无框顶栏、原生材质与整页搜索';
   }
 
   private toggleOverride(generation: number): void {
