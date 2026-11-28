@@ -68,7 +68,7 @@ const launch = action => ({ kind: 'launch', action, subject: 'reader-session-lau
 const launchHandoff = action => ({ kind: 'launch', action, subject: 'reader-session-launch-handoff', rules: ['T3'] });
 
 export async function applyVmJourneyProfile(ui) {
-  await ui.wait('确认公开夹具已启动并原生扫描书架', { ...bookshelfReady, requiredRules: ['R13'] });
+  await ui.wait('确认公开夹具已启动并原生扫描书架', { ...bookshelfReady, requiredRules: ['R12', 'R13'] });
   const { scheme, material, motion } = ui.profile;
   if (scheme || material || motion) {
     await ui.tap('访问旅程环境设置', tab('settings'), settingsHome);
@@ -518,7 +518,7 @@ export const journeys = {
       await ui.tap('重新打开第二章操作', secondChapterActions, chapterSheet);
     }
     await ui.tap('下载第二章并等待已保存的章节状态', downloadChapter, {
-      route: 'downloads', all: [text(SECOND_REMOTE_CHAPTER), savedChapter], modalOpen: false, requiredRules: ['R8', 'R13'],
+      route: 'downloads', all: [text(SECOND_REMOTE_CHAPTER), savedChapter], modalOpen: false, requiredRules: ['R8', 'R12', 'R13'],
     });
     await ui.key('从章节下载返回管理首页并核对计数', 'Back', {
       route: 'downloads', all: [{ text: /^已下载 [12] \/ 2 章$/, within: novelRow }],
@@ -571,7 +571,7 @@ export const journeys = {
       route: 'rss', all: [text('RSS'), tab('settings')],
     });
     await ui.tap('切换到设置', tab('settings'), {
-      ...settingsHome, requiredRules: ['R13'], screenCapture: true,
+      ...settingsHome, requiredRules: ['R12', 'R13'], screenCapture: true,
     });
     await reveal(ui, general, settingsScroll, '设置首页', 'down');
     for (const [heading, endpoint] of [['通用与界面', general], ['内容与阅读', enabled('reader-settings-source-management')],
@@ -909,7 +909,7 @@ export const journeys = {
     const bookInfo = { ...action('书籍信息'), within: menu };
     await ui.tap('打开正文更多菜单', more, { route: 'reading', all: [menu, bookInfo], requiredRules: ['R9', 'R10'] });
     await ui.tap('正文 → 书籍信息，应以 push 打开详情', bookInfo, {
-      route: 'detail', all: [text(LOCAL_TXT), readBook], requiredRules: ['R8', 'R13'],
+      route: 'detail', all: [text(LOCAL_TXT), readBook], requiredRules: ['R8', 'R12', 'R13'],
       // Keep PNG acquisition outside the native frame window on this VM.
       transition: [routeMotion('push', 'reader-detail'), surface('reader-detail')]
         .map(observation => ({ ...observation, route: 'detail' })), screenCapture: true,
@@ -959,7 +959,7 @@ export const journeys = {
     const more = { ...enabled(/^source-back:\d+:tools:header$/u), clickable: 'true' };
     const sourceName = text(/^ReaderNovel[AB]$/u);
     await ui.tap('进入书源管理，核对公开书源', enabled('reader-settings-source-management'), {
-      route: 'source', all: [source, sourceName, more], requiredRules: ['R8', 'R13'],
+      route: 'source', all: [source, sourceName, more], requiredRules: ['R8', 'R12', 'R13'],
     });
     await ui.tap('展开书源分组选择器', enabled('reader-source-group-trigger'), {
       route: 'source', all: [id('reader-source-group-panel'), id('reader-source-group-search')],

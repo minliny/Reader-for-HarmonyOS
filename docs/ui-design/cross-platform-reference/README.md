@@ -1,3 +1,8 @@
+> [!WARNING]
+> **已退役历史参考（2026-11-27 起不再约束现行开发）**
+> 根据根目录 [CROSS_PLATFORM_CLIENT_ARCHITECTURE.md](../../../../CROSS_PLATFORM_CLIENT_ARCHITECTURE.md) 记录的 2026-11-27 用户裁决，本目录（2026-10-20 冻结的 `HarmonyOS 33f7c7b2` / `Reader-UI 95366cd9` 快照）仅服务于已退役的旧 demo，**不再约束**当前 HarmonyOS 主线及 Android/iOS 重建端。
+> 现行唯一权威参考为 `Reader-Core`、`Reader-UI`（墨纸青松 2.0）与 `Reader-for-HarmonyOS` 的锁定最新 `main`（跨端规范见 `Reader-UI/README.md` 与 `Reader-UI/docs/DESIGN_TOKENS_AND_STATES.md`）。本目录相对路径反映重构前源码结构，如需核对历史字节请按 [BASELINE.json](BASELINE.json) 使用 `git show <commit>:<path>` 读取。
+
 # Reader 跨平台界面参考
 
 本目录是以非鸿蒙原生增强主线的**已提交版本**整理的 UI、页面逻辑及交互交接入口。用户于 2026-10-20 指定：鸿蒙原生特性引入前的通用样式作为全平台兼容参考；本轮先收敛非原生分支当前提交，仍在进行的 UI 优化另行保留。

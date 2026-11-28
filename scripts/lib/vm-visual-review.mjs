@@ -60,11 +60,14 @@ export function renderVisualReview(receipts) {
         const url = frame.file && relativeUrl(directory, frame.file);
         return url && Number.isFinite(frame.timestampMs) ? [{ url, timestampMs: frame.timestampMs }] : [];
       }).sort((left, right) => left.timestampMs - right.timestampMs);
+      const stepSizeAudit = step.sizeAudit;
+      const sizeChecks = Array.isArray(stepSizeAudit?.checks) ? stepSizeAudit.checks : [];
+      const sizeViolations = Array.isArray(stepSizeAudit?.violations) ? stepSizeAudit.violations : [];
       if (step.status === 'BLOCKED' && step.reason) {
         alerts.push({ id: sectionId, evidence: receiptLink, label: `${title} · ${step.step}`,
           detail: step.reason, priority: 1 });
       }
-      if (!screen && frames.length === 0 && transitions.length === 0 && violations.length === 0) continue;
+      if (!screen && frames.length === 0 && transitions.length === 0 && violations.length === 0 && sizeChecks.length === 0) continue;
       const name = step.step ?? step.action ?? `Checkpoint ${stepIndex + 1}`;
       const suspectFrames = new Set();
       for (const violation of violations) {
@@ -77,21 +80,38 @@ export function renderVisualReview(receipts) {
         alerts.push({ id, evidence: closest?.url ?? screen ?? frames[0]?.url ?? receiptLink,
           label: `${rule} · ${title} · ${name}`, detail: annotation, priority: 0 });
       }
+      for (const violation of sizeViolations) {
+        alerts.push({ id, evidence: screen ?? receiptLink,
+          label: `SIZE/${violation.severity} · ${title} · ${name}`,
+          detail: `${violation.label}: expected ${violation.expected}, actual ${violation.actual}`, priority: 0 });
+      }
       const observedRules = new Set(step.report?.observedRules ?? []);
       const details = `Route ${step.report?.route ?? 'unreported'} · Observed ${layoutRules.filter(rule => observedRules.has(rule)).join(', ') || 'none'}`;
       markdown.push(`- **${escapeMarkdown(name)}** · ${escapeMarkdown(details)}${screen ? ` · [Screenshot](${screen})` : ''}`);
       if (frames.length > 0) markdown.push(`  - Transition frames · ${frames.map(({ url, timestampMs }) => `[${timestampMs} ms](${url})`).join(' · ')}`);
       if (transitions.length > 0) markdown.push(`  - Transition rules observed · ${[...new Set(transitions.flatMap(report => report.observedRules ?? []))].join(', ') || 'none'}`);
       for (const { rule, detail } of violations) markdown.push(`  - ${rule} · ${escapeMarkdown(detail)}`);
+      if (sizeChecks.length > 0) {
+        if (sizeViolations.length > 0) {
+          for (const v of sizeViolations) {
+            markdown.push(`  - SIZE/${escapeMarkdown(v.severity)} · ${escapeMarkdown(v.label)} · expected \`${escapeMarkdown(v.expected)}\`, actual \`${escapeMarkdown(v.actual)}\``);
+          }
+        } else {
+          markdown.push(`  - Size budget (${escapeMarkdown(stepSizeAudit.screen ?? 'auto')}): PASS (${sizeChecks.length} checks)`);
+        }
+      }
       const strip = frames.length > 0 ? `<div class="filmstrip" aria-label="Chronological transition frames">${frames.map(({ url, timestampMs }) =>
         `<figure${suspectFrames.has(url) ? ' class="suspect"' : ''}>${imageLink(url, `${name}, ${timestampMs} ms`)}
 <figcaption>${timestampMs} ms${suspectFrames.has(url) ? ' · near reported frame' : ''}</figcaption></figure>`).join('')}</div>` :
         transitions.length > 0 ? '<p>No transition screenshots. See the journey receipt for frame telemetry.</p>' : '';
+      const sizeTable = sizeChecks.length > 0 ? `<table class="size-table"><thead><tr><th>Target</th><th>Expected</th><th>Measured</th><th>Status</th></tr></thead><tbody>${sizeChecks.map(c =>
+        `<tr class="${c.passed ? 'ok' : 'bad'}"><td>${escapeHtml(c.label)}</td><td>${escapeHtml(c.expected)}</td><td>${escapeHtml(c.actual)}</td><td>${c.passed ? 'PASS' : escapeHtml(c.severity)}</td></tr>`).join('')}</tbody></table>` : '';
       cards.push(`<article id="${id}">${screen ? imageLink(screen, name) : ''}
 <h3>${escapeHtml(name)}</h3><p>${escapeHtml(details)}</p><div class="rules">${marks(layoutRules, reports, violations)}</div>
 ${transitions.length > 0 || frames.length > 0 ? `<div class="rules transition">${marks(transitionRules, transitions, violations)}</div>` : ''}
 ${strip}
-${violations.length > 0 ? `<ul>${violations.map(({ rule, detail }) => `<li><strong>${rule}</strong> ${escapeHtml(detail)}</li>`).join('')}</ul>` : ''}</article>`);
+${violations.length > 0 ? `<ul>${violations.map(({ rule, detail }) => `<li><strong>${rule}</strong> ${escapeHtml(detail)}</li>`).join('')}</ul>` : ''}
+${sizeTable}</article>`);
     }
     if (receipt.status !== 'PASS' && (receipt.failure || !receipt.blockers?.length)) {
       const capturedFile = receipt.failure?.screenCap?.file ?? receipt.failure?.capture?.file;
@@ -146,6 +166,9 @@ ${coverage.length > 0 ? `<h3>External coverage</h3><ul>${coverage.map(item => `<
   .filmstrip figure { margin: 0; flex: 0 0 8rem; text-align: center; }
   .filmstrip .suspect { outline: 2px solid #be2943; outline-offset: -2px; }
   .filmstrip img { height: 12rem; }
+  .size-table { width: 100%; border-collapse: collapse; margin-top: .6rem; font-size: .78rem; }
+  .size-table th, .size-table td { border-bottom: 1px solid GrayText; padding: .25rem .35rem; text-align: left; }
+  .size-table tr.bad td { color: #ff8b8b; font-weight: 600; }
 </style></head><body>
 <h1>VM visual review</h1>
 ${summary}

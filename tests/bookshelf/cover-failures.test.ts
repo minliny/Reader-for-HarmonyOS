@@ -21,6 +21,47 @@ test('shelf cover failures deduplicate and evict their oldest URL at 256 entries
   assert.equal(rememberBookCoverFailure(failures, failures[12]), failures);
 });
 
+test('BookshelfPage disables renderGroup, mounts a single cover layer, avoids green cover gradient, and retains failedCoverUrls on non-empty updates', () => {
+  const source = readFileSync(
+    new URL('../../entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets', import.meta.url),
+    'utf8',
+  );
+
+  assert.equal(/\.renderGroup\s*\(/.test(source), false,
+    'BookshelfPage must not enable .renderGroup() on cover actors');
+
+  const coverMatch = /private\s+projectionBookCover\([^\n]*\)\s*\{([\s\S]*?)\n  \}/.exec(source);
+  assert.ok(coverMatch, 'projectionBookCover must exist');
+  const layerCalls = coverMatch[1].match(/this\.projectionBookCoverLayer\s*\(/g) ?? [];
+  assert.equal(layerCalls.length, 1, 'projectionBookCover must mount a single cover layer');
+
+  const layerMatch = /private\s+projectionBookCoverLayer\([^\n]*\)\s*\{([\s\S]*?)\n  \}/.exec(source);
+  assert.ok(layerMatch, 'projectionBookCoverLayer must exist');
+  assert.equal(/TOK_PRIMARY_GRADIENT_START|TOK_PRIMARY_DARK/.test(layerMatch[1]), false,
+    'projectionBookCoverLayer must not paint green primary gradient behind covers');
+  assert.match(layerMatch[1], /app\.cover\.placeholder/);
+  assert.match(layerMatch[1], /cornerRadius:\s*this\.projectionCoverRadius\(expandedLayout\)/);
+
+  const changedMatch = /private\s+onBooksChanged\s*\(\s*\)\s*:\s*void\s*\{([\s\S]*?)\n\s*\}/.exec(source);
+  assert.ok(changedMatch, 'onBooksChanged must exist');
+  assert.match(changedMatch[1], /this\.books\.length\s*===\s*0\s*&&\s*this\.continueReading\s*===\s*undefined/);
+});
+
+test('BookshelfMultiSelectPage and DiscoverPage bound cover failures and isolate reusable cover images', () => {
+  const multiSelectSource = readFileSync(
+    new URL('../../entry/src/main/ets/features/bookshelf/ui/BookshelfMultiSelectPage.ets', import.meta.url),
+    'utf8',
+  );
+  assert.match(multiSelectSource, /rememberBookCoverFailure\s*\(/);
+  assert.match(multiSelectSource, /ForEach\s*\(\s*\[this\.coverUrl\(this\.currentBook\(book\)\)\s*\?\?\s*''\]/);
+
+  const discoverSource = readFileSync(
+    new URL('../../entry/src/main/ets/features/discover/ui/DiscoverPage.ets', import.meta.url),
+    'utf8',
+  );
+  assert.match(discoverSource, /rememberBookCoverFailure\s*\(/);
+});
+
 test('persistent cover failure entries expire after TTL, deduplicate, cap at 256, and tolerate corrupt cache JSON', () => {
   const now = 10_000_000_000;
   let entries = recordBookCoverFailureEntry([], 'https://covers.invalid/a.jpg', now - BOOK_COVER_FAILURE_TTL_MS - 1);

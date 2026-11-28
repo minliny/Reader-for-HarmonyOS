@@ -1,3 +1,8 @@
+> [!WARNING]
+> **已退役历史参考（2026-11-27 起不再约束现行开发）**
+> 根据根目录 [CROSS_PLATFORM_CLIENT_ARCHITECTURE.md](../../../../CROSS_PLATFORM_CLIENT_ARCHITECTURE.md) 记录的 2026-11-27 用户裁决，本目录（2026-10-20 冻结的 `HarmonyOS 33f7c7b2` / `Reader-UI 95366cd9` 快照）仅服务于已退役的旧 demo，**不再约束**当前 HarmonyOS 主线及 Android/iOS 重建端（本文中的 `IOS-REF-*` 编号亦随旧 demo 退役，跨端无障碍清单由 `Reader-UI/docs/ACCESSIBILITY_CHECKLIST.md` 接替）。
+> 现行唯一权威参考为 `Reader-Core`、`Reader-UI`（墨纸青松 2.0）与 `Reader-for-HarmonyOS` 的锁定最新 `main`。本目录相对路径反映重构前源码结构，如需核对历史字节请按 [BASELINE.json](BASELINE.json) 使用 `git show <commit>:<path>` 读取。
+
 # iOS 复刻适配与交付边界
 
 本文件收敛已选定的全平台兼容样式及其 iOS 适配依据，不改变产品设计。

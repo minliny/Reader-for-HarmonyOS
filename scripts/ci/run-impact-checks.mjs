@@ -40,6 +40,11 @@ function main() {
   if (!values.base) throw new Error('Provide --base');
   const { base, head, paths } = committedHostChanges(values.base, values.head);
   const nonDocument = paths.filter(path => !isHostDocument(path));
+  const designContractPaths = [
+    'tests/navigation-geometry/design-size-contract.json',
+    'entry/src/main/ets/ui/layout/LayoutInvariantNativeAudit.ts',
+  ];
+  const designContractChanged = nonDocument.some(path => designContractPaths.includes(path));
   const selected = affectedHostDomains(nonDocument);
   const suggested = suggestedVmJourneys(nonDocument);
   const journeyArgs = suggested.length === Object.keys(journeys).length ? '--all' :
@@ -48,6 +53,9 @@ function main() {
   let failure = '';
   try {
     checkAddedNodeLines(base, head);
+    if (designContractChanged) {
+      console.log('NOTICE: Design contract / R12 budget modified — confirm approved design spec before merging.');
+    }
     if (selected.length > 0) {
       const outcome = spawnSync(process.execPath, ['scripts/test-host.mjs', '--changed-from', base, '--committed'],
         { cwd: root, stdio: 'inherit' });
@@ -61,12 +69,14 @@ function main() {
   const report = `${status} — Host incremental checks${failure ? ` (${failure})` : ''}\n\n` +
     `Non-document paths: ${nonDocument.length}\nHost domains selected: ${selected.length}, executed: ${executed}` +
     (selected.length > 0 ? `\nSelected: ${selected.join(', ')}` : '') +
+    `\nDesign contract modified: ${designContractChanged}` +
     `\nSuggested VM journeys: ${suggested.join(', ') || 'none'}` +
     (journeyArgs ? `\nVM journey arguments: ${journeyArgs}` : '');
   console.log(report);
   if (values['summary-file']) appendFileSync(values['summary-file'], `\n## ${report}\n`);
   if (values['output-file']) appendFileSync(values['output-file'],
     `non_document=${nonDocument.length > 0}\nselected=${selected.length}\nexecuted=${executed}\n` +
+    `design_contract_changed=${designContractChanged}\n` +
     `suggested_vm_journeys=${suggested.join(',') || 'none'}\n` +
     (journeyArgs ? `suggested_vm_journey_args=${journeyArgs}\n` : ''));
   if (failure) process.exitCode = 1;
