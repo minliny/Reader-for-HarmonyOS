@@ -28,6 +28,7 @@ export {
 } from './hap-pipeline/locks-and-retention.mjs';
 export {
   resolveHarmonyAbi,
+  isCleanArkTsCompileFailure,
   run,
   prepareDuringNativePreflight,
   hapMainlineSources,

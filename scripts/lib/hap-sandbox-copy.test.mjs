@@ -4,7 +4,7 @@ import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, renameSync
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { copySourceSandbox, sourceSnapshot } from '../hap-pipeline.mjs';
+import { copySourceSandbox, isCleanArkTsCompileFailure, sourceSnapshot } from '../hap-pipeline.mjs';
 import { publishVerifiedHapRun } from './hap-delivery-evidence.mjs';
 
 const asset = 'entry/src/main/resources/base/media/font.bin';
@@ -114,4 +114,69 @@ test('a recovery marker cleanup failure leaves publication committed and require
   assert.equal(existsSync(staging), false);
   assert.equal(readFileSync(join(published, 'manifest.json'), 'utf8'), '{}');
   assert.equal(readFileSync(join(marker, 'unexpected-content'), 'utf8'), 'retain for recovery');
+});
+
+test('isCleanArkTsCompileFailure admits ArkTS compiler errors and rejects daemon or native/packaging failures', () => {
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 255,
+    signal: null,
+    stdout: '> hvigor ERROR: Failed :entry:default@CompileArkTS...\nCOMPILE RESULT:FAIL {ERROR:2 WARN:462}\n> hvigor ERROR: BUILD FAILED in 19 s 761 ms',
+    stderr: '',
+  }), true);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 255,
+    signal: null,
+    stdout: '> hvigor \x1b[91mERROR: Failed :entry:default@CompileArkTS... \x1b[39m\n\x1b[31mCOMPILE RESULT:FAIL {ERROR:2 WARN:458}\x1b[39m\n',
+    stderr: '',
+  }), true);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 0,
+    signal: null,
+    stdout: '> hvigor ERROR: Failed :entry:default@CompileArkTS...\nCOMPILE RESULT:FAIL {ERROR:1 WARN:0}',
+    stderr: '',
+  }), false);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: null,
+    signal: 'SIGKILL',
+    stdout: '> hvigor ERROR: Failed :entry:default@CompileArkTS...\nCOMPILE RESULT:FAIL {ERROR:1 WARN:0}',
+    stderr: '',
+  }), false);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 255,
+    signal: null,
+    error: new Error('ETIMEDOUT'),
+    stdout: '> hvigor ERROR: Failed :entry:default@CompileArkTS...\nCOMPILE RESULT:FAIL {ERROR:1 WARN:0}',
+    stderr: '',
+  }), false);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 255,
+    signal: null,
+    stdout: '> hvigor ERROR: Failed :entry:default@CompileArkTS...\nCOMPILE RESULT:FAIL {ERROR:1 WARN:0}\nServer has disconnected',
+    stderr: '',
+  }), false);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 255,
+    signal: null,
+    stdout: '> hvigor ERROR: Failed :entry:default@CompileArkTS...\nCOMPILE RESULT:FAIL {ERROR:1 WARN:0}\nABORT_WORK sent to workers.',
+    stderr: '',
+  }), false);
+  assert.equal(isCleanArkTsCompileFailure({
+    status: 255,
+    signal: null,
+    stdout: '> hvigor ERROR: Failed :entry:default@PackageHap...\nCOMPILE RESULT:FAIL {ERROR:1 WARN:0}',
+    stderr: '',
+  }), false);
+});
+
+test('copySourceSandbox omits docs, tests, and CI metadata directories outside BUILD_INPUTS', t => {
+  const { source, destination, cache, put } = fixture(t);
+  put(source, 'docs/guide.md', 'documentation');
+  put(source, 'tests/sample.test.ts', 'unit test');
+  put(source, '.github/workflows/ci.yml', 'workflow');
+  put(source, '.pytest_cache/README.md', 'pytest');
+  const snapshot = copySourceSandbox(source, destination, cache, { incremental: true });
+  assert.deepEqual(snapshot, sourceSnapshot(destination));
+  for (const omitted of ['docs', 'tests', '.github', '.pytest_cache']) {
+    assert.equal(existsSync(join(destination, omitted)), false, `${omitted} should not be copied into Hvigor sandbox`);
+  }
 });

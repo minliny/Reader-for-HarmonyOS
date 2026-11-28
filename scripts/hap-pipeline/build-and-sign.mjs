@@ -5,6 +5,7 @@ import { chmodSync, constants, copyFileSync, cpSync, existsSync, lstatSync, mkdi
 import { homedir, tmpdir } from 'node:os';
 import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { stripVTControlCharacters } from 'node:util';
 import { Worker } from 'node:worker_threads';
 import { contentSnapshot, coreBuildSnapshot } from '../../../Reader-Core/scripts/build-input-snapshot.mjs';
 import { acquireBuildLease } from '../../../Reader-Core/scripts/lib/build-resource-lock.mjs';
@@ -49,6 +50,19 @@ const EXPECTED_NATIVE_ENTRIES = [
 export function resolveHarmonyAbi(value = 'arm64-v8a') {
   if (value !== 'arm64-v8a' && value !== 'x86_64') fail(`unsupported Harmony ABI: ${value}`, 2);
   return value;
+}
+
+/** Return true only when Hvigor exited cleanly from an ArkTS compile error without daemon or native/packaging failure. */
+export function isCleanArkTsCompileFailure(result) {
+  if (!result || result.error !== undefined || (result.signal !== null && result.signal !== undefined)) return false;
+  if (!Number.isInteger(result.status) || result.status === 0) return false;
+  const output = stripVTControlCharacters(`${result.stdout ?? ''}\n${result.stderr ?? ''}`);
+  if (!/> hvigor ERROR: Failed :entry:default@CompileArkTS\b/.test(output)) return false;
+  if (!/COMPILE RESULT:FAIL\s*\{ERROR:\d+/.test(output)) return false;
+  if (/Server has disconnected|ABORT_WORK|Failed :entry:default@(?:BuildNative|ConfigureCmake|PackageHap|SignHap|ProcessLibs|DoNativeStrip)/i.test(output)) {
+    return false;
+  }
+  return true;
 }
 
 const LIVE_SOURCE_TIMEOUT_MS = 110_000;
@@ -245,12 +259,17 @@ export function copySourceSandbox(source, destination, sandboxRoot = tmpdir(), {
     '.idea',
     '.appanalyzer',
     '.claude',
+    '.github',
+    '.pytest_cache',
+    '.worktrees',
     'build',
+    'docs',
     'entry/build',
     'entry/.cxx',
     'node_modules',
     'oh_modules',
     'evidence',
+    'tests',
     '.reader-app-build.json',
     '.reader-pipeline-session.json',
   ];
@@ -1143,6 +1162,7 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
   let markerWritten = false;
   let unpublishedRunDir = null;
   let afterSnapshots;
+  let preserveIncrementalCache = false;
   try {
     const readAppIdentity = () => measureBuildStep('appIdentity', () => prepareAppIdentity(REPO_ROOT, APP_CONTENT_INPUTS, { abi,
       channel: option(options, '--channel', process.env.READER_APP_CHANNEL), buildClass, signed: signingMode === 'local',
@@ -1282,11 +1302,23 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
     const hvigorVersion = measureBuildStep('hvigorVersion', () =>
       admittedHvigorVersion(hvigorw, sandboxRepo, buildEnvironment, resolve(sandboxRoot, 'hvigor-version.json'), versionFingerprint));
     const hvigorStarted = performance.now();
-    run(hvigorw, buildArgs, {
+    const hvigorResult = run(hvigorw, buildArgs, {
       cwd: sandboxRepo,
       stdio: 'inherit',
       env: buildEnvironment,
+      allowFailure: incremental,
     });
+    if (hvigorResult.status !== 0) {
+      if (incremental && isCleanArkTsCompileFailure(hvigorResult)) {
+        for (const name of ['entry-default-signed.hap', 'entry-default-unsigned.hap']) {
+          rmSync(resolve(outputDir, name), { force: true });
+        }
+        preserveIncrementalCache = true;
+      }
+      const stderr = typeof hvigorResult.stderr === 'string' ? hvigorResult.stderr.trim() : '';
+      const stdout = typeof hvigorResult.stdout === 'string' ? hvigorResult.stdout.trim() : '';
+      fail(`${hvigorw} failed (${hvigorResult.status}): ${stderr || stdout || '<no output>'}`);
+    }
     const hvigorFinished = performance.now();
     const finishedAt = new Date().toISOString();
     afterSnapshots = measureBuildStep('startSourceSnapshotsAfter', () => startRegularInputSnapshots([
@@ -1339,8 +1371,9 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
     activeBuildTimings?.steps.set('sandboxAfter', sandboxSnapshotMs);
     activeBuildTimings?.steps.set('sourceAfter', sourceSnapshotMs);
     assertSnapshotUnchanged(sandboxBefore, sandboxAfter, 'isolated build inputs');
-    assertSnapshotUnchanged(sourceBefore, sourceAfter, 'source worktree build inputs');
     measureBuildStep('resolvedDependenciesAfter', () => assertResolvedCorePackage(sandboxRepo, expectedVendor));
+    if (incremental) preserveIncrementalCache = true;
+    assertSnapshotUnchanged(sourceBefore, sourceAfter, 'source worktree build inputs');
     const controllerAfter = measureBuildStep('controllerAfter', () => controllerSnapshot());
     assertSnapshotUnchanged(harmonyGateBefore, controllerAfter, 'Harmony build controller and gate inputs');
     measureBuildStep('appIdentityAfter', () => assertAppIdentityUnchanged(appIdentity, nativeEnvironment,
@@ -1475,6 +1508,7 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
       return { ...evidence.artifact };
     }));
     if (incremental) writeSandboxFile(signingStamp, signingKey, 0o600);
+    preserveIncrementalCache = false;
     const recoveryMarkerCleanupError = measureBuildStep('publish', () => publishVerifiedHapRun(runDir, publishedRunDir, () => {
       afterSnapshots.assertUnchanged();
       for (const [artifactPath, evidence] of inspected) evidence.assertUnchanged(artifactPath);
@@ -1506,6 +1540,10 @@ async function buildImpl(options, inputs, buildStarted, verifyManifestWithInspec
       await afterSnapshots?.stop();
       if (unpublishedRunDir !== null) rmSync(unpublishedRunDir, { recursive: true, force: true });
       if (markerWritten) rmSync(pipelineMarker, { force: true });
+      if (incremental && preserveIncrementalCache) {
+        try { rmSync(incompleteBuild, { force: true }); }
+        catch { /* Retain recovery marker so the next incremental build cleans the cache. */ }
+      }
     } finally { buildLease.release(); }
   }
 }
