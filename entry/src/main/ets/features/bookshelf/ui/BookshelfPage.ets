@@ -26,7 +26,6 @@ import {
   TYPE_SHELF_CONTINUE_AUTHOR, TYPE_SHELF_CONTINUE_LABEL,
   TYPE_SHELF_CONTINUE_TITLE,
   TYPE_SHELF_LIST_AUTHOR,
-  TYPE_SHELF_LIST_STATUS,
   TYPE_SHELF_LIST_TITLE,
 } from '../../../ui/foundation/ReaderTypography';
 import { BookshelfSectionHeader } from './BookshelfSectionHeader';
@@ -55,7 +54,9 @@ import {
   TOK_SPACE_XS,
 } from '../../../ui/foundation/ReaderTokens';
 
+import { CoverProgressBadge } from '../../../ui/patterns/CoverProgressBadge';
 import { NoCoverCover, noCoverGlyph } from '../../../ui/patterns/NoCoverCover';
+import { noCoverFooterInsets } from '../../../ui/patterns/NoCoverLayout';
 import { registerReaderShelfFonts } from '../../../ui/foundation/ReaderFonts';
 import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
 import { ReaderBottomSheet } from '../../../ui/surfaces/ReaderBottomSheet';
@@ -1123,14 +1124,18 @@ export struct BookshelfPage {
       y: projectionBookTranslateYForProgress(metrics, columnIndex, this.visualListProgress),
     })
     .id(this.bookActionFocusKey(book, false))
-    .attributeModifier(new ReaderActionAccessibility(`${book.title}，${book.author}，${this.gridProgressLabel(book)}` +
-      ((book.unreadCount ?? 0) > 0 ? `，更新 ${book.unreadCount} 章` : '')))
+    .attributeModifier(new ReaderActionAccessibility(this.bookCardAccessibilityText(book)))
     .onTouch((event: TouchEvent): void => this.observeShelfPress(event, this.bookActionFocusKey(book, false)))
     .onClick(this.bookSelectionHandler((): ShelfBook => book))
     .gesture(
       LongPressGesture({ fingers: 1, repeat: false, duration: 500 })
         .onAction(this.bookActionPresentationHandler(book, false)),
     );
+  }
+
+  private bookCardAccessibilityText(book: ShelfBook): string {
+    const progress = this.gridProgressLabel(book);
+    return `${book.title}，${book.author}${progress.length > 0 ? `，${progress}` : ''}${(book.unreadCount ?? 0) > 0 ? `，更新 ${book.unreadCount} 章` : ''}`;
   }
 
   @Builder
@@ -1141,9 +1146,12 @@ export struct BookshelfPage {
     .width(metrics.gridCardWidth)
     .height(metrics.gridCoverHeight)
     .id(this.bookCoverMotionId(book))
-    .backgroundColor(readerAppColor('TOK_META_BG', this.appThemeScheme))
+    .backgroundColor(readerAppColor(
+      this.hasCover(book) ? 'app.cover.placeholder' : 'app.cover.novelSurfaceStart',
+      this.appThemeScheme,
+    ))
     .borderRadius(this.projectionCoverRadius(expandedLayout))
-    .shadow(readerSurfaceElevation(this.hasCover(book) ? 'cover' : 'embedded', this.appThemeScheme))
+    .shadow(readerSurfaceElevation('cover', this.appThemeScheme))
     .scale({
       x: projectionCoverScaleForProgress(metrics, this.visualListProgress),
       y: projectionCoverScaleForProgress(metrics, this.visualListProgress),
@@ -1179,6 +1187,7 @@ export struct BookshelfPage {
           glyph: noCoverGlyph(book.title),
           kindLabel: ShelfBookPresentation.contentLabel(book),
           cornerRadius: this.projectionCoverRadius(expandedLayout),
+          reserveTopBadge: (book.unreadCount ?? 0) > 0,
         });
       }
       if ((book.unreadCount ?? 0) > 0) {
@@ -1201,16 +1210,49 @@ export struct BookshelfPage {
           .margin({ top: 7, right: 7 })
           .opacity(this.viewSwitchGridContentOpacity);
       }
+      if (ShelfBookPresentation.progressPercent(book) > 0) {
+        this.coverProgressOverlay(book, metrics);
+      }
     }
     .width(metrics.gridCardWidth)
     .height(metrics.gridCoverHeight)
     .backgroundColor(readerAppColor(
-      this.hasCover(book) ? 'app.cover.placeholder' : 'TOK_META_BG',
+      this.hasCover(book) ? 'app.cover.placeholder' : 'app.cover.novelSurfaceStart',
       this.appThemeScheme,
     ))
     .borderRadius(this.projectionCoverRadius(expandedLayout))
     .clip(true)
     .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  @Builder
+  private coverProgressOverlay(book: ShelfBook, metrics: BookshelfProjectionMetrics) {
+    Stack({ alignContent: Alignment.BottomEnd }) {
+      if (this.hasCover(book)) {
+        CoverProgressBadge({
+          percent: ShelfBookPresentation.progressPercent(book),
+          variant: 'pill',
+          compactScale: noCoverFooterInsets(metrics.gridCardWidth, metrics.gridCoverHeight).scale,
+        })
+          .margin({ right: 5, bottom: 5 })
+          .opacity(this.viewSwitchGridContentOpacity);
+      } else {
+        CoverProgressBadge({
+          percent: ShelfBookPresentation.progressPercent(book),
+          variant: 'inline',
+          compactScale: noCoverFooterInsets(metrics.gridCardWidth, metrics.gridCoverHeight).scale,
+        })
+          .margin({
+            right: noCoverFooterInsets(metrics.gridCardWidth, metrics.gridCoverHeight).right,
+            bottom: noCoverFooterInsets(metrics.gridCardWidth, metrics.gridCoverHeight).bottom,
+          })
+          .opacity(this.viewSwitchGridContentOpacity);
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .hitTestBehavior(HitTestMode.None)
+    .accessibilityLevel('no-hide-descendants');
   }
 
   @Builder
@@ -1236,17 +1278,6 @@ export struct BookshelfPage {
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
-      if (this.gridProgressLabel(book).length > 0) {
-        Text(this.gridProgressLabel(book))
-          .width(metrics.gridCardWidth)
-          .fontFamily(TYPE_SHELF_LIST_STATUS.fontFamily)
-          .fontWeight(TYPE_SHELF_LIST_STATUS.fontWeight)
-          .fontSize(TYPE_SHELF_LIST_STATUS.fontSizeFp)
-          .lineHeight(`${TYPE_SHELF_LIST_STATUS.lineHeightFp}fp`)
-          .letterSpacing(TYPE_SHELF_LIST_STATUS.letterSpacingFp)
-          .fontColor(readerAppColor('TOK_ACCENT', this.appThemeScheme))
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      }
     }
     .width(metrics.gridCardWidth)
     .alignItems(HorizontalAlign.Start)
@@ -1995,10 +2026,7 @@ export struct BookshelfPage {
     return metrics;
   }
 
-  private rowHasGridProgress(books: ShelfBook[]): boolean {
-    for (const book of books) {
-      if (this.gridProgressLabel(book).length > 0) return true;
-    }
+  private rowHasGridProgress(_books: ShelfBook[]): boolean {
     return false;
   }
 
@@ -2027,10 +2055,8 @@ export struct BookshelfPage {
     );
   }
 
-  private gridBookCardHeight(book: ShelfBook, metrics: BookshelfProjectionMetrics): number {
-    return this.gridProgressLabel(book).length > 0
-      ? metrics.gridCardHeightWithProgress
-      : metrics.gridCardHeightNoProgress;
+  private gridBookCardHeight(_book: ShelfBook, metrics: BookshelfProjectionMetrics): number {
+    return metrics.gridCardHeightNoProgress;
   }
 
   private hasCover(book: ShelfBook | undefined): boolean {

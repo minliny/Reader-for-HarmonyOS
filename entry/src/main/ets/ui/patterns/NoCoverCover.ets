@@ -18,10 +18,10 @@ export function noCoverGlyph(title: string | undefined): string {
 /**
  * Generated default cover aligned with Paper & Pine 2.0 (mineral finished covers).
  * - Novel: solid pine cloth spine with a thin bronze thread, warm parchment board,
- *   serif title and bottom-left kind label.
- * - Comic: crisp elevated/panel canvas, bold sans title and a solid bronze mineral
- *   bottom band with high-contrast label.
- * Grid covers leave the top badge lane clear so bookshelf update pills never collide.
+ *   serif title and elevated bottom-left kind caption.
+ * - Comic: crisp elevated/panel canvas, bold sans title and lightweight bronze
+ *   kind caption on the same elevated baseline.
+ * Grid covers reserve top clearance only when an update badge is present.
  */
 @Component
 export struct NoCoverCover {
@@ -31,6 +31,7 @@ export struct NoCoverCover {
   @Prop glyph: string = '';
   @Prop kindLabel: string = '';
   @Prop cornerRadius: number = 8;
+  @Prop reserveTopBadge: boolean = false;
   @State private serifFontReady: boolean = readerFontFamilyReady(READER_FONT_NOTO_SERIF_SC_BOLD);
   private mounted: boolean = false;
 
@@ -48,8 +49,14 @@ export struct NoCoverCover {
   }
 
   build() {
-    this.coverSurface(computeNoCoverLayout(this.coverWidth, this.coverHeight, this.glyph, this.kindLabel,
-      this.cornerRadius));
+    this.coverSurface(computeNoCoverLayout(
+      this.coverWidth,
+      this.coverHeight,
+      this.glyph,
+      this.kindLabel,
+      this.cornerRadius,
+      this.reserveTopBadge,
+    ));
   }
 
   @Builder
@@ -63,7 +70,7 @@ export struct NoCoverCover {
         }
 
         Stack({
-          alignContent: layout.title.verticalAlign === 'top' ? Alignment.TopStart : Alignment.Center,
+          alignContent: Alignment.TopStart,
         }) {
           Text(layout.title.text)
             .width('100%')
@@ -82,32 +89,31 @@ export struct NoCoverCover {
         }
         .width(layout.title.box.width)
         .height(layout.title.box.height)
+        .padding({ top: layout.title.opticalPaddingTopVp })
         .position({ x: layout.title.box.x, y: layout.title.box.y });
       }
     }
     .width(this.coverWidth)
     .height(this.coverHeight)
     .backgroundColor(readerAppColor(
-      layout.variant === 'comic'
-        ? (this.appThemeScheme === 'night' ? 'TOK_SURFACE_PANEL' : 'TOK_SURFACE_ELEVATED')
-        : (this.appThemeScheme === 'night' ? 'TOK_META_BG' : 'TOK_PAPER'),
+      layout.variant === 'comic' ? 'app.cover.comicSurfaceStart' : 'app.cover.novelSurfaceStart',
       this.appThemeScheme,
     ))
-    .linearGradient(layout.variant === 'comic' ? undefined : {
-      angle: 155,
-      colors: this.appThemeScheme === 'night'
+    .linearGradient({
+      angle: layout.variant === 'comic' ? 160 : 155,
+      colors: layout.variant === 'comic'
         ? [
-            [readerAppColor('TOK_META_BG', 'night'), 0],
-            [readerAppColor('TOK_BOTTOM_BG', 'night'), 1],
+            [readerAppColor('app.cover.comicSurfaceStart', this.appThemeScheme), 0],
+            [readerAppColor('app.cover.comicSurfaceEnd', this.appThemeScheme), 1],
           ]
         : [
-            [readerAppColor('TOK_PAPER', 'day'), 0],
-            [readerAppColor('TOK_FIELD_SURFACE', 'day'), 1],
+            [readerAppColor('app.cover.novelSurfaceStart', this.appThemeScheme), 0],
+            [readerAppColor('app.cover.novelSurfaceEnd', this.appThemeScheme), 1],
           ],
     })
     .border(layout.width <= 0 || layout.height <= 0 ? undefined : {
-      width: 0.7,
-      color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme),
+      width: this.appThemeScheme === 'night' ? 0.9 : 0.8,
+      color: readerAppColor('app.cover.border', this.appThemeScheme),
     })
     .borderRadius(layout.cornerRadius)
     .clip(true)
@@ -130,15 +136,10 @@ export struct NoCoverCover {
       .height(layout.height)
       .linearGradient({
         angle: 180,
-        colors: this.appThemeScheme === 'night'
-          ? [
-              [readerAppColor('TOK_MESSAGE_FEEDBACK', 'night'), 0],
-              [readerAppColor('TOK_READ_CARD_EMPHASIS', 'night'), 1],
-            ]
-          : [
-              [readerAppColor('TOK_PRIMARY_GRADIENT_START', 'day'), 0],
-              [readerAppColor('TOK_PRIMARY_DARK', 'day'), 1],
-            ],
+        colors: [
+          [readerAppColor('app.cover.novelSpineStart', this.appThemeScheme), 0],
+          [readerAppColor('app.cover.novelSpineEnd', this.appThemeScheme), 1],
+        ],
       })
       .position({ x: 0, y: 0 });
 
@@ -147,10 +148,10 @@ export struct NoCoverCover {
       .width(0.8)
       .height(layout.height)
       .backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme))
-      .opacity(0.75)
+      .opacity(0.72)
       .position({ x: layout.novel.spineLineX, y: 0 });
 
-    // Bottom-left bronze accent rule + muted kind caption (clear of bottom-right selection badge).
+    // Elevated bottom-left bronze accent rule + muted kind caption.
     if (layout.novel.showFooterRule) {
       Row()
         .width(layout.novel.footerRule.width)
@@ -180,39 +181,32 @@ export struct NoCoverCover {
 
   @Builder
   private comicArtwork(layout: NoCoverLayoutMetrics) {
-    // Rich mineral bronze bottom obi band.
-    Row()
-      .width(layout.comic.bottomBand.width)
-      .height(layout.comic.bottomBand.height)
-      .backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme))
-      .position({ x: layout.comic.bottomBand.x, y: layout.comic.bottomBand.y });
-
-    // High-contrast left-aligned comic label inside the bottom band.
-    Text(layout.kindText)
-      .width(layout.comic.badgeBox.width)
-      .height(layout.comic.badgeBox.height)
-      .textAlign(TextAlign.Start)
-      .fontFamily(TYPE_SHELF_COVER_PLACEHOLDER.fontFamily)
-      .fontWeight(700)
-      .fontSize(`${layout.comic.badgeFontSizeVp}vp`)
-      .lineHeight(`${layout.comic.badgeLineHeightVp}vp`)
-      .letterSpacing(0.8)
-      .minFontScale(1)
-      .maxFontScale(1)
-      .fontColor(readerAppColor('app.text.onAccent', this.appThemeScheme))
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
-      .position({ x: layout.comic.badgeBox.x, y: layout.comic.badgeBox.y });
-
-    // Subtle geometric colophon square on the right of the band.
+    // Lightweight elevated bronze marker + label aligned with the novel baseline.
     if (layout.comic.showAccentMark) {
       Row()
         .width(layout.comic.accentMark.width)
         .height(layout.comic.accentMark.height)
-        .borderRadius(1.5)
-        .backgroundColor(readerAppColor('app.text.onAccent', this.appThemeScheme))
-        .opacity(0.8)
+        .borderRadius(1)
+        .backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme))
         .position({ x: layout.comic.accentMark.x, y: layout.comic.accentMark.y });
+    }
+
+    if (layout.comic.showBadge) {
+      Text(layout.kindText)
+        .width(layout.comic.badgeBox.width)
+        .height(layout.comic.badgeBox.height)
+        .textAlign(TextAlign.Start)
+        .fontFamily(TYPE_SHELF_COVER_PLACEHOLDER.fontFamily)
+        .fontWeight(700)
+        .fontSize(`${layout.comic.badgeFontSizeVp}vp`)
+        .lineHeight(`${layout.comic.badgeLineHeightVp}vp`)
+        .letterSpacing(0.6)
+        .minFontScale(1)
+        .maxFontScale(1)
+        .fontColor(readerAppColor('TOK_ACCENT', this.appThemeScheme))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .position({ x: layout.comic.badgeBox.x, y: layout.comic.badgeBox.y });
     }
   }
 }

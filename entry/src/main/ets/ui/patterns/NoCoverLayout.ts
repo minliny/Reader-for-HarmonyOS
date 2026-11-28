@@ -25,6 +25,7 @@ export interface NoCoverTitleLayout {
   readonly maxLines: number;
   readonly textAlign: NoCoverTextAlign;
   readonly verticalAlign: NoCoverVerticalAlign;
+  readonly opticalPaddingTopVp: number;
   readonly wordBreak: NoCoverWordBreak;
 }
 
@@ -41,12 +42,18 @@ export interface NoCoverNovelLayout {
 }
 
 export interface NoCoverComicLayout {
-  readonly bottomBand: NoCoverRect;
+  readonly showBadge: boolean;
   readonly badgeBox: NoCoverRect;
   readonly badgeFontSizeVp: number;
   readonly badgeLineHeightVp: number;
   readonly showAccentMark: boolean;
   readonly accentMark: NoCoverRect;
+}
+
+export interface NoCoverFooterInsets {
+  readonly bottom: number;
+  readonly right: number;
+  readonly scale: number;
 }
 
 export interface NoCoverLayoutMetrics {
@@ -56,6 +63,8 @@ export interface NoCoverLayoutMetrics {
   readonly variant: NoCoverVariant;
   readonly density: NoCoverDensity;
   readonly kindText: string;
+  readonly footerBottomInsetVp: number;
+  readonly footerRightInsetVp: number;
   readonly title: NoCoverTitleLayout;
   readonly novel: NoCoverNovelLayout;
   readonly comic: NoCoverComicLayout;
@@ -97,6 +106,20 @@ export function noCoverResolvedKindLabel(kindLabel: string | undefined, variant:
   const trimmed = kindLabel?.trim() ?? '';
   if (variant === 'comic') return trimmed.length > 0 ? trimmed : '漫画';
   return trimmed;
+}
+
+export function noCoverFooterInsets(coverWidth: number, coverHeight: number): NoCoverFooterInsets {
+  const width = finitePositive(coverWidth);
+  const height = finitePositive(coverHeight);
+  if (width <= 0 || height <= 0) {
+    return { bottom: 0, right: 0, scale: 1 };
+  }
+  const u = Math.min(width / 90, height / 124);
+  return {
+    bottom: clamp(u * 10.5, 5.5, 16),
+    right: clamp(u * 7.5, 4.5, 13),
+    scale: clamp(u, 0.9, 1.35),
+  };
 }
 
 export function estimateNoCoverTitleUnits(title: string): NoCoverTitleMeasure {
@@ -154,12 +177,18 @@ function resolveDensity(width: number): NoCoverDensity {
   return 'large';
 }
 
-function buildNovelLayout(width: number, height: number, u: number, density: NoCoverDensity,
-  kindText: string): { layout: NoCoverNovelLayout; titleBox: NoCoverRect } {
-  const spineWidth = clamp(width * 0.17, 7, 22);
+function buildNovelLayout(
+  width: number,
+  height: number,
+  u: number,
+  density: NoCoverDensity,
+  kindText: string,
+  padBottom: number,
+  reserveTopBadge: boolean,
+): { layout: NoCoverNovelLayout; titleBox: NoCoverRect } {
+  const spineWidth = clamp(width * 0.165, 7, 22);
   const spineLineX = Math.max(0, spineWidth - 2.5);
-  const padX = clamp(u * 7.0, 3.8, 12);
-  const padBottom = clamp(u * 6.5, 4.5, 11);
+  const padX = clamp(u * 7.2, 3.8, 12);
 
   const showFooter = kindText.length > 0 && density !== 'micro';
   const footerFontSizeVp = clamp(u * 7.0, 6.5, 11.0);
@@ -168,8 +197,8 @@ function buildNovelLayout(width: number, height: number, u: number, density: NoC
   const footerY = Math.max(0, height - padBottom - footerLineHeightVp);
 
   const showFooterRule = showFooter;
-  const ruleW = clamp(u * 8.5, 4.5, 13);
-  const ruleGap = clamp(u * 3.2, 2.0, 5.5);
+  const ruleW = clamp(u * 8.0, 4.5, 12.5);
+  const ruleGap = clamp(u * 3.0, 2.0, 5.0);
   const footerRule: NoCoverRect = showFooterRule
     ? {
         x: spineWidth + padX,
@@ -180,7 +209,7 @@ function buildNovelLayout(width: number, height: number, u: number, density: NoC
     : ZERO_RECT;
 
   const footerTextX = showFooterRule ? footerRule.x + footerRule.width + ruleGap : spineWidth + padX;
-  const footerMaxRight = Math.min(width - padX, width * 0.65);
+  const footerMaxRight = Math.min(width - padX, width * 0.56);
   const footerBox: NoCoverRect = showFooter
     ? {
         x: footerTextX,
@@ -190,10 +219,10 @@ function buildNovelLayout(width: number, height: number, u: number, density: NoC
       }
     : ZERO_RECT;
 
-  const naturalTopY = clamp(u * 10, 5, 11);
-  const topY = width >= 76 ? Math.max(33, clamp(u * 12, 8, 18)) : naturalTopY;
+  const naturalTopY = clamp(u * 12, 6, 18);
+  const topY = reserveTopBadge && width >= 76 ? Math.max(30, naturalTopY) : naturalTopY;
   const bottomY = showFooter
-    ? Math.max(topY, footerY - clamp(u * 4, 3, 7))
+    ? Math.max(topY, footerY - clamp(u * 5, 3.5, 8))
     : Math.max(topY, height - padBottom);
 
   const titleBox: NoCoverRect = {
@@ -219,41 +248,48 @@ function buildNovelLayout(width: number, height: number, u: number, density: NoC
   };
 }
 
-function buildComicLayout(width: number, height: number, u: number,
-  density: NoCoverDensity): { layout: NoCoverComicLayout; titleBox: NoCoverRect } {
-  const bottomBandHeight = clamp(height * 0.27, 15, 48);
-  const bottomBand: NoCoverRect = {
-    x: 0,
-    y: Math.max(0, height - bottomBandHeight),
-    width,
-    height: Math.min(height, bottomBandHeight),
-  };
-
+function buildComicLayout(
+  width: number,
+  height: number,
+  u: number,
+  density: NoCoverDensity,
+  padBottom: number,
+  reserveTopBadge: boolean,
+): { layout: NoCoverComicLayout; titleBox: NoCoverRect } {
   const padX = clamp(u * 8.5, 5, 14);
-  const badgeFontSizeVp = clamp(u * 7.5, 6.5, 11.5);
-  const badgeLineHeightVp = badgeFontSizeVp * 1.2;
-  const badgeMaxRight = Math.min(width - padX, width * 0.56);
-  const badgeBox: NoCoverRect = {
-    x: padX,
-    y: bottomBand.y + Math.max(0, (bottomBand.height - badgeLineHeightVp) / 2),
-    width: Math.max(0, badgeMaxRight - padX),
-    height: Math.min(bottomBand.height, badgeLineHeightVp),
-  };
+  const showBadge = density !== 'micro';
+  const badgeFontSizeVp = clamp(u * 7.2, 6.5, 11.5);
+  const badgeLineHeightVp = badgeFontSizeVp * 1.25;
+  const footerY = Math.max(0, height - padBottom - badgeLineHeightVp);
 
-  const showAccentMark = density !== 'micro';
-  const markSize = clamp(u * 6, 4, 9);
+  const showAccentMark = showBadge;
+  const markSize = clamp(u * 4.0, 3.5, 6.5);
+  const markGap = clamp(u * 3.2, 2.0, 5.0);
   const accentMark: NoCoverRect = showAccentMark
     ? {
-        x: Math.max(0, width - padX - markSize),
-        y: bottomBand.y + Math.max(0, (bottomBand.height - markSize) / 2),
+        x: padX,
+        y: footerY + Math.max(0, (badgeLineHeightVp - markSize) / 2),
         width: markSize,
         height: markSize,
       }
     : ZERO_RECT;
 
-  const naturalTopY = clamp(u * 9, 5, 10);
-  const topY = width >= 76 ? Math.max(33, clamp(u * 11, 7, 17)) : naturalTopY;
-  const bottomY = Math.max(topY, bottomBand.y - clamp(u * 5, 3, 8));
+  const badgeTextX = showAccentMark ? accentMark.x + accentMark.width + markGap : padX;
+  const badgeMaxRight = Math.min(width - padX, width * 0.56);
+  const badgeBox: NoCoverRect = showBadge
+    ? {
+        x: badgeTextX,
+        y: footerY,
+        width: Math.max(0, badgeMaxRight - badgeTextX),
+        height: badgeLineHeightVp,
+      }
+    : ZERO_RECT;
+
+  const naturalTopY = clamp(u * 12, 6, 18);
+  const topY = reserveTopBadge && width >= 76 ? Math.max(30, naturalTopY) : naturalTopY;
+  const bottomY = showBadge
+    ? Math.max(topY, footerY - clamp(u * 5, 3.5, 8))
+    : Math.max(topY, height - padBottom);
   const titleBox: NoCoverRect = {
     x: padX,
     y: topY,
@@ -263,7 +299,7 @@ function buildComicLayout(width: number, height: number, u: number,
 
   return {
     layout: {
-      bottomBand,
+      showBadge,
       badgeBox,
       badgeFontSizeVp,
       badgeLineHeightVp,
@@ -281,6 +317,8 @@ function solveTitleLayout(
   variant: NoCoverVariant,
   density: NoCoverDensity,
   u: number,
+  coverHeight: number,
+  reserveTopBadge: boolean,
 ): NoCoverTitleLayout {
   if (titleBox.width <= 0 || titleBox.height <= 0 || u <= 0) {
     return {
@@ -291,7 +329,8 @@ function solveTitleLayout(
       letterSpacingVp: 0,
       maxLines: 1,
       textAlign: variant === 'comic' ? 'start' : 'center',
-      verticalAlign: 'center',
+      verticalAlign: 'top',
+      opticalPaddingTopVp: 0,
       wordBreak: measure.preferWordBreak ? 'break-word' : 'break-all',
     };
   }
@@ -339,13 +378,12 @@ function solveTitleLayout(
   const maxLines = Math.max(1, Math.min(densityLineCap, fitLines));
 
   let textAlign: NoCoverTextAlign = 'start';
-  let verticalAlign: NoCoverVerticalAlign = 'center';
+  const verticalAlign: NoCoverVerticalAlign = 'top';
   let letterSpacingVp = 0;
 
   if (variant === 'novel') {
     if (estimatedLines <= 2) {
       textAlign = 'center';
-      verticalAlign = 'center';
       if (measure.visualUnits <= 4) {
         letterSpacingVp = clamp(u * 0.8, 0.3, 1.5);
       } else if (measure.visualUnits <= 8) {
@@ -353,11 +391,20 @@ function solveTitleLayout(
       }
     } else {
       textAlign = 'start';
-      verticalAlign = 'center';
     }
   } else {
     textAlign = 'start';
-    verticalAlign = estimatedLines >= 3 ? 'top' : 'center';
+  }
+
+  let opticalPaddingTopVp = 0;
+  if (estimatedLines <= 2) {
+    const actualLines = Math.min(maxLines, estimatedLines);
+    const estTextHeight = actualLines * lineHeightVp;
+    const targetCenterY = reserveTopBadge
+      ? Math.max(titleBox.y + estTextHeight / 2 + 2, coverHeight * 0.43)
+      : coverHeight * 0.375;
+    const rawOffset = targetCenterY - estTextHeight / 2 - titleBox.y;
+    opticalPaddingTopVp = clamp(rawOffset, 0, Math.max(0, titleBox.height - estTextHeight));
   }
 
   return {
@@ -369,6 +416,7 @@ function solveTitleLayout(
     maxLines,
     textAlign,
     verticalAlign,
+    opticalPaddingTopVp,
     wordBreak: measure.preferWordBreak ? 'break-word' : 'break-all',
   };
 }
@@ -379,6 +427,7 @@ export function computeNoCoverLayout(
   title: string | undefined,
   kindLabel: string | undefined,
   requestedRadius: number = 8,
+  reserveTopBadge: boolean = false,
 ): NoCoverLayoutMetrics {
   const width = finitePositive(coverWidth);
   const height = finitePositive(coverHeight);
@@ -403,10 +452,10 @@ export function computeNoCoverLayout(
       footerLetterSpacingVp: 0,
     };
     const emptyComic: NoCoverComicLayout = {
-      bottomBand: ZERO_RECT,
+      showBadge: false,
       badgeBox: ZERO_RECT,
       badgeFontSizeVp: 7,
-      badgeLineHeightVp: 8.4,
+      badgeLineHeightVp: 8.75,
       showAccentMark: false,
       accentMark: ZERO_RECT,
     };
@@ -418,15 +467,18 @@ export function computeNoCoverLayout(
       variant,
       density,
       kindText,
-      title: solveTitleLayout(ZERO_RECT, displayTitle, measure, variant, density, 0),
+      footerBottomInsetVp: 0,
+      footerRightInsetVp: 0,
+      title: solveTitleLayout(ZERO_RECT, displayTitle, measure, variant, density, 0, 0, reserveTopBadge),
       novel: emptyNovel,
       comic: emptyComic,
     };
   }
 
   const u = Math.min(width / 90, height / 124);
-  const novelBuilt = buildNovelLayout(width, height, u, density, kindText);
-  const comicBuilt = buildComicLayout(width, height, u, density);
+  const footerInsets = noCoverFooterInsets(width, height);
+  const novelBuilt = buildNovelLayout(width, height, u, density, kindText, footerInsets.bottom, reserveTopBadge);
+  const comicBuilt = buildComicLayout(width, height, u, density, footerInsets.bottom, reserveTopBadge);
   const titleBox = variant === 'comic' ? comicBuilt.titleBox : novelBuilt.titleBox;
   const measure = estimateNoCoverTitleUnits(displayTitle);
 
@@ -437,7 +489,9 @@ export function computeNoCoverLayout(
     variant,
     density,
     kindText,
-    title: solveTitleLayout(titleBox, displayTitle, measure, variant, density, u),
+    footerBottomInsetVp: footerInsets.bottom,
+    footerRightInsetVp: footerInsets.right,
+    title: solveTitleLayout(titleBox, displayTitle, measure, variant, density, u, height, reserveTopBadge),
     novel: novelBuilt.layout,
     comic: comicBuilt.layout,
   };
