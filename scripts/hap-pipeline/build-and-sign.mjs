@@ -251,6 +251,14 @@ export function copySourceSandbox(source, destination, sandboxRoot = tmpdir(), {
   }
   const existingDestination = existsSync(destination);
   mkdirSync(destination, { recursive: true });
+  const rootExcludes = [
+    '.github',
+    '.pytest_cache',
+    '.worktrees',
+    'docs',
+    'evidence',
+    'tests',
+  ];
   const excludes = [
     '.git',
     '.reader-artifacts',
@@ -259,17 +267,11 @@ export function copySourceSandbox(source, destination, sandboxRoot = tmpdir(), {
     '.idea',
     '.appanalyzer',
     '.claude',
-    '.github',
-    '.pytest_cache',
-    '.worktrees',
     'build',
-    'docs',
     'entry/build',
     'entry/.cxx',
     'node_modules',
     'oh_modules',
-    'evidence',
-    'tests',
     '.reader-app-build.json',
     '.reader-pipeline-session.json',
   ];
@@ -278,8 +280,9 @@ export function copySourceSandbox(source, destination, sandboxRoot = tmpdir(), {
   // removing stale included entries, matching the former --delete contract.
   const excluded = path => {
     const local = relative(source, path).split(sep).join('/');
-    return excludes.some(entry => entry.includes('/') ? local === entry || local.startsWith(`${entry}/`)
-      : local.split('/').includes(entry));
+    return rootExcludes.some(entry => local === entry || local.startsWith(`${entry}/`)) ||
+      excludes.some(entry => entry.includes('/') ? local === entry || local.startsWith(`${entry}/`)
+        : local.split('/').includes(entry));
   };
   const omit = local => omitted.some(entry => local === entry || local.startsWith(`${entry}${sep}`));
   const skipCopy = path => {

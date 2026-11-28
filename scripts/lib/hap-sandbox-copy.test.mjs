@@ -175,9 +175,13 @@ test('copySourceSandbox omits docs, tests, and CI metadata directories outside B
   put(source, 'tests/sample.test.ts', 'unit test');
   put(source, '.github/workflows/ci.yml', 'workflow');
   put(source, '.pytest_cache/README.md', 'pytest');
-  const snapshot = copySourceSandbox(source, destination, cache, { incremental: true });
+  put(source, '.worktrees/wt/file.txt', 'worktree');
+  put(source, 'evidence/e.json', '{}');
+  put(source, 'entry/src/main/cpp/tests/unit.cpp', 'int test_main() { return 0; }\n');
+  const snapshot = copySourceSandbox(source, destination, cache, { incremental: false });
   assert.deepEqual(snapshot, sourceSnapshot(destination));
-  for (const omitted of ['docs', 'tests', '.github', '.pytest_cache']) {
+  assert.equal(existsSync(join(destination, 'entry/src/main/cpp/tests/unit.cpp')), true);
+  for (const omitted of ['docs', 'tests', '.github', '.pytest_cache', '.worktrees', 'evidence']) {
     assert.equal(existsSync(join(destination, omitted)), false, `${omitted} should not be copied into Hvigor sandbox`);
   }
 });
