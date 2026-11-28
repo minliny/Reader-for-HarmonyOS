@@ -13,6 +13,14 @@ export function readerTransitionsEnabled(): boolean {
     (AppStorage.get<boolean>('readerDeveloperMode') === true || AppStorage.get<boolean>('readerLayoutInvariantAutomation') === true);
 }
 
+/** Frame-by-frame JS sampling (createAnimator / postFrameCallback) is reserved
+ * for automated transition invariant probes, so enabling Developer Mode on
+ * device keeps native animateTo playback smooth. */
+export function readerTransitionFrameSamplingEnabled(): boolean {
+  return READER_LAYOUT_DEBUG_BUILD && AppStorage.get<boolean>('readerAppForeground') === true &&
+    AppStorage.get<boolean>('readerLayoutInvariantAutomation') === true;
+}
+
 export function observeReaderTransitions(receive: ReaderTransitionConsumer): () => void {
   consumer = receive;
   return (): void => { if (consumer === receive) consumer = undefined; };

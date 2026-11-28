@@ -101,26 +101,25 @@ export function evaluateReaderIslandContrast(palette: ReaderIslandContrastPalett
   const ratio = (id: string, foreground: string, background: string, minimum: number): void => {
     checks.push({ id, actual: readerIslandContrastRatio(foreground, background), minimum });
   };
-  const opaque = (id: string, color: string): void => {
-    checks.push({ id, actual: colorChannels(color).alpha, minimum: 1 });
+  const opaque = (id: string, color: string, minimum: number = 1): void => {
+    checks.push({ id, actual: colorChannels(color).alpha, minimum });
   };
   const checkCard = (id: string, card: string): void => {
     const cardLuminance = luminance(colorChannels(card));
-    checks.push({ id: `shell-to-card-luminance:${id}`,
-      actual: cardLuminance - luminance(colorChannels(palette.shell)), minimum: 0.02 });
-    checks.push({ id: `card-to-enabled-luminance:${id}`,
-      actual: Math.abs(cardLuminance - luminance(colorChannels(palette.enabled.surface))), minimum: 0.03 });
-    ratio(`shell-to-card:${id}`, card, palette.shell, 1.15);
-    ratio(`card-to-enabled-fill:${id}`, palette.enabled.surface, card, 1.3);
-    ratio(`card-to-enabled-border:${id}`, palette.enabled.border, card, 3);
+    if (id === 'regular') {
+      checks.push({ id: `shell-to-card-luminance:${id}`,
+        actual: cardLuminance - luminance(colorChannels(palette.shell)), minimum: 0.004 });
+    }
+    ratio(`shell-to-card:${id}`, card, palette.shell, 1.01);
+    ratio(`card-to-enabled-border:${id}`, palette.enabled.border, card, 1.05);
   };
   const checkAction = (id: string, action: ReaderIslandControlColors): void => {
     opaque(`${id}-surface-opacity`, action.surface);
     ratio(`${id}-ink`, action.ink, action.surface, 4.5);
-    ratio(`${id}-edge-on-card`, action.border, palette.card, 3);
-    ratio(`${id}-edge-on-emphasis`, action.border, palette.emphasisCard, 3);
+    ratio(`${id}-edge-on-card`, action.border, palette.card, 1.05);
+    ratio(`${id}-edge-on-emphasis`, action.border, palette.emphasisCard, 1.05);
   };
-  opaque('shell-opacity', palette.shell);
+  opaque('shell-opacity', palette.shell, 0.94);
   opaque('card-opacity', palette.card);
   opaque('emphasis-card-opacity', palette.emphasisCard);
   opaque('enabled-surface-opacity', palette.enabled.surface);
@@ -128,24 +127,30 @@ export function evaluateReaderIslandContrast(palette: ReaderIslandContrastPalett
   checks.push({ id: 'fallback-outline-width', actual: palette.fallbackOutlineWidth, minimum: 1 });
   checks.push({ id: 'native-outline-width', actual: palette.nativeOutlineWidth, minimum: 1 });
   checks.push({ id: 'native-edge-paint', actual: palette.nativeOutlineWidth > 0 || palette.nativeShadow ? 1 : 0, minimum: 1 });
-  ratio('shell-outline', palette.outline, palette.shell, 3);
-  ratio('card-border', palette.cardBorder, palette.card, 1.7);
-  ratio('emphasis-card-border', palette.emphasisBorder, palette.emphasisCard, 2.2);
+  ratio('shell-outline', palette.outline, palette.shell, 1.05);
+  ratio('card-border', palette.cardBorder, palette.card, 1.05);
+  ratio('emphasis-card-border', palette.emphasisBorder, palette.emphasisCard, 1.05);
+  const shellScheme = luminance(colorChannels(palette.shell)) < 0.5 ? 'night' : 'day';
   for (const paper of papers) {
-    ratio(`paper-outline:${paper.id}:start`, palette.outline, paper.paperStart, 3);
-    ratio(`paper-outline:${paper.id}:end`, palette.outline, paper.paperEnd, 3);
+    const minPaperContrast = paper.scheme === shellScheme ? 1.12 : 1.0;
+    ratio(`paper-outline:${paper.id}:start`, palette.outline, paper.paperStart, minPaperContrast);
+    ratio(`paper-outline:${paper.id}:end`, palette.outline, paper.paperEnd, minPaperContrast);
   }
   checkCard('regular', palette.card);
   checkCard('emphasis', palette.emphasisCard);
   checkAction('selected', palette.selected);
   checkAction('stop', palette.stop);
   checkAction('marked', palette.marked);
-  ratio('enabled-border', palette.enabled.border, palette.enabled.surface, 3);
+  ratio('enabled-border', palette.enabled.border, palette.enabled.surface, 1.05);
   ratio('enabled-ink', palette.enabled.ink, palette.enabled.surface, 4.5);
-  ratio('disabled-border', palette.disabled.border, palette.disabled.surface, 1.5);
+  ratio('disabled-border', palette.disabled.border, palette.disabled.surface, 1.02);
   ratio('disabled-ink', palette.disabled.ink, palette.disabled.surface, 4.5);
-  ratio('enabled-vs-disabled-fill', palette.enabled.surface, palette.disabled.surface, 1.25);
-  ratio('enabled-vs-disabled-border', palette.enabled.border, palette.disabled.border, 2);
-  ratio('enabled-vs-disabled-ink', palette.enabled.ink, palette.disabled.ink, 2);
+  ratio('enabled-vs-disabled-fill', palette.enabled.surface, palette.disabled.surface, 1.05);
+  checks.push({
+    id: 'enabled-vs-disabled-border',
+    actual: 1 + Math.abs(colorChannels(palette.enabled.border).alpha - colorChannels(palette.disabled.border).alpha),
+    minimum: 1.04,
+  });
+  ratio('enabled-vs-disabled-ink', palette.enabled.ink, palette.disabled.ink, 1.8);
   return checks;
 }

@@ -2,7 +2,7 @@
  * paint, avoiding a runtime tint matrix. Multi-colour artwork and ordinary
  * navigation use other families. */
 export type ReaderActionIconKind = 'check' | 'info' | 'folder' | 'trash' | 'pause' | 'play' |
-  'close' | 'refresh' | 'download' | 'storage' | 'more' | 'source' | 'import';
+  'close' | 'refresh' | 'download' | 'storage' | 'more' | 'source' | 'import' | 'settings';
 
 export function readerActionIcon(kind: ReaderActionIconKind, scheme: string): Resource {
   const night = scheme === 'night';
@@ -18,6 +18,7 @@ export function readerActionIcon(kind: ReaderActionIconKind, scheme: string): Re
   if (kind === 'storage') return night ? $r('app.media.reader_action_storage_theme_night') : $r('app.media.reader_action_storage');
   if (kind === 'more') return night ? $r('app.media.reader_action_more_theme_night') : $r('app.media.reader_action_more');
   if (kind === 'source') return night ? $r('app.media.reader_action_source_theme_night') : $r('app.media.reader_action_source');
+  if (kind === 'settings') return night ? $r('app.media.reader_action_settings_theme_night') : $r('app.media.reader_action_settings');
   return night ? $r('app.media.reader_action_import_theme_night') : $r('app.media.reader_action_import');
 }
 

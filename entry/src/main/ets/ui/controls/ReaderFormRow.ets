@@ -58,7 +58,7 @@ export struct ReaderFormRow {
           .borderRadius(14).scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
           .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion));
       }
-        .width('100%').constraintSize({ minHeight: 58 }).padding(0)
+        .width('100%').constraintSize({ minHeight: this.secondaryText.length > 0 ? 58 : 52 }).padding(0)
         .borderRadius(0).backgroundColor(Color.Transparent)
         .onTouch((event: TouchEvent): void => this.observePress(event))
         .enabled(this.canAct())
@@ -96,7 +96,7 @@ export struct ReaderFormRow {
               .borderRadius(14).scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
               .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion));
           }
-            .layoutWeight(1).constraintSize({ minHeight: 58 }).padding(0)
+            .layoutWeight(1).constraintSize({ minHeight: this.secondaryText.length > 0 ? 58 : 52 }).padding(0)
             .backgroundColor(Color.Transparent).enabled(this.canAct()).focusable(false)
             .accessibilityLevel('no-hide-descendants')
             .onTouch((event: TouchEvent): void => this.observePress(event))
@@ -111,7 +111,7 @@ export struct ReaderFormRow {
         }
       }
         .width('100%')
-        .constraintSize({ minHeight: this.kind === 'compact' ? 44 : 58 })
+        .constraintSize({ minHeight: this.kind === 'compact' ? 44 : (this.secondaryText.length > 0 ? 58 : 52) })
         .padding({ left: this.contentInset(), right: this.contentInset(),
           top: this.secondaryText.length > 0 ? 6 : 0, bottom: this.secondaryText.length > 0 ? 6 : 0 })
         .alignItems(VerticalAlign.Center)
@@ -148,7 +148,7 @@ export struct ReaderFormRow {
         fontFamily: TYPE_APP_ROW_LABEL.fontFamily, fontSize: `${TYPE_APP_ROW_LABEL.fontSizeFp}fp`,
         fontWeight: TYPE_APP_ROW_LABEL.fontWeight }));
       if (!Number.isFinite(labelWidth) || labelWidth <= 0) return;
-      const iconWidth = this.icon === undefined ? 0 : 28 + TOK_SPACE_SM;
+      const iconWidth = this.icon === undefined ? 0 : 32 + TOK_SPACE_SM;
       const requiredWidth = 2 * this.contentInset() + iconWidth + labelWidth + TOK_SPACE_SM + this.contentMinWidth;
       this.contentStacked = this.contentRowWidth < Math.ceil(requiredWidth);
     } catch (_) { /* Keep the current layout until measurement is available. */ }
@@ -161,9 +161,9 @@ export struct ReaderFormRow {
     Row({ space: TOK_SPACE_SM }) {
       if (this.icon !== undefined) {
         Stack({ alignContent: Alignment.Center }) {
-          Image(this.icon).width(15).height(15).objectFit(ImageFit.Contain).accessibilityLevel('no');
+          Image(this.icon).width(16).height(16).objectFit(ImageFit.Contain).accessibilityLevel('no');
         }
-          .width(28).height(28).borderRadius(14)
+          .width(32).height(32).borderRadius(10)
           .backgroundColor(readerAppColor('TOK_SETTING_ICON_BG', this.appThemeScheme));
       }
       if (this.secondaryText.length > 0) {

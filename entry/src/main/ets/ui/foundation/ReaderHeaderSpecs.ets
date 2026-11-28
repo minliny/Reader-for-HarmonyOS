@@ -83,10 +83,10 @@ export function readerPageInitialHeaderHeight(kind: 'bookshelf'): number {
  * read the same values, so the first frame matches the natural-height panel.
  */
 export class SearchHeaderSpec {
-  readonly panelInnerInset: number = 12;
-  readonly outerInsetPhone: number = 16;
+  readonly panelInnerInset: number = 14;
+  readonly outerInsetPhone: number = 14;
   readonly outerInsetTablet: number = 20;
-  readonly historyRadius: number = 24;
+  readonly historyRadius: number = 26;
   readonly borderWidth: number = TOK_BORDER_W;
   readonly panelBottomGap: number = 6;
   readonly barPaddingLeft: number = 5;

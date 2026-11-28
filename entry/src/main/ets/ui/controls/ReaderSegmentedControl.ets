@@ -29,9 +29,9 @@ interface ReaderSegmentSpec {
   surface: ReaderAppColorRole;
   border: ReaderAppColorRole;
 }
-export const READER_APP_THEME_SEGMENT_WIDTH = 168;
+export const READER_APP_THEME_SEGMENT_WIDTH = 162;
 const APP_THEME_SEGMENT: ReaderSegmentSpec = {
-  width: READER_APP_THEME_SEGMENT_WIDTH, padding: 4, radius: 12, itemRadius: 9, borderWidth: 1,
+  width: READER_APP_THEME_SEGMENT_WIDTH, padding: 3, radius: 11, itemRadius: 8, borderWidth: 1,
   activeText: 'app.segment.activeText',
   inactiveText: 'TOK_MUTED',
   selectedSurface: 'TOK_SURFACE_ELEVATED',
@@ -87,6 +87,7 @@ export struct ReaderSegmentedControl {
       .backgroundColor(readerAppColor(this.spec().surface, this.appThemeScheme))
       .border({ width: this.spec().borderWidth, color: readerAppColor(this.spec().border, this.appThemeScheme) })
       .borderRadius(this.spec().radius)
+      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
       .accessibilityText(this.accessibilityLabel)
       .alignItems(VerticalAlign.Center);
     }, (identity: string): string => identity);
@@ -167,7 +168,7 @@ export struct ReaderSegmentedControl {
         .fontSize(style.fontSizeFp).fontWeight(style.fontWeight)
         .minFontScale(0).maxFontScale(this.themeMaxFontScale)
         .maxLines(Math.max(1, this.optionLabel(id).length)).textOverflow({ overflow: TextOverflow.Clip })
-        .width('100%').constraintSize({ minHeight: 44 }).padding(0).textAlign(TextAlign.Center)
+        .width('100%').constraintSize({ minHeight: 30 }).padding(0).textAlign(TextAlign.Center)
         .backgroundColor(Color.Transparent).borderRadius(this.spec().itemRadius);
   }
   @Builder
@@ -180,12 +181,12 @@ export struct ReaderSegmentedControl {
             !opening.ids.every((id: string, i: number): boolean => this.optionIds[i] === id)) return;
           this.select(opening.identity, opening.ids[index] ?? '');
         },
-        itemSpace: LengthMetrics.vp(0), itemMinHeight: LengthMetrics.vp(44),
+        itemSpace: LengthMetrics.vp(0), itemMinHeight: LengthMetrics.vp(30),
         itemPadding: { top: LengthMetrics.vp(0), bottom: LengthMetrics.vp(0), start: LengthMetrics.vp(0), end: LengthMetrics.vp(0) },
         itemBorderRadius: LengthMetrics.vp(this.spec().itemRadius),
         itemFontColor: ColorMetrics.resourceColor(readerAppColor(this.spec().inactiveText, this.appThemeScheme)),
         itemSelectedFontColor: ColorMetrics.resourceColor(readerAppColor(this.spec().activeText, this.appThemeScheme)),
-        buttonPadding: LengthMetrics.vp(0), buttonMinHeight: LengthMetrics.vp(44),
+        buttonPadding: LengthMetrics.vp(0), buttonMinHeight: LengthMetrics.vp(30),
         itemSelectedBackgroundColor: ColorMetrics.resourceColor(readerAppColor(this.spec().selectedSurface, this.appThemeScheme)),
         itemShadow: { radius: 3 * readerWindowMetrics().densityPixels,
           color: readerAppColor('app.chrome.raisedShadowNear', this.appThemeScheme),

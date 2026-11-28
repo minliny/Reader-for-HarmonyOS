@@ -107,6 +107,21 @@ export function readerHeaderVeilBorder(scheme: string): string {
   return readerAppColor(HEADER_VEIL_SPEC.borderRole, scheme);
 }
 
+export function readerNativeScrolledHeaderMaterial(scheme: string): BackgroundEffectOptions {
+  return {
+    radius: HEADER_VEIL_SPEC.scrolledBlurRadius,
+    color: scheme === 'night' ? '#E61B1F1C' : '#E0ECE5D8',
+  };
+}
+
+export function readerNativeScrolledHeaderSolid(scheme: string): string {
+  return readerAppColor(scheme === 'night' ? 'TOK_CARD_BG' : 'TOK_PAPER', scheme);
+}
+
+export function readerNativeScrolledHeaderDivider(scheme: string): string {
+  return readerAppColor('TOK_LINE_STRONG', scheme);
+}
+
 export const READER_GLASS_BLUR_VP = 20;
 export const READER_HEAVY_GLASS_BLUR_VP = 24;
 const READER_BOTTOM_SHEET_RADIUS_VP = 24;
@@ -616,7 +631,7 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     surfaceShadowRole: 'TOK_SS_WINDOW_BORDER',
     pointerFillRole: 'TOK_SS_WINDOW_BG',
     pointerStrokeRole: 'TOK_SS_WINDOW_BORDER',
-    actionTextRole: 'TOK_SS_FOOTER_TEXT',
+    actionTextRole: 'TOK_MUTED',
     dividerRole: 'TOK_SS_WINDOW_BORDER',
     actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 0, actionLineHeight: 0,
   }),

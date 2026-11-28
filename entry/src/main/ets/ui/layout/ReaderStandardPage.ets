@@ -11,8 +11,20 @@ import { ReaderFrameStyle, readerFrameStyle } from './ReaderFrameStyle';
 import { ReaderPageScrollHost } from './ReaderPageScrollHost';
 import { ReaderScrollLayout, readerScrollLayout } from './ReaderScrollLayout';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { TOK_SCREEN_INSET } from '../foundation/ReaderLayoutTokens';
 import { ReaderEditingVisibility } from './ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from './ReaderEditingScrollBinding';
+import {
+  isReaderNativeChromeStyle,
+  isReaderRealtimeBlurEnabled,
+  type ReaderNavigationPreferences,
+} from '../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences } from '../surfaces/ReaderSurfaceMaterial';
+import {
+  readerNativeScrolledHeaderDivider,
+  readerNativeScrolledHeaderMaterial,
+  readerNativeScrolledHeaderSolid,
+} from '../surfaces/ReaderSurfaceSpecs';
 
 /** Standard pages share the resolved page geometry, Scroll body, measured
  * header clearance and footer budget. Pages supply business builders only. */
@@ -20,6 +32,8 @@ import { ReaderEditingScrollBinding } from './ReaderEditingScrollBinding';
 export struct ReaderStandardPage {
   @StorageLink('readerWindowMetricsRevision') @Watch('onLayoutInputsChanged') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') @Watch('onLayoutInputsChanged')
+  private navigationPreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
   @Prop @Watch('onLayoutInputsChanged') variant: ReaderStandardPageVariant = 'management';
   @Prop @Watch('onLayoutInputsChanged') floatingHeader: boolean = false;
   @Prop @Watch('onLayoutInputsChanged') embeddedWide: boolean = false;
@@ -29,6 +43,7 @@ export struct ReaderStandardPage {
   @Prop auditFooterDock: boolean = true;
   @Prop scrollOwner: 'page' | 'native-list' = 'page';
   @Prop initialScrollY: number = 0;
+  @State private headerScrolled: boolean = false;
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
   @State private measurementKey: number = 0;
   @State private footerMeasurementKey: number = 0;
@@ -57,17 +72,27 @@ export struct ReaderStandardPage {
 
   aboutToAppear(): void {
     this.mounted = true;
+    this.headerScrolled = Number.isFinite(this.initialScrollY) && this.initialScrollY > 4;
     this.onLayoutInputsChanged();
   }
 
   aboutToDisappear(): void {
     this.mounted = false;
+    this.headerScrolled = false;
     this.measurements.clear();
     this.headerInputs = '';
     this.footerInputs = '';
     this.viewportWidth = 0;
     this.viewportHeight = 0;
     this.viewportOriginX = 0;
+  }
+
+  private nativeChrome(): boolean {
+    return this.floatingHeader && isReaderNativeChromeStyle(this.navigationPreferences);
+  }
+
+  private effectiveFloatingHeader(): boolean {
+    return this.floatingHeader && !this.nativeChrome();
   }
 
   private onLayoutInputsChanged(): void {
@@ -77,7 +102,7 @@ export struct ReaderStandardPage {
     const originX = this.embeddedWide ? this.viewportOriginX : undefined;
     const headerInputs = JSON.stringify([width, metrics.systemFontScale, metrics.densityPixels, metrics.ready,
       readerPageSafeLeft(metrics, originX, true), readerPageSafeRight(metrics, originX, this.viewportWidth, true),
-      this.variant, this.floatingHeader]);
+      this.variant, this.effectiveFloatingHeader()]);
     const footerInputs = JSON.stringify([headerInputs, this.contentLeadingRail > 0,
       this.initialFooterHeight, readerStandardPageFooterBottom(this.variant, metrics)]);
     if (headerInputs !== this.headerInputs) {
@@ -99,7 +124,7 @@ export struct ReaderStandardPage {
 
   private headerHeight(): number {
     return this.measurements.readForGeneration('standard:header', this.measurementKey,
-      this.floatingHeader ? APP_FLOATING_HEADER_BAR_HEIGHT : APP_HEADER_BAR_HEIGHT);
+      this.effectiveFloatingHeader() ? APP_FLOATING_HEADER_BAR_HEIGHT : APP_HEADER_BAR_HEIGHT);
   }
 
   private footerHeight(): number {
@@ -115,7 +140,7 @@ export struct ReaderStandardPage {
     input.originX = this.embeddedWide ? this.viewportOriginX : undefined;
     input.measurementRevision = ++this.geometryRevision;
     input.headerHeight = this.headerHeight();
-    if (this.floatingHeader) applyReaderStandardFloatingHeader(input);
+    if (this.effectiveFloatingHeader()) applyReaderStandardFloatingHeader(input);
     input.contentGap = READER_STANDARD_PAGE_CONTENT_GAP;
     input.footerHeight = this.footerHeight();
     input.footerBottom = readerStandardPageFooterBottom(this.variant, metrics);
@@ -123,12 +148,29 @@ export struct ReaderStandardPage {
     input.contentEndInset = this.contentEndInset >= 0 ? this.contentEndInset :
       readerStandardPageContentEndInset(this.variant, metrics, input.footerHeight);
     input.contentMaxWidth = readerStandardPageSpec(this.variant).maxWidth;
-    input.contentHorizontalPadding = 19;
+    input.contentHorizontalPadding = TOK_SCREEN_INSET;
     this.geometry = resolveReaderPageGeometry(input);
   }
 
   private frameStyle(): ReaderFrameStyle {
     const pageBackground = readerAppColor('TOK_PAPER', this.appThemeScheme);
+    if (this.nativeChrome()) {
+      if (!this.headerScrolled) {
+        return readerFrameStyle({ backgroundColor: pageBackground,
+          headerTransparent: true,
+          headerBackground: pageBackground,
+          footerBackground: pageBackground });
+      }
+      const blur = isReaderRealtimeBlurEnabled(this.navigationPreferences);
+      const veil = readerNativeScrolledHeaderMaterial(this.appThemeScheme);
+      return readerFrameStyle({ backgroundColor: pageBackground,
+        headerTransparent: false,
+        headerBackground: readerNativeScrolledHeaderSolid(this.appThemeScheme),
+        headerBlurRadius: blur ? veil.radius : 0,
+        headerBlurColor: blur ? `${veil.color}` : '',
+        headerBottomDividerColor: readerNativeScrolledHeaderDivider(this.appThemeScheme),
+        footerBackground: pageBackground });
+    }
     return readerFrameStyle({ backgroundColor: pageBackground,
       headerTransparent: this.floatingHeader,
       headerBackground: this.variant === 'settingsHome' ? pageBackground :
@@ -201,6 +243,13 @@ export struct ReaderStandardPage {
           (): number => this.geometry.content.startInset))
         .onDisAppear((): void => this.editingScroll.unmount())
         .onAreaChange((): void => this.editingHost?.refresh())
+        .onDidScroll((): void => {
+          try {
+            const offset = this.scroller.currentOffset()?.yOffset;
+            const next = typeof offset === 'number' && Number.isFinite(offset) && offset > 4;
+            if (next !== this.headerScrolled) this.headerScrolled = next;
+          } catch (_detached) {}
+        })
         .width('100%').height('100%')
         .contentStartOffset(this.geometry.content.startInset)
         .contentEndOffset(this.geometry.content.endInset)
@@ -214,6 +263,7 @@ export struct ReaderStandardPage {
   @Builder private scrollContent() {
     ReaderPageScrollHost({ scroller: this.scroller, layout: this.scrollLayout(), editingHost: this.editingHost,
       initialScrollY: this.initialScrollY,
+      onScrolledChange: (scrolled: boolean): void => { this.headerScrolled = scrolled; },
       content: (): void => { this.pageContent(); } });
   }
 

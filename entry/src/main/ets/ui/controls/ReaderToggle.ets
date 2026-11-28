@@ -124,7 +124,7 @@ export struct ReaderToggle {
             .onAppear((): void => this.restoreNativeFocus(identity, revision))
             .onChange((next: boolean): void => this.toggle(identity, revision, next));
         }, (revision: number): string => revision.toString());
-      }.width(44).height(44);
+      }.width(44).height(26).clip(false);
     }, (identity: string): string => identity);
   }
   private canAct(identity: string): boolean {

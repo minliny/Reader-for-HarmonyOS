@@ -7,11 +7,23 @@ export class ReaderHeaderFrameStyle {
   readonly transparent: boolean;
   readonly clip: boolean;
   readonly backgroundColor: string;
+  readonly blurRadius: number;
+  readonly blurColor: string;
+  readonly bottomDividerColor: string;
 
-  constructor(transparent: boolean, backgroundColor: string) {
+  constructor(
+    transparent: boolean,
+    backgroundColor: string,
+    blurRadius: number = 0,
+    blurColor: string = '',
+    bottomDividerColor: string = '',
+  ) {
     this.transparent = transparent;
     this.clip = !transparent;
     this.backgroundColor = transparent ? '#00000000' : backgroundColor;
+    this.blurRadius = transparent ? 0 : blurRadius;
+    this.blurColor = transparent ? '' : blurColor;
+    this.bottomDividerColor = transparent ? '' : bottomDividerColor;
   }
 }
 
@@ -53,6 +65,9 @@ export interface ReaderFrameStyleOptions {
   safeArea?: ReaderSafeAreaPolicy;
   headerBackground: string;
   headerTransparent?: boolean;
+  headerBlurRadius?: number;
+  headerBlurColor?: string;
+  headerBottomDividerColor?: string;
   footerBackground: string;
   footerSolid?: boolean;
 }
@@ -60,6 +75,12 @@ export interface ReaderFrameStyleOptions {
 export function readerFrameStyle(options: ReaderFrameStyleOptions): ReaderFrameStyle {
   return new ReaderFrameStyle(options.backgroundColor, options.clip !== false,
     options.alignment ?? 'topStart', options.safeArea ?? 'none',
-    new ReaderHeaderFrameStyle(options.headerTransparent === true, options.headerBackground),
+    new ReaderHeaderFrameStyle(
+      options.headerTransparent === true,
+      options.headerBackground,
+      options.headerBlurRadius ?? 0,
+      options.headerBlurColor ?? '',
+      options.headerBottomDividerColor ?? '',
+    ),
     new ReaderFooterFrameStyle(options.footerSolid === true, options.footerBackground));
 }

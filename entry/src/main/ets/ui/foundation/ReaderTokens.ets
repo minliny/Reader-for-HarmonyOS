@@ -147,8 +147,7 @@ export const TOK_RADIUS_PILL = 999;
 // ----------------------------------------------------------------------------
 // Responsive — 响应式参数 (内容屏边距 / 内容最大宽度)
 // ----------------------------------------------------------------------------
-// HarmonyOS calibration: 屏边距 19 (Figma 变量 screen/padding=16, 但节点实测用 19。
-// 该值为节点实测/校准值, 非正式 Figma Variable 来源, 与 TOK_ON_* 等 Variable 绑定区分)。
+// 墨纸青松 2.0 屏边距 16 (与 ReaderLayoutTokens / design-size-contract.json 一致)。
 export { TOK_SCREEN_INSET } from './ReaderLayoutTokens';
 // Figma: 内容列宽 (Phone 390−2×19)
 export const TOK_CONTENT_MAX_W_PHONE = 352;
@@ -215,10 +214,6 @@ export const TOK_READ_IMMERSIVE_META_NIGHT = readerThemeDefinition('paperNight')
 export const TOK_SS_WINDOW_BG = readerAppColor('TOK_SS_WINDOW_BG', 'day');
 // Figma: source-switch window border rgba(155,132,102,0.24)
 export const TOK_SS_WINDOW_BORDER = readerAppColor('TOK_SS_WINDOW_BORDER', 'day');
-// Figma: source-switch muted text  排序/关闭字形次级文字
-export const TOK_SS_MUTED = readerAppColor('TOK_SS_MUTED', 'day');
-// Figma: source-switch footer count text  底部书源计数
-export const TOK_SS_FOOTER_TEXT = readerAppColor('TOK_SS_FOOTER_TEXT', 'day');
 // Figma: source-switch close button pill rgba(238,230,219,0.42)
 export const TOK_SS_CLOSE_BG = readerAppColor('TOK_SS_CLOSE_BG', 'day');
 // Figma: source-switch sort pill rgba(155,132,102,0.10)

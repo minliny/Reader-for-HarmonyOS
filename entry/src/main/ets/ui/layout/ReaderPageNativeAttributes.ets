@@ -19,7 +19,13 @@ export class ReaderHeaderFrameModifier implements AttributeModifier<CommonAttrib
   private readonly style: ReaderHeaderFrameStyle;
   constructor(style: ReaderHeaderFrameStyle) { this.style = style; }
   applyNormalAttribute(instance: CommonAttribute): void {
-    instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor).zIndex(10);
+    const blurred = !this.style.transparent && this.style.blurRadius > 0 && this.style.blurColor.length > 0;
+    instance.clip(this.style.clip)
+      .backgroundEffect(blurred ? { radius: this.style.blurRadius, color: this.style.blurColor } : undefined)
+      .backgroundColor(blurred ? Color.Transparent : this.style.backgroundColor)
+      .border(this.style.bottomDividerColor.length > 0 ?
+        { width: { bottom: 1 }, color: this.style.bottomDividerColor } : { width: 0, color: Color.Transparent })
+      .zIndex(10);
   }
 }
 

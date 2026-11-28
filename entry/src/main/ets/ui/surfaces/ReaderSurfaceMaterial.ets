@@ -51,7 +51,7 @@ const materialFallbackPaint: WeakMap<ReaderSurfaceMaterialDecision, string> =
 
 function materialFallbackRole(role: ReaderSurfaceMaterialRole): ReaderAppColorRole {
   switch (role) {
-    case 'chromeBar': return 'TOK_PAPER';
+    case 'chromeBar': return 'app.navigation.floatingSurface';
     case 'floatingDock': return 'app.surface.dock';
     case 'sessionCapsule': return 'app.sessionCapsule.surface';
     case 'controlPanel': return 'TOK_READ_SURFACE';
@@ -82,17 +82,9 @@ export function readerSurfaceMaterialDecision(
   systemScheme: string,
 ): ReaderSurfaceMaterialDecision {
   const decision = resolveReaderSurfaceMaterial(role, preferences, readerHarmonyCapabilities(), appScheme, systemScheme);
-  if (!decision.native) return decision;
-  // Callers choose opaque fallback paint from this decision. Admit native
-  // material only after its optional SDK constructor has succeeded.
-  try {
-    if (deviceInfo.distributionOSApiVersion >= 260000) {
-      if (deviceInfo.apiAvailable('26.0.0') && readerImmersiveMaterial(decision) !== undefined) {
-        materialFallbackPaint.set(decision, readerAppColor(materialFallbackRole(role), appScheme));
-        return decision;
-      }
-    }
-  } catch (_) { /* Preserve the caller's normal surface paint. */ }
+  // ArkUI uiMaterial.ImmersiveMaterial leaves floating surfaces completely
+  // see-through without Paper & Pine frosted backdrop tinting on API 26 hardware.
+  // Keep quality realtime blur on the unified Paper & Pine backgroundEffect path.
   return {
     native: false,
     style: decision.style,

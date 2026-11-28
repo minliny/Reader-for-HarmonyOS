@@ -10,10 +10,11 @@ export const SEARCH_CAPSULE_HEIGHT = 36;
 export const SEARCH_CAPSULE_HORIZONTAL_INSET = 12;
 export const SEARCH_CAPSULE_ICON_GAP = 7;
 export const SEARCH_BOOK_PANEL_ICON_SIZE = 14;
-export const SEARCH_CAPSULE_EMPTY_CHROME =
-  2 * SEARCH_CAPSULE_HORIZONTAL_INSET + SEARCH_BOOK_PANEL_ICON_SIZE + SEARCH_CAPSULE_ICON_GAP;
-export const SEARCH_HISTORY_FONT_SIZE = 12;
-export const SEARCH_HISTORY_LINE_HEIGHT = 16;
+export const SEARCH_CAPSULE_EMPTY_CHROME = 2 * SEARCH_CAPSULE_HORIZONTAL_INSET;
+export const SEARCH_HISTORY_FONT_SIZE = 13;
+export const SEARCH_HISTORY_LINE_HEIGHT = 18;
+export const SEARCH_HISTORY_ROW_HEIGHT = 40;
+export const SEARCH_HISTORY_MAX_ROWS = 6;
 // Kept as a named recipe input for older callers. The capsule no longer adds
 // vertical padding on top of its fixed 32vp paint height.
 export const SEARCH_HISTORY_VERTICAL_PADDING = 0;
@@ -40,4 +41,8 @@ export function readerSearchControlVisualHeight(fontScale: number): number {
 }
 export function readerSearchHistoryControlHeight(fontScale: number): number {
   return Math.ceil(SEARCH_HISTORY_VISUAL_HEIGHT + SEARCH_HISTORY_LINE_HEIGHT * Math.max(0, fontScale - 1));
+}
+export function readerSearchHistoryRowHeight(fontScale: number): number {
+  const scale = Number.isFinite(fontScale) ? Math.max(1, fontScale) : 1;
+  return Math.ceil(SEARCH_HISTORY_ROW_HEIGHT + SEARCH_HISTORY_LINE_HEIGHT * Math.max(0, scale - 1));
 }

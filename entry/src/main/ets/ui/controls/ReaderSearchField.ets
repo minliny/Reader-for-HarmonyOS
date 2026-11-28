@@ -539,7 +539,6 @@ export struct ReaderSearchField {
   @Builder
   private bookEditorLane() {
     Row() {
-      this.magnifier();
       TextInput({ placeholder: this.placeholder, text: this.text, controller: this.bookInputController })
         .id('reader-book-search-input')
         // This gates programmatic focus. Native TextInput taps still open the keyboard.
