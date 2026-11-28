@@ -3,6 +3,15 @@ import type { ShelfBook } from '../../../app/ReaderCoreGateway';
 import type { ReaderSurfaceRect } from '../../../ui/layout/ReaderSurfaceRect';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import {
+  bookshelfBookIdentityKey,
+  bookshelfBookRenderKey,
+  bookshelfRowRenderKey,
+  bookshelfRowSlotKey,
+  reconcileBookshelfRows,
+  type BookshelfBookSlotLike,
+  type BookshelfRowSlotLike,
+} from './BookshelfRowReconciler';
+import {
   TOK_BORDER_W,
   TOK_RADIUS_MD,
   TOK_SPACE_CARD_PADDING,
@@ -47,18 +56,48 @@ export class BookshelfBookActionFocusFrame extends FrameCallback {
   onIdle(_remaining: number): void {}
 }
 
+export { bookshelfBookIdentityKey, bookshelfBookRenderKey, bookshelfRowRenderKey, bookshelfRowSlotKey };
+
+@Observed
+export class BookshelfBookSlot implements BookshelfBookSlotLike {
+  readonly key: string;
+  book: ShelfBook;
+  columnIndex: number;
+  signature: string;
+
+  constructor(key: string, book: ShelfBook, columnIndex: number, signature: string) {
+    this.key = key;
+    this.book = book;
+    this.columnIndex = columnIndex;
+    this.signature = signature;
+  }
+}
+
+@Observed
+export class BookshelfRowSlot implements BookshelfRowSlotLike<BookshelfBookSlot> {
+  readonly rowIndex: number;
+  books: ShelfBook[];
+  slots: BookshelfBookSlot[];
+  signature: string;
+
+  constructor(rowIndex: number, books: ShelfBook[], slots: BookshelfBookSlot[], signature: string) {
+    this.rowIndex = rowIndex;
+    this.books = books;
+    this.slots = slots;
+    this.signature = signature;
+  }
+}
+
 export class BookshelfRowDataSource implements IDataSource {
-  private items: ShelfBook[][] = [];
+  private rows: BookshelfRowSlot[] = [];
   private listeners: DataChangeListener[] = [];
-  private keys: string[] = [];
-  private readonly positions: Map<string, number> = new Map();
   private readonly renderKey: (row: ShelfBook[]) => string;
   constructor(renderKey: (row: ShelfBook[]) => string) { this.renderKey = renderKey; }
 
-  totalCount(): number { return this.items.length; }
-  getData(index: number): ShelfBook[] { return this.items[index]; }
-  positionForKey(key: string, fallback: number): () => number {
-    return (): number => this.positions.get(key) ?? fallback;
+  totalCount(): number { return this.rows.length; }
+  getData(index: number): BookshelfRowSlot { return this.rows[index]; }
+  booksAt(index: number): ShelfBook[] {
+    return index >= 0 && index < this.rows.length ? this.rows[index].books : [];
   }
   registerDataChangeListener(listener: DataChangeListener): void {
     if (this.listeners.indexOf(listener) < 0) this.listeners.push(listener);
@@ -68,38 +107,25 @@ export class BookshelfRowDataSource implements IDataSource {
     if (index >= 0) this.listeners.splice(index, 1);
   }
   replace(items: ShelfBook[][]): void {
-    const keys = items.map((row: ShelfBook[]): string => this.renderKey(row));
-    const previous = this.keys;
-    const shared = Math.min(previous.length, keys.length);
-    const samePrefix = previous.slice(0, shared).every((key: string, index: number): boolean => key === keys[index]);
-    this.items = items;
-    this.keys = keys;
-    this.positions.clear();
-    keys.forEach((key: string, index: number): void => { this.positions.set(key, index); });
-    if (samePrefix && previous.length === keys.length) return;
+    void this.renderKey;
+    const delta = reconcileBookshelfRows<BookshelfBookSlot, BookshelfRowSlot>(
+      this.rows,
+      items,
+      (key: string, book: ShelfBook, columnIndex: number, signature: string): BookshelfBookSlot =>
+        new BookshelfBookSlot(key, book, columnIndex, signature),
+      (rowIndex: number, books: ShelfBook[], slots: BookshelfBookSlot[], signature: string): BookshelfRowSlot =>
+        new BookshelfRowSlot(rowIndex, books, slots, signature),
+    );
+    if (delta.kind === 'none') return;
     for (const listener of this.listeners) {
-      if (samePrefix && keys.length > previous.length) listener.onDatasetChange([{
-        type: DataOperationType.ADD, index: previous.length,
-        count: keys.length - previous.length, key: keys.slice(previous.length),
+      if (delta.kind === 'add') listener.onDatasetChange([{
+        type: DataOperationType.ADD, index: delta.index, count: delta.count, key: delta.addedKeys,
       }]);
-      else if (samePrefix && keys.length < previous.length) listener.onDatasetChange([{
-        type: DataOperationType.DELETE, index: keys.length, count: previous.length - keys.length,
+      else listener.onDatasetChange([{
+        type: DataOperationType.DELETE, index: delta.index, count: delta.count,
       }]);
-      else listener.onDatasetChange([{ type: DataOperationType.RELOAD }]);
     }
   }
-}
-
-export function bookshelfRowRenderKey(row: ShelfBook[], _rowIndex: number): string {
-  return JSON.stringify(row.map((book: ShelfBook): Array<string | number> => [
-    book.sourceId, book.bookId, book.addedAt, book.title, book.author,
-    book.sourceName ?? '', book.coverUrl ?? '', book.kind ?? '', book.contentKind ?? '', book.currentChapterTitle ?? '',
-    book.currentChapterIndex ?? -1, book.chapterCount ?? -1, book.lastChapter ?? '',
-    book.unreadCount ?? 0, book.readProgress ?? -1,
-    book.readingPosition?.chapterIndex ?? -1, book.readingPosition?.chapterOffset ?? -1,
-    book.readingPosition?.updatedAt ?? -1, book.readingPosition?.locationRevision ?? '',
-    book.readingPosition?.bodyVersion ?? '', book.readingPosition?.processingVersion ?? '',
-  ]));
 }
 
 export interface BookshelfMeasureBookOriginParams {

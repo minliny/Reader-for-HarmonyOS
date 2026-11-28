@@ -4,6 +4,7 @@ import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPress
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { bookCoverDisplayUrl, rememberBookCoverFailure } from '../../../app/library/BookCoverDisplay';
+import { BookCoverFailureCache } from '../../../app/library/BookCoverFailureCache';
 import { BOOKSHELF_GRID_TEXT_GAP, BOOKSHELF_GRID_TITLE_LINES } from './BookshelfGridSpec';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
@@ -102,10 +103,13 @@ import { bookshelfFileDropTypes, type BookshelfFileDrop } from '../application/B
 import { dispatchBookshelfFileDrop, showBookshelfFileDropFeedback } from './BookshelfFileDropEvent';
 import {
   BookshelfBookActionFocusFrame,
+  BookshelfBookSlot,
   BookshelfMotionFrameCallback,
   BookshelfRowDataSource,
+  BookshelfRowSlot,
   bookshelfFileDropHint,
   bookshelfRowRenderKey,
+  bookshelfRowSlotKey,
   measureBookshelfBookOrigin,
 } from './BookshelfPageDataSource';
 import { BookshelfContinueCard } from './BookshelfContinueCard';
@@ -134,6 +138,52 @@ import {
 
 export { bookshelfFileDropHint };
 
+@Builder
+function emptyBookshelfRowBuilder(_slot: BookshelfRowSlot, _expandedLayout: boolean): void {}
+
+@Builder
+function emptyBookshelfBookBuilder(
+  _book: ShelfBook,
+  _expandedLayout: boolean,
+  _index: () => number,
+  _columnIndex: number,
+): void {}
+
+@Component
+struct BookshelfRowSlotHost {
+  @ObjectLink slot: BookshelfRowSlot;
+  @Prop expandedLayout: boolean = false;
+  @Prop renderStateKey: string = '';
+  @BuilderParam renderRow: (slot: BookshelfRowSlot, expandedLayout: boolean) => void = emptyBookshelfRowBuilder;
+
+  build() {
+    this.renderRow(this.slot, this.expandedLayout);
+  }
+}
+
+@Component
+struct BookshelfBookSlotHost {
+  @ObjectLink bookSlot: BookshelfBookSlot;
+  @Prop rowIndex: number = 0;
+  @Prop expandedLayout: boolean = false;
+  @Prop renderStateKey: string = '';
+  @BuilderParam renderCard: (
+    book: ShelfBook,
+    expandedLayout: boolean,
+    index: () => number,
+    columnIndex: number,
+  ) => void = emptyBookshelfBookBuilder;
+
+  build() {
+    this.renderCard(
+      this.bookSlot.book,
+      this.expandedLayout,
+      (): number => this.rowIndex * bookshelfColumnCount(this.expandedLayout) + this.bookSlot.columnIndex,
+      this.bookSlot.columnIndex,
+    );
+  }
+}
+
 /**
  * Figma-backed Bookshelf with the canonical Cover and List projections.
  *
@@ -151,7 +201,7 @@ export struct BookshelfPage {
   private readonly shelfScroller: Scroller = new Scroller();
   @State private paneWidth: number = 0;
   private viewportRestored: boolean = false;
-  @State private failedCoverUrls: string[] = [];
+  @State private failedCoverUrls: string[] = BookCoverFailureCache.snapshotUrls();
   private coverFailureGeneration: number = 0;
   private projectedWideLayout: boolean = false;
   private viewportRestoreGeneration: number = 0;
@@ -279,6 +329,7 @@ export struct BookshelfPage {
 
   aboutToAppear(): void {
     this.mounted = true;
+    this.failedCoverUrls = BookCoverFailureCache.snapshotUrls();
     this.detailReturnFocus = this.takeDetailReturnFocus(this.navigationGeneration);
     registerReaderShelfFonts(this.getUIContext().getFont());
     this.prepareListTextFonts();
@@ -630,21 +681,21 @@ export struct BookshelfPage {
         }
       }
 
-      // One stable row/card tree owns both projections. Replacing the list and
-      // grid subtrees made ArkUI mount the target at its final geometry, so the
-      // Figma shared-cover motion had no persistent actor to interpolate.
-      LazyForEach(this.rowDataSource, (row: ShelfBook[], rowIndex: number) => {
+      // One stable row/card tree owns both projections. Keep LazyForEach row
+      // slots keyed by index and mutate changed books in-place via @Observed
+      // slots so background refreshes or returning from reading never reload covers.
+      LazyForEach(this.rowDataSource, (slot: BookshelfRowSlot) => {
         ListItem() {
-          // Keep the ListItem and its stable key when its layout form changes.
-          if (this.isWideViewport()) {
-            this.projectionRow(row, true,
-              this.rowDataSource.positionForKey(this.bookRowRenderKey(row, rowIndex), rowIndex));
-          } else {
-            this.projectionRow(row, false,
-              this.rowDataSource.positionForKey(this.bookRowRenderKey(row, rowIndex), rowIndex));
-          }
+          BookshelfRowSlotHost({
+            slot,
+            expandedLayout: this.isWideViewport(),
+            renderStateKey: this.slotRenderStateKey(),
+            renderRow: (currentSlot: BookshelfRowSlot, expanded: boolean): void => {
+              this.projectionRow(currentSlot, expanded);
+            },
+          });
         }
-      }, (row: ShelfBook[], rowIndex: number): string => this.bookRowRenderKey(row, rowIndex));
+      }, (slot: BookshelfRowSlot): string => bookshelfRowSlotKey(slot.rowIndex));
     }
     .width(this.shelfContentWidth(this.isWideViewport()))
     .height('100%')
@@ -711,9 +762,8 @@ export struct BookshelfPage {
       const itemY = this.shelfScroller.getItemRect(this.firstVisibleItem).y;
       if (!Number.isFinite(offset) || !Number.isFinite(itemY)) return;
       const rowIndex = this.firstVisibleItem - this.shelfHeaderItems();
-      const row = rowIndex >= 0 && rowIndex < this.rowDataSource.totalCount() ?
-        this.rowDataSource.getData(rowIndex) : undefined;
-      const key = row !== undefined && row.length > 0 ?
+      const row = this.rowDataSource.booksAt(rowIndex);
+      const key = row.length > 0 ?
         JSON.stringify([row[0].sourceId, row[0].bookId]) : '';
       // Publish the complete native sample together. An invalid/detached read
       // must not pair a new offset with the previous identity or item position.
@@ -740,7 +790,7 @@ export struct BookshelfPage {
       if (!this.isShelfPresentationCurrent(navigation) || generation !== this.viewportRestoreGeneration) return;
       let anchor = -1;
       for (let index = 0; index < this.rowDataSource.totalCount(); index += 1) {
-        if (this.rowDataSource.getData(index).some((book: ShelfBook): boolean =>
+        if (this.rowDataSource.booksAt(index).some((book: ShelfBook): boolean =>
           JSON.stringify([book.sourceId, book.bookId]) === key)) { anchor = index; break; }
       }
       if (anchor < 0) {
@@ -916,20 +966,32 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private projectionRow(row: ShelfBook[], expandedLayout: boolean, rowIndex: () => number) {
+  private projectionRow(slot: BookshelfRowSlot, expandedLayout: boolean) {
     Stack({ alignContent: Alignment.TopStart }) {
-      ForEach(row, (book: ShelfBook, columnIndex: number) => {
-        this.projectionBookCard(book, expandedLayout, (): number => rowIndex() * bookshelfColumnCount(expandedLayout) + columnIndex, columnIndex);
-      }, (book: ShelfBook): string => `${book.sourceId}:${book.bookId}`);
+      ForEach(slot.slots, (bookSlot: BookshelfBookSlot) => {
+        BookshelfBookSlotHost({
+          bookSlot,
+          rowIndex: slot.rowIndex,
+          expandedLayout,
+          renderStateKey: this.slotRenderStateKey(),
+          renderCard: (book: ShelfBook, cardExpanded: boolean, index: () => number, columnIndex: number): void => {
+            this.projectionBookCard(book, cardExpanded, index, columnIndex);
+          },
+        });
+      }, (bookSlot: BookshelfBookSlot): string => bookSlot.key);
     }
     .width(this.shelfContentWidth(expandedLayout))
-    .height(this.projectionRowHeight(row, expandedLayout, rowIndex() * bookshelfColumnCount(expandedLayout)))
+    .height(this.projectionRowHeight(slot.books, expandedLayout, slot.rowIndex * bookshelfColumnCount(expandedLayout)))
     // The native no-expand child range can expose only the first generated
     // card of this ForEach row. Publish the already-mounted card and cover
     // actors by their stable ids so the developer scanner can resolve every
     // column and the cover boundary at each column.
     .customProperty('readerLayoutDebugMountedIds',
-      this.layoutDebugMountedIds(row));
+      this.layoutDebugMountedIds(slot.books));
+  }
+
+  private slotRenderStateKey(): string {
+    return `${this.viewMode}:${this.viewSwitchRunning ? this.viewSwitchTimeMs : 0}:${this.viewSwitchGridContentOpacity}:${this.viewSwitchListContentOpacity}:${this.viewSwitchDestinationCoverOpacity}:${this.viewSwitchMorphCoverOpacity}:${this.visibleBookCount}:${this.failedCoverUrls.length}:${this.shelfPressKey}:${this.navigationGeneration}:${this.reduceMotion ? 1 : 0}:${this.appThemeScheme}:${this.readerWindowMetricsRevision}:${this.mainViewportRevision}:${this.wideNavigationRail ? 1 : 0}:${this.listTextFontRevision}:${this.paneWidth}`;
   }
 
   private layoutDebugMountedIds(row: ShelfBook[]): string {
@@ -1639,7 +1701,7 @@ export struct BookshelfPage {
     for (let index = 0; index < visible.length; index += columns) {
       rows.push(visible.slice(index, index + columns));
     }
-    const oldFirst = this.rowDataSource.totalCount() > 0 ? this.rowDataSource.getData(0)[0] : undefined;
+    const oldFirst = this.rowDataSource.booksAt(0)[0];
     const newFirst = rows.length > 0 ? rows[0][0] : undefined;
     const shifted = oldFirst !== undefined && newFirst !== undefined &&
       (oldFirst.sourceId !== newFirst.sourceId || oldFirst.bookId !== newFirst.bookId);
@@ -1677,7 +1739,7 @@ export struct BookshelfPage {
     }
     const firstRow = Math.max(0, this.firstVisibleItem - this.shelfHeaderItems());
     for (let index = firstRow; index < this.rowDataSource.totalCount() && books.length < 6; index += 1) {
-      for (const book of this.rowDataSource.getData(index)) {
+      for (const book of this.rowDataSource.booksAt(index)) {
         if (books.length >= 6) break;
         if (!books.some((value: ShelfBook): boolean => value.sourceId === book.sourceId && value.bookId === book.bookId)) {
           books.push(book);
@@ -1788,7 +1850,7 @@ export struct BookshelfPage {
     const firstRow = Math.max(0, this.firstVisibleItem - leadingItems);
     const lastRow = Math.min(this.rowDataSource.totalCount() - 1, this.lastVisibleItem - leadingItems);
     for (let row = firstRow; row <= lastRow && this.viewSwitchRanks.size < 9; row += 1) {
-      const books = this.rowDataSource.getData(row);
+      const books = this.rowDataSource.booksAt(row);
       for (let column = 0; column < books.length && this.viewSwitchRanks.size < 9; column += 1) {
         if (this.measureBookOrigin(books[column]) === undefined) continue;
         this.viewSwitchRanks.set(row * bookshelfColumnCount(this.projectedWideLayout) + column, this.viewSwitchRanks.size);
@@ -1920,6 +1982,7 @@ export struct BookshelfPage {
     const generation = this.coverFailureGeneration;
     return (): void => {
       if (!this.mounted || generation !== this.coverFailureGeneration || url === undefined) return;
+      BookCoverFailureCache.recordFailure(url);
       const next = rememberBookCoverFailure(this.failedCoverUrls, url);
       if (next !== this.failedCoverUrls) this.failedCoverUrls = next;
     };

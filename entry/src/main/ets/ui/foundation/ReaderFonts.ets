@@ -58,7 +58,7 @@ const READER_UI_FONT_FAMILIES: string[] = [
   READER_FONT_NOTO_SANS_SC_UI_BOLD,
 ];
 const READER_SHELF_FONT_FAMILIES: string[] = [READER_FONT_NOTO_SANS_SC,
-  ...READER_UI_FONT_FAMILIES, READER_FONT_NOTO_SANS_SC_UI_600];
+  ...READER_UI_FONT_FAMILIES, READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SERIF_SC_BOLD];
 const READER_SOURCE_SWITCH_FONT_FAMILIES: string[] = [...READER_UI_FONT_FAMILIES];
 
 export function prepareMangaSheetFonts(progress?: (family: string, phase: string) => void): Promise<boolean> {

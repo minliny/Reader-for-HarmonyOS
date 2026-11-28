@@ -1,4 +1,5 @@
 import { prepareReaderShelfFonts, prepareReaderFontFamily } from '../ui/foundation/ReaderFonts';
+import { BookCoverFailureCache } from '../app/library/BookCoverFailureCache';
 import { readerAppearanceSnapshotFontFamily } from '../features/reading/ui/ReaderAppearanceRenderStyle';
 import { setReaderAppearanceFont, type ReaderAppearanceSnapshot } from '../features/reading/application/ReaderAppearanceState';
 import { ReaderCustomFontHost } from '../app/ReaderCustomFontHost';
@@ -143,6 +144,7 @@ export default class EntryAbility extends UIAbility {
         }
       }).catch((): void => {});
     this.shelfFontsReady = trace.measure('startup.shelf-fonts', (): Promise<void> => prepareReaderShelfFonts());
+    const coverFailureCacheReady = BookCoverFailureCache.attachCacheDir(this.context.cacheDir).catch((): void => {});
     void this.shelfFontsReady.catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Shelf font preparation failed: %{private}s', error.message);
     });
@@ -244,7 +246,7 @@ export default class EntryAbility extends UIAbility {
         hilog.info(DOMAIN, 'Reader', 'Public UI fixture source and long-directory book verified: %{public}s', fixture.id);
       });
     }
-    this.recoveryReady = Promise.all([this.themeReady, this.bookshelfModeReady, dataReady])
+    this.recoveryReady = Promise.all([this.themeReady, this.bookshelfModeReady, coverFailureCacheReady, dataReady])
       .then(async (): Promise<void> => {
         if (this.runtimeOwner === owner) {
           // Reader-only fonts can prepare after confirmed recovery without

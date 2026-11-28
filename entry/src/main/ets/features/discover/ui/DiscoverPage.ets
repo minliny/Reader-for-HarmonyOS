@@ -8,6 +8,8 @@ import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { TYPE_APP_SECTION_LABEL, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_LABEL, TYPE_DISCOVER_AUTHOR, TYPE_DISCOVER_CATEGORY, TYPE_DISCOVER_FILTER_LABEL, TYPE_DISCOVER_FILTER_VALUE, TYPE_DISCOVER_INTRO, TYPE_DISCOVER_RANK_TITLE, TYPE_DISCOVER_SOURCE_META, TYPE_DISCOVER_STATE_TITLE, TYPE_DISCOVER_STATUS } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { NoCoverCover } from '../../../ui/patterns/NoCoverCover';
+import { rememberBookCoverFailure } from '../../../app/library/BookCoverDisplay';
+import { BookCoverFailureCache } from '../../../app/library/BookCoverFailureCache';
 import { readerSourceCategoryLabel } from '../../source/application/ReaderSourceCategory';
 // Discover main page — rebuilt 2026-08-06 against live Figma node 376:2
 // (Reference/Discover/Phone · 390×844).
@@ -73,11 +75,12 @@ export struct DiscoverPage {
   onOpenBook: (book: DiscoverBook) => void = (_book: DiscoverBook): void => {};
   private mounted: boolean = false;
   private lastReadFeedback: string = '';
-  @State private failedCoverUrls: string[] = [];
+  @State private failedCoverUrls: string[] = BookCoverFailureCache.snapshotUrls();
   @State private failedCoverGeneration: number = -1;
 
   aboutToAppear(): void {
     this.mounted = true;
+    this.failedCoverUrls = BookCoverFailureCache.snapshotUrls();
     this.onGeometryInputsChanged();
     this.lastReadFeedback = this.readFeedbackIdentity();
     registerReaderFonts(this.getUIContext().getFont());
@@ -406,20 +409,20 @@ export struct DiscoverPage {
 
   private coverUrl(book: DiscoverBook): string {
     const url = this.currentBook(book).coverUrl.trim();
-    return this.failedCoverGeneration === (this.presentation.operation?.generation ?? 0) &&
-      this.failedCoverUrls.includes(url) ? '' : url;
+    return this.failedCoverUrls.includes(url) ? '' : url;
   }
 
   private coverErrorHandler(url: string, generation: number): () => void {
     return (): void => {
       if (!this.mounted || generation !== (this.presentation.operation?.generation ?? 0) ||
         !this.presentation.books.some((book: DiscoverBook): boolean => book.coverUrl.trim() === url)) return;
+      BookCoverFailureCache.recordFailure(url);
       if (this.failedCoverGeneration !== generation) {
         this.failedCoverGeneration = generation;
-        this.failedCoverUrls = [url];
-      } else if (!this.failedCoverUrls.includes(url)) {
-        this.failedCoverUrls = [...this.failedCoverUrls, url];
+        this.failedCoverUrls = BookCoverFailureCache.snapshotUrls();
       }
+      const next = rememberBookCoverFailure(this.failedCoverUrls, url);
+      if (next !== this.failedCoverUrls) this.failedCoverUrls = next;
     };
   }
 

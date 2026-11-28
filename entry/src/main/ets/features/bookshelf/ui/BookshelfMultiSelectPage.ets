@@ -26,7 +26,8 @@ import { BOOKSHELF_LIST_CARD_PADDING, BOOKSHELF_LIST_COLUMN_GAP, BOOKSHELF_LIST_
   bookshelfGridFrame, bookshelfListCardWidth, BookshelfGridFrame, BookshelfListTextBudget, BookshelfListTextFrame,
   prepareBookshelfListTextFonts, bookshelfSelectionCardHeight } from './BookshelfGridSpec';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
-import { bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
+import { bookCoverDisplayUrl, rememberBookCoverFailure } from '../../../app/library/BookCoverDisplay';
+import { BookCoverFailureCache } from '../../../app/library/BookCoverFailureCache';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { DEFAULT_BOOKSHELF_VIEW } from '../application/BookshelfViewMode';
@@ -58,7 +59,7 @@ export struct BookshelfMultiSelectPage {
   onRemoveSelected: (keys: string[]) => void = (_keys: string[]): void => {};
   @State private viewportWidth: number = 0;
   @State private selectedKeys: string[] = [];
-  @State private failedCoverUrls: string[] = [];
+  @State private failedCoverUrls: string[] = BookCoverFailureCache.snapshotUrls();
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
   @State private measurementKey: number = 0;
   @State private footerMeasurementKey: number = 0;
@@ -76,6 +77,7 @@ export struct BookshelfMultiSelectPage {
 
   aboutToAppear(): void {
     this.mounted = true;
+    this.failedCoverUrls = BookCoverFailureCache.snapshotUrls();
     registerReaderFonts(this.getUIContext().getFont());
     this.prepareSelectionHeaderFonts();
     this.prepareListTextFonts();
@@ -570,8 +572,10 @@ export struct BookshelfMultiSelectPage {
 
   private coverErrorHandler(url: string | undefined): () => void {
     return (): void => {
-      if (!this.mounted || url === undefined || this.failedCoverUrls.includes(url)) return;
-      this.failedCoverUrls = [...this.failedCoverUrls, url];
+      if (!this.mounted || url === undefined) return;
+      BookCoverFailureCache.recordFailure(url);
+      const next = rememberBookCoverFailure(this.failedCoverUrls, url);
+      if (next !== this.failedCoverUrls) this.failedCoverUrls = next;
     };
   }
 
