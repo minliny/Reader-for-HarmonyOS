@@ -12,7 +12,7 @@ import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../..
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
-import { READER_ACTION_MIN_TARGET, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
+import { READER_ACTION_MIN_TARGET, readerActionTouchRegion, readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import { ReaderDelayedRowPress, readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
@@ -1013,7 +1013,7 @@ export struct SourceSwitchWindow {
         .border({ width: this.latestFirst === latestFirst ? 1 : 0, color: readerAppColor('TOK_PRIMARY_BORDER', this.appThemeScheme) })
         .accessibilityLevel('no');
     }.padding(0).constraintSize({ minWidth: 44, minHeight: 34 }).flexShrink(1).backgroundColor(Color.Transparent)
-      .responseRegion({ x: 0, y: -5, width: '100%', height: 44 })
+      .responseRegion(readerUnionTouchRegion('100%', 34))
       .enabled(this.filterInputCurrent())
       .accessibilityText(`排序：${label}`).accessibilitySelected(this.latestFirst === latestFirst)
       .onTouch((event: TouchEvent): void => this.observeFilterPress(event, this.sortPressKey(latestFirst), this.filterInputCurrent()))

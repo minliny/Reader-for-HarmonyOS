@@ -1,4 +1,4 @@
-import { TOK_SCREEN_INSET } from '../foundation/ReaderLayoutTokens';
+import { TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET } from '../foundation/ReaderLayoutTokens';
 import { APP_HEADER_BAR_HEIGHT } from '../foundation/ReaderHeaderMetrics';
 import { ReaderWindowMetricsSnapshot, readerVisualSafeLeft, readerVisualSafeRight } from '../foundation/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from './SurfaceHorizontalGeometry';
@@ -19,17 +19,17 @@ export class ReaderStandardPageSpec {
 
 export function readerStandardPageSpec(variant: ReaderStandardPageVariant): ReaderStandardPageSpec {
   switch (variant) {
-    case 'settings': return new ReaderStandardPageSpec(0, 720, 16);
-    case 'rssManagement': return new ReaderStandardPageSpec(0, 720, 24);
-    case 'rssFeed': return new ReaderStandardPageSpec(8, 720, 24);
-    case 'rssDetail': return new ReaderStandardPageSpec(12, 720, 8);
-    case 'sync': return new ReaderStandardPageSpec(16, 720, 18);
-    case 'sourceManagement': return new ReaderStandardPageSpec(8, 720, 12);
+    case 'settings': return new ReaderStandardPageSpec(0, TOK_CONTENT_MAX_W_TABLET, 16);
+    case 'rssManagement': return new ReaderStandardPageSpec(0, TOK_CONTENT_MAX_W_TABLET, 24);
+    case 'rssFeed': return new ReaderStandardPageSpec(8, TOK_CONTENT_MAX_W_TABLET, 24);
+    case 'rssDetail': return new ReaderStandardPageSpec(12, TOK_CONTENT_MAX_W_TABLET, 8);
+    case 'sync': return new ReaderStandardPageSpec(16, TOK_CONTENT_MAX_W_TABLET, 18);
+    case 'sourceManagement': return new ReaderStandardPageSpec(8, TOK_CONTENT_MAX_W_TABLET, 12);
     case 'settingsHome':
-    case 'settingsGeneral': return new ReaderStandardPageSpec(12, 720, 12);
+    case 'settingsGeneral': return new ReaderStandardPageSpec(12, TOK_CONTENT_MAX_W_TABLET, 12);
     case 'management':
     case 'tools':
-    case 'rssEditor': return new ReaderStandardPageSpec(16, Number.MAX_SAFE_INTEGER, 16);
+    case 'rssEditor': return new ReaderStandardPageSpec(16, TOK_CONTENT_MAX_W_TABLET, 16);
     default: throw new Error('Unknown Reader standard page variant');
   }
 }

@@ -68,6 +68,33 @@ export function readerSurfaceMaxHeight(
   return Math.max(0, finiteNonNegative(availableHeight) - finiteNonNegative(reservedHeight));
 }
 
+export class ReaderVerticalTouchBounds {
+  readonly y: number;
+  readonly height: number;
+  constructor(y: number, height: number) {
+    this.y = y;
+    this.height = height;
+  }
+}
+
+export function readerScaledWidth(
+  baseWidth: number,
+  fontScale: number,
+  maxWidth: number = Number.MAX_SAFE_INTEGER,
+): number {
+  const scaled = Math.ceil(finiteNonNegative(baseWidth) * readableScale(fontScale));
+  return Math.min(finiteNonNegative(maxWidth), scaled);
+}
+
+export function readerExpandedVerticalTouchBounds(
+  visualHeight: number,
+  minTarget: number = 44,
+): ReaderVerticalTouchBounds {
+  const h = finiteNonNegative(visualHeight);
+  const target = finiteNonNegative(minTarget);
+  return new ReaderVerticalTouchBounds(Math.min(0, (h - target) / 2), Math.max(target, h));
+}
+
 export function readerDynamicSurfaceWidth(
   maxWidth: number,
   availableWidth: number,

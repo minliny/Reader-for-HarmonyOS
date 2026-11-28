@@ -274,7 +274,7 @@ export struct PageBackBar {
   }
 
   private requestedRadius(): number {
-    return this.variant === 'download' ? DOWNLOAD_HEADER_RADIUS : this.effectiveFloating() ? this.barHeight() / 2 : 0;
+    return this.variant === 'download' ? this.barHeight() / 2 : this.effectiveFloating() ? this.barHeight() / 2 : 0;
   }
 
   private raisedShapeIdentity(): string {
@@ -330,7 +330,10 @@ export struct PageBackBar {
   }
 
   private barHeight(): number {
-    if (this.variant === 'download') return DOWNLOAD_HEADER_HEIGHT;
+    if (this.variant === 'download') {
+      return readerScaledBarHeight(DOWNLOAD_HEADER_HEIGHT,
+        TYPE_DOWNLOAD_HEADER_TITLE.lineHeightFp ?? 24, this.fontScale(), DOWNLOAD_HEADER_PADDING_Y);
+    }
     if (this.variant === 'mangaDirectory') return mangaDirectoryHeaderHeight(this.mangaFontScale());
     return this.effectiveFloating()
       ? readerScaledBarHeight(this.minimumBarHeightVp > 0 ? this.minimumBarHeightVp : APP_FLOATING_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0)

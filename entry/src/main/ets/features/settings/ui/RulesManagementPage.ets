@@ -150,7 +150,7 @@ export struct RulesManagementPage {
   @Builder
   private pageHeader() {
     PageBackBar({ floating: true, centered: true, elevation: 'floating', title: '规则与订阅',
-      showBack: !this.embeddedWide,
+      showBack: !this.embeddedWide, balancedCenteredSlots: !this.embeddedWide,
       backFocusId: this.backFocusId, onBack: (): void => { if (this.inputAllowed()) this.onBack(); } });
   }
 
@@ -188,7 +188,7 @@ export struct RulesManagementPage {
         .padding(TOK_SPACE_SM)
         .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
         .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-        .borderRadius(8);
+        .borderRadius(14);
     }
   }
 
@@ -216,8 +216,8 @@ export struct RulesManagementPage {
         this.input((): string => this.replacePattern, '查找表达式', (value: string): void => { this.replacePattern = value; }, draftKey);
         this.input((): string => this.replaceValue, '替换为', (value: string): void => { this.replaceValue = value; }, draftKey);
         Row({ space: TOK_SPACE_SM }) {
-          this.booleanField('启用', (): boolean => this.replaceEnabled, (next: boolean): void => { this.replaceEnabled = next; }, draftKey);
-          this.booleanField('正则', (): boolean => this.replaceRegex, (next: boolean): void => { this.replaceRegex = next; }, draftKey);
+          this.booleanField('启用', (): boolean => this.replaceEnabled, (next: boolean): void => { this.replaceEnabled = next; }, draftKey, true);
+          this.booleanField('正则', (): boolean => this.replaceRegex, (next: boolean): void => { this.replaceRegex = next; }, draftKey, true);
         }.width('100%');
         this.input((): string => this.replaceOrder, '排序', (value: string): void => { this.replaceOrder = value; }, draftKey);
         this.actionButton(this.replaceId < 0 ? '新增替换规则' : '保存替换规则', true, (): void => {
@@ -320,7 +320,7 @@ export struct RulesManagementPage {
       ForEach([this.draftKey('subscription')], (draftKey: string): void => {
         this.input((): string => this.subName, '名称', (value: string): void => { this.subName = value; }, draftKey);
         this.input((): string => this.subUrl, '订阅 URL', (value: string): void => { this.subUrl = value; }, draftKey);
-        ReaderSegmentedControl({ controlWidth: 232, options: ['书源', 'RSS 源', '替换规则'],
+        ReaderSegmentedControl({ controlWidth: -1, options: ['书源', 'RSS 源', '替换规则'],
           optionIds: ['book-source', 'rss-source', 'replace-rule'], accessibilityLabel: '订阅源类型',
           selectedIndex: this.subType, inputIdentity: draftKey, actionEnabled: this.actionAllowed(false, draftKey),
           onSelect: (index: number): void => {
@@ -367,7 +367,8 @@ export struct RulesManagementPage {
   }
 
   @Builder
-  private booleanField(label: string, value: () => boolean, action: (next: boolean) => void, draftKey: string) {
+  private booleanField(label: string, value: () => boolean, action: (next: boolean) => void, draftKey: string,
+    shareRow: boolean = false) {
     Row() {
       Text(label).layoutWeight(1).fontFamily(TYPE_APP_ROW_LABEL.fontFamily).fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
         .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp).lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
@@ -376,7 +377,9 @@ export struct RulesManagementPage {
         inputIdentity: `${draftKey}:${label}`,
         actionEnabled: this.inputAllowed(),
         onToggle: (next: boolean): void => { if (this.draftIsCurrent(draftKey)) action(next); } });
-    }.layoutWeight(1).constraintSize({ minHeight: 44 });
+    }.width(shareRow ? undefined : '100%')
+      .layoutWeight(shareRow ? 1 : 0)
+      .constraintSize({ minHeight: 44 });
   }
 
   @Builder
@@ -402,10 +405,12 @@ export struct RulesManagementPage {
     Column({ space: TOK_SPACE_XS }) {
       Column({ space: 3 }) {
         Text(title().length > 0 ? title() : '未命名').width('100%')
+          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontFamily(TYPE_APP_ROW_LABEL.fontFamily).fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
           .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp).lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         Text(detail()).width('100%')
+          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight)
           .fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).lineHeight(TYPE_APP_ROW_DETAIL.lineHeightFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .wordBreak(WordBreak.BREAK_WORD);
@@ -424,10 +429,12 @@ export struct RulesManagementPage {
     Column({ space: TOK_SPACE_XS }) {
       Column({ space: 3 }) {
         Text((this.currentSubscription(rule.id)?.name ?? rule.name) || '未命名').width('100%')
+          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontFamily(TYPE_APP_ROW_LABEL.fontFamily).fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
           .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp).lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         Text(`${this.subscriptionTypeLabel(this.currentSubscription(rule.id)?.type ?? rule.type)} · ${this.currentSubscription(rule.id)?.url ?? rule.url}`).width('100%')
+          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight)
           .fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).lineHeight(TYPE_APP_ROW_DETAIL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).wordBreak(WordBreak.BREAK_WORD);

@@ -14,6 +14,8 @@ import { ReaderDirectoryRulesGateway } from '../application/ReaderDirectoryRules
 import type { RulesMutationSnapshot } from '../../settings/application/RulesMutationOwner';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 
 class DirectoryRuleDraft {
   id: number; pattern: string; level: string; boundary: string;
@@ -50,6 +52,7 @@ export struct ReaderDirectoryRules {
   @Prop availableWidthVp: number = -1;
   @Prop availableHeightVp: number = -1;
   @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @State private rules: DirectoryRuleDraft[] = [];
   private nextRuleId: number = 0;
   @State private message: string = '';
@@ -342,7 +345,10 @@ export struct ReaderDirectoryRules {
           }.width('100%');
         }
       }, (rule: DirectoryRuleDraft): string => `${rule.id}`);
-        } }.height(Math.min(240, this.rules.length * 94, this.availableHeightVp >= 0 ? this.availableHeightVp : 240)).width('100%')
+        } }.height(Math.min(
+            readerScaledControlHeight(240, 36, readerReadableFontScale(this.readerWindowMetricsRevision < 0 ? 1 : readerWindowMetrics().systemFontScale)),
+            this.rules.length * readerScaledControlHeight(94, 36, readerReadableFontScale(this.readerWindowMetricsRevision < 0 ? 1 : readerWindowMetrics().systemFontScale)),
+            this.availableHeightVp >= 0 ? this.availableHeightVp : 240)).width('100%')
           .id(this.editingScroll.id)
           .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.editingScroller))
           .onDisAppear((): void => this.editingScroll.unmount())

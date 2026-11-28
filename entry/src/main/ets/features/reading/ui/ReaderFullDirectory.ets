@@ -37,6 +37,7 @@ import {
 } from '../../../ui/foundation/ReaderWindowMetrics';
 import {
   TOK_BORDER_W,
+  TOK_SCREEN_INSET,
 } from '../../../ui/foundation/ReaderTokens';
 
 import { isReaderLocalTxtFormat } from '../application/ReaderDirectoryNavigation';
@@ -892,12 +893,12 @@ export struct ReaderFullDirectory {
     const expanded = this.usesExpandedLayout();
     if (this.catalogContext === 'detail') {
       input.contentMaxWidth = expanded ? 720 : Number.MAX_SAFE_INTEGER;
-      input.contentHorizontalPadding = 18;
+      input.contentHorizontalPadding = TOK_SCREEN_INSET;
       input.contentHorizontalSafeArea = 'interactive';
     } else {
-      input.contentMaxWidth = expanded ? 720 : 364;
-      input.contentLeftGap = expanded ? 27 : 12;
-      input.contentRightGap = expanded ? 13 : 12;
+      input.contentMaxWidth = 720;
+      input.contentLeftGap = expanded ? 27 : TOK_SCREEN_INSET;
+      input.contentRightGap = expanded ? 13 : TOK_SCREEN_INSET;
       input.contentAlignment = expanded ? 'right' : 'center';
     }
     this.geometry = resolveReaderPageGeometry(input);

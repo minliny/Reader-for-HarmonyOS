@@ -1,7 +1,9 @@
 import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
-import { readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
+import { readerActionTouchRegion, readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
+import { readerScaledControlHeight, readerScaledWidth } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { TOK_CONTENT_MAX_W_TABLET } from '../../../ui/foundation/ReaderTokens';
 import { DOWNLOAD_HEADER_ACTION_WIDTH, DOWNLOAD_HEADER_ACTION_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
@@ -171,9 +173,18 @@ export function sharedDownloadSelectWidth(frame: SharedDownloadFrameView, value:
   const metrics = frame.metrics();
   const side = quick ? frame.layout.contentLeftInset() + frame.layout.contentRightInset() : DOWNLOAD_VISUAL.sheetBodySide * 2;
   const gap = quick ? DOWNLOAD_VISUAL.chapterToolbarGap : DOWNLOAD_VISUAL.settingsGap;
-  const available = Math.max(0, metrics.windowRect.width - side - gap - Math.max(0, context.px2vp(labelPx)));
+  const paneWidth = Math.min(TOK_CONTENT_MAX_W_TABLET, frame.layout.pageViewportWidth() > 0 ? frame.layout.pageViewportWidth() : metrics.windowRect.width);
+  const available = Math.max(0, paneWidth - side - gap - Math.max(0, context.px2vp(labelPx)));
   const desired = Math.ceil(context.px2vp(valuePx)) + 42;
   return Math.min(maximum, available, desired);
+}
+
+function sharedDownloadTextUnits(text: string): number {
+  let units = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    units += text.charCodeAt(i) <= 0x7F ? 0.62 : 1;
+  }
+  return units;
 }
 
 export function sharedDownloadPrimaryInk(scheme: string): string { return downloadVisualColor('green', scheme); }
@@ -278,21 +289,21 @@ export class SharedDownloadBookListOwner {
 
   listFilterWidth(): number {
     return Math.min(Math.max(0, this.listToolsAvailableWidth() - DOWNLOAD_VISUAL.listToolsGap),
-      Math.max(DOWNLOAD_VISUAL.touchTarget, this.filterLabel().length * TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp * this.view.frame.fontScale() +
+      Math.max(DOWNLOAD_VISUAL.touchTarget, Math.ceil(sharedDownloadTextUnits(this.filterLabel()) * TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp * this.view.frame.fontScale()) +
         DOWNLOAD_VISUAL.listToolIconSize + DOWNLOAD_VISUAL.listToolIconGap));
   }
 
   listSortLabelWidth(): number {
     return Math.min(Math.max(0, this.listToolsAvailableWidth() - DOWNLOAD_VISUAL.listToolsGap -
       DOWNLOAD_VISUAL.touchTarget - DOWNLOAD_VISUAL.sortPairGap),
-      Math.max(DOWNLOAD_VISUAL.touchTarget, Math.ceil(this.sortLabel().length * TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp * this.view.frame.fontScale()) + 6));
+      Math.max(DOWNLOAD_VISUAL.touchTarget, Math.ceil(sharedDownloadTextUnits(this.sortLabel()) * TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp * this.view.frame.fontScale()) + 6));
   }
 
   listSortWidth(): number { return DOWNLOAD_VISUAL.touchTarget + DOWNLOAD_VISUAL.sortPairGap + this.listSortLabelWidth(); }
 
   listToolCountWidth(): number {
-    return Math.min(this.listToolsAvailableWidth(), `${this.visibleBooks().length} / ${this.view.input.books().length} 本书`.length *
-      TYPE_DOWNLOAD_META.fontSizeFp * this.view.frame.fontScale());
+    return Math.min(this.listToolsAvailableWidth(), Math.ceil(sharedDownloadTextUnits(`${this.visibleBooks().length} / ${this.view.input.books().length} 本书`) *
+      TYPE_DOWNLOAD_META.fontSizeFp * this.view.frame.fontScale()));
   }
 
   listToolsInline(): boolean {
@@ -908,12 +919,13 @@ export function SharedDownloadBookRow(owner: SharedDownloadBookListOwner, input:
         Flex({ direction: FlexDirection.Row, justifyContent: FlexAlign.Start, alignItems: ItemAlign.Center }) {
           Text(input.secondary ? downloadChapterBookTitle(input.book()) : input.book().title).fontFamily(TYPE_DOWNLOAD_BOOK_TITLE.fontFamily).fontWeight(TYPE_DOWNLOAD_BOOK_TITLE.fontWeight)
             .fontSize(TYPE_DOWNLOAD_BOOK_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BOOK_TITLE.lineHeightFp as number).halfLeading(true)
+            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
             .fontColor(downloadVisualColor('ink', owner.view.frame.scheme())).flexShrink(1).textAlign(TextAlign.Start).wordBreak(WordBreak.BREAK_WORD);
           if (!input.secondary) {
             Image(sharedDownloadVisualIcon('chevron', owner.view.frame.scheme())).width(DOWNLOAD_VISUAL.titleChevronSize).height(DOWNLOAD_VISUAL.titleChevronSize)
               .flexShrink(0).margin({ left: DOWNLOAD_VISUAL.statusGap });
           }
-        }.layoutWeight(1).constraintSize({ minHeight: DOWNLOAD_VISUAL.bookTopHeight });
+        }.layoutWeight(1).constraintSize({ minHeight: Math.max(DOWNLOAD_VISUAL.bookTopHeight, Math.ceil(DOWNLOAD_VISUAL.bookTitleLineHeight * owner.view.frame.fontScale())) });
         if (!input.secondary && input.book().contentKind !== undefined) {
           Text(input.book().contentKind === 'manga' ? '漫画' : '小说')
             .fontFamily(TYPE_DOWNLOAD_TAG.fontFamily).fontWeight(TYPE_DOWNLOAD_TAG.fontWeight)
@@ -934,7 +946,7 @@ export function SharedDownloadBookRow(owner: SharedDownloadBookListOwner, input:
                 const current = owner.eventBook(input.book, input.ownerGeneration);
                 if (current !== undefined) owner.toggleBook(current.key, selected);
               });
-            }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.bookTopHeight);
+            }.width(DOWNLOAD_VISUAL.touchTarget).constraintSize({ minHeight: Math.max(DOWNLOAD_VISUAL.bookTopHeight, Math.ceil(DOWNLOAD_VISUAL.bookTitleLineHeight * owner.view.frame.fontScale())) });
           } else {
             Stack({ alignContent: Alignment.Center }) {
               SharedDownloadMoreButton(owner.view.frame, { label: (): string => `${input.book().title}的书籍操作`, action: (): void => {
@@ -942,13 +954,14 @@ export function SharedDownloadBookRow(owner: SharedDownloadBookListOwner, input:
                 if (current === undefined) return;
                 owner.view.actions.openBookActions(current.key);
               }, chapter: false, focusTarget: (): string => 'book-menu:' + input.book().key });
-            }.width(DOWNLOAD_VISUAL.touchTarget).height(DOWNLOAD_VISUAL.bookTopHeight);
+            }.width(DOWNLOAD_VISUAL.touchTarget).constraintSize({ minHeight: Math.max(DOWNLOAD_VISUAL.bookTopHeight, Math.ceil(DOWNLOAD_VISUAL.bookTitleLineHeight * owner.view.frame.fontScale())) });
           }
         }
-      }.constraintSize({ minHeight: DOWNLOAD_VISUAL.bookTopHeight }).width('100%').alignItems(VerticalAlign.Center);
+      }.constraintSize({ minHeight: Math.max(DOWNLOAD_VISUAL.bookTopHeight, Math.ceil(DOWNLOAD_VISUAL.bookTitleLineHeight * owner.view.frame.fontScale())) }).width('100%').alignItems(VerticalAlign.Center);
       Text(owner.authorSource(input.book())).fontFamily(TYPE_DOWNLOAD_SOURCE.fontFamily).fontWeight(TYPE_DOWNLOAD_SOURCE.fontWeight)
         .fontSize(TYPE_DOWNLOAD_SOURCE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_SOURCE.lineHeightFp as number).halfLeading(true)
-        .fontColor(downloadVisualColor('muted', owner.view.frame.scheme())).width('100%').wordBreak(WordBreak.BREAK_WORD)
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .fontColor(downloadVisualColor('muted', owner.view.frame.scheme())).width('100%')
         .constraintSize({ minHeight: DOWNLOAD_VISUAL.sourceLineHeight * owner.view.frame.fontScale() }).margin({ top: DOWNLOAD_VISUAL.sourceTop });
       Row({ space: DOWNLOAD_VISUAL.bookTopGap }) {
         Text(owner.downloadCount(input.book(), input.secondary)).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
@@ -1015,8 +1028,12 @@ function DownloadStatusButton(owner: SharedDownloadBookListOwner, input: Downloa
       Image(owner.statusIcon(input.book())).width(DOWNLOAD_VISUAL.statusIconSize).height(DOWNLOAD_VISUAL.statusIconSize);
       Text(input.book().stateLabel).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
         .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .fontColor(owner.statusInk(input.book())).textAlign(TextAlign.Center).layoutWeight(1);
-    }.width(DOWNLOAD_VISUAL.statusWidth).constraintSize({ minHeight: DOWNLOAD_VISUAL.statusHeight }).padding({ left: DOWNLOAD_VISUAL.statusPaddingX, right: DOWNLOAD_VISUAL.statusPaddingX }).borderRadius(DOWNLOAD_VISUAL.statusRadius)
+    }.constraintSize({
+      minWidth: readerScaledWidth(DOWNLOAD_VISUAL.statusWidth, owner.view.frame.fontScale(), 128),
+      minHeight: readerScaledControlHeight(DOWNLOAD_VISUAL.statusHeight, 16, owner.view.frame.fontScale()),
+    }).padding({ left: DOWNLOAD_VISUAL.statusPaddingX, right: DOWNLOAD_VISUAL.statusPaddingX }).borderRadius(DOWNLOAD_VISUAL.statusRadius)
       .backgroundColor(downloadVisualColor('soft', owner.view.frame.scheme()));
   } else {
   Button({ type: ButtonType.Normal }) {
@@ -1024,12 +1041,19 @@ function DownloadStatusButton(owner: SharedDownloadBookListOwner, input: Downloa
       Image(owner.statusIcon(input.book())).width(DOWNLOAD_VISUAL.statusIconSize).height(DOWNLOAD_VISUAL.statusIconSize);
       Text(owner.statusActionLabel(input.book())).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
         .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .fontColor(owner.statusInk(input.book()))
         .textAlign(TextAlign.Center).layoutWeight(1);
     }.width('100%');
-  }.id(sharedDownloadFocusKey('book-status:' + input.book().key)).width(DOWNLOAD_VISUAL.statusWidth).constraintSize({ minHeight: DOWNLOAD_VISUAL.statusHeight })
-    .responseRegion([{ x: 0, y: 0, width: '100%', height: '100%' },
-      readerActionTouchRegion(DOWNLOAD_VISUAL.statusWidth, DOWNLOAD_VISUAL.statusHeight)])
+  }.id(sharedDownloadFocusKey('book-status:' + input.book().key))
+    .constraintSize({
+      minWidth: readerScaledWidth(DOWNLOAD_VISUAL.statusWidth, owner.view.frame.fontScale(), 128),
+      minHeight: readerScaledControlHeight(DOWNLOAD_VISUAL.statusHeight, 16, owner.view.frame.fontScale()),
+    })
+    .responseRegion(readerUnionTouchRegion(
+      readerScaledWidth(DOWNLOAD_VISUAL.statusWidth, owner.view.frame.fontScale(), 128),
+      readerScaledControlHeight(DOWNLOAD_VISUAL.statusHeight, 16, owner.view.frame.fontScale()),
+    ))
     .padding({ left: DOWNLOAD_VISUAL.statusPaddingX, right: DOWNLOAD_VISUAL.statusPaddingX }).borderRadius(DOWNLOAD_VISUAL.statusRadius)
     .backgroundColor(downloadVisualColor('soft', owner.view.frame.scheme()))
     .enabled(!owner.view.frame.mount.managing()).opacity(owner.view.frame.mount.managing() ? DOWNLOAD_VISUAL.disabledOpacity : 1)

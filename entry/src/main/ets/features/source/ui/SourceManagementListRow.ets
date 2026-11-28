@@ -11,7 +11,9 @@ import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame'
 import { readerStableInteractiveSafeTop, readerStableInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerStandardPageSpec } from '../../../ui/layout/ReaderPageShell';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
-import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerCompactSearchHeight } from '../../../ui/foundation/ReaderSearchControlGeometry';
+import { readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
+import { readerScaledControlHeight, readerScaledWidth } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { resolveSourceManagementLayout, SOURCE_FOOTER_ACTION_HEIGHT, SOURCE_ROW_ACTION_GAP, SOURCE_ROW_ICON_WIDTH, type SourceManagementLayout } from '../presentation/SourceManagementLayout';
 import { sourceManagementFilterKey, copySourceManagementScroll, type SourceManagementScrollState } from '../presentation/SourceManagementScrollState';
 import { sourceV9DisplayUrl, sourceV9ReportTone, sourceV9Supports, type SourceV9Counts, type SourceV9ListAction, type SourceV9Projection, type SourceV9View } from '../presentation/SourceManagementV9';
@@ -710,7 +712,9 @@ export class SourceManagementListOwner {
   }
 
   footerActionHeight(): number {
-    if (this.host.presentation.batchMode()) return Math.max(54, Math.ceil(37 * this.host.native.fontScale()));
+    if (this.host.presentation.batchMode()) {
+      return Math.max(54, Math.ceil(16 + 4 + 14 * this.host.native.fontScale() + 14));
+    }
     const controlHeight = this.footerControlHeight();
     return this.footerStacked() ? controlHeight * 2 + TOK_SPACE_CONTROL_INLINE : controlHeight;
   }
@@ -720,9 +724,9 @@ export class SourceManagementListOwner {
     return resolveSourceManagementLayout({ availableWidth: this.host.native.contentFrame().width, fontScale: scale,
       hasLogin: !this.host.presentation.batchMode() && source?.loginUrl !== undefined && source.loginUrl.trim().length > 0,
       detectWidth: this.host.presentation.batchMode() ? 0 : 28, batchStatusWidth: this.host.presentation.batchMode() ? Math.ceil(35 * scale) : 0,
-      actionWidth: 58, actionHeight: this.host.presentation.batchMode() ? 34 : 36,
-      loginHeight: 26,
-      filterHeight: 40, footerHeight: this.footerActionHeight(),
+      actionWidth: readerScaledWidth(58, scale, 96), actionHeight: this.host.presentation.batchMode() ? 34 : 36,
+      loginHeight: readerScaledControlHeight(26, 15, scale),
+      filterHeight: readerCompactSearchHeight(40, 18, scale), footerHeight: this.footerActionHeight(),
       titleLineHeight: TYPE_SOURCE_MANAGEMENT_ROW_TITLE.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontSizeFp * 1.5,
       metaLineHeight: TYPE_SOURCE_MANAGEMENT_ROW_URL.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_ROW_URL.fontSizeFp * 1.5 });
   }
@@ -1232,8 +1236,15 @@ function SourceListLoginButton($$: SourceManagementListOwnerSlot, source: BookSo
         .fontColor($$.owner.loginInk(source));
     }.justifyContent(FlexAlign.Center);
   }.id($$.owner.verificationRowActionsCurrent(source) ? 'reader-source-text-row-login' : '')
-    .width(58).height(26).padding(2).flexShrink(0)
-    .responseRegion({ x: 0, y: -9, width: 58, height: 44 })
+    .constraintSize({
+      minWidth: readerScaledWidth(58, $$.owner.host.native.fontScale(), 96),
+      minHeight: readerScaledControlHeight(26, 15, $$.owner.host.native.fontScale()),
+    })
+    .padding({ left: 6, right: 6, top: 2, bottom: 2 }).flexShrink(0)
+    .responseRegion(readerUnionTouchRegion(
+      readerScaledWidth(58, $$.owner.host.native.fontScale(), 96),
+      readerScaledControlHeight(26, 15, $$.owner.host.native.fontScale()),
+    ))
     .attributeModifier(new ReaderPressFeedback($$.owner.loginSurface(source), $$.owner.host.presentation.appThemeScheme(), 13, 13,
       $$.owner.sourceActionEnabled() && source.checkState !== 'checking', $$.owner.rowPressed(source, 'login'), false))
     .onTouch((event: TouchEvent): void => $$.owner.rowPressTouch(source, 'login', event))
@@ -1290,7 +1301,7 @@ export function SourceManagementBatchFooter($$: SourceManagementListOwnerSlot, i
         } })
         .id(!$$.owner.hasTypographyLayoutOptions() ? '' : 'reader-source-text-footer-manage')
         .height($$.owner.footerControlHeight())
-        .responseRegion({ x: 0, y: -2, width: '100%', height: 44 })
+        .responseRegion(readerUnionTouchRegion('100%', $$.owner.footerControlHeight()))
         .width($$.owner.footerStacked() ? '100%' : $$.owner.footerManageWidth())
         .onAreaChange((_old: Area, area: Area): void => $$.owner.host.focus.onToolsEntryLayout(identity, 'footer', area));
       ReaderLabeledIconAction({ scheme: $$.owner.host.presentation.appThemeScheme(), specId: 'source-management-add', label: '导入书源', fillWidth: true, surfaceColor: readerAppColor('app.sourceUi.primary', $$.owner.host.presentation.appThemeScheme()),
@@ -1302,7 +1313,7 @@ export function SourceManagementBatchFooter($$: SourceManagementListOwnerSlot, i
         } })
         .id(!$$.owner.hasTypographyLayoutOptions() ? '' : 'reader-source-text-footer-add')
         .height($$.owner.footerControlHeight())
-        .responseRegion({ x: 0, y: -2, width: '100%', height: 44 })
+        .responseRegion(readerUnionTouchRegion('100%', $$.owner.footerControlHeight()))
         .width($$.owner.footerStacked() ? '100%' : undefined).layoutWeight($$.owner.footerStacked() ? 0 : 1);
     }.id($$.owner.footerStacked() ? 'reader-source-footer-stacked' : 'reader-source-footer-row')
       .width($$.owner.host.native.contentFrame().width).constraintSize({ minHeight: $$.owner.layoutBudget().footerHeight })
@@ -1317,7 +1328,7 @@ function SourceListBatchAction($$: SourceManagementListOwnerSlot, icon: Resource
     Column({ space: 2 }) {
       Image(icon).width(16).height(16).fillColor($$.owner.batchActionInk(action)).accessibilityLevel('no');
       Text(label).fontSize(10).maxLines(1).textAlign(TextAlign.Center)
-        .minFontSize(8).maxFontSize(10).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .minFontSize(10).maxFontSize(11).textOverflow({ overflow: TextOverflow.Ellipsis })
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontColor($$.owner.batchActionInk(action));
     }
   }.layoutWeight(1).height('100%').padding(2)

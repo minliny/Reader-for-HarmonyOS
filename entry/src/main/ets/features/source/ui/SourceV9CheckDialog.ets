@@ -6,8 +6,9 @@ import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
   READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { readerReadableFontScale } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerReadableFontScale, readerScaledControlHeight, readerScaledWidth } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import type { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReaderDialogViewport } from '../../../ui/surfaces/ReaderDialogViewport';
 import { DialogActionView, ReaderDialogSurface, readerDialogCardTransition,
@@ -224,9 +225,13 @@ export struct SourceV9CheckDialog {
     });
   }
 
-  private bodyHeight(viewportHeight: number): number {
+  private fontScale(): number {
     this.windowRevision;
-    const scale = readerReadableFontScale(readerWindowMetrics().systemFontScale);
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
+  }
+
+  private bodyHeight(viewportHeight: number): number {
+    const scale = this.fontScale();
     // The outer scroll keeps the actions reachable when the keyboard leaves too little room for the full card.
     return Math.max(72, Math.min(500, viewportHeight - Math.max(150, 100 * scale)));
   }
@@ -250,7 +255,7 @@ export struct SourceV9CheckDialog {
           TextInput({ text: this.keyword, placeholder: '自定义测试词' })
             .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(13)
             .fontColor(readerAppColor('TOK_INK', this.scheme)).backgroundColor(readerAppColor('app.sourceUi.field', this.scheme))
-            .width('100%').height(38).borderRadius(10)
+            .width('100%').constraintSize({ minHeight: readerScaledControlHeight(40, 18, this.fontScale()) }).borderRadius(10)
             .border({ width: 1, color: readerAppColor('TOK_LINE_STRONG', this.scheme) })
             .cancelButton({ style: CancelButtonStyle.INPUT })
             .enabled(!this.running && this.inputEnabled)
@@ -280,13 +285,18 @@ export struct SourceV9CheckDialog {
 
   @Builder
   private choice(word: string) {
-    Button(word, { type: ButtonType.Capsule, stateEffect: false }).height(32).padding({ left: 9, right: 9 })
+    Button(word, { type: ButtonType.Capsule, stateEffect: false })
+      .constraintSize({ minHeight: readerScaledControlHeight(32, 16, this.fontScale()) })
+      .padding({ left: 9, right: 9, top: 2, bottom: 2 })
       .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(12)
       .fontColor(readerAppColor(word === this.keyword ? 'app.sourceUi.onPrimary' : 'TOK_INK', this.scheme))
       .attributeModifier(new ReaderPressFeedback(
         readerAppColor(word === this.keyword ? 'app.sourceUi.primary' : 'app.sourceUi.field', this.scheme),
-        this.scheme, 16, 16, !this.running && this.inputEnabled))
-      .responseRegion({ y: -6, height: 44 })
+        this.scheme,
+        readerScaledControlHeight(32, 16, this.fontScale()) / 2,
+        readerScaledControlHeight(32, 16, this.fontScale()) / 2,
+        !this.running && this.inputEnabled))
+      .responseRegion(readerUnionTouchRegion('100%', readerScaledControlHeight(32, 16, this.fontScale())))
       .accessibilitySelected(word === this.keyword).enabled(!this.running && this.inputEnabled)
       .onClick((): void => {
         if (!this.running && this.inputEnabled) this.keyword = word === this.keyword ? '' : word;
@@ -348,7 +358,8 @@ export struct SourceV9CheckDialog {
             Image(this.scheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') :
               $r('app.media.reader_chevron_right')).width(14).height(14).accessibilityLevel('no');
           }.width('100%');
-        }.width('100%').height(44).padding({ left: 10, right: 10 })
+        }.width('100%').constraintSize({ minHeight: readerScaledControlHeight(44, 18, this.fontScale()) })
+          .padding({ left: 10, right: 10, top: 6, bottom: 6 })
           .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_CARD_BG', this.scheme),
             this.scheme, 0, 0, !this.running && this.inputEnabled))
           .border({ width: { bottom: index === this.rows.length - 1 ? 0 : 1 },
@@ -397,10 +408,22 @@ export struct SourceV9ReportSteps {
       .borderRadius(14).border({ width: 1, color: readerAppColor('TOK_LINE', this.scheme) });
   }
 
+  private stageFontScale(): number {
+    this.windowRevision;
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
+  }
+
+  @StorageLink('readerWindowMetricsRevision') private windowRevision: number = 0;
+
   @Builder
   private step(stage: SourceV9CheckChoice, step: SourceCheckReportStep | undefined) {
     Row({ space: 8 }) {
-      Text(stage.value).width(29).height(24).borderRadius(6).textAlign(TextAlign.Center)
+      Text(stage.value)
+        .constraintSize({
+          minWidth: readerScaledWidth(29, this.stageFontScale(), 48),
+          minHeight: readerScaledControlHeight(24, 14, this.stageFontScale()),
+        })
+        .padding({ left: 4, right: 4, top: 2, bottom: 2 }).borderRadius(6).textAlign(TextAlign.Center)
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(11)
         .fontColor(readerAppColor(step?.status === 'fail' ? 'app.sourceUi.danger' :
           step?.status === 'pass' ? 'TOK_PRIMARY_TEXT' : 'TOK_MUTED', this.scheme))

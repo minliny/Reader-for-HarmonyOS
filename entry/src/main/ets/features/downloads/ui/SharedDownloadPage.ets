@@ -15,7 +15,8 @@ import { readerPageAreaLength, readerPresentedHeaderBottom } from '../../../ui/l
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader, readerPageSafeLeft, readerPageSafeRight, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { prepareSharedDownloadFonts } from '../../../ui/foundation/ReaderFonts';
-import { DOWNLOAD_VISUAL, downloadVisualColor, sharedDownloadContentInsets } from './SharedDownloadVisualSpec';
+import { TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET } from '../../../ui/foundation/ReaderTokens';
+import { DOWNLOAD_VISUAL, downloadVisualColor } from './SharedDownloadVisualSpec';
 import { TYPE_DOWNLOAD_CONTROL, TYPE_DOWNLOAD_META, TYPE_DOWNLOAD_TAG, TYPE_DOWNLOAD_BOOK_TITLE, TYPE_DOWNLOAD_CHAPTER_TITLE } from './DownloadTypography';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderWindowMetricsSnapshot, readerStableInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
@@ -498,7 +499,7 @@ export struct SharedDownloadPage {
 
   private dockMaterialRadius(selection: boolean): number {
     return this.currentRaisedDockShape(selection)?.radius ?? resolveReaderRaisedShape(this.raisedDockShapeIdentity(selection),
-      this.currentMetrics().windowRect.width - this.dockLeftInset() - this.dockRightInset(),
+      this.pageViewportWidth() - this.dockLeftInset() - this.dockRightInset(),
       this.resolvedDockHeight(), DOWNLOAD_VISUAL.dockRadius)?.radius ?? 0;
   }
 
@@ -813,6 +814,8 @@ export struct SharedDownloadPage {
     input.viewportHeight = this.availableHeight();
     input.originX = this.embeddedWide ? this.pageOriginX : undefined;
     input.measurementRevision = this.measurementRevision;
+    input.contentMaxWidth = TOK_CONTENT_MAX_W_TABLET;
+    input.contentHorizontalPadding = TOK_SCREEN_INSET;
     // Compact lists retain their in-flow header. An embedded pane shares the
     // floating header geometry of the other settings destinations.
     input.chromeMode = fixedDock || this.embeddedWide ? 'overlay' : 'inline';
@@ -835,20 +838,26 @@ export struct SharedDownloadPage {
     return readerPageSafeRight(this.currentMetrics(), this.embeddedWide ? this.pageOriginX : undefined, this.pageWidth);
   }
 
-  private leftInset(): number { return Math.max(8, this.safeLeft()); }
+  private leftInset(): number { return Math.max(TOK_SCREEN_INSET, this.safeLeft()); }
 
-  private rightInset(): number { return Math.max(8, this.safeRight()); }
+  private rightInset(): number { return Math.max(TOK_SCREEN_INSET, this.safeRight()); }
 
-  private dockLeftInset(): number { return Math.max(30, this.safeLeft()); }
+  private dockLeftInset(): number {
+    const capInset = (this.pageViewportWidth() - TOK_CONTENT_MAX_W_TABLET) / 2;
+    return Math.max(DOWNLOAD_VISUAL.dockSide, this.safeLeft(), capInset);
+  }
 
-  private dockRightInset(): number { return Math.max(30, this.safeRight()); }
+  private dockRightInset(): number {
+    const capInset = (this.pageViewportWidth() - TOK_CONTENT_MAX_W_TABLET) / 2;
+    return Math.max(DOWNLOAD_VISUAL.dockSide, this.safeRight(), capInset);
+  }
 
   private contentLeftInset(): number {
-    return sharedDownloadContentInsets(this.safeLeft(), this.safeRight()).left;
+    return Math.max(DOWNLOAD_VISUAL.contentSide, this.pageGeometry().content.frame.left);
   }
 
   private contentRightInset(): number {
-    return sharedDownloadContentInsets(this.safeLeft(), this.safeRight()).right;
+    return Math.max(DOWNLOAD_VISUAL.contentSide, this.pageGeometry().content.frame.right);
   }
 
   private bottomInset(): number { return Math.max(DOWNLOAD_VISUAL.dockBottom, readerStableInteractiveSafeBottom(this.currentMetrics())); }

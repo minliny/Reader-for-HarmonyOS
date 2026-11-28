@@ -334,12 +334,14 @@ export struct BookshelfManagementPage {
   private recordRow(record: ShelfReadRecord) {
     Column({ space: 2 }) {
       Text(record.bookName).width('100%')
+        .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
         .fontFamily(TYPE_SHELF_MANAGEMENT_BOOK_TITLE.fontFamily)
         .fontWeight(TYPE_SHELF_MANAGEMENT_BOOK_TITLE.fontWeight)
         .fontSize(TYPE_SHELF_MANAGEMENT_BOOK_TITLE.fontSizeFp)
-        .lineHeight(TYPE_SHELF_MANAGEMENT_BOOK_TITLE.lineHeightFp as number)
+        .lineHeight(TYPE_SHELF_MANAGEMENT_BOOK_TITLE.lineHeightFp ?? 18)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       Text(`${this.formatDuration(record.readTime)} · ${this.formatTimestamp(record.lastRead)}`).width('100%')
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .fontFamily(TYPE_SHELF_MANAGEMENT_META.fontFamily)
         .fontWeight(TYPE_SHELF_MANAGEMENT_META.fontWeight)
         .fontSize(TYPE_SHELF_MANAGEMENT_META.fontSizeFp).lineHeight(TYPE_SHELF_MANAGEMENT_META.lineHeightFp as number)
@@ -349,11 +351,12 @@ export struct BookshelfManagementPage {
   }
 
   private managementTextRowHeight(): number {
-    if (this.readerWindowMetricsRevision < 0) return 68;
+    if (this.readerWindowMetricsRevision < 0) return 76;
     const scale = ReaderWindowCoordinator.metrics().systemFontScale;
-    const textHeight = Math.max(TYPE_SHELF_MANAGEMENT_GROUP_TITLE.lineHeightFp ?? 21,
-      TYPE_SHELF_MANAGEMENT_BOOK_TITLE.lineHeightFp ?? 21) + (TYPE_SHELF_MANAGEMENT_META.lineHeightFp ?? 18);
-    return Math.max(68, textHeight * (Number.isFinite(scale) && scale > 0 ? scale : 1) + 26);
+    const titleLine = TYPE_SHELF_MANAGEMENT_BOOK_TITLE.lineHeightFp ?? 18;
+    const textHeight = Math.max(TYPE_SHELF_MANAGEMENT_GROUP_TITLE.lineHeightFp ?? 21, titleLine * 2) +
+      (TYPE_SHELF_MANAGEMENT_META.lineHeightFp ?? 18);
+    return Math.max(76, Math.ceil(textHeight * (Number.isFinite(scale) && scale > 0 ? scale : 1) + 26));
   }
 
   @Builder

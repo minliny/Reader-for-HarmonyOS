@@ -163,11 +163,16 @@ export struct RssEntryDetailPage {
     }
   }
 
+  private trailingBarWidth(): number {
+    if (this.archivedFavorite !== undefined && this.originalUrl().length === 0) return 0;
+    return this.archivedFavorite === undefined ? 94 : 44;
+  }
+
   @Builder
   private backBar() {
     PageBackBar({
       floating: true, elevation: 'floating',
-      title: 'RSS 阅读', trailingWidthVp: 94,
+      title: 'RSS 阅读', trailingWidthVp: this.trailingBarWidth(),
       onBack: (): void => this.onBack(),
     }) {
       Row({ space: 6 }) {
@@ -183,7 +188,7 @@ export struct RssEntryDetailPage {
           .onClick((): void => { void this.openOriginal(); });
         }
       }
-      .width(94)
+      .width(this.trailingBarWidth())
       .constraintSize({ minHeight: 44 })
       .alignItems(VerticalAlign.Center);
     }
@@ -249,7 +254,7 @@ export struct RssEntryDetailPage {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-    .borderRadius(8);
+    .borderRadius(14);
   }
 
   @Builder
@@ -270,7 +275,7 @@ export struct RssEntryDetailPage {
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-    .borderRadius(8);
+    .borderRadius(14);
   }
 
   @Builder
@@ -313,7 +318,7 @@ export struct RssEntryDetailPage {
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-    .borderRadius(8);
+    .borderRadius(14);
   }
 
   @Builder
@@ -365,7 +370,7 @@ export struct RssEntryDetailPage {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-    .borderRadius(8)
+    .borderRadius(14)
     .enabled(this.hasOriginalLink())
     .onClick((): void => { void this.openOriginal(); });
   }

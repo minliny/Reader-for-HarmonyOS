@@ -9,7 +9,7 @@ import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import { resolveReaderButtonMatrixSize, resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
 import { readerPageAreaLength, readerStandardPageSpec } from '../../../ui/layout/ReaderPageShell';
-import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerReadableFontScale, readerScaledControlHeight, readerScaledWidth } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { resolveSourceToolsRowLayout, type SourceToolsRowLayout } from '../presentation/SourceToolsLayout';
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
 import { ReaderCardSpecId, resolveReaderCardSpec } from '../../../ui/surfaces/ReaderCardSpecs';
@@ -989,7 +989,7 @@ export struct SourceToolsPage {
       // Retire the previous native edit and its open choices when a task
       // takes ownership. Keep the log actors and the accepted text intact.
       ForEach([this.snapshot.busy], (busy: boolean): void => {
-        Row({ space: TOK_SPACE_SM }) {
+        Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_SM), cross: LengthMetrics.vp(8) } }) {
           ReaderInlineSelect({ reduceMotion: this.reduceMotion,
             value: this.snapshot.checkMode === 'explore' ? '发现' : '搜索',
             options: ['搜索', '发现'],
@@ -1039,7 +1039,9 @@ export struct SourceToolsPage {
   @Builder
   private debugLogRow(log: SourceDebugLog, index: number) {
     Row({ space: 9 }) {
-      Text(`${index + 1}`).width(22).fontFamily(MESSAGE_META.fontFamily as string)
+      Text(`${index + 1}`)
+        .constraintSize({ minWidth: readerScaledWidth(22, readerReadableFontScale(this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale), 44) })
+        .fontFamily(MESSAGE_META.fontFamily as string)
         .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
       Column({ space: 4 }) {

@@ -29,7 +29,7 @@ import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
 import { bookCoverDisplayUrl, rememberBookCoverFailure } from '../../../app/library/BookCoverDisplay';
 import { BookCoverFailureCache } from '../../../app/library/BookCoverFailureCache';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
+import { TOK_BORDER_W, TOK_CONTENT_RAIL_W_TABLET, TOK_SCREEN_INSET } from '../../../ui/foundation/ReaderTokens';
 import { DEFAULT_BOOKSHELF_VIEW } from '../application/BookshelfViewMode';
 
 const GRID_ROW_GAP = 12;
@@ -414,8 +414,8 @@ export struct BookshelfMultiSelectPage {
     input.footerInsetLeft = input.headerInsetLeft;
     input.footerInsetRight = input.headerInsetRight;
     input.footerHeight = this.removeBarClearance();
-    input.contentMaxWidth = this.isWide() ? 622 : 351;
-    input.contentHorizontalPadding = this.isWide() ? 20 : 7.5;
+    input.contentMaxWidth = TOK_CONTENT_RAIL_W_TABLET;
+    input.contentHorizontalPadding = TOK_SCREEN_INSET;
     input.contentHorizontalSafeArea = 'interactive';
     input.contentGap = 12;
     input.contentNativeEndInset = input.footerHeight;

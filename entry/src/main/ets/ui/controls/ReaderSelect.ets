@@ -2,6 +2,8 @@ import type { MeasureOptions } from '@ohos.measure';
 import { KeyCode } from '@kit.InputKit';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
+import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
+import { readerCompactSearchHeight } from '../foundation/ReaderSearchControlGeometry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { readerSelectAvailableWidth, readerSelectTriggerWidth,
@@ -203,7 +205,10 @@ export struct ReaderSelect {
 
   private triggerHeight(): number {
     if (this.variant === 'appearanceLibrary') return this.appearanceLibraryTriggerHeight(this.readerWindowMetricsRevision);
-    if (this.variant === 'sourceGroup') return 40;
+    if (this.variant === 'sourceGroup') {
+      const scale = readerReadableFontScale(this.readerWindowMetricsRevision < 0 ? 1 : readerWindowMetrics().systemFontScale);
+      return readerCompactSearchHeight(40, 18, scale);
+    }
     const style = TYPE_SELECT_DEFAULT_VALUE;
     return Math.max(TRIGGER_H, this.measuredValueHeight(style.fontSizeFp, style.fontFamily, style.fontWeight,
       style.lineHeightFp) + 16);

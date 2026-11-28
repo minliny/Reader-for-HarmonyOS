@@ -54,15 +54,15 @@ export class SharedDownloadVisualSpec {
   readonly contentBottom: number = 130;
   readonly tabsGap: number = 4;
   readonly tabsPadding: number = 4;
-  readonly tabsRadius: number = 13;
+  readonly tabsRadius: number = 12;
   readonly tabsTop: number = 12;
   readonly tabsBottom: number = 7;
   readonly tabHeight: number = 36;
-  readonly tabRadius: number = 10;
+  readonly tabRadius: number = 9;
   readonly tabPaddingX: number = 8;
   readonly tabPaddingY: number = 5;
   readonly searchHeight: number = 38;
-  readonly searchRadius: number = 13;
+  readonly searchRadius: number = 10;
   readonly searchGap: number = 8;
   readonly searchPaddingX: number = 11;
   readonly searchIconSize: number = 16;
@@ -92,7 +92,7 @@ export class SharedDownloadVisualSpec {
   readonly progressGap: number = 6;
   readonly statusWidth: number = 78;
   readonly statusHeight: number = 28;
-  readonly statusRadius: number = 7;
+  readonly statusRadius: number = 999;
   readonly statusPaddingX: number = 6;
   readonly statusIconSize: number = 14;
   readonly statusGap: number = 4;
@@ -109,7 +109,7 @@ export class SharedDownloadVisualSpec {
   readonly chapterPaddingX: number = 3;
   readonly chapterPaddingY: number = 9;
   readonly chapterActionHeight: number = 32;
-  readonly chapterActionRadius: number = 9;
+  readonly chapterActionRadius: number = 999;
   readonly chapterActionPaddingX: number = 9;
   readonly chapterActionPaddingY: number = 4;
   readonly chapterTitleFontSize: number = 12;
@@ -124,7 +124,7 @@ export class SharedDownloadVisualSpec {
   readonly chapterCheckSize: number = 17;
   readonly dockSide: number = 16;
   readonly dockBottom: number = 18;
-  readonly dockRadius: number = 18;
+  readonly dockRadius: number = 20;
   readonly dockPaddingX: number = 14;
   readonly dockPaddingY: number = 11;
   readonly dockGap: number = 8;
@@ -136,7 +136,7 @@ export class SharedDownloadVisualSpec {
   readonly buttonHeight: number = 44;
   readonly buttonPaddingX: number = 10;
   readonly buttonPaddingY: number = 9;
-  readonly buttonRadius: number = 12;
+  readonly buttonRadius: number = 999;
   readonly disabledOpacity: number = 0.5;
   readonly emptyTop: number = 85;
   readonly emptyBottom: number = 30;
@@ -144,7 +144,7 @@ export class SharedDownloadVisualSpec {
   readonly emptyGap: number = 12;
   readonly emptyIconSize: number = 32;
   readonly sheetMaxPercent: number = 82;
-  readonly sheetRadius: number = 22;
+  readonly sheetRadius: number = 24;
   readonly gripWidth: number = 42;
   readonly gripHeight: number = 5;
   readonly gripRadius: number = 4;

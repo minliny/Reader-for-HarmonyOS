@@ -52,7 +52,7 @@ import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
-import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderActionAccessibility, readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { PathShape } from '@ohos.arkui.shape';
 import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observeReaderControlMorphScroll,
   readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,
@@ -846,7 +846,7 @@ export struct ReaderControlTtsContent {
                     .id('reader-control-tts-seek-slider')
                     .attributeModifier(new ReaderPaperMaterial())
                     .width('100%').height(34)
-                    .responseRegion({ x: 0, y: -5, width: '100%', height: 44 })
+                    .responseRegion(readerUnionTouchRegion('100%', 34))
                     .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
                     .trackColor(readerAppColor('TOK_TTS_TRACK', this.appScheme))
                     .enabled(this.sharedInput()).accessibilityText('跳转朗读句子')
@@ -973,7 +973,7 @@ export struct ReaderControlTtsContent {
           .id('reader-control-tts-rate-slider')
           .attributeModifier(new ReaderPaperMaterial())
           .width('100%').height(34)
-          .responseRegion({ x: 0, y: -5, width: '100%', height: 44 })
+          .responseRegion(readerUnionTouchRegion('100%', 34))
           .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
           .enabled(this.sharedInput())
           .trackColor(readerAppColor('TOK_TTS_TRACK', this.appScheme))

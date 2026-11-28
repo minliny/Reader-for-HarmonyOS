@@ -147,16 +147,13 @@ export const TOK_RADIUS_PILL = 999;
 // ----------------------------------------------------------------------------
 // Responsive — 响应式参数 (内容屏边距 / 内容最大宽度)
 // ----------------------------------------------------------------------------
-// 墨纸青松 2.0 屏边距 16 (与 ReaderLayoutTokens / design-size-contract.json 一致)。
-export { TOK_SCREEN_INSET } from './ReaderLayoutTokens';
-// Figma: 内容列宽 (Phone 390−2×19)
-export const TOK_CONTENT_MAX_W_PHONE = 352;
-// Figma: 内容列宽 — 子页档 (无左 rail, 19px 边距; 实测 SourceMgmt 722 / Sync·BookDetail·WebDAV 720)。
-// 兼作大屏 maxWidth cap。区别于 rail 档 620。
-export const TOK_CONTENT_MAX_W_TABLET = 720;
-// Figma: 内容列宽 — rail 档 (主 tab 带左侧 BottomNav rail, 实测 Bookshelf/Discover/RSS 内容列 620)。
-// Discover 代码原 722 为 bug, 已纠正到 620。
-export const TOK_CONTENT_RAIL_W_TABLET = 620;
+// 墨纸青松 2.0 屏边距 16；手机端由 TOK_SCREEN_INSET 约束实际可用列宽，不再死锁 352。
+export {
+  TOK_SCREEN_INSET,
+  TOK_CONTENT_MAX_W_PHONE,
+  TOK_CONTENT_MAX_W_TABLET,
+  TOK_CONTENT_RAIL_W_TABLET,
+} from './ReaderLayoutTokens';
 
 // ----------------------------------------------------------------------------
 // State — 状态色 (危险 / 成功)

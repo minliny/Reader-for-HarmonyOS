@@ -7,11 +7,13 @@ import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconA
 import { RssPresentationProjection } from '../presentation/RssPresentationProjection';
 import type { RssFailedSource, RssFeedItems, RssMode, RssPresentation } from '../presentation/RssPresentationContract';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { ReaderRecessedSegmentRail } from '../../../ui/controls/ReaderRecessedSegmentRail';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import { projectOperationFacts, type OperationFacts } from '../../../app/ReaderOperationFacts';
 import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_ACTION, TYPE_RSS_ENTRY_DESCRIPTION, TYPE_RSS_ENTRY_TITLE, TYPE_RSS_ERROR_REASON, TYPE_RSS_HOME_TITLE, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_REFRESH_STATUS, TYPE_RSS_SECTION_HEADING, TYPE_RSS_SOURCE_TITLE, TYPE_RSS_STATE_ACTION, TYPE_RSS_STATE_BODY, TYPE_RSS_STATE_TITLE, TYPE_RSS_UNREAD_COUNT } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import {
   type RssFavorite,
   type RssItem,
@@ -211,13 +213,13 @@ export struct RssPage {
   }
 
   private headerLeftInset(): number {
-    if (this.readerWindowMetricsRevision < 0) return 20;
-    return Math.max(20, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()));
+    if (this.readerWindowMetricsRevision < 0) return TOK_SCREEN_INSET;
+    return Math.max(TOK_SCREEN_INSET, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()));
   }
 
   private headerRightInset(): number {
-    if (this.readerWindowMetricsRevision < 0) return 20;
-    return Math.max(20, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics()));
+    if (this.readerWindowMetricsRevision < 0) return TOK_SCREEN_INSET;
+    return Math.max(TOK_SCREEN_INSET, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics()));
   }
 
   @Builder
@@ -243,7 +245,6 @@ export struct RssPage {
           fromStart: true,
           src: this.refreshStatusText(),
         })
-          .width(132.5625)
           .constraintSize({ maxWidth: this.refreshMarqueeWidth() })
           .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)
           .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)
@@ -261,7 +262,7 @@ export struct RssPage {
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.feed.pillBorder', this.appThemeScheme) })
     .borderRadius(this.currentRefreshPillRadius())
     .onAreaChange(this.refreshPillAreaHandler())
-    .responseRegion({ x: 0, y: -5, width: '100%', height: 44 })
+    .responseRegion(readerUnionTouchRegion('100%', 34))
     .accessibilityText('刷新订阅')
     .onClick((): void => { if (!this.feedBusy()) this.onRefresh(); });
   }
@@ -308,17 +309,41 @@ export struct RssPage {
       .margin({ top: TOK_SPACE_XS, left: this.contentFrame().left });
   }
 
+  private systemFontScale(): number {
+    const value = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    return Number.isFinite(value) && value > 0 ? value : 1;
+  }
+
   @Builder
   private statusTabs() {
-    Scroll() {
-      Row({ space: 6 }) {
-        this.statusTab('源列表', 'sources');
-        this.statusTab('全部', 'all');
-        this.statusTab('收藏', 'favorites');
-      }.constraintSize({ minWidth: this.contentFrame().width, minHeight: RSS_STATUS_TABS_HEIGHT })
+    if (this.systemFontScale() < 1.75) {
+      Row() {
+        ReaderRecessedSegmentRail({
+          options: [
+            { id: 'sources', label: '源列表', accessibilityText: '订阅视图：源列表' },
+            { id: 'all', label: '全部', accessibilityText: '订阅视图：全部' },
+            { id: 'favorites', label: '收藏', accessibilityText: '订阅视图：收藏' },
+          ],
+          selectedId: this.activeMode,
+          accessibilityGroupLabel: '订阅视图',
+          trackHeight: 36,
+          pillShape: true,
+          onSelect: (modeId: string): void => this.onModeRequested(modeId as RssMode),
+        });
+      }.width(this.contentFrame().width).height(RSS_STATUS_TABS_HEIGHT)
+        .margin({ top: TOK_SPACE_XS, left: this.contentFrame().left })
         .alignItems(VerticalAlign.Center);
-    }.width(this.contentFrame().width).scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
-      .margin({ top: TOK_SPACE_XS, left: this.contentFrame().left });
+    } else {
+      Scroll() {
+        Row({ space: 6 }) {
+          this.statusTab('源列表', 'sources');
+          this.statusTab('全部', 'all');
+          this.statusTab('收藏', 'favorites');
+        }.constraintSize({ minWidth: this.contentFrame().width, minHeight: RSS_STATUS_TABS_HEIGHT })
+          .alignItems(VerticalAlign.Center);
+      }.width(this.contentFrame().width).scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
+        .margin({ top: TOK_SPACE_XS, left: this.contentFrame().left });
+    }
   }
 
   @Builder
@@ -449,7 +474,7 @@ export struct RssPage {
       .alignItems(VerticalAlign.Center)
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-      .borderRadius(8);
+      .borderRadius(14);
 
       Row({ space: 7 }) {
         Image((this.appThemeScheme === 'night' ? $r('app.media.rss_filter_theme_night') : $r('app.media.rss_filter')))
@@ -482,8 +507,8 @@ export struct RssPage {
       .alignItems(VerticalAlign.Center)
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.filter', this.appThemeScheme) })
-      .borderRadius(8)
-      .responseRegion({ x: 0, y: -5, width: '100%', height: 44 })
+      .borderRadius(14)
+      .responseRegion(readerUnionTouchRegion('100%', 34))
       .onClick((): void => {
         this.filterOpen = !this.filterOpen;
       });
@@ -496,22 +521,16 @@ export struct RssPage {
       if (this.filteredSubscriptions(subscriptions()).length === 0 && this.query.trim().length > 0) {
         this.emptyFeedResults('没有匹配的订阅源');
       } else {
-      List() {
-        Repeat(this.filteredSubscriptions(subscriptions()))
-          .each((repeatItem: RepeatItem<RssSubscription>) => {
-          ListItem() {
-            this.sourceItem((): RssSubscription => repeatItem.item, (): number => repeatItem.index);
-          }
-        })
-        .key((sub: RssSubscription): string => `rss-sub-${sub.subscriptionId}`)
-        .virtualScroll({ reusable: true });
+      Column() {
+        ForEach(this.filteredSubscriptions(subscriptions()), (sub: RssSubscription, index: number): void => {
+          this.sourceItem((): RssSubscription => sub, (): number => index);
+        }, (sub: RssSubscription): string => `rss-sub-${sub.subscriptionId}`);
       }
       .width('100%')
-      .height(Math.min(420, Math.max(62, this.filteredSubscriptions(subscriptions()).length * 62)))
-      .scrollBar(BarState.Off)
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-      .borderRadius(8);
+      .borderRadius(14)
+      .clip(true);
       }
     }
     .width(this.contentFrame().width);
@@ -530,7 +549,7 @@ export struct RssPage {
     .padding({ left: 11, right: 11, top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-    .borderRadius(8);
+    .borderRadius(14);
   }
 
   @Builder
@@ -609,44 +628,32 @@ export struct RssPage {
 
   @Builder
   private articleList(subscriptions: () => RssSubscription[], recentUnread: () => RssItem[]) {
-      List() {
-        Repeat(recentUnread())
-          .each((repeatItem: RepeatItem<RssItem>) => {
-          ListItem() {
-            this.recentUnreadItem(subscriptions, (): RssItem => repeatItem.item, (): number => repeatItem.index);
-          }
-        })
-        .key((item: RssItem): string =>
-          `rss-item-${item.subscriptionId.length}:${item.subscriptionId}-${item.guid.length}:${item.guid}`)
-        .virtualScroll({ reusable: true });
+      Column() {
+        ForEach(recentUnread(), (item: RssItem, index: number): void => {
+          this.recentUnreadItem(subscriptions, (): RssItem => item, (): number => index);
+        }, (item: RssItem): string =>
+          `rss-item-${item.subscriptionId.length}:${item.subscriptionId}-${item.guid.length}:${item.guid}`);
       }
       .width('100%')
-      .height(Math.min(420, Math.max(72, recentUnread().length * 72)))
-      .scrollBar(BarState.Off)
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-      .borderRadius(8);
+      .borderRadius(14)
+      .clip(true);
   }
 
   @Builder
   private archivedArticleList(favorites: () => RssFavorite[]) {
-    List() {
-      Repeat(favorites())
-        .each((favorite: RepeatItem<RssFavorite>) => {
-          ListItem() {
-            this.articleRow((): string => favorite.item.title, (): string => favorite.item.subscriptionTitle,
-              (): string => favorite.item.summary ?? '', (): boolean => false, (): number => favorite.index,
-              (): void => this.onSelectItem(favorite.item.subscriptionId, favorite.item.guid));
-          }
-        })
-        .key((favorite: RssFavorite): string => JSON.stringify([favorite.subscriptionId, favorite.guid]))
-        .virtualScroll({ reusable: true });
+    Column() {
+      ForEach(favorites(), (favorite: RssFavorite, index: number): void => {
+        this.articleRow((): string => favorite.title, (): string => favorite.subscriptionTitle,
+          (): string => favorite.summary ?? '', (): boolean => false, (): number => index,
+          (): void => this.onSelectItem(favorite.subscriptionId, favorite.guid));
+      }, (favorite: RssFavorite): string => JSON.stringify([favorite.subscriptionId, favorite.guid]));
     }.width('100%')
-      .height(Math.min(420, Math.max(72, favorites().length * 72)))
-      .scrollBar(BarState.Off)
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-      .borderRadius(8);
+      .borderRadius(14)
+      .clip(true);
   }
 
   @Builder
@@ -855,7 +862,7 @@ export struct RssPage {
     .width('100%')
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
-    .borderRadius(8)
+    .borderRadius(14)
     .padding({ top: 26, bottom: 26, left: 18, right: 18 })
     .alignItems(HorizontalAlign.Center);
   }
@@ -955,12 +962,9 @@ export struct RssPage {
   private refreshMarqueeWidth(): number {
     const viewportWidth = this.effectiveViewportWidth();
     if (viewportWidth <= 0) {
-      return 132.5625;
+      return 140;
     }
-    // Figma's 390vp top bar has a 132.5625vp status slot. Keep a conservative
-    // 240vp budget for the title, controls, gaps and 20vp edges; only the
-    // scrolling status slot contracts on narrower physical viewports.
-    return Math.max(0, Math.min(132.5625, viewportWidth - 240));
+    return Math.max(72, Math.min(180, viewportWidth - 220));
   }
 
   private isWideViewport(): boolean {

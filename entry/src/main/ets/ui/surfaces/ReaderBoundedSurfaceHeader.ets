@@ -1,6 +1,6 @@
 import { readerPaperActionIcon } from '../foundation/ReaderActionIconResources';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
-import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
+import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
 import { TYPE_SOURCE_SWITCH_HEADING, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_FILE_IMPORT_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE } from '../foundation/ReaderTypography';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
@@ -40,7 +40,7 @@ export class ReaderBoundedTitleModifier implements AttributeModifier<TextAttribu
       this.id === 'tts-config-manager' ? TYPE_READER_TTS_MANAGER_TITLE : TYPE_READER_TTS_CONFIGURATION_TITLE;
     instance.fontFamily(type.fontFamily).fontWeight(type.fontWeight).fontSize(type.fontSizeFp)
       .fontColor(readerAppColor(this.id === 'source-switch-window' ? 'TOK_READ_INK' : 'TOK_TTS_INK', this.scheme));
-    if (this.id === 'source-switch-window') instance.constraintSize({ minWidth: 0 }).height(16)
+    if (this.id === 'source-switch-window') instance.constraintSize({ minWidth: 0 })
       .lineHeight(TYPE_SOURCE_SWITCH_HEADING.lineHeightFp as number).margin({ left: 7 });
   }
 }
@@ -89,7 +89,7 @@ export struct ReaderBoundedSurfaceHeader {
         this.headerRow();
         Text('').width(Math.max(0, this.surfaceWidth - 1)).height(1)
           .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
-      }.width('100%').height(34);
+      }.width('100%').constraintSize({ minHeight: Math.max(44, readerScaledControlHeight(34, 16, this.fontScale())) });
     } else { this.headerRow(); }
   }
 
@@ -216,8 +216,8 @@ export struct ReaderBoundedSurfaceHeader {
       this.accessory();
       this.closeAction();
     }.width('100%')
-      .height(this.specId === 'source-switch-window' ? 33 : this.naturalHeaderHeightVp > 0 ? this.naturalHeaderHeightVp : undefined)
-      .constraintSize({ minHeight: this.specId === 'source-switch-window' ? undefined : this.specId === 'tts-config-manager' ? 58 : 44 })
+      .height(this.specId === 'source-switch-window' ? undefined : this.naturalHeaderHeightVp > 0 ? this.naturalHeaderHeightVp : undefined)
+      .constraintSize({ minHeight: this.specId === 'source-switch-window' ? Math.max(44, readerScaledControlHeight(33, 16, this.fontScale())) : this.specId === 'tts-config-manager' ? 58 : 44 })
       .alignItems(VerticalAlign.Center)
       .padding(this.specId === 'source-switch-window' ? 0 : {
         left: this.specId === 'tts-config-manager' ? 18 : 12, right: this.specId === 'tts-config-manager' ? 24 : 16,

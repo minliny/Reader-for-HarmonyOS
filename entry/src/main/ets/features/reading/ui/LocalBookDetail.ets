@@ -16,7 +16,7 @@ import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwit
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility, readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier, readerNativeSurfaceOutline,
   readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
@@ -842,7 +842,7 @@ export struct LocalBookDetail {
               .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
               .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
           }.constraintSize({ minWidth: 44, minHeight: 32 }).flexShrink(0)
-            .responseRegion({ x: 0, y: -6, width: '100%', height: 44 })
+            .responseRegion(readerUnionTouchRegion('100%', 32))
             .padding(0).backgroundColor(Color.Transparent).borderRadius(999)
             .id(sourceSwitchTriggerFocusId(this.book.sourceId, this.book.bookId, 'detail-source'))
             .enabled(this.sourceSwitchEnabled && !this.removing)
@@ -1309,12 +1309,12 @@ export struct LocalBookDetail {
     input.headerTop = this.headerSpec.headerTop(stableSafeTop);
     const minimumHeaderHeight = manga ? mangaDirectoryHeaderHeight(this.mangaFontScale()) : this.headerSpec.barHeight;
     input.headerHeight = Math.max(minimumHeaderHeight, this.measurements.readForGeneration('detail:header', this.measurementKey, minimumHeaderHeight));
-    input.headerInsetLeft = Math.max(8, this.safeLeft());
-    input.headerInsetRight = Math.max(8, this.safeRight());
+    input.headerInsetLeft = Math.max(14, this.safeLeft());
+    input.headerInsetRight = Math.max(14, this.safeRight());
     input.contentGap = manga ? visual.contentTop - visual.headerHeight - this.headerSpec.topGap : this.headerSpec.contentGap;
     input.contentUnderlap = 0;
     input.contentMaxWidth = manga ? visual.contentWidthMax : TOK_CONTENT_MAX_W_TABLET;
-    input.contentHorizontalPadding = manga ? 20 : 16;
+    input.contentHorizontalPadding = 16;
     const dock = this.dockFrame(resolveReaderPageGeometry(input).content.frame);
     const restingDockHeight = this.restingDockHeight(dock.width);
     input.footerBottom = readerStableInteractiveSafeBottom(metrics) + (manga ? visual.detailDockBottom : DETAIL_DOCK_BOTTOM_GAP);

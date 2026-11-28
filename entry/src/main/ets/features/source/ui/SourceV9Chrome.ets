@@ -1,9 +1,11 @@
 import { drawing } from '@kit.ArkGraphics2D';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
-import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
-import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { ReaderRecessedSegmentRail, type ReaderRecessedSegmentOption } from '../../../ui/controls/ReaderRecessedSegmentRail';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
+import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { readerUnionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { sourceV9ReportFill, type SourceV9ReportTone } from '../presentation/SourceManagementV9';
 
 export interface SourceV9SegmentChoice {
@@ -23,7 +25,7 @@ export struct SourceV9TypeSeal {
       .border({ width: 1, color: readerAppColor(this.category === 'comic' ? 'TOK_LINE' : 'TOK_PRIMARY_BORDER', this.scheme) })
       .backgroundColor(this.paintSurface ? readerAppColor(this.category === 'comic' ? 'app.status.warningSoft' :
         'app.sourceUi.selected', this.scheme) : Color.Transparent)
-      .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(15)
+      .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(15).maxFontScale(1.25)
       .fontColor(readerAppColor(this.category === 'comic' ? 'app.status.warning' : 'app.sourceUi.primary', this.scheme))
       .accessibilityLevel('no');
   }
@@ -74,8 +76,7 @@ export struct SourceV9CircleCheck {
 
 @Component
 export struct SourceV9SegmentedTrack {
-  @StorageLink('readerAppScheme') private scheme: string = 'day';
-  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageLink('readerWindowMetricsRevision') private windowRevision: number = 0;
   @Prop choices: SourceV9SegmentChoice[] = [];
   @Prop selected: string = '';
   @Prop idPrefix: string = '';
@@ -83,27 +84,33 @@ export struct SourceV9SegmentedTrack {
   @Prop actionEnabled: boolean = true;
   onSelect: (id: string) => void = (_id: string): void => {};
 
+  private trackHeight(): number {
+    const scale = readerReadableFontScale(this.windowRevision < 0 ? 1 : readerWindowMetrics().systemFontScale);
+    return readerScaledControlHeight(34, 16, scale);
+  }
+
+  private railOptions(): ReaderRecessedSegmentOption[] {
+    return this.choices.map((choice: SourceV9SegmentChoice): ReaderRecessedSegmentOption => ({
+      id: choice.id,
+      label: choice.label,
+      elementId: this.idPrefix.length > 0 ? this.idPrefix + '-' + choice.id : '',
+      accessibilityText: this.accessibilityLabel + ' · ' + choice.label,
+    }));
+  }
+
   build() {
-    Row({ space: 2 }) {
-      ForEach(this.choices, (choice: SourceV9SegmentChoice): void => {
-        Button({ type: ButtonType.Normal, stateEffect: false }) {
-          Text(choice.label).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(12)
-            .maxLines(1).minFontSize(9).maxFontSize(12)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .fontColor(readerAppColor(choice.id === this.selected ? 'app.sourceUi.primary' : 'app.sourceUi.muted', this.scheme));
-        }.id(this.idPrefix.length > 0 ? this.idPrefix + '-' + choice.id : '')
-          .layoutWeight(1).height('100%').padding(0).borderRadius(8)
-          .attributeModifier(new ReaderPressFeedback(choice.id === this.selected ? readerAppColor('TOK_CARD_BG', this.scheme) :
-            Color.Transparent, this.scheme, 8, 8, this.actionEnabled))
-          .shadow(readerSurfaceElevation(choice.id === this.selected ? 'card' : 'embedded', this.scheme))
-          .animation(this.reduceMotion ? undefined : readerMotionAnimateParam('app.control.press', false))
-          .responseRegion({ x: 0, y: -8, width: '100%', height: 44 })
-          .enabled(this.actionEnabled).accessibilitySelected(choice.id === this.selected)
-          .accessibilityText(this.accessibilityLabel + ' · ' + choice.label)
-          .onClick((): void => { if (this.actionEnabled) this.onSelect(choice.id); });
-      }, (choice: SourceV9SegmentChoice): string => choice.id);
-    }.width('100%').height(32).padding(2).borderRadius(10)
-      .backgroundColor(readerAppColor('app.sourceUi.field', this.scheme)).opacity(this.actionEnabled ? 1 : 0.45);
+    ReaderRecessedSegmentRail({
+      options: this.railOptions(),
+      selectedId: this.selected,
+      accessibilityGroupLabel: this.accessibilityLabel,
+      trackHeight: this.trackHeight(),
+      trackInset: 3,
+      pillShape: false,
+      activeColorRole: 'app.sourceUi.primary',
+      inactiveColorRole: 'app.sourceUi.muted',
+      actionEnabled: this.actionEnabled,
+      onSelect: this.onSelect,
+    });
   }
 }
 
@@ -159,26 +166,32 @@ export struct SourceV9DetectButton {
 @Component
 export struct SourceV9AddAction {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private windowRevision: number = 0;
   @Prop selected: boolean = false;
   @Prop label: string = '新建';
   @Prop actionEnabled: boolean = true;
   @Prop controlId: string = '';
   onTap: () => void = (): void => {};
 
+  private buttonHeight(): number {
+    const scale = readerReadableFontScale(this.windowRevision < 0 ? 1 : readerWindowMetrics().systemFontScale);
+    return readerScaledControlHeight(32, 16, scale);
+  }
+
   build() {
     Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Row({ space: 3 }) {
         Image($r('app.media.source_add')).width(14).height(14).accessibilityLevel('no')
           .fillColor(readerAppColor(this.selected ? 'app.sourceUi.onPrimary' : 'app.sourceUi.primary', this.scheme));
-        Text(this.label).fontSize(12).minFontSize(9).maxFontSize(12).maxLines(1)
+        Text(this.label).fontSize(12).minFontSize(10).maxFontSize(12).maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis }).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
           .fontColor(readerAppColor(this.selected ? 'app.sourceUi.onPrimary' : 'app.sourceUi.primary', this.scheme));
       }
-    }.id(this.controlId).height(32).padding({ left: 8, right: 8 })
+    }.id(this.controlId).constraintSize({ minHeight: this.buttonHeight() }).padding({ left: 8, right: 8, top: 2, bottom: 2 })
       .attributeModifier(new ReaderPressFeedback(readerAppColor(this.selected ? 'app.sourceUi.primary' : 'app.sourceUi.selected',
-        this.scheme), this.scheme, 16, 16, this.actionEnabled))
+        this.scheme), this.scheme, this.buttonHeight() / 2, this.buttonHeight() / 2, this.actionEnabled))
       .opacity(this.actionEnabled ? 1 : 0.45).accessibilitySelected(this.selected)
-      .responseRegion({ x: 0, y: -6, width: '100%', height: 44 })
+      .responseRegion(readerUnionTouchRegion('100%', this.buttonHeight()))
       .enabled(this.actionEnabled).accessibilityText(this.label).onClick(this.onTap);
   }
 }

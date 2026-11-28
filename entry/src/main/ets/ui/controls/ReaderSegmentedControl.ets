@@ -6,6 +6,7 @@ import { TextModifier } from '@ohos.arkui.modifier';
 import { ColorMetrics, LengthMetrics } from '@ohos.arkui.node';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
+import { readerUnionTouchRegion } from './ReaderActionAccessibility';
 
 interface ReaderSegmentOpening { identity: string; ids: string[]; }
 
@@ -31,10 +32,10 @@ interface ReaderSegmentSpec {
 }
 export const READER_APP_THEME_SEGMENT_WIDTH = 162;
 const APP_THEME_SEGMENT: ReaderSegmentSpec = {
-  width: READER_APP_THEME_SEGMENT_WIDTH, padding: 3, radius: 11, itemRadius: 8, borderWidth: 1,
+  width: READER_APP_THEME_SEGMENT_WIDTH, padding: 3, radius: 11, itemRadius: 8, borderWidth: 0.75,
   activeText: 'app.segment.activeText',
   inactiveText: 'TOK_MUTED',
-  selectedSurface: 'TOK_SURFACE_ELEVATED',
+  selectedSurface: 'app.segment.selected',
   surface: 'app.segment.surface', border: 'app.segment.border',
 };
 function resolveReaderSegmentSpec(id: ReaderSegmentSpecId): ReaderSegmentSpec {
@@ -50,6 +51,7 @@ export struct ReaderSegmentedControl {
   private uiConfigurationRevision: number = 0;
   @State private themeFontPolicyReady: boolean = false;
   @State private themeMaxFontScale: number = 1;
+  @State private trackHeight: number = 36;
   @Prop @Watch('refreshThemeFontPolicy') specId: ReaderSegmentSpecId = 'app-theme-segment';
   @Prop controlWidth: number = 0;
   @Prop @Watch('syncNativeThemeItems') options: string[] = [];
@@ -71,25 +73,52 @@ export struct ReaderSegmentedControl {
   }
   build() {
     ForEach([this.inputIdentity], (identity: string): void => {
-      Row() {
-        if (this.themeFontPolicyReady && this.themeInputIsValid()) {
-          this.nativeThemeOptions(identity);
-        } else {
-          Text(`${this.options[this.selectedIndex] ?? ''}（暂不可用）`)
-            .fontFamily(TYPE_APP_SEGMENT_LABEL.fontFamily).fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
-            .fontSize(TYPE_APP_SEGMENT_LABEL.fontSizeFp).fontColor(readerAppColor(this.spec().inactiveText, this.appThemeScheme))
-            .constraintSize({ minHeight: 44 }).layoutWeight(1).textAlign(TextAlign.Center)
-            .accessibilityText(`${this.accessibilityLabel} ${this.options[this.selectedIndex] ?? ''}，暂不可用`);
+      Stack({ alignContent: Alignment.Center }) {
+        // Bottom bevel catchlight beneath the recessed groove.
+        Row()
+          .width('100%')
+          .height(this.trackHeight)
+          .translate({ y: 0.75 })
+          .borderRadius(this.spec().radius)
+          .backgroundColor(readerAppColor(this.appThemeScheme === 'night' ? 'TOK_LINE' : 'TOK_SURFACE_ELEVATED', this.appThemeScheme))
+          .opacity(this.appThemeScheme === 'night' ? 1 : 0.85)
+          .accessibilityLevel('no')
+          .hitTestBehavior(HitTestMode.None);
+        Row() {
+          if (this.themeFontPolicyReady && this.themeInputIsValid()) {
+            this.nativeThemeOptions(identity);
+          } else {
+            Text(`${this.options[this.selectedIndex] ?? ''}（暂不可用）`)
+              .fontFamily(TYPE_APP_SEGMENT_LABEL.fontFamily).fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
+              .fontSize(TYPE_APP_SEGMENT_LABEL.fontSizeFp).fontColor(readerAppColor(this.spec().inactiveText, this.appThemeScheme))
+              .constraintSize({ minHeight: 44 }).layoutWeight(1).textAlign(TextAlign.Center)
+              .accessibilityText(`${this.accessibilityLabel} ${this.options[this.selectedIndex] ?? ''}，暂不可用`);
+          }
         }
+        .width('100%')
+        .padding(this.spec().padding)
+        .clip(true)
+        .backgroundColor(readerAppColor(this.spec().surface, this.appThemeScheme))
+        .linearGradient({
+          direction: GradientDirection.Bottom,
+          colors: [
+            [readerAppColor(this.appThemeScheme === 'night' ? 'app.segment.border' : 'app.chrome.raisedShadowAmbient', this.appThemeScheme), 0.0],
+            [readerAppColor('app.surface.transparent', this.appThemeScheme), 0.36],
+          ],
+        })
+        .border({ width: this.spec().borderWidth, color: readerAppColor(this.spec().border, this.appThemeScheme) })
+        .borderRadius(this.spec().radius)
+        .onAreaChange((_oldArea: Area, area: Area): void => {
+          const measured = Number(area.height);
+          if (Number.isFinite(measured) && measured > 0 && Math.abs(measured - this.trackHeight) > 0.5) {
+            this.trackHeight = measured;
+          }
+        })
+        .alignItems(VerticalAlign.Center);
       }
-      .width(this.controlWidth > 0 ? this.controlWidth : this.spec().width)
-      .padding(this.spec().padding)
-      .backgroundColor(readerAppColor(this.spec().surface, this.appThemeScheme))
-      .border({ width: this.spec().borderWidth, color: readerAppColor(this.spec().border, this.appThemeScheme) })
-      .borderRadius(this.spec().radius)
-      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-      .accessibilityText(this.accessibilityLabel)
-      .alignItems(VerticalAlign.Center);
+      .width(this.controlWidth < 0 ? '100%' : this.controlWidth > 0 ? this.controlWidth : this.spec().width)
+      .responseRegion(readerUnionTouchRegion('100%', this.trackHeight))
+      .accessibilityText(this.accessibilityLabel);
     }, (identity: string): string => identity);
   }
   private refreshThemeFontPolicy(): void {
@@ -188,12 +217,16 @@ export struct ReaderSegmentedControl {
         itemSelectedFontColor: ColorMetrics.resourceColor(readerAppColor(this.spec().activeText, this.appThemeScheme)),
         buttonPadding: LengthMetrics.vp(0), buttonMinHeight: LengthMetrics.vp(30),
         itemSelectedBackgroundColor: ColorMetrics.resourceColor(readerAppColor(this.spec().selectedSurface, this.appThemeScheme)),
-        itemShadow: { radius: 3 * readerWindowMetrics().densityPixels,
-          color: readerAppColor('app.chrome.raisedShadowNear', this.appThemeScheme),
-          offsetX: 0, offsetY: readerWindowMetrics().densityPixels },
+        itemShadow: { radius: 3.5 * this.density(),
+          color: readerAppColor('app.shadow.cover', this.appThemeScheme),
+          offsetX: 0, offsetY: 1.5 * this.density() },
         buttonBackgroundColor: ColorMetrics.resourceColor(readerAppColor('app.surface.transparent', this.appThemeScheme)), buttonBorderRadius: LengthMetrics.vp(this.spec().radius),
       }).width('100%');
     }, (opening: ReaderSegmentOpening): string => opening.identity + JSON.stringify(opening.ids));
+  }
+  private density(): number {
+    const value = readerWindowMetrics().densityPixels;
+    return Number.isFinite(value) && value > 0 ? value : 1;
   }
   private spec(): ReaderSegmentSpec { return resolveReaderSegmentSpec(this.specId); }
   private optionLabel(id: string): string { return this.options[this.optionIds.indexOf(id)] ?? ''; }

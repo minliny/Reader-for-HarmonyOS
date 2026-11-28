@@ -298,9 +298,9 @@ const DIALOG_ACTION_RADIUS = 999;
 // Confirmation and form owners retain focus, keyboard bounds and admission.
 const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
   'source-v9-check': new DialogSurfaceSpec({
-    maxWidth: 460, edgeGap: 14, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
-    padding: 14, borderRadius: 14,
-    backgroundRole: 'TOK_CARD_BG', hasShadow: true, hasBorder: true,
+    maxWidth: 392, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
+    padding: 19, borderRadius: DIALOG_RADIUS,
+    backgroundRole: 'TOK_SURFACE_ELEVATED', hasShadow: true, hasBorder: true,
     headerFontSize: 17, headerFontFamily: 'ReaderNotoSansSCUIBold', headerTextAlign: TextAlign.Start,
     headerLineHeight: 24, headerGap: 9, bodyActionsGap: 10, bodyActionsOwnMargin: 0,
     actionsLayout: 'row', actionHeight: 44, actionBorderRadius: DIALOG_ACTION_RADIUS, actionUsesPressFeedback: true,
