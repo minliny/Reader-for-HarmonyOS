@@ -9,7 +9,7 @@ import { readerControlIslandHeight, type ReaderControlContentBudget } from './Re
 import { readerTtsWaveformSnapshot } from './ReaderTtsWaveform';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
-import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
+import { readerTransitionFrameSamplingEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { readerControlNativeMotionMode, type ReaderControlNativeMotionMode } from './ReaderControlNativeMotionPolicy';
 import { readerControlIsDirectSheet } from './ReaderControlHostSession';
 import { ReaderControlMotionFrameCache } from './ReaderControlMotionGeometry';
@@ -395,7 +395,7 @@ export class ReaderControlPanelRuntimeHost {
       readerControlIsDirectSheet(session.transition.fromLocation.module);
     const toDirect = target.level === 'secondary' && readerControlIsDirectSheet(target.module);
     const direct = this.host.facts().geometry.directSheet && (fromDirect || toDirect);
-    const transitionsProbed = readerTransitionsEnabled() || this.host.facts().geometry.verification?.observing() === true;
+    const transitionsProbed = readerTransitionFrameSamplingEnabled() || this.host.facts().geometry.verification?.observing() === true;
     return readerControlNativeMotionMode(
       session.transition.kind,
       this.host.facts().geometry.fixedIsland,
@@ -561,6 +561,31 @@ export class ReaderControlPanelRuntimeHost {
           paint.directSheetScrimOpacity = targetScrimOpacity;
           paint.dockOpacity = targetDockOpacity;
         });
+      } else if (mode === 'morph') {
+        const targetExpansion = transition.to.expansionProgress;
+        paint.visualVisibilityProgress = 1;
+        paint.visualHeldPointerId = update.session.heldPointerId;
+        paint.visualTransitionKind = transition.kind;
+        paint.motionOffsetY = 0;
+        paint.controlPresented = true;
+        paint.visibilityAnimating = false;
+        paint.topBarTranslateY = 0;
+        paint.topBarOpacity = 1;
+        paint.dockTranslateY = 0;
+        paint.dockOpacity = 1;
+        if (transition.kind === 'navigate') {
+          this.updateModuleMotion(update.session);
+        }
+        this.startNativeAnimate(generation, ticket, duration, transition.kind === 'navigate', (): void => {
+          paint.visualExpansionProgress = targetExpansion;
+          paint.moduleMotionX = 0;
+          paint.moduleMotionY = 0;
+          paint.moduleMotionOpacity = 1;
+          const nextLayout = this.layoutFrame();
+          paint.contentMotionProgress = nextLayout.progress;
+          paint.contentMotionWidth = nextLayout.content.width;
+          paint.contentMotionHeight = nextLayout.content.height;
+        });
       } else {
         paint.visualVisibilityProgress = 1;
         paint.visualExpansionProgress = transition.to.expansionProgress;
@@ -630,7 +655,7 @@ export class ReaderControlPanelRuntimeHost {
 
     const nativeMode: ReaderControlNativeMotionMode | '' =
       update.endpoint === undefined && transition !== undefined ? this.nativeModeFor(update.session) : '';
-    if (nativeMode === 'visibility' || nativeMode === 'directSheet' || nativeMode === 'moduleNavigate') {
+    if (nativeMode === 'visibility' || nativeMode === 'directSheet' || nativeMode === 'moduleNavigate' || nativeMode === 'morph') {
       const alreadyRunning = this.nativeMotionMode === nativeMode && this.nativeMotionTicket === ticket;
       this.runNativeMotion(nativeMode, update, ticket, wasRetained, alreadyRunning, sessionChanged, placementInputChanged);
       return;

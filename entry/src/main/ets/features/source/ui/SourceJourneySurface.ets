@@ -4,7 +4,7 @@ import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../..
 import type { ReaderNativeAlertOptions } from '../../../ui/platform/ReaderNativeAlertOwner';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
-import { readerBeginTransition, readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
+import { readerBeginTransition, readerTransitionFrameSamplingEnabled, readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { motionSpecGet, readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { SourceManagementPage } from './SourceManagementPage';
 import { SourceToolsPage } from './SourceToolsPage';
@@ -231,7 +231,7 @@ export struct SourceJourneySurface {
           subject: `source-${motion.actor}`, scope: `source-${this.identity}`,
           nodes: [routeMotion.nodeId], staticMotion: motion.reduced });
         try {
-          if (readerTransitionsEnabled()) {
+          if (readerTransitionFrameSamplingEnabled()) {
             const animator = context.createAnimator({ duration, easing: motion.reduced ? 'ease-out' : 'linear',
               delay: 0, fill: 'forwards', direction: 'normal', iterations: 1, begin: 0, end: 1 });
             this.paneAnimator = animator;

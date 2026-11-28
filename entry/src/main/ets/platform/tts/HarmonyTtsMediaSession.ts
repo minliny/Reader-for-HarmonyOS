@@ -2,8 +2,8 @@ import common from '@ohos.app.ability.common';
 import deviceInfo from '@ohos.deviceInfo';
 import { avSession } from '@kit.AVSessionKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { type ReaderTtsHostEvent } from '../../features/reading/application/ReaderTtsHostContract';
-import { isReaderTtsSupportedPlaybackRate, readerTtsSupportedPlaybackRates } from '../../features/reading/application/ReaderTtsState';
+import { type ReaderTtsHostEvent } from '../contracts/ReaderTtsHostContract';
+import { isReaderTtsSupportedPlaybackRate, readerTtsSupportedPlaybackRates } from '../contracts/ReaderTtsPlaybackRates';
 
 const LOG_DOMAIN = 0x5244;
 

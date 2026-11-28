@@ -405,7 +405,7 @@ export struct ReaderControlSettingsContent {
           this.islandToggle('息屏终止朗读', 'stopTtsOnScreenOff');
           this.islandToggle('长按选择文本', 'longPressSelectText');
         }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
-      }.width('100%').padding({ bottom: 2 });
+      }.width('100%').padding({ bottom: 10 });
     }.id('reader-control-module-settings').width(this.availableWidth).height(this.availableHeight)
       .scrollBar(BarState.Auto).edgeEffect(EdgeEffect.None).clip(true).enabled(this.currentInputEnabled());
   }

@@ -5,6 +5,7 @@ import { BookshelfReadOwner } from './BookshelfReadOwner';
 import type { BookshelfReadResult } from './BookshelfReadOwner';
 import type { BookshelfDataState, BookshelfFilter, BookshelfFlowGateway } from './BookshelfFlowGateway';
 import type { BookSource } from '../../source/application/SourceGateway';
+import { BookshelfLocalMetricsBackfill } from './BookshelfLocalMetricsBackfill';
 import { bookshelfSourceDisplayName, bookshelfSourceNameNeedsLookup, readableBookshelfSourceName,
   type BookshelfNamedSource } from './BookshelfSourceNameProjection';
 
@@ -44,23 +45,43 @@ export class BookshelfProjectionOwner {
   private membershipRequest: number = 0;
   private pageTask: number = 0;
   private deliveryFailed: boolean = false;
+  private readonly localMetricsBackfill: BookshelfLocalMetricsBackfill;
   private value: BookshelfProjectionSnapshot = { generation: 0,
     filter: { readingState: 'all', sourceKind: 'all' }, books: [], revision: '',
     matchedTotal: 0, offset: 0, hasOnlineBooks: false, pageLoading: false,
     visualAdmitted: false, coreEmpty: false };
   constructor(private readonly owner: ReaderRuntimeOwner, private readonly ownsRuntime: () => boolean,
     private readonly gateway: (filter: BookshelfFilter) => BookshelfFlowGateway,
-    private readonly loadSources: (ids: string[], current: () => boolean) => Promise<BookSource[]>) {}
+    private readonly loadSources: (ids: string[], current: () => boolean) => Promise<BookSource[]>) {
+    this.localMetricsBackfill = new BookshelfLocalMetricsBackfill({
+      requestMetrics: async (bookId: string, current: () => boolean): Promise<void> => {
+        await this.owner.requestBook('local_book.content.metrics', { bookId },
+          { shouldCancel: (): boolean => !current() }, 'background');
+      },
+      onRefreshed: (): void => {
+        const active = this.binding;
+        if (active !== undefined && this.current(active)) {
+          void this.refresh(this.value.filter, active, false);
+        }
+      },
+    });
+  }
   owns(owner: ReaderRuntimeOwner): boolean { return owner === this.owner; }
   snapshot(): BookshelfProjectionSnapshot { return this.value; }
   attach(binding: BookshelfProjectionBinding): boolean {
     if (!this.admitted(binding)) return false;
     this.binding = binding; this.publish(binding); return true;
   }
-  detach(identity: string): void { if (this.binding?.identity === identity) this.binding = undefined; }
+  detach(identity: string): void {
+    if (this.binding?.identity === identity) {
+      this.binding = undefined;
+      this.localMetricsBackfill.reset();
+    }
+  }
   invalidate(): void {
     this.value = { ...this.value, generation: this.value.generation + 1, pageLoading: false };
     this.pageTask += 1; this.sourceNameRequest += 1; this.membershipRequest += 1;
+    this.localMetricsBackfill.reset();
     this.publish();
   }
   async refresh(filter: BookshelfFilter, binding: BookshelfProjectionBinding,
@@ -138,6 +159,9 @@ export class BookshelfProjectionOwner {
     else if (binding.membershipNeeded?.() === true) void this.refreshMembership(binding);
     this.deliver(binding, (): void => binding.accepted?.(state));
     if (state.shelf.books.some(book => bookshelfSourceNameNeedsLookup(book.sourceId, book.sourceName ?? ''))) void this.hydrate(binding);
+    const metricsCandidates = state.continueReading !== undefined ? books.concat([state.continueReading]) : books;
+    this.localMetricsBackfill.schedule(metricsCandidates, state.shelf.projectionRevision ?? '',
+      (): boolean => this.current(binding) && generation === this.value.generation);
   }
   async page(previous: boolean, binding: BookshelfProjectionBinding): Promise<void> {
     const before = this.value, start = before.offset, count = before.books.length;

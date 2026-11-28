@@ -155,6 +155,11 @@ export function isReaderRealtimeBlurEnabled(preferences: ReaderNavigationPrefere
   return preferences.renderMode === 'quality';
 }
 
+/** True when System Native appearance is enabled (frameless scroll-linked headers & full-page search). */
+export function isReaderNativeChromeStyle(preferences: ReaderNavigationPreferences): boolean {
+  return preferences.override === 'systemNative';
+}
+
 export function shouldBlurBackdrop(preferences: ReaderNavigationPreferences,
   overlayUsesNativeMaterial: boolean = false): boolean {
   return isReaderRealtimeBlurEnabled(preferences) && !overlayUsesNativeMaterial;

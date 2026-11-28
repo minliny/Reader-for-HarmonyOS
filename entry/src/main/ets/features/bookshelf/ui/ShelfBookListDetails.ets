@@ -88,7 +88,7 @@ export struct ShelfBookListDetails {
         // Anchor the painted track at the cover edge while keeping the label centered in its line.
         Progress({ value: ShelfBookPresentation.progressPercent(this.book), total: 100, type: ProgressType.Linear })
           .layoutWeight(1).height(BOOKSHELF_LIST_PROGRESS_STROKE).alignSelf(ItemAlign.End)
-          .color(readerAppColor('TOK_ACCENT', this.appThemeScheme))
+          .color(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
           .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
           .style({ strokeWidth: BOOKSHELF_LIST_PROGRESS_STROKE, strokeRadius: 2, enableSmoothEffect: false })
           .hitTestBehavior(HitTestMode.None);
@@ -96,7 +96,7 @@ export struct ShelfBookListDetails {
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(FontWeight.Medium)
           .fontSize(11).lineHeight(`${this.textFrame.progressRowHeight}vp`).fontFeature('"tnum" 1')
           .minFontScale(Math.min(1, this.textFrame.scale)).maxFontScale(Math.max(1, this.textFrame.scale))
-          .fontColor(readerAppColor(this.progressLabel() === '未读' ? 'TOK_MUTED' : 'TOK_ACCENT', this.appThemeScheme))
+          .fontColor(readerAppColor(this.progressLabel() === '未读' ? 'TOK_MUTED' : 'TOK_PRIMARY_DARK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).ellipsisMode(EllipsisMode.END);
       }.width('100%').height(this.textFrame.progressRowHeight).alignItems(VerticalAlign.Center);
     }.width('100%').height(this.targetHeight).alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.SpaceBetween);

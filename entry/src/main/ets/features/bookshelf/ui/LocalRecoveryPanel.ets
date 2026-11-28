@@ -319,10 +319,10 @@ export struct LocalRecoveryPanel {
       if (this.systemPending) {
         Column() { this.resumeControl(expected); }.width('100%').padding(TOK_SPACE_SM);
       }
-      ReaderFormRow({ label: '导出恢复包', secondaryText: '设置口令并将加密恢复包保存到文件',
+      ReaderFormRow({ label: '导出恢复包', secondaryText: '设置口令并将加密恢复包保存到文件', disclosure: true,
         actionEnabled: this.canStart('export', expected), onAction: (): void => this.openDialog('export', expected) });
       if (!this.systemPending) {
-        ReaderFormRow({ label: '导入恢复包', secondaryText: '输入口令并选择文件，先查看校验结果',
+        ReaderFormRow({ label: '导入恢复包', secondaryText: '输入口令并选择文件，先查看校验结果', disclosure: true,
           actionEnabled: this.canStart('inspect', expected), onAction: (): void => this.openDialog('inspect', expected) });
       }
     }

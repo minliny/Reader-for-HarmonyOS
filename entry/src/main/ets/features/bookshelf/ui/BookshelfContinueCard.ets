@@ -92,7 +92,7 @@ export struct BookshelfContinueCard {
             height: this.continueCardFrame().coverHeight,
           })
           .objectFit(ImageFit.Cover)
-          .borderRadius(8)
+          .borderRadius(6)
           .onError((): void => this.onCoverError(this.coverUrl(this.continueReading)));
       } else {
         NoCoverCover({
@@ -105,7 +105,11 @@ export struct BookshelfContinueCard {
     }
     .width(this.continueCardFrame().coverWidth)
     .height(this.continueCardFrame().coverHeight)
-    .borderRadius(8)
+    .backgroundColor(readerAppColor(
+      this.coverUrl(this.continueReading) !== undefined ? 'app.cover.placeholder' : 'TOK_META_BG',
+      this.appThemeScheme,
+    ))
+    .borderRadius(6)
     .clip(true);
   }
 
@@ -135,12 +139,12 @@ export struct BookshelfContinueCard {
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Row({ space: 8 }) {
         Progress({ value: this.continueBookProgress(this.continueReading), total: 100, type: ProgressType.Linear })
-          .layoutWeight(1).height(BOOKSHELF_LIST_PROGRESS_STROKE).color(readerAppColor('TOK_ACCENT', this.appThemeScheme))
+          .layoutWeight(1).height(BOOKSHELF_LIST_PROGRESS_STROKE).color(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
           .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
           .style({ strokeWidth: BOOKSHELF_LIST_PROGRESS_STROKE, strokeRadius: 2, enableSmoothEffect: false })
           .hitTestBehavior(HitTestMode.None);
         Text(this.continueBookProgressLabel(this.continueReading)).fontFamily(TYPE_SHELF_LIST_STATUS.fontFamily)
-          .fontSize(TYPE_SHELF_LIST_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_ACCENT', this.appThemeScheme))
+          .fontSize(TYPE_SHELF_LIST_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
           .fontFeature('"tnum" 1')
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.width('100%').alignItems(VerticalAlign.Center);

@@ -3,7 +3,9 @@ import { readerMainTabIconResource } from '../../app/navigation/ReaderMainTabs';
 import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
 import { ReaderRaisedSurface } from '../../ui/surfaces/ReaderRaisedSurface';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, readerSurfaceMaterialDecision } from '../../ui/surfaces/ReaderSurfaceMaterial';
-import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
+import { READER_GLASS_BLUR_VP } from '../../ui/surfaces/ReaderSurfaceSpecs';
+import { isReaderRealtimeBlurEnabled, type ReaderNavigationPreferences, type ReaderSurfaceMaterialDecision }
+  from '../../app/HarmonyCapabilityPolicy';
 import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
 import { registerReaderShelfFonts } from '../../ui/foundation/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -73,8 +75,10 @@ export struct MainTabBar {
     .padding(MAIN_TAB_RAIL_PADDING + (this.material().native ? TOK_BORDER_W : 0))
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundEffect(undefined)
-    .backgroundColor(this.material().native ? Color.Transparent : readerAppColor('app.navigation.floatingSurface', this.appThemeScheme))
+    .backgroundEffect(!this.material().native && isReaderRealtimeBlurEnabled(this.navigationPreferences) ?
+      { radius: READER_GLASS_BLUR_VP, color: readerAppColor('app.header.veilSurfaceScrolled', this.appThemeScheme) } : undefined)
+    .backgroundColor(this.material().native || isReaderRealtimeBlurEnabled(this.navigationPreferences) ?
+      Color.Transparent : readerAppColor('app.navigation.floatingSurface', this.appThemeScheme))
     .border(this.material().native ? { width: 0, color: Color.Transparent } :
       { width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.appThemeScheme) })
     .borderRadius(this.railRadius())

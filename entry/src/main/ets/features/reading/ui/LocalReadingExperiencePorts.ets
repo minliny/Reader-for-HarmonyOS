@@ -1075,19 +1075,22 @@ export function buildDirectoryAndFirstPagePorts(host: ReadingExperiencePortHost)
   };
 }
 
-export interface ReadingSpeechAndProgressPortsBundle {
+export interface ReadingSpeechPortsBundle {
   speechSession: ReaderReadingSpeechSession;
   speechView: ReaderReadingSpeechView;
   speechProgress: ReaderReadingSpeechProgress;
   speechChapter: ReaderReadingSpeechChapter;
   speechControls: ReaderReadingSpeechControls;
+}
+
+export interface ReadingProgressPortsBundle {
   readingProgressOwners: ReaderReadingProgressOwners;
   readingProgressView: ReaderReadingProgressView;
   readingExitEffects: ReaderReadingExitEffects;
   readingBackControls: ReaderReadingBackControls;
 }
 
-export function buildSpeechAndProgressPorts(host: ReadingExperiencePortHost): ReadingSpeechAndProgressPortsBundle {
+export function buildSpeechPorts(host: ReadingExperiencePortHost): ReadingSpeechPortsBundle {
   const speechSession: ReaderReadingSpeechSession = {
     scope: (): ReaderTtsPlaybackScope => ({
       lifecycleToken: host.mountHost().lifecycleToken,
@@ -1184,6 +1187,16 @@ export function buildSpeechAndProgressPorts(host: ReadingExperiencePortHost): Re
     stopAutoPage: (): void => host.playback().stopAutoPage(),
     waitForLaunchMotion: (): Promise<void> => host.auxiliarySession().waitForLaunchMotion(),
   };
+  return {
+    speechSession,
+    speechView,
+    speechProgress,
+    speechChapter,
+    speechControls,
+  };
+}
+
+export function buildReadingProgressPorts(host: ReadingExperiencePortHost): ReadingProgressPortsBundle {
   const readingProgressOwners: ReaderReadingProgressOwners = {
     progress: host.exitProgress(),
     mount: host.mountHost(),
@@ -1230,11 +1243,6 @@ export function buildSpeechAndProgressPorts(host: ReadingExperiencePortHost): Re
     requestBackSession: (session: ReaderControlSessionState): void => host.controlInteraction().requestControlSession(session, 'system-back'),
   };
   return {
-    speechSession,
-    speechView,
-    speechProgress,
-    speechChapter,
-    speechControls,
     readingProgressOwners,
     readingProgressView,
     readingExitEffects,

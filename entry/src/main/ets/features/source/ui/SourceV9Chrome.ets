@@ -1,3 +1,4 @@
+import { drawing } from '@kit.ArkGraphics2D';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
@@ -124,7 +125,15 @@ export struct SourceV9DetectButton {
 
   private reportBackground(): string {
     const color = this.checking ? undefined : sourceV9ReportFill(this.tone, this.scheme);
-    return color === undefined ? readerAppColor('app.sourceUi.field', this.scheme) : '#1F' + color.slice(1);
+    if (color === undefined) return readerAppColor('app.sourceUi.field', this.scheme);
+    const rgb = color.length === 9 ? color.slice(3) : color.slice(1);
+    return `#1F${rgb}`;
+  }
+
+  private waveColorFilter(): drawing.ColorFilter {
+    const color = sourceV9ReportFill(this.tone, this.scheme) ?? readerAppColor('app.sourceUi.muted', this.scheme);
+    return drawing.ColorFilter.createBlendModeColorFilter(Number.parseInt(color.slice(1), 16),
+      drawing.BlendMode.SRC_IN);
   }
 
   build() {
@@ -134,7 +143,7 @@ export struct SourceV9DetectButton {
           .enableLoading(!this.reduceMotion).id(this.iconId).accessibilityLevel('no');
       } else {
         Image($r('app.media.source_v9_wave')).width(16).height(16)
-          .fillColor(sourceV9ReportFill(this.tone, this.scheme) ?? readerAppColor('app.sourceUi.muted', this.scheme))
+          .supportSvg2(true).colorFilter(this.waveColorFilter())
           .id(this.iconId).accessibilityLevel('no');
       }
     }.id(this.controlId).width(28).height(28).padding(0)

@@ -1,3 +1,4 @@
+import { registerRuntimeOwnerAccessors } from './ReaderRuntimeIdentity';
 import { ReaderRuntimeImageResources, type MangaImagePriority } from './ReaderRuntimeImageResources';
 import { ReaderBundledBookSourceInstaller, type BundledSourceInstallSummary } from './ReaderBundledBookSourceInstaller';
 import { requireStorageProbeIdentity, requireCoreBuildIdentity, requireCoreStorageFormat,
@@ -1398,3 +1399,8 @@ export class ReaderRuntimeOwner {
   }
 
 }
+
+registerRuntimeOwnerAccessors(
+  (): ReaderRuntimeOwner => ReaderRuntimeOwner.current(),
+  (candidate: object): boolean => ReaderRuntimeOwner.isCurrent(candidate as ReaderRuntimeOwner),
+);

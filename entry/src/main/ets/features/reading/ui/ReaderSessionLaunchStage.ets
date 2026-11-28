@@ -54,9 +54,27 @@ export struct ReaderSessionLaunchStage {
   onToggle: () => void = (): void => {};
   @State private pressPointer: number = -1;
   private readonly metricsCache: ReaderSessionCapsuleMetricsCache = new ReaderSessionCapsuleMetricsCache();
+  private cachedCapsuleFrameKey: string = '';
+  private cachedCapsuleFrameModifier: ReaderSessionCapsuleFrame | undefined = undefined;
 
   private sourceClipCache: ReaderControlMotionPathCache<PathShape> = new ReaderControlMotionPathCache<PathShape>(
     (path: string): PathShape => new PathShape().commands(path));
+
+  private capsuleFrameModifier(): ReaderSessionCapsuleFrame {
+    const pressed = this.interactionEnabled && this.sample.pauseOpacity > 0 && this.pressPointer >= 0;
+    const material = this.sample.canonicalSurfaceOpacity > 0 ? this.material : undefined;
+    const density = this.paintDensity();
+    const key = `${this.themeScheme}:${this.surfaceColor}:${this.surfaceBorderColor}:${this.shadowColor}:${density}:${pressed ? 1 : 0}:${material === undefined ? 'none' : `${material.native ? 1 : 0}:${material.style}:${material.interactive ? 1 : 0}:${material.performanceMode ? 1 : 0}`}`;
+    if (this.cachedCapsuleFrameModifier !== undefined && this.cachedCapsuleFrameKey === key) {
+      return this.cachedCapsuleFrameModifier;
+    }
+    const modifier = new ReaderSessionCapsuleFrame(
+      this.themeScheme, this.surfaceColor, this.surfaceBorderColor, this.shadowColor,
+      density, pressed, material);
+    this.cachedCapsuleFrameKey = key;
+    this.cachedCapsuleFrameModifier = modifier;
+    return modifier;
+  }
 
   private onInteractionChanged(): void {
     if (!this.interactionEnabled || this.sample.pauseOpacity <= 0) this.pressPointer = -1;
@@ -95,9 +113,7 @@ export struct ReaderSessionLaunchStage {
       Row() {}
         .id('reader-session-launch-surface')
         .width('100%').height('100%')
-        .attributeModifier(new ReaderSessionCapsuleFrame(this.themeScheme, this.surfaceColor, this.surfaceBorderColor, this.shadowColor,
-          this.paintDensity(), this.interactionEnabled && this.sample.pauseOpacity > 0 && this.pressPointer >= 0,
-          this.sample.canonicalSurfaceOpacity > 0 ? this.material : undefined))
+        .attributeModifier(this.capsuleFrameModifier())
         .opacity(this.sample.canonicalSurfaceOpacity).hitTestBehavior(HitTestMode.None);
 
       // The live card and this source region use the same ownership decision.

@@ -179,7 +179,8 @@ import {
   buildReadingAcquisitionPorts,
   buildReadingMeasurementPorts,
   buildReadingPreferencePorts,
-  buildSpeechAndProgressPorts,
+  buildReadingProgressPorts,
+  buildSpeechPorts,
   type ReadingExperiencePortHost,
 } from './LocalReadingExperiencePorts';
 export { ReaderRetainedPresentation } from '../presentation/ReaderPagePresentationModels';
@@ -1150,11 +1151,11 @@ export struct ReadingExperience {
   };
   /** Layout facts admitted for the last window-metrics revision. */
 
-  private readonly speechAndProgressPorts = buildSpeechAndProgressPorts(this.portHost);
+  private readonly speechPorts = buildSpeechPorts(this.portHost);
   private readonly speech: ReaderReadingSpeechHost = new ReaderReadingSpeechHost(this.transientFeedback,
-    this.speechAndProgressPorts.speechSession, this.speechAndProgressPorts.speechView,
-    this.speechAndProgressPorts.speechProgress, this.speechAndProgressPorts.speechChapter,
-    this.speechAndProgressPorts.speechControls);
+    this.speechPorts.speechSession, this.speechPorts.speechView,
+    this.speechPorts.speechProgress, this.speechPorts.speechChapter,
+    this.speechPorts.speechControls);
 
   private publishSpeechPresentation(presentation: ReaderReadingSpeechPresentation): void {
     this.publishSessionStatus({
@@ -1173,9 +1174,10 @@ export struct ReadingExperience {
     });
   }
 
+  private readonly readingProgressPorts = buildReadingProgressPorts(this.portHost);
   private readonly readingProgress: ReaderReadingProgressHost = new ReaderReadingProgressHost(
-    this.speechAndProgressPorts.readingProgressOwners, this.speechAndProgressPorts.readingProgressView,
-    this.speechAndProgressPorts.readingExitEffects, this.speechAndProgressPorts.readingBackControls);
+    this.readingProgressPorts.readingProgressOwners, this.readingProgressPorts.readingProgressView,
+    this.readingProgressPorts.readingExitEffects, this.readingProgressPorts.readingBackControls);
 
   private readonly pageChromeDocument: ReaderPageChromeDocument = {
     measured: (): ReaderMeasuredPagePublication => this.measuredPage,

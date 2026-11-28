@@ -385,7 +385,7 @@ export struct SettingsPage {
 
   @Builder
   private backupPageContent() {
-    LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration, editingHost: this.backupEditingHost,
+    LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration, showHeading: true, editingHost: this.backupEditingHost,
       isOpeningCurrent: (): boolean => this.activeSection === 'backup' && this.isOpeningCurrent(),
       isInputAllowed: (): boolean => this.backupInputIsCurrent(),
       onBusyChange: (busy: boolean): void => {
@@ -670,7 +670,7 @@ export struct SettingsPage {
       ForEach(group.items, (item: SettingsNavigationItem): void => {
         this.navRow(item.label, (): Resource => $r(`app.media.${item.icon}${this.appThemeScheme === 'night' ? '_theme_night' : ''}`),
           (): void => this.openHomeDestination(item.id), item.actionId ?? '', this.homeDestinationSummary(item.id));
-      }, (item: SettingsNavigationItem): string => item.id);
+      }, (item: SettingsNavigationItem): string => `${item.id}:${this.homeDestinationSummary(item.id)}`);
     }
   }
 
@@ -1205,7 +1205,8 @@ export struct SettingsPage {
         actionEnabled: this.canClearTextCache(capturedIdentity), isBusy: this.cacheCleanup?.busy === true,
         onLabelAction: (): void => this.requestClearTextCache(capturedIdentity),
       }) {
-        ReaderButton({ scheme: this.appThemeScheme, variant: 'tonal', visualSize: 'small', label: this.cacheActionLabel(),
+        ReaderButton({ scheme: this.appThemeScheme, variant: 'tonal', visualSize: 'small', controlHeight: 32,
+          label: this.cacheActionLabel(),
           actionAccessibilityLabel: this.cacheActionLabel() === '清理' ? '清理文字缓存' : this.cacheActionLabel(),
           actionEnabled: this.canClearTextCache(capturedIdentity), isBusy: this.cacheCleanup?.busy === true,
           onAction: (): void => this.requestClearTextCache(capturedIdentity) });

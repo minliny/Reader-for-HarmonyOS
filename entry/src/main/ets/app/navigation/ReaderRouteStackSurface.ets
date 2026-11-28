@@ -8,7 +8,7 @@ import { motionAnimateParam, motionSpecGet, readerMotionStandardCurve } from '..
 import { readerMotionReducedFadeParam } from '../../ui/foundation/ReaderMotionPolicy';
 import { readerMotionNowMs } from '../../ui/foundation/ReaderMotionClock';
 import { readerBeginTransition, readerRouteTransitionLaneId, readerTransitionActorX,
-  readerTransitionsEnabled } from '../../ui/foundation/ReaderTransitionSignals';
+  readerTransitionFrameSamplingEnabled, readerTransitionsEnabled } from '../../ui/foundation/ReaderTransitionSignals';
 import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
 
 const ROOT_LANE = 'reader-route-root';
@@ -363,7 +363,7 @@ export struct ReaderRouteStackSurface {
         const start = (): void => {
           if (!this.mounted || this.activeRouteAnimation !== animation || animation.settled) return;
           try {
-            if (readerTransitionsEnabled() && preview === undefined && !fade && duration !== undefined && duration > 0) {
+            if (readerTransitionFrameSamplingEnabled() && preview === undefined && !fade && duration !== undefined && duration > 0) {
               this.stopRouteAnimator();
               const animator = context.createAnimator({
                 duration, easing: 'linear', delay: 0, fill: 'forwards',

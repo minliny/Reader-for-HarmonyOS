@@ -253,7 +253,7 @@ export struct BookshelfMultiSelectPage {
     available: () => boolean = (): boolean => true) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Text(label())
-        .constraintSize({ minWidth: 72 }).maxLines(1)
+        .constraintSize({ minWidth: 84 }).maxLines(1)
         .fontFamily(TYPE_SHELF_SELECTION_ACTION.fontFamily)
         .fontWeight(TYPE_SHELF_SELECTION_ACTION.fontWeight)
         .fontSize(TYPE_SHELF_SELECTION_ACTION.fontSizeFp)
@@ -262,7 +262,7 @@ export struct BookshelfMultiSelectPage {
         .textAlign(TextAlign.Center).padding({ left: 8, right: 8 })
         .accessibilityLevel('no');
     }
-    .constraintSize({ minWidth: 72, minHeight: READER_ACTION_MIN_TARGET }).flexShrink(0)
+    .constraintSize({ minWidth: 84, minHeight: READER_ACTION_MIN_TARGET }).flexShrink(0)
     .padding(0).attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_CARD_BG', this.appThemeScheme), this.appThemeScheme, 999, 999,
       this.selectionInputEnabled() && available()))
     .enabled(this.selectionInputEnabled() && available())
@@ -276,13 +276,15 @@ export struct BookshelfMultiSelectPage {
     Column({ space: 6 }) {
       Stack({ alignContent: Alignment.BottomEnd }) {
         if (this.hasCover(this.currentBook(book))) {
-          Image(this.coverUrl(this.currentBook(book)) as string)
-            .width(this.cardWidth())
-            .height(this.coverHeight())
-            .objectFit(ImageFit.Cover)
-            .borderRadius(8)
-            .shadow(readerSurfaceElevation('cover', this.appThemeScheme))
-            .onError(this.coverErrorHandler(this.coverUrl(this.currentBook(book))));
+          ForEach([this.coverUrl(this.currentBook(book)) ?? ''], (url: string): void => {
+            Image(url)
+              .width(this.cardWidth())
+              .height(this.coverHeight())
+              .objectFit(ImageFit.Cover)
+              .borderRadius(8)
+              .shadow(readerSurfaceElevation('cover', this.appThemeScheme))
+              .onError(this.coverErrorHandler(url));
+          }, (url: string): string => url);
         } else {
           NoCoverCover({ coverWidth: this.cardWidth(), coverHeight: this.coverHeight(),
             glyph: noCoverGlyph(this.currentBook(book).title), kindLabel: ShelfBookPresentation.contentLabel(this.currentBook(book)) });
@@ -291,7 +293,13 @@ export struct BookshelfMultiSelectPage {
         this.selectionBadge(book, 4);
       }
       .width(this.cardWidth())
-      .height(this.coverHeight());
+      .height(this.coverHeight())
+      .backgroundColor(readerAppColor(
+        this.hasCover(this.currentBook(book)) ? 'app.cover.placeholder' : 'TOK_META_BG',
+        this.appThemeScheme,
+      ))
+      .borderRadius(8)
+      .clip(true);
 
       Text(this.currentBook(book).title)
         .width(this.cardWidth())
@@ -515,20 +523,28 @@ export struct BookshelfMultiSelectPage {
     Row({ space: BOOKSHELF_LIST_DETAILS_GAP }) {
       Stack({ alignContent: Alignment.BottomEnd }) {
         if (this.hasCover(this.currentBook(book))) {
-          Image(this.coverUrl(this.currentBook(book)) as string)
-            .width(BOOKSHELF_LIST_COVER_WIDTH)
-            .height(this.listContentHeight())
-            .objectFit(ImageFit.Cover)
-            .borderRadius(6)
-            .onError(this.coverErrorHandler(this.coverUrl(this.currentBook(book))));
+          ForEach([this.coverUrl(this.currentBook(book)) ?? ''], (url: string): void => {
+            Image(url)
+              .width(BOOKSHELF_LIST_COVER_WIDTH)
+              .height(this.listContentHeight())
+              .objectFit(ImageFit.Cover)
+              .borderRadius(6)
+              .onError(this.coverErrorHandler(url));
+          }, (url: string): string => url);
         } else {
           NoCoverCover({ coverWidth: BOOKSHELF_LIST_COVER_WIDTH, coverHeight: this.listContentHeight(), glyph: noCoverGlyph(this.currentBook(book).title),
-            kindLabel: ShelfBookPresentation.contentLabel(this.currentBook(book)) });
+            kindLabel: ShelfBookPresentation.contentLabel(this.currentBook(book)), cornerRadius: 6 });
         }
         this.selectionBadge(book, 2);
       }
       .width(BOOKSHELF_LIST_COVER_WIDTH)
-      .height(this.listContentHeight());
+      .height(this.listContentHeight())
+      .backgroundColor(readerAppColor(
+        this.hasCover(this.currentBook(book)) ? 'app.cover.placeholder' : 'TOK_META_BG',
+        this.appThemeScheme,
+      ))
+      .borderRadius(6)
+      .clip(true);
       ShelfBookListDetails({
         book: this.currentBook(book), textFrame: this.listTextFrame(), targetHeight: this.listContentHeight(),
       }).layoutWeight(1).constraintSize({ minWidth: 0 });
@@ -550,8 +566,9 @@ export struct BookshelfMultiSelectPage {
       }
     }
     .width(22).height(22).margin({ right: inset, bottom: inset })
-    .backgroundColor(this.isSelected(book) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.surface.menuSolid', this.appThemeScheme))
-    .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('app.border.control', this.appThemeScheme) })
+    .backgroundColor(this.isSelected(book) ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) :
+      readerAppColor('TOK_SURFACE_TRANSLUCENT', this.appThemeScheme))
+    .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(11).shadow(readerSurfaceElevation('control', this.appThemeScheme));
   }
 

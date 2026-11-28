@@ -35,15 +35,10 @@ export struct ReaderControlModuleNavigation {
     }
     .width('100%')
     .height(this.navHeight)
-    .padding({ left: 9, right: 9, top: 9, bottom: 6 })
+    .padding({ left: 6, right: 6, top: 6, bottom: 6 })
     .backgroundColor(readerAppColor('TOK_SURFACE_SOLID_OPAQUE', this.appScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appScheme) })
-    .borderRadius({
-      topLeft: this.topRadius,
-      topRight: this.topRadius,
-      bottomLeft: TOK_RADIUS_LG,
-      bottomRight: TOK_RADIUS_LG,
-    });
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) })
+    .borderRadius(TOK_RADIUS_LG);
   }
 
   @Builder
@@ -55,11 +50,11 @@ export struct ReaderControlModuleNavigation {
           .width(20)
           .height(20).accessibilityLevel('no');
       }
-      .width(32)
-      .height(32)
+      .width(42)
+      .height(42)
       .backgroundColor(readerPressSurface(readerAppColor(this.isActiveModule(module) ? 'TOK_READ_PRIMARY' : 'TOK_SURFACE_PANEL_SOFT', this.appScheme),
         this.appScheme, this.quickOrModulePress === module, this.reduceMotion))
-      .borderRadius(16).scale(readerPressScale(this.quickOrModulePress === module, this.reduceMotion))
+      .borderRadius(21).scale(readerPressScale(this.quickOrModulePress === module, this.reduceMotion))
       .opacity(readerPressOpacity(this.quickOrModulePress === module, this.reduceMotion));
 
       // Original Make V17 navigation uses Black 10/13.889; the complete bundled Sans face owns its 900 axis.
@@ -75,12 +70,12 @@ export struct ReaderControlModuleNavigation {
         .textAlign(TextAlign.Center)
         .maxLines(!this.hasMeasuredProfile ? 1 : undefined)
         .accessibilityLevel('no')
-        .margin({ top: 4 });
+        .margin({ top: 3 });
     }.width('100%').height('100%').alignItems(HorizontalAlign.Center).justifyContent(FlexAlign.Center);
     }
     .layoutWeight(1)
     .id('reader-control-entry-' + module)
-    .height(62 + this.labelHeight - 13.889)
+    .height(64 + this.labelHeight - 13.889)
     .padding(0).backgroundColor(Color.Transparent)
     .borderRadius(12)
     .opacity(module === 'tts' && this.ttsUnavailable ? 0.72 : 1)

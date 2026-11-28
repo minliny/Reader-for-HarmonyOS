@@ -20,6 +20,7 @@ import curves from '@ohos.curves';
 import { MotionPointTrack } from '../../../ui/foundation/MotionPointTrack';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { readerTransitionFrameSamplingEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { motionSpecGet } from '../../../ui/foundation/MotionSpec';
 import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionClipRects, readerControlMotionClipPath,
   type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';
@@ -235,7 +236,9 @@ export struct ReaderControlAppearanceContent {
   private islandFontScrollStart: number = 0;
   private islandFontDragX: number = 0;
   private islandFontDragY: number = 0;
-  private islandFontScrollTimer: number = -1;
+  private islandFontScrollRunning: boolean = false;
+  private islandFontScrollGeneration: number = 0;
+  @State private nativeSettlingOrder: ReaderAppearanceFontSlot[] = [];
   private fontPointerId: number = -1;
   private fontDownX: number = 0;
   private fontDownY: number = 0;
@@ -854,7 +857,7 @@ export struct ReaderControlAppearanceContent {
             this.islandTurn('none');
           }.width('100%');
         }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
-      }.id('reader-control-font-grid').width('100%').padding({ bottom: 2 });
+      }.id('reader-control-font-grid').width('100%').padding({ bottom: 10 });
     }.id('reader-control-module-appearance').width(this.availableWidth).height(this.availableHeight)
       .enabled(this.currentInputEnabled()).enableScrollInteraction(this.draggedFontId === '')
       .scrollBar(BarState.Auto).edgeEffect(EdgeEffect.None).clip(true)
@@ -1125,6 +1128,9 @@ export struct ReaderControlAppearanceContent {
   }
 
   private fontIds(): ReaderAppearanceFontSlot[] {
+    if (this.draggedFontId === '' && this.nativeSettlingOrder.length > 0) {
+      return this.nativeSettlingOrder;
+    }
     const displayed = this.displayedFacts();
     if (this.draggedFontId === '' && displayed !== undefined) return displayed.readViewFontOrder();
     const key = this.draggedFontId === '' ? `saved:${this.displaySnapshot().fontOrder.join(',')}` :
@@ -1568,27 +1574,45 @@ export struct ReaderControlAppearanceContent {
       this.islandScrollHeight, this.islandFontDragY - this.fontDownY);
   }
 
+  private usesNativeFontReorder(): boolean {
+    return this.verificationSession?.observing() !== true && !readerTransitionFrameSamplingEnabled() &&
+      !this.reduceMotion && this.fullInput();
+  }
+
   private updateIslandFontAutoScroll(): void {
-    if (this.islandFontScrollTimer >= 0 || this.islandFontAutoScrollDelta() === 0) return;
-    this.islandFontScrollTimer = setInterval((): void => {
-      const delta = this.islandFontAutoScrollDelta();
-      const offset = this.islandScroller.currentOffset()?.yOffset ?? 0;
-      if (delta === 0 || (delta < 0 && offset <= 0) || (delta > 0 && this.islandScroller.isAtEnd())) {
-        this.stopIslandFontAutoScroll();
-      } else {
-        this.islandScroller.scrollBy(0, delta);
-      }
-    }, 16);
+    if (this.islandFontScrollRunning || this.islandFontAutoScrollDelta() === 0) return;
+    this.islandFontScrollRunning = true;
+    const generation = ++this.islandFontScrollGeneration;
+    this.scheduleIslandFontAutoScrollFrame(generation);
+  }
+
+  private scheduleIslandFontAutoScrollFrame(generation: number): void {
+    try {
+      this.getUIContext().postFrameCallback(new ReaderFontMotionFrameCallback((): void => {
+        if (!this.feedbackMounted || generation !== this.islandFontScrollGeneration || !this.islandFontScrollRunning) return;
+        const delta = this.islandFontAutoScrollDelta();
+        const offset = this.islandScroller.currentOffset()?.yOffset ?? 0;
+        if (delta === 0 || (delta < 0 && offset <= 0) || (delta > 0 && this.islandScroller.isAtEnd())) {
+          this.stopIslandFontAutoScroll();
+        } else {
+          this.islandScroller.scrollBy(0, delta);
+          this.scheduleIslandFontAutoScrollFrame(generation);
+        }
+      }));
+    } catch (_) {
+      this.stopIslandFontAutoScroll();
+    }
   }
 
   private stopIslandFontAutoScroll(): void {
-    if (this.islandFontScrollTimer >= 0) clearInterval(this.islandFontScrollTimer);
-    this.islandFontScrollTimer = -1;
+    this.islandFontScrollGeneration += 1;
+    this.islandFontScrollRunning = false;
   }
 
   private updateFontDrag(x: number, y: number): void {
     if (this.fontOriginalIndex < 0) return;
-    const positions = this.captureFontPositions();
+    const useNative = this.usesNativeFontReorder();
+    const positions = useNative ? undefined : this.captureFontPositions();
     const previous = this.previewFontOrder.join('|');
     this.draggedFontOffsetX = x;
     this.draggedFontOffsetY = y;
@@ -1596,6 +1620,7 @@ export struct ReaderControlAppearanceContent {
       readerControlAppearanceFontDropIndex(this.frame(), this.fontOrigin.x, this.fontOrigin.y, x, y, this.fontOriginalOrder.length);
     // Raw import source geometry cannot be moved or implicitly resolved by
     // a drag of another font. Its existing ordered index remains unchanged.
+    let nextOrder: ReaderAppearanceFontSlot[];
     if (this.importLayout === 'source-overlap-pending') {
       const visible = this.fontOriginalOrder.filter((slot: ReaderAppearanceFontSlot): boolean => slot !== 'import');
       const from = visible.indexOf(this.draggedFontId as ReaderAppearanceFontSlot);
@@ -1607,12 +1632,25 @@ export struct ReaderControlAppearanceContent {
         if (slot === 'import') result.push(slot);
         else { result.push(ordered[visibleIndex]); visibleIndex += 1; }
       });
-      this.previewFontOrder = result;
+      nextOrder = result;
     } else {
-      this.previewFontOrder = moveReaderAppearanceFontSlot(this.fontOriginalOrder, this.fontOriginalIndex, target);
+      nextOrder = moveReaderAppearanceFontSlot(this.fontOriginalOrder, this.fontOriginalIndex, target);
     }
-    if (previous !== this.previewFontOrder.join('|')) this.animateFontPositions(positions,
-      motionSpecGet('reader.font.reorder.shift')!.durationMs, 'shift');
+    if (previous !== nextOrder.join('|')) {
+      if (useNative) {
+        const duration = motionSpecGet('reader.font.reorder.shift')!.durationMs;
+        try {
+          this.getUIContext().animateTo({ duration, curve: this.fontMotionCurve }, (): void => {
+            this.previewFontOrder = nextOrder;
+          });
+        } catch (_) {
+          this.previewFontOrder = nextOrder;
+        }
+      } else {
+        this.previewFontOrder = nextOrder;
+        this.animateFontPositions(positions!, motionSpecGet('reader.font.reorder.shift')!.durationMs, 'shift');
+      }
+    }
   }
   private cancelFontDrag(): void {
     this.stopIslandFontAutoScroll();
@@ -1622,6 +1660,7 @@ export struct ReaderControlAppearanceContent {
     this.draggedFontOffsetX = 0;
     this.draggedFontOffsetY = 0;
     this.previewFontOrder = [];
+    this.nativeSettlingOrder = [];
     this.fontOriginalIndex = -1;
     this.fontPointerId = -1;
     this.fontVerification.finish(this.verificationSession, 'interrupted');
@@ -1733,6 +1772,7 @@ export struct ReaderControlAppearanceContent {
     if (this.fontIds().join('|') !== pending.order ||
       normalizeReaderAppearanceFontOrder(this.displaySnapshot().fontOrder).join('|') !== pending.order) return;
     this.pendingFontOrder = undefined;
+    this.nativeSettlingOrder = [];
     // The existing tracks and the prepared layout now agree. Keep any
     // running animation, and release held endpoint tracks after adoption.
     for (const track of this.fontTracks.values()) {
@@ -1743,6 +1783,7 @@ export struct ReaderControlAppearanceContent {
 
   private restoreAdmittedFontPositions(): void {
     this.retireFontOrderPresentation();
+    this.nativeSettlingOrder = [];
     if (this.feedbackMounted && this.fullInput() && this.fontTracks.size > 0) {
       this.animateFontPositions(this.captureFontPositions(), motionSpecGet('reader.font.reorder.settle')!.durationMs);
     } else {
@@ -1767,9 +1808,41 @@ export struct ReaderControlAppearanceContent {
 
   private settleFontDrag(commit: boolean): void {
     if (this.draggedFontId === '') { this.cancelFontDrag(); return; }
-    const positions = this.captureFontPositions();
     const next = this.previewFontOrder.slice();
     const changed = next.join('|') !== normalizeReaderAppearanceFontOrder(this.displaySnapshot().fontOrder).join('|');
+    if (this.usesNativeFontReorder()) {
+      this.stopIslandFontAutoScroll();
+      this.retireFontOrderPresentation();
+      this.fontMotionGeneration += 1;
+      this.fontTracks.clear();
+      this.onFontReorderActivityChange(false);
+      const facts: ReaderControlFontDragRelease = { commit: commit, changed: changed, order: next };
+      this.verificationSession?.effect('font-reorder', 'drag-released', facts);
+      const duration = motionSpecGet('reader.font.reorder.settle')!.durationMs;
+      const applySettle = (): void => {
+        this.draggedFontId = '';
+        this.draggedFontOffsetX = 0;
+        this.draggedFontOffsetY = 0;
+        this.previewFontOrder = [];
+        this.fontOriginalIndex = -1;
+        this.fontPointerId = -1;
+        this.nativeSettlingOrder = commit && changed ? next : [];
+      };
+      try {
+        this.getUIContext().animateTo({
+          duration,
+          curve: this.fontMotionCurve,
+          onFinish: (): void => {
+            if (this.pendingFontOrder === undefined) this.nativeSettlingOrder = [];
+          },
+        }, applySettle);
+      } catch (_) {
+        applySettle();
+      }
+      if (commit && changed) this.observeFontOrderPresentation(next);
+      return;
+    }
+    const positions = this.captureFontPositions();
     this.cancelFontDrag();
     const facts: ReaderControlFontDragRelease = { commit: commit, changed: changed, order: next };
     this.verificationSession?.effect('font-reorder', 'drag-released', facts);

@@ -8,22 +8,37 @@ import { prepareReaderFontFamily } from '../../../ui/foundation/ReaderFonts';
 import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
 import { TOK_SPACE_XS } from '../../../ui/foundation/ReaderTokens';
 
+import {
+  BOOKSHELF_LIST_COLUMN_GAP,
+  BOOKSHELF_LIST_COVER_WIDTH,
+  BOOKSHELF_LIST_COVER_HEIGHT,
+  BOOKSHELF_LIST_CARD_PADDING,
+  BOOKSHELF_LIST_DETAILS_GAP,
+  bookshelfColumnCount,
+  bookshelfListCardWidth,
+} from './BookshelfListGeometry';
+
+export {
+  BOOKSHELF_LIST_COLUMN_GAP,
+  BOOKSHELF_LIST_COVER_WIDTH,
+  BOOKSHELF_LIST_COVER_HEIGHT,
+  BOOKSHELF_LIST_CARD_PADDING,
+  BOOKSHELF_LIST_DETAILS_GAP,
+  bookshelfColumnCount,
+  bookshelfListCardWidth,
+};
+
 const MAX_COLUMN_GAP = 30;
 const MIN_COLUMN_GAP = TOK_SPACE_XS;
 const PHONE_CARD_MAX_WIDTH = 96.656;
 const TABLET_CARD_MAX_WIDTH = 186.672;
 const COVER_RATIO = 4.1 / 3;
-export const BOOKSHELF_LIST_COLUMN_GAP = 10;
-export const BOOKSHELF_LIST_COVER_WIDTH = 62;
-export const BOOKSHELF_LIST_COVER_HEIGHT = 88;
-export const BOOKSHELF_LIST_CARD_PADDING = 12;
-export const BOOKSHELF_LIST_DETAILS_GAP = BOOKSHELF_LIST_CARD_PADDING;
 export const BOOKSHELF_LIST_TITLE_LINE_HEIGHT = 20;
 export const BOOKSHELF_LIST_AUTHOR_LINE_HEIGHT = 16;
 export const BOOKSHELF_LIST_CHAPTER_LINE_HEIGHT = 16;
 export const BOOKSHELF_LIST_LATEST_LINE_HEIGHT = 16;
 export const BOOKSHELF_LIST_PROGRESS_LINE_HEIGHT = 14;
-export const BOOKSHELF_LIST_PROGRESS_STROKE = 3;
+export const BOOKSHELF_LIST_PROGRESS_STROKE = 4;
 const BOOKSHELF_LIST_MIN_ROW_GAP = 1.5;
 export const BOOKSHELF_GRID_TEXT_GAP = 6;
 /** Runtime title line count. Figma `Library/BookCard` `493:196` exposes
@@ -59,15 +74,6 @@ export interface BookshelfGridFrame {
   coverHeight: number;
   cardHeight: number;
   columnGap: number;
-}
-
-export function bookshelfColumnCount(expanded: boolean, list: boolean = false): number {
-  return list ? (expanded ? 2 : 1) : (expanded ? 4 : 3);
-}
-
-export function bookshelfListCardWidth(contentWidth: number, expanded: boolean): number {
-  const columns = bookshelfColumnCount(expanded, true);
-  return Math.max(0, (contentWidth - BOOKSHELF_LIST_COLUMN_GAP * (columns - 1)) / columns);
 }
 
 /** The shelf and multi-select share the width class and the cover grid. */

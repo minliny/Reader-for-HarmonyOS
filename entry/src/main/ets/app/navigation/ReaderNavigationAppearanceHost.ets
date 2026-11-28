@@ -104,8 +104,12 @@ export struct ReaderNavigationAppearanceHost {
 
   private refreshAppearance(): void {
     if (!this.mounted) return;
-    const requested = resolveReaderNavigationAppearance(this.preferences, readerHarmonyCapabilities(),
+    // HdsTabs overrides Paper & Pine's pine-green active pill and paints system
+    // blue accents in immersive mode; stay on the unified Paper & Pine renderer
+    // while keeping realtime backdrop blur controlled by renderMode.
+    const resolved = resolveReaderNavigationAppearance(this.preferences, readerHarmonyCapabilities(),
       this.appScheme, this.systemScheme);
+    const requested: ReaderNavigationAppearance = resolved === 'immersive' ? 'unified' : resolved;
     if (!this.inputEnabled || !this.foreground || (requested === 'unified' && this.shown !== 'unified')) {
       // A disabled or retired renderer may never deliver the matching Up or Cancel.
       this.releaseInteraction();

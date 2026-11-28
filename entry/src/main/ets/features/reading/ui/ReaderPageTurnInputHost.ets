@@ -269,8 +269,12 @@ export class ReaderPageTurnInputHost {
       native.surfaceGeneration = motion.generation;
     } else if (!turn.hasSlide()) {
       return undefined;
+    } else {
+      const liveOffset = turn.slidePosition(time);
+      if (liveOffset !== undefined) offset = liveOffset;
     }
     turn.cancelSlide();
+    if (!this.scene.simulation()) this.settlement.cancelSlideAnimation(offset);
     this.settlement.prepared.cancelDeadline();
     turn.generation += 1;
     this.render.publish({ pageTurnSettlementActive: false });

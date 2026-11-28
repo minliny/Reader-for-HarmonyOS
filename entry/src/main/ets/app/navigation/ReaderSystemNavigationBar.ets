@@ -39,8 +39,11 @@ export struct ReaderSystemNavigationBar {
       TabContent() {
         Stack() {}.width(0).height(0).accessibilityLevel('no');
       }.tabBar(BottomTabBarStyle.of($r(`app.media.${readerMainTabIconResource(tab.key, tab.key === this.current, this.scheme)}`),
-        tab.label).labelStyle({ selectedColor: readerAppColor('TOK_GREEN', this.scheme),
-        unselectedColor: readerAppColor('TOK_MUTED', this.scheme) }).id(`reader-main-tab-${tab.key}`));
+        tab.label)
+        .iconStyle({ selectedColor: readerAppColor('TOK_GREEN', this.scheme),
+          unselectedColor: readerAppColor('TOK_MUTED', this.scheme) })
+        .labelStyle({ selectedColor: readerAppColor('TOK_GREEN', this.scheme),
+          unselectedColor: readerAppColor('TOK_MUTED', this.scheme) }).id(`reader-main-tab-${tab.key}`));
     }, (tab: MainTabDef): string => tab.key);
   }
 

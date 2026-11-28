@@ -30,8 +30,9 @@ export interface SourceManagementLayout {
 
 export const SOURCE_ROW_ICON_WIDTH = 34;
 export const SOURCE_STATUS_CHIP_GAP = 5;
+export const SOURCE_FOOTER_ACTION_HEIGHT = 40;
 const SOURCE_ROW_GAP = 8;
-const SOURCE_ROW_CARD_INSETS = 22;
+const SOURCE_ROW_CARD_INSETS = 16;
 export const SOURCE_ROW_ACTION_GAP = 10;
 const SOURCE_ROW_SWITCH_WIDTH = 44;
 
@@ -57,9 +58,9 @@ export function resolveSourceManagementLayout(input: SourceManagementLayoutInput
   const infoHeight = (input.titleLineHeight + input.metaLineHeight) * scale + 3;
   const bodyHeight = rowForm === 'stacked-leading' ? SOURCE_ROW_ICON_WIDTH + SOURCE_ROW_GAP + infoHeight :
     Math.max(SOURCE_ROW_ICON_WIDTH, infoHeight);
-  const rowMinHeight = SOURCE_ROW_CARD_INSETS + Math.ceil(rowForm === 'inline' ? Math.max(bodyHeight, actionsHeight) :
+  const rowMinHeight = SOURCE_ROW_CARD_INSETS + Math.ceil(rowForm === 'inline' ? Math.max(bodyHeight, Math.min(actionsHeight, 36)) :
     bodyHeight + (hasActions ? SOURCE_ROW_GAP + actionsHeight : 0));
   return { rowForm, textMinWidth, textAvailableWidth, trailingWidth, actionsHeight, actionRowCount, rowMinHeight,
-    filterHeight: input.filterHeight, footerHeight: Math.max(48, input.footerHeight),
+    filterHeight: input.filterHeight, footerHeight: Math.max(40, input.footerHeight),
     statusContentWidth: input.availableWidth };
 }

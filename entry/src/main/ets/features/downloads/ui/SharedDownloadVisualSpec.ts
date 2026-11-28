@@ -50,7 +50,7 @@ export class SharedDownloadVisualSpec {
   readonly headerIconHeight: number = 44;
   readonly headerTextWidth: number = 40;
   readonly contentTop: number = 78;
-  readonly contentSide: number = 18;
+  readonly contentSide: number = 16;
   readonly contentBottom: number = 130;
   readonly tabsGap: number = 4;
   readonly tabsPadding: number = 4;
@@ -61,7 +61,7 @@ export class SharedDownloadVisualSpec {
   readonly tabRadius: number = 10;
   readonly tabPaddingX: number = 8;
   readonly tabPaddingY: number = 5;
-  readonly searchHeight: number = 44;
+  readonly searchHeight: number = 38;
   readonly searchRadius: number = 13;
   readonly searchGap: number = 8;
   readonly searchPaddingX: number = 11;
@@ -76,13 +76,13 @@ export class SharedDownloadVisualSpec {
   readonly sortPairGap: number = 3;
   readonly sortWidth: number = 24;
   readonly sortIconSize: number = 18;
-  readonly bookPaddingY: number = 15;
-  readonly coverWidth: number = 54;
-  readonly coverHeight: number = 80;
+  readonly bookPaddingY: number = 12;
+  readonly coverWidth: number = 48;
+  readonly coverHeight: number = 66;
   readonly coverRadius: number = 5;
   readonly coverPadding: number = 4;
   readonly bookGap: number = 11;
-  readonly bookMinHeight: number = 80;
+  readonly bookMinHeight: number = 66;
   readonly bookTopHeight: number = 24;
   readonly bookTopGap: number = 6;
   readonly tagPaddingX: number = 5;

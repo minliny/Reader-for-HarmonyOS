@@ -1,10 +1,9 @@
-export type ReaderTtsFailurePolicy = 'skip' | 'stop';
+export {
+  isReaderTtsVoiceInstalled,
+  type ReaderTtsVoiceOption,
+} from '../../../platform/contracts/ReaderTtsVoiceContract.ts';
 
-export type ReaderTtsVoiceOption = {
-  language: string;
-  person: number;
-  label: string;
-};
+export type ReaderTtsFailurePolicy = 'skip' | 'stop';
 
 export type ReaderTtsPreferencesSnapshot = {
   version: 1;
@@ -47,16 +46,6 @@ export function mergeReaderTtsPreferencesPatch(base: ReaderTtsPreferencesSnapsho
     followHighlight: patch.followHighlight ?? base.followHighlight,
     backgroundPlayback: patch.backgroundPlayback ?? base.backgroundPlayback,
     keepScreenOn: patch.keepScreenOn ?? base.keepScreenOn });
-}
-
-/**
- * Newer system images report downloadable catalogue entries alongside voices
- * that can be created immediately. Only the latter may enter persisted Reader
- * choices; older images omit status, so an absent value remains compatible.
- */
-export function isReaderTtsVoiceInstalled(status: string | undefined): boolean {
-  if (status === undefined || status.trim().length === 0) return true;
-  return status.trim().toUpperCase() === 'INSTALLED';
 }
 
 const DEFAULT_LANGUAGE = 'zh-CN';

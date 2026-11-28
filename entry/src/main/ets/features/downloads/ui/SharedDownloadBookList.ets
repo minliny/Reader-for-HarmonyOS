@@ -285,7 +285,7 @@ export class SharedDownloadBookListOwner {
   listSortLabelWidth(): number {
     return Math.min(Math.max(0, this.listToolsAvailableWidth() - DOWNLOAD_VISUAL.listToolsGap -
       DOWNLOAD_VISUAL.touchTarget - DOWNLOAD_VISUAL.sortPairGap),
-      Math.max(DOWNLOAD_VISUAL.touchTarget, this.sortLabel().length * TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp * this.view.frame.fontScale()));
+      Math.max(DOWNLOAD_VISUAL.touchTarget, Math.ceil(this.sortLabel().length * TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp * this.view.frame.fontScale()) + 6));
   }
 
   listSortWidth(): number { return DOWNLOAD_VISUAL.touchTarget + DOWNLOAD_VISUAL.sortPairGap + this.listSortLabelWidth(); }
@@ -795,8 +795,9 @@ function DownloadListFilterControl(owner: SharedDownloadBookListOwner, input: Do
       Image(sharedDownloadVisualIcon('filter', owner.view.frame.scheme())).width(DOWNLOAD_VISUAL.listToolIconSize).height(DOWNLOAD_VISUAL.listToolIconSize);
       Text(owner.filterLabel()).fontFamily(TYPE_DOWNLOAD_LIST_TOOLS.fontFamily).fontWeight(TYPE_DOWNLOAD_LIST_TOOLS.fontWeight)
         .fontSize(TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp).lineHeight(TYPE_DOWNLOAD_LIST_TOOLS.lineHeightFp as number).halfLeading(true)
-        .minFontScale(1).maxFontScale(owner.view.frame.fontScale()).fontColor(downloadVisualColor('ink', owner.view.frame.scheme())).layoutWeight(1);
-    }.width('100%');
+        .minFontScale(1).maxFontScale(owner.view.frame.fontScale()).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .fontColor(downloadVisualColor('ink', owner.view.frame.scheme())).layoutWeight(1);
+    }.width('100%').alignItems(VerticalAlign.Center);
   }.width(owner.listFilterWidth()).padding({ top: DOWNLOAD_VISUAL.toolPaddingY, bottom: DOWNLOAD_VISUAL.toolPaddingY })
     .constraintSize({ minHeight: owner.listToolControlHeight() }).borderRadius(0).backgroundColor(Color.Transparent)
     .accessibilityText('筛选书籍').id(sharedDownloadFocusKey('filter')).onClick((): void => {
@@ -822,13 +823,14 @@ function DownloadListSortControls(owner: SharedDownloadBookListOwner, input: Dow
     Button({ type: ButtonType.Normal }) {
       Text(owner.sortLabel()).fontFamily(TYPE_DOWNLOAD_LIST_TOOLS.fontFamily).fontWeight(TYPE_DOWNLOAD_LIST_TOOLS.fontWeight)
         .fontSize(TYPE_DOWNLOAD_LIST_TOOLS.fontSizeFp).lineHeight(TYPE_DOWNLOAD_LIST_TOOLS.lineHeightFp as number).halfLeading(true)
-        .minFontScale(1).maxFontScale(owner.view.frame.fontScale()).fontColor(downloadVisualColor('ink', owner.view.frame.scheme()));
+        .minFontScale(1).maxFontScale(owner.view.frame.fontScale()).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .fontColor(downloadVisualColor('ink', owner.view.frame.scheme()));
     }.width(owner.listSortLabelWidth()).padding({ top: DOWNLOAD_VISUAL.toolPaddingY, bottom: DOWNLOAD_VISUAL.toolPaddingY })
       .constraintSize({ minHeight: owner.listToolControlHeight() }).borderRadius(0).backgroundColor(Color.Transparent)
       .accessibilityText('选择排序字段').id(sharedDownloadFocusKey('sort')).onClick((): void => {
         if (owner.searchInputIsCurrent(input.identity)) owner.view.actions.openTool('sort', 'sort');
       });
-  }.width(owner.listSortWidth()).constraintSize({ minHeight: owner.listToolControlHeight() });
+  }.width(owner.listSortWidth()).constraintSize({ minHeight: owner.listToolControlHeight() }).alignItems(VerticalAlign.Center);
 }
 
 @Builder
@@ -895,9 +897,9 @@ export function SharedDownloadBookRow(owner: SharedDownloadBookListOwner, input:
     Stack() {
       SharedDownloadBookCover({ bookKey: input.book().key, coverUrl: input.book().coverUrl ?? '',
         presentationGeneration: input.ownerGeneration, coverWidth: DOWNLOAD_VISUAL.coverWidth,
-        coverHeight: owner.bookHeight(input.book().key), bookTitle: input.book().title,
+        coverHeight: DOWNLOAD_VISUAL.coverHeight, bookTitle: input.book().title,
         kindLabel: input.book().contentKind === undefined ? '' : input.book().contentKind === 'manga' ? '漫画' : '小说' });
-    }.width(DOWNLOAD_VISUAL.coverWidth).height(owner.bookHeight(input.book().key)).borderRadius(DOWNLOAD_VISUAL.coverRadius).clip(true)
+    }.width(DOWNLOAD_VISUAL.coverWidth).height(DOWNLOAD_VISUAL.coverHeight).borderRadius(DOWNLOAD_VISUAL.coverRadius).clip(true)
       .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', owner.view.frame.scheme()) })
       .backgroundColor(downloadVisualColor(input.book().contentKind === 'manga' ? 'softGreen' : 'soft', owner.view.frame.scheme()));
     Column({ space: 0 }) {

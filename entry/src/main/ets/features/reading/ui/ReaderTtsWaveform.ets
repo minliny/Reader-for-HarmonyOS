@@ -100,7 +100,6 @@ export struct ReaderTtsWaveform {
           .backgroundColor(this.barColor()).opacity(this.sample().opacities[index]);
       }, (_height: number, index: number): string => index.toString());
     }.width(this.slotWidth).height(this.slotHeight).clip(true)
-      .renderGroup(this.playing && !this.frozen && !this.reduceMotion)
       .justifyContent(FlexAlign.SpaceBetween).alignItems(VerticalAlign.Center)
       .hitTestBehavior(HitTestMode.None).accessibilityLevel('no')
       .onVisibleAreaChange([0, 0.01, 1], (visible: boolean, ratio: number): void => {

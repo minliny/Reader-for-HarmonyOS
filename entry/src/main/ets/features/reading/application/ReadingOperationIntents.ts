@@ -3,7 +3,8 @@ import fileIo from '@ohos.file.fs';
 import type { BusinessError } from '@ohos.base';
 import util from '@ohos.util';
 import { ReaderCoreRequestError, isReaderCoreTransactionPendingError, type JsonObject } from '@reader/core-harmony';
-import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
+import type { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
+import { isCurrentRuntimeOwner } from '../../../app/ReaderRuntimeIdentity';
 import { replaceReaderAtomicSnapshot } from '../../../app/ReaderAtomicSnapshotFile';
 import type { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
@@ -45,7 +46,7 @@ class ReadingDomainIntent {
   private readonly lane: ReadingDomainLane;
   constructor(runtime: ReadingGatewayRuntime, domain: 'bookmark' | 'cacheClear', ownsRuntime?: () => boolean) {
     this.runtime = runtime; this.domain = domain;
-    this.ownsRuntime = ownsRuntime ?? ((): boolean => ReaderRuntimeOwner.isCurrent(runtime as ReaderRuntimeOwner));
+    this.ownsRuntime = ownsRuntime ?? ((): boolean => isCurrentRuntimeOwner(runtime as ReaderRuntimeOwner));
     this.lane = domain === 'bookmark' ? bookmarkLane : cacheClearLane;
   }
   async pending(): Promise<ReadingOperationIntent | undefined> {

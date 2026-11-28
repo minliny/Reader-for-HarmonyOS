@@ -4,7 +4,7 @@ import vibrator from '@ohos.vibrator';
 import type { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { motionAnimateParam, readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
-import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
+import { readerTransitionFrameSamplingEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { readerAppColor, readerThemeDefinition, type ReaderThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
 import type { LocalReadingBookmark, LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
 import type { ReaderAppearanceTheme } from '../application/ReaderAppearanceState';
@@ -214,7 +214,7 @@ export class ReaderBookmarkInteractionHost {
           bookmarkPullHintOpacity: 0,
         });
       });
-    } else if (!readerTransitionsEnabled()) {
+    } else if (!readerTransitionFrameSamplingEnabled()) {
       this.ports.uiContext().animateTo(motionAnimateParam('reader.bookmark.rollback', finish), (): void => {
         this.ports.publishProjection({
           bookmarkPageOffsetY: 0,

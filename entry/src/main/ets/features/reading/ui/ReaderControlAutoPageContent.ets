@@ -584,13 +584,13 @@ export struct ReaderControlAutoPageContent {
                 max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, step: 1 })
                 .id(this.speedActorId('slider'))
                 .attributeModifier(new ReaderPaperMaterial())
-                .width('100%').height(44)
+                .width('100%').height(34)
+                .responseRegion({ x: 0, y: -5, width: '100%', height: 44 })
                 .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
-                .trackColor(readerAppColor('app.readerIsland.controlBorder', this.appScheme))
+                .trackColor(readerAppColor('TOK_TTS_TRACK', this.appScheme))
                 .enabled(this.sharedInput()).accessibilityText('自动翻页间隔')
                 .onChange((value: number, mode: SliderChangeMode): void => this.changeSpeedSlider(value, mode));
-            }.width('100%')
-              .attributeModifier(new ReaderIslandControlFrame(this.appScheme, this.sharedInput(), 'normal', 8, false));
+            }.width('100%');
           }.width('100%').padding({ left: 10, right: 10, bottom: 8 })
             .attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
           Column() {
@@ -608,7 +608,7 @@ export struct ReaderControlAutoPageContent {
               onChange: (value: boolean): void => { if (this.currentInputEnabled()) this.onFollowHighlightChange(value); },
             });
           }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
-        }.width('100%').padding({ bottom: 2 });
+        }.width('100%').padding({ bottom: 10 });
       }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).edgeEffect(EdgeEffect.None)
           .onDidScroll((): void => this.reportMorphActor());
     }.id('reader-control-module-autoPage').width(this.availableWidth).height(this.availableHeight)

@@ -745,7 +745,7 @@ export struct ReaderControlReplaceContent {
     Text(label()).fontFamily(TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme)).textAlign(TextAlign.Center);
     }.layoutWeight(1).height(this.frame().actionHeight).padding({ left: 6, right: 6 })
       .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme),
-        this.appThemeScheme, 6, 6, enabled() && (this.fullInput() || this.quickInput())))
+        this.appThemeScheme, 8, 8, enabled() && (this.fullInput() || this.quickInput())))
       .enabled(enabled() && (this.fullInput() || this.quickInput()))
       .id(id)
       .onClick((): void => { if (enabled() && (this.fullInput() || this.quickInput())) action(); });

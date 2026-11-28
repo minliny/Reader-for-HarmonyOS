@@ -93,6 +93,8 @@ const NATIVE_FEATURES: ReaderNativeFeatureSpec[] = [
   { id: 'source-group-select', trigger: 'reader-source-group-panel', required: ['reader-source-group-search', 'reader-source-v9-manage-groups'] },
   { id: 'reading-appearance', trigger: 'reader-control-module-appearance', required: ['reader-control-font-grid'],
     anyVisible: READER_THEME_DEFINITIONS.map((theme: ReaderThemeDefinition): string => `reader-control-theme-${theme.id}`) },
+  { id: 'reader-control-quick-home', trigger: 'reader-control-quick-content-surface',
+    required: ['reader-control-island-grabber', 'reader-control-chapter-progress-card'] },
 ];
 
 function hitMode(value?: string | number): LayoutAuditHitTest | undefined {
@@ -391,7 +393,19 @@ export class ReaderNativeLayoutAudit {
     return candidates.some((item: LayoutInvariantNativeNode): boolean => item.scrollClip) ? 'scroll-reachable' : 'absent';
   }
 
-  private density(): LayoutInvariantDensityAudit[] {
+  private pushBoxDensity(result: LayoutInvariantDensityAudit[], specId: string, node: LayoutInvariantNativeNode | undefined,
+    viewport?: LayoutInvariantRect, skipBottomClip: boolean = false, maxChildGap?: number): void {
+    if (node === undefined || node.opacity < .1 || !hasArea(node.bounds)) return;
+    const bounds = node.bounds as LayoutInvariantRect;
+    if (!skipBottomClip && viewport !== undefined &&
+      bounds.y + bounds.height >= viewport.height - 2 && bounds.y > viewport.height - 80) return;
+    const insetLeft = viewport === undefined ? undefined : bounds.x - viewport.x;
+    const insetRight = viewport === undefined ? undefined : (viewport.x + viewport.width) - (bounds.x + bounds.width);
+    result.push({ specId, id: node.id, bounds, contentBounds: bounds,
+      insetLeft, insetRight, maxChildGap, viewportWidth: viewport?.width });
+  }
+
+  private density(viewport?: LayoutInvariantRect): LayoutInvariantDensityAudit[] {
     const result: LayoutInvariantDensityAudit[] = [];
     const bar = this.byId.get('reader-bookshelf-search-bar');
     const lane = this.byId.get('reader-bookshelf-search-lane-row') ?? this.byId.get('reader-bookshelf-search-lane-stacked');
@@ -412,6 +426,61 @@ export class ReaderNativeLayoutAudit {
       result.push({ specId, id: frame.id, bounds: frame.bounds,
         contentBounds: union(this.nodes.filter((item: LayoutInvariantNativeNode): boolean =>
           item.parentKey === frame.key && item.opacity >= .1 && item.type !== 'Blank')) });
+    }
+    this.pushBoxDensity(result, 'bookshelf-viewport-inset', this.byId.get('reader.bookshelf.viewport:0'), viewport, true);
+    this.pushBoxDensity(result, 'bookshelf-view-pill', this.byId.get('reader-bookshelf-view-cover'), viewport);
+    this.pushBoxDensity(result, 'bookshelf-view-pill', this.byId.get('reader-bookshelf-view-list'), viewport);
+    this.pushBoxDensity(result, 'bookshelf-filter-toggle', this.byId.get('reader-bookshelf-filter-toggle'), viewport);
+
+    const quickSurface = this.byId.get('reader-control-quick-content-surface');
+    const dock = this.byId.get('reader-control-motion-dock');
+    if (quickSurface !== undefined && quickSurface.opacity >= .1 && hasArea(quickSurface.bounds) && dock !== undefined) {
+      const autoPage = this.byId.get('reader-control-entry-autoPage');
+      const gap = autoPage !== undefined && hasArea(autoPage.bounds) && quickSurface.bounds !== undefined ?
+        (autoPage.bounds as LayoutInvariantRect).y - ((quickSurface.bounds as LayoutInvariantRect).y + (quickSurface.bounds as LayoutInvariantRect).height) :
+        undefined;
+      this.pushBoxDensity(result, 'reader-control-island-quick', dock, viewport, true, gap);
+    }
+    this.pushBoxDensity(result, 'reader-control-chapter-card', this.byId.get('reader-control-chapter-progress-card'), viewport);
+    this.pushBoxDensity(result, 'reader-control-bookmark-lane', this.byId.get('reader-control-chapter-bookmark-lane'), viewport);
+    this.pushBoxDensity(result, 'reader-control-grabber', this.byId.get('reader-control-island-grabber'), viewport);
+
+    this.pushBoxDensity(result, 'settings-single-row', this.byId.get('reader-settings-source-management'), viewport);
+    this.pushBoxDensity(result, 'settings-single-row', this.byId.get('reader-settings-rules-management'), viewport);
+    this.pushBoxDensity(result, 'settings-two-line-row', this.byId.get('reader-settings-general'), viewport);
+
+    this.pushBoxDensity(result, 'source-filter-block', this.byId.get('reader-source-filter-block'), viewport);
+    for (const chipId of ['reader-source-status-all', 'reader-source-status-enabled', 'reader-source-status-disabled', 'reader-source-status-error']) {
+      this.pushBoxDensity(result, 'source-status-chip', this.byId.get(chipId), viewport);
+    }
+
+    let toggleCount = 0;
+    let downloadCoverCount = 0;
+    let detailPreviewCount = 0;
+    for (const item of this.nodes) {
+      if (item.id.startsWith('reader-toggle:') && toggleCount < 6) {
+        const before = result.length;
+        this.pushBoxDensity(result, 'reader-toggle', item, viewport);
+        if (result.length > before) toggleCount += 1;
+      } else if (item.id.endsWith(':tools:footer') || item.id.endsWith(':import:footer')) {
+        this.pushBoxDensity(result, 'source-footer-action', item, viewport);
+      } else if (item.id.endsWith('"detail-source"]')) {
+        this.pushBoxDensity(result, 'detail-inline-source-action', item, viewport);
+      } else if (item.id.startsWith('reader-detail-preview-') && detailPreviewCount < 4) {
+        const before = result.length;
+        this.pushBoxDensity(result, 'detail-preview-row', item, viewport);
+        if (result.length > before) detailPreviewCount += 1;
+      } else if (item.id.startsWith('reader-download:book-title:') && downloadCoverCount < 4 &&
+        item.opacity >= .1 && hasArea(item.bounds)) {
+        const rowBounds = item.bounds as LayoutInvariantRect;
+        if (viewport !== undefined && rowBounds.y + rowBounds.height >= viewport.height - 2) continue;
+        const coverStack = this.nodes.find((child: LayoutInvariantNativeNode): boolean =>
+          child.parentKey === item.key && child.type === 'Stack' && hasArea(child.bounds));
+        if (coverStack !== undefined) {
+          this.pushBoxDensity(result, 'download-book-cover', coverStack, viewport);
+          downloadCoverCount += 1;
+        }
+      }
     }
     return result;
   }
@@ -464,6 +533,6 @@ export class ReaderNativeLayoutAudit {
     return { viewport, safeViewport, nodes: this.nodes, complete, dockBounds, expectDock: route === 'detail',
       readingPaletteChecks, readingPaletteSource: paper === undefined ? appScheme : `${appScheme}/${paper.id}`,
       readingPaperEvidenceMissing: visibleTextReader && paper === undefined,
-      surfaces: this.surfaces(safeViewport, viewport), density: this.density(), features: this.features() };
+      surfaces: this.surfaces(safeViewport, viewport), density: this.density(viewport), features: this.features() };
   }
 }

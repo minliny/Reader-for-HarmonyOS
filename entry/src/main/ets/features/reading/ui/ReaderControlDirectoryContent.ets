@@ -896,9 +896,6 @@ export struct ReaderControlDirectoryContent {
           .fontColor(this.tab === tab ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }.width('100%').height(this.tabHeight() - this.value(13, 8)).justifyContent(FlexAlign.Center)
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
-      if (this.tab === tab) {
-        Row().width('52%').height(2).borderRadius(1).backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
-      }
     }.width('100%').height(this.tabHeight() - this.value(13, 8))
       .borderRadius(8).backgroundColor(this.tab === tab ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent)
       .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');

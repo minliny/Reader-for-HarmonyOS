@@ -9,13 +9,13 @@
 export const READER_CONTROL_REGULAR_DOCK_HEIGHT = 330;
 export const READER_CONTROL_TOP_BAR_HEIGHT = 54;
 export const READER_CONTROL_CONTENT_SLOT_HEIGHT = 196;
-export const READER_CONTROL_HOME_TOP_ROW_HEIGHT = 190;
+export const READER_CONTROL_HOME_TOP_ROW_HEIGHT = 198;
 export const READER_CONTROL_TOP_COMPONENT_GAP = 14;
 export const READER_CONTROL_CONTENT_PADDING_LEFT = 12.44;
 export const READER_CONTROL_CONTENT_PADDING_RIGHT = 13.56;
 
 // Home owns the equality: quick-control column height = brightness rail height.
-export const READER_CONTROL_BRIGHTNESS_RAIL_WIDTH = 46;
+export const READER_CONTROL_BRIGHTNESS_RAIL_WIDTH = 38;
 export const READER_CONTROL_BRIGHTNESS_RAIL_HEIGHT = READER_CONTROL_HOME_TOP_ROW_HEIGHT;
 export const READER_CONTROL_BRIGHTNESS_ICON_SIZE = 20;
 // Both endpoint centers align with the rail cap centers.
@@ -38,12 +38,12 @@ export function readerControlBrightnessTrackHeight(railHeight: number,
 export const READER_CONTROL_AUTO_PAGE_BRIGHTNESS_X = 312.44;
 export const READER_CONTROL_AUTO_PAGE_BRIGHTNESS_Y = 28;
 
-export const READER_CONTROL_HOME_SECTION_GAP = 6;
+export const READER_CONTROL_HOME_SECTION_GAP = 10;
 export const READER_CONTROL_HOME_SHORT_ACTION_HEIGHT = 44;
 export const READER_CONTROL_HOME_QUICK_ACTION_HEIGHT = 76;
 export const READER_CONTROL_HOME_CHAPTER_ROW_HEIGHT = 52.563;
 export const READER_CONTROL_HOME_PROGRESS_ROW_HEIGHT = 30;
-export const READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT = 106;
+export const READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT = 108;
 
 // Full TTS currently has its own Figma anchor. It is intentionally not tied to
 // the regular dock's Phone bottom gap even though both currently equal 19vp.

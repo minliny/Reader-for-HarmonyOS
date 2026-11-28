@@ -831,10 +831,10 @@ function SourceFilterChip($$: SourceManagementFiltersOwnerSlot, label: string, v
       .textOverflow({ overflow: TextOverflow.Ellipsis })
       .fontColor(readerAppColor($$.owner.paint().statusValue === label ? 'app.sourceUi.onPrimary' : 'app.sourceUi.muted', $$.owner.host.presentation.appThemeScheme()));
   }.id(`reader-source-status-${verificationId}`).layoutWeight(1)
-    .height(32).padding({ left: 2, right: 2 })
+    .height(28).padding({ left: 2, right: 2 })
     .attributeModifier(new ReaderPressFeedback(readerAppColor($$.owner.paint().statusValue === label ? 'app.sourceUi.primary' :
-      'TOK_CARD_BG', $$.owner.host.presentation.appThemeScheme()), $$.owner.host.presentation.appThemeScheme(), 16))
-    .responseRegion({ x: 0, y: -6, width: '100%', height: 44 })
+      'TOK_CARD_BG', $$.owner.host.presentation.appThemeScheme()), $$.owner.host.presentation.appThemeScheme(), 14))
+    .responseRegion({ x: 0, y: -8, width: '100%', height: 44 })
     .border({ width: TOK_BORDER_W, color: $$.owner.paint().statusValue === label ?
       readerAppColor('app.sourceUi.primary', $$.owner.host.presentation.appThemeScheme()) : readerAppColor('app.sourceUi.border', $$.owner.host.presentation.appThemeScheme()) })
     .accessibilityText(`书源状态，${label}，${$$.owner.statusCount(verificationId)} 项`).accessibilitySelected($$.owner.paint().statusValue === label)
