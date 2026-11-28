@@ -172,4 +172,10 @@ test('BookshelfPage drives view-mode switching with native animateTo without per
   assert.equal(/\bscheduleViewSwitchFrame\b/.test(source), false);
   assert.equal(/\bmeasureBookOrigin\b/.test(source), false);
   assert.match(source, /private\s+startViewSwitch\([^)]*\)\s*:\s*void[\s\S]*context\.animateTo\(/);
+  assert.equal(/\.renderGroup\s*\(/.test(source), false,
+    'BookshelfPage must not enable .renderGroup() on cover actors');
+  const coverMatch = /private\s+projectionBookCover\([^\n]*\)\s*\{([\s\S]*?)\n  \}/.exec(source);
+  assert.ok(coverMatch, 'projectionBookCover must exist');
+  const layerCalls = coverMatch[1].match(/this\.projectionBookCoverLayer\s*\(/g) ?? [];
+  assert.equal(layerCalls.length, 1, 'projectionBookCover must mount a single cover layer');
 });
