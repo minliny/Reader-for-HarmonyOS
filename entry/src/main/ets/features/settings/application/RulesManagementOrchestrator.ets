@@ -365,7 +365,7 @@ export class RulesManagementOrchestrator {
         errors.length === 0 && this.gateway.mutationSnapshot().blocked !== true ? 'succeeded' : 'failed', this.gateway.mutationSnapshot().blocked ? this.gateway.mutationSnapshot().message : errors.length === 0 ? undefined : errors.join('；'));
       this.publish({ busy: false, statusMessage: errors.length === 0 &&
         (receipt === undefined || receipt.receipt.confirmation === 'confirmed') ? statusMessage :
-        receipt === undefined ? `规则实体刷新失败：${errors.join('；')}` : this.snapshot.statusMessage,
+        receipt === undefined ? `规则刷新失败：${errors.join('；')}` : this.snapshot.statusMessage,
         readFacts: projectOperationFacts({ phase: errors.length === 0 ? 'succeeded' : readCount > 0 ? 'partial' : 'failed',
           value: this.readValue(), canRetry: errors.length > 0, generation: ++rulesProjectionGeneration,
           message: errors.join('；') }) });

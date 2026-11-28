@@ -93,7 +93,7 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
       { shouldCancel: (): boolean => !isCurrent() });
     this.assertCurrent(isCurrent);
     if (validation.data['valid'] !== true) {
-      throw new ReaderControlReplaceGatewayError('Core 拒绝保存：表达式或作用域未通过校验');
+      throw new ReaderControlReplaceGatewayError('保存失败：表达式或生效范围格式有误');
     }
     const operation = draft.original === undefined ? 'create' : 'update';
     try {
@@ -102,12 +102,12 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
       // original book's processed content after every confirmed mutation.
       return await RulesMutationOwner.forRuntime(this.fullRuntime).run('保存替换规则', isCurrent, async (request, confirmed) => {
       const result = await request('replace.persist', { operation, params });
-      if (result.data['operation'] !== operation) throw new Error('保存操作回执不匹配');
+      if (result.data['operation'] !== operation) throw new Error('保存结果与请求不符');
       const data = this.checkedObject(result.data['data']);
       const rawRule = this.checkedObject(data['rule']);
       const rule = this.decodeRule(rawRule, 'replace.persist');
       for (const key of Object.keys(params)) {
-        if (rawRule[key] !== params[key]) throw new Error(`保存字段回执不匹配：${key}`);
+        if (rawRule[key] !== params[key]) throw new Error(`保存内容与请求不符：${key}`);
       }
       confirmed(); return { rule, changed: true };
       });
@@ -133,7 +133,7 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
       const result = await request('replace.persist', { operation: 'delete', params: { id } });
       const data = this.checkedObject(result.data['data']);
       if (result.data['operation'] !== 'delete' || data['id'] !== id || data['deleted'] !== true) {
-        throw new Error('删除回执未确认指定规则');
+        throw new Error('未能确认删除指定规则');
       }
       confirmed(); return id;
       });
@@ -147,7 +147,7 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
       { shouldCancel: (): boolean => !isCurrent() });
     this.assertCurrent(isCurrent);
     if (result.data['schemaVersion'] !== 1 || typeof result.data['json'] !== 'string') {
-      throw new ReaderControlReplaceGatewayError('规则导出回执无效');
+      throw new ReaderControlReplaceGatewayError('规则导出结果无效');
     }
     const bundle = this.checkedObject(JSON.parse(result.data['json'] as string));
     if (bundle['schemaVersion'] !== 1) throw new ReaderControlReplaceGatewayError('规则文档版本无效');
@@ -189,7 +189,7 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
       const counts = this.checkedObject(result.data['counts']);
       if (result.data['schemaVersion'] !== 1 || result.data['replaceExisting'] !== false ||
         counts['replaceRules'] !== rules.length || counts['dictRules'] !== 0 ||
-        counts['txtTocRules'] !== 0 || counts['ruleSubscriptions'] !== 0) throw new Error('导入回执不匹配');
+        counts['txtTocRules'] !== 0 || counts['ruleSubscriptions'] !== 0) throw new Error('导入结果与预期数量不符');
       confirmed(); return rules.length;
       });
     } catch (error) { throw this.uncertain(error); }
@@ -211,7 +211,7 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
 
   private checkedObject(value: unknown): JsonObject {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-      throw new ReaderControlReplaceGatewayError('Core 规则回执不是有效对象');
+      throw new ReaderControlReplaceGatewayError('规则返回结果无效');
     }
     return value as JsonObject;
   }

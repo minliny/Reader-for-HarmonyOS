@@ -222,7 +222,7 @@ export class SourceManagementRecoveryOwner {
   readPageStateMessage(): string {
     return this.sourceListLoading() ? '请稍候' : this.hasEmptyImportReadbackFailure() ?
       '已确认导入，但当前列表尚未核对完成，请刷新列表。' : this.hasEmptyListReadFailure() ?
-      '请稍后重试。' : '点击下方「＋ 导入书源」导入 Legado 书源 JSON';
+      '请稍后重试。' : '点击下方「＋ 导入书源」导入书源';
   }
 
   verificationReadTextScope(): SourceSurfaceTextScope | undefined {

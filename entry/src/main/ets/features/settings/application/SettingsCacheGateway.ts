@@ -71,7 +71,7 @@ export class SettingsCacheGateway {
     if (journal === undefined) return undefined;
     if (journal.version !== 2 || journal.scope !== 'text' || journal.phase === 'pending' ||
       (journal.phase === 'confirmed' && journal.result === undefined))
-      throw new SettingsCacheCleanupFailure('清理结果尚未确认，原状态已保留；当前没有可核对的完整回执', true);
+      throw new SettingsCacheCleanupFailure('清理结果尚未确认，原状态已保留；暂无可核对记录', true);
     let result = journal.result;
     try {
       if (journal.phase !== 'confirmed') result = await this.owner.reconcileSettingsTextCleanup(current);

@@ -447,7 +447,7 @@ export class ReaderHostRegistry {
    * `source.import` semantics remain in the source feature gateway / Rust Core.
    */
   async selectBookSourceJson(): Promise<BookSourceJsonSelection | undefined> {
-    return this.selectBoundedJsonDocument('Legado 书源 JSON', '.json,.txt');
+    return this.selectBoundedJsonDocument('书源 JSON', '.json,.txt');
   }
 
   /** Select one Core-owned portable rule bundle; Host only transports bytes. */
@@ -456,7 +456,7 @@ export class ReaderHostRegistry {
   }
 
   async selectRssSourceJson(): Promise<BookSourceJsonSelection | undefined> {
-    return this.selectBoundedJsonDocument('Legado RSS 源 JSON');
+    return this.selectBoundedJsonDocument('RSS 源 JSON');
   }
 
   /**
@@ -505,7 +505,7 @@ export class ReaderHostRegistry {
       throw new Error(`在线 JSON 响应超过 ${ReaderHostRegistry.JsonDocumentLimitBytes} 字节限制`);
     }
     if (text.trimStart().startsWith('<')) {
-      throw new Error('在线地址返回网页而不是 JSON；GitHub 仓库文件请使用 Raw 链接');
+      throw new Error('在线地址返回网页而非 JSON');
     }
     return { fileName: 'online.json', text };
   }
@@ -539,7 +539,7 @@ export class ReaderHostRegistry {
    * destination selection and byte-exact UTF-8 I/O.
    */
   async saveBookSourceJson(text: string, suggestedFileName: string): Promise<string | undefined> {
-    return this.saveBoundedJsonDocument(text, suggestedFileName, 'Legado 书源 JSON', 'Book-source');
+    return this.saveBoundedJsonDocument(text, suggestedFileName, '书源 JSON', 'Book-source');
   }
 
   /** Save a byte-exact Core rule bundle through the system document picker. */
@@ -548,7 +548,7 @@ export class ReaderHostRegistry {
   }
 
   async saveRssSourceJson(text: string, suggestedFileName: string): Promise<string | undefined> {
-    return this.saveBoundedJsonDocument(text, suggestedFileName, 'Legado RSS 源 JSON', 'RSS-source');
+    return this.saveBoundedJsonDocument(text, suggestedFileName, 'RSS 源 JSON', 'RSS-source');
   }
 
   private async saveBoundedJsonDocument(

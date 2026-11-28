@@ -135,7 +135,7 @@ export class RulesManagementGateway {
       scope: ['chapter'],
     });
     if (validation.data['valid'] !== true) {
-      throw new Error('Core 拒绝保存：替换规则未通过语义校验');
+      throw new Error('保存失败：替换规则格式有误');
     }
     const params: JsonObject = {
       name: draft.name.trim(),
@@ -225,7 +225,7 @@ export class RulesManagementGateway {
   /** Capture the original provider and rule lineage before opening Host HTTP. */
   async captureSourceSubscription(sub: ManagedRuleSubscription, current: () => boolean): Promise<JsonObject> {
     if (sub.type !== 0 || this.owner.supportsCoreCapability('rules.mutation.subscription.v1') !== true) {
-      throw new Error('当前 Core 不支持书源订阅差异预览');
+      throw new Error('当前版本不支持书源订阅差异预览');
     }
     const result = await this.owner.request('rules.mutation.query', {}, { canDispatch: current, canContinue: current });
     const head = result.data['head'];
@@ -250,7 +250,7 @@ export class RulesManagementGateway {
     const expiresAt = this.requireCount(data, 'expiresAt');
     if (this.requireInteger(data, 'subscriptionId') !== id || !planId.startsWith(`${id}:`) ||
       !/^[a-f0-9]{64}$/.test(remoteDigest) || expiresAt <= Date.now()) {
-      throw new Error('Core 返回的订阅预览身份无效');
+      throw new Error('订阅预览标识无效');
     }
     const found = new Set<string>();
     const changes = this.requireArray(data['changes'], '订阅差异').map((raw: unknown): RuleSourceChange => {
@@ -259,7 +259,7 @@ export class RulesManagementGateway {
       const kind = this.requireString(item, 'kind');
       if (!sourceId.length || found.has(sourceId) ||
         !['added', 'update', 'conflict', 'removedRemote', 'unchanged', 'localOnly'].includes(kind)) {
-        throw new Error('Core 返回的订阅差异不完整');
+        throw new Error('订阅差异数据不完整');
       }
       found.add(sourceId);
       return { sourceId, name: this.requireString(item, 'name'), kind: kind as RuleSourceChangeKind };
@@ -273,14 +273,14 @@ export class RulesManagementGateway {
     if (ids.size !== sourceIds.length || !sourceIds.every((id: string): boolean =>
       preview.changes.some((change: RuleSourceChange): boolean => change.sourceId === id &&
         (change.kind === 'added' || change.kind === 'update')))) {
-      throw new Error('订阅更新包含 Core 预览之外的候选项');
+      throw new Error('订阅更新包含预览之外的条目');
     }
     return RulesMutationOwner.forRuntime(this.owner).run('应用书源订阅差异', current, async (request, confirmed) => {
       const params: JsonObject = { planId: preview.planId, sourceIds };
       const data = (await request('rule-sub.update.apply.v1', params)).data;
       const applied = this.readSourceSubscriptionApply(params, data);
       if (data['subscriptionId'] !== preview.subscriptionId || data['remoteDigest'] !== preview.remoteDigest) {
-        throw new Error('Core 订阅应用回执与预览身份不一致');
+        throw new Error('订阅更新结果与预览不一致');
       }
       confirmed();
       return applied;
@@ -298,7 +298,7 @@ export class RulesManagementGateway {
       !applied.every((id: unknown): boolean => typeof id === 'string' && expected.includes(id)) ||
       new Set(skipped).size !== skipped.length ||
       !skipped.every((id: unknown): boolean => typeof id === 'string' && !applied.includes(id))) {
-      throw new Error('Core 返回的订阅应用回执不完整');
+      throw new Error('订阅更新结果不完整');
     }
     return applied as string[];
   }
@@ -421,7 +421,7 @@ export class RulesManagementGateway {
 
   private async requestMutation(method: string, params: JsonObject, prepare?: () => Promise<void>): Promise<ReaderCoreResultEvent> {
     const admission = this.mutationAdmission;
-    return RulesMutationOwner.forRuntime(this.owner).run('Core 规则写入',
+    return RulesMutationOwner.forRuntime(this.owner).run('规则写入',
       (): boolean => ReaderRuntimeOwner.isCurrent(this.owner) && (admission?.() ?? true),
       async (request, confirmed) => {
         if (prepare !== undefined) await prepare();
@@ -439,16 +439,16 @@ export class RulesManagementGateway {
     }
     if (method === 'source.import') {
       if (data['imported'] !== true || data['sourceId'] !== params['sourceId'] ||
-        typeof data['name'] !== 'string' || (data['name'] as string).trim().length === 0) throw new Error('source.import 原回执无效');
+        typeof data['name'] !== 'string' || (data['name'] as string).trim().length === 0) throw new Error('书源导入结果无效');
       return;
     }
     if (method === 'rss-source.import') {
-      if (data['schemaVersion'] !== 1 || data['replaceExisting'] !== params['replaceExisting']) throw new Error('RSS 导入原回执无效');
+      if (data['schemaVersion'] !== 1 || data['replaceExisting'] !== params['replaceExisting']) throw new Error('RSS 导入结果无效');
       this.requireCount(data,'imported'); return;
     }
     if (method === 'reader.chinese-conversion.put') {
-      const config=this.requireObject(data['config'],'转换原回执');
-      if (config['mode'] !== params['mode'] || config['configId'] !== 1) throw new Error('转换原回执无效'); return;
+      const config=this.requireObject(data['config'],'转换结果');
+      if (config['mode'] !== params['mode'] || config['configId'] !== 1) throw new Error('转换结果无效'); return;
     }
     if (method === 'rule-bundle.import') {
       if (data['schemaVersion'] !== 1 || data['replaceExisting'] !== params['replaceExisting'])

@@ -112,7 +112,7 @@ export class MangaSourceSwitchIntents {
       } else {
         const operation = this.recoveryOperation(record);
         if (operation === undefined)
-          throw new MangaSwitchRecoveryError('当前 Core 无法核对此次漫画换源，原记录已保留');
+          throw new MangaSwitchRecoveryError('当前版本无法核对此次漫画换源，原记录已保留');
         await this.settleReceipt(record, operation, snapshot);
       }
       return true;

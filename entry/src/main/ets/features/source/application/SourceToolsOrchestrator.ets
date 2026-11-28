@@ -872,7 +872,7 @@ export class SourceToolsOrchestrator {
         if (!this.isCurrentSession(session) || this.gateway.originalMutationSnapshot()?.generation !== generation) return;
         const recovered = await this.recoverOriginalSource(session, false, original.operationId);
         if (!await this.settleRecoveredEditor(session, recovered)) {
-          await this.reloadManagement(session, '已核对原书源回执');
+          await this.reloadManagement(session, '已核对书源状态');
         }
       });
       return;
@@ -960,7 +960,7 @@ export class SourceToolsOrchestrator {
         if (this.isAcceptedSession(session) && this.pendingOperations === 0 && this.snapshot.busy) {
           this.publish({ busy: false, readFacts: projectOperationFacts({ phase: 'cancelled',
             value: this.snapshot.sources, canRetry: true, generation: ++sourceToolsReceiptGeneration,
-            message: started ? '原页面已退役，操作结果未投影' : '原页面已退役，操作尚未派发' }) });
+            message: started ? '页面已切换，操作结果暂未更新' : '页面已切换，操作未提交' }) });
         }
       });
   }

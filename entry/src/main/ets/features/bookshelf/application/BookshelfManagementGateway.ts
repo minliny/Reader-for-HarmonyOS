@@ -67,15 +67,15 @@ export class BookshelfManagementGateway {
   private qualifyMutation(method: BookshelfManagementMethod, params: JsonObject, data: JsonObject): void {
     if (method === 'book-group.create' || method === 'book-group.update') {
       const group = this.decodeGroup(this.requiredObject(data, 'group', method));
-      if (method === 'book-group.update' && group.groupId !== params['groupId']) throw new Error('分组原回执实体不符');
-      if (params['groupName'] !== undefined && group.groupName !== params['groupName']) throw new Error('分组原回执名称不符');
-      if (params['order'] !== undefined && group.order !== params['order']) throw new Error('分组原回执顺序不符');
-      if (params['enableRefresh'] !== undefined && group.enableRefresh !== params['enableRefresh']) throw new Error('分组原回执刷新选项不符');
-      if (params['show'] !== undefined && group.show !== params['show']) throw new Error('分组原回执显示选项不符');
+      if (method === 'book-group.update' && group.groupId !== params['groupId']) throw new Error('分组结果与请求不符');
+      if (params['groupName'] !== undefined && group.groupName !== params['groupName']) throw new Error('分组名称与请求不符');
+      if (params['order'] !== undefined && group.order !== params['order']) throw new Error('分组顺序与请求不符');
+      if (params['enableRefresh'] !== undefined && group.enableRefresh !== params['enableRefresh']) throw new Error('分组刷新选项与请求不符');
+      if (params['show'] !== undefined && group.show !== params['show']) throw new Error('分组显示选项与请求不符');
       return;
     }
     if (method === 'book-group.delete') {
-      if (typeof data['deleted'] !== 'boolean' || data['groupId'] !== params['groupId']) throw new Error('分组原删除回执不符');
+      if (typeof data['deleted'] !== 'boolean' || data['groupId'] !== params['groupId']) throw new Error('删除结果与原请求不符');
       return;
     }
     if (method === 'bookshelf.remove') { this.shelf.qualifyBookRemoval(data); return; }
@@ -84,7 +84,7 @@ export class BookshelfManagementGateway {
     }
     const book = this.decodeShelfBook(this.requiredObject(data, 'book', method));
     if (book.sourceId !== params['sourceId'] || book.bookId !== params['bookId'] || (book.group ?? '').trim() !== params['group'])
-      throw new Error('原分组分配回执与完整书籍/分组不符');
+      throw new Error('分组分配结果与所选书籍不符');
   }
 
   async load(): Promise<BookshelfManagementData> {

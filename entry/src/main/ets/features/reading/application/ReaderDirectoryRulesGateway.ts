@@ -84,7 +84,7 @@ export class ReaderDirectoryRulesGateway {
   }
   async preview(bookId: string, rules: JsonObject[], admission: () => boolean): Promise<JsonObject> {
     this.releasePreview();
-    if (!this.supportsPreview()) throw new Error('当前 Core 尚不支持完整目录预览');
+    if (!this.supportsPreview()) throw new Error('当前版本暂不支持完整目录预览');
     const generation=this.previewGeneration;
     const current=(): boolean=>generation===this.previewGeneration && this.current(admission);
     const event=await this.runtime.request('reading.directory.rules.preview.v2',{sourceId:'local',bookId,rules,previewView:true},
@@ -99,7 +99,7 @@ export class ReaderDirectoryRulesGateway {
     return event.data;
   }
   async apply(bookId: string, rules: JsonObject[], admission: () => boolean): Promise<JsonObject> {
-    if (!this.supportsApply()) throw new Error('当前 Core 不支持本书目录规则原操作回执，未派发');
+    if (!this.supportsApply()) throw new Error('当前版本暂不支持应用此目录规则');
     const context=this.previewContext;
     if(context===undefined || context.preview.bookId!==bookId || context.rules!==JSON.stringify(rules)) throw new Error('请重新预览当前规则后应用');
     const params: JsonObject={sourceId:'local',bookId,rules,expectedPreview:this.proofParams(context.preview.proof)};
@@ -128,6 +128,6 @@ export class ReaderDirectoryRulesGateway {
       !Number.isSafeInteger(data['nodeCount']) || (data['nodeCount'] as number) < 0 ||
       !Number.isSafeInteger(data['readableChapterCount']) || (data['readableChapterCount'] as number) < 0 ||
       !Array.isArray(data['nodes']) ||
-      (params['expectedPreview'] !== undefined && (params['expectedPreview'] as JsonObject)['navigationRevision'] !== data['navigationRevision'])) throw new Error('本书目录规则原回执不匹配，保留原操作核对');
+      (params['expectedPreview'] !== undefined && (params['expectedPreview'] as JsonObject)['navigationRevision'] !== data['navigationRevision'])) throw new Error('本书目录规则结果与预览不符，请重新核对');
   }
 }
