@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { copySourceSandbox, isCleanArkTsCompileFailure, sourceSnapshot } from '../hap-pipeline.mjs';
-import { publishVerifiedHapRun } from './hap-delivery-evidence.mjs';
+import { LEAN_OMITTED_FONT_FILES, leanReaderFontsSource, publishVerifiedHapRun,
+  requiredHapResources } from './hap-delivery-evidence.mjs';
 
 const asset = 'entry/src/main/resources/base/media/font.bin';
 const profile = 'build-profile.json5';
@@ -179,4 +180,38 @@ test('copySourceSandbox omits docs, tests, and CI metadata directories outside B
   for (const omitted of ['docs', 'tests', '.github', '.pytest_cache']) {
     assert.equal(existsSync(join(destination, omitted)), false, `${omitted} should not be copied into Hvigor sandbox`);
   }
+});
+
+test('requiredHapResources leanFonts omits extra font faces while preserving core fonts, identity, and licenses', () => {
+  const repoRoot = join(import.meta.dirname, '..', '..');
+  const full = requiredHapResources(repoRoot);
+  const lean = requiredHapResources(repoRoot, { leanFonts: true });
+  const leanPaths = new Set(lean.map(entry => entry.path));
+  assert.equal(full.length - lean.length, LEAN_OMITTED_FONT_FILES.length);
+  for (const omitted of LEAN_OMITTED_FONT_FILES) {
+    assert.equal(leanPaths.has(`resources/rawfile/${omitted}`), false, `${omitted} should be omitted in lean mode`);
+  }
+  for (const kept of [
+    'resources/rawfile/reader-core-storage-identity.v1.json',
+    'resources/rawfile/InterVariable.ttf',
+    'resources/rawfile/NotoSansSC-UIRegular.otf',
+    'resources/rawfile/NotoSerifSC-Regular.ttf',
+    'resources/rawfile/licenses/oss-reuse-NOTICE.txt',
+  ]) {
+    assert.equal(leanPaths.has(kept), true, `${kept} must stay required in lean mode`);
+  }
+});
+
+test('leanReaderFontsSource rewrites omitted font literals to retained base fonts', async () => {
+  const { readFileSync } = await import('node:fs');
+  const fontSourcePath = join(import.meta.dirname, '..', '..', 'entry', 'src', 'main', 'ets', 'ui', 'foundation', 'ReaderFonts.ets');
+  const original = readFileSync(fontSourcePath, 'utf8');
+  const rewritten = leanReaderFontsSource(original);
+  for (const omitted of LEAN_OMITTED_FONT_FILES) {
+    assert.equal(original.includes(`$rawfile('${omitted}')`), true, `${omitted} should exist in ReaderFonts.ets`);
+    assert.equal(rewritten.includes(`$rawfile('${omitted}')`), false, `${omitted} should be rewritten in lean ReaderFonts.ets`);
+  }
+  assert.equal(rewritten.includes("$rawfile('NotoSansSC-UIRegular.otf')"), true);
+  assert.equal(rewritten.includes("$rawfile('NotoSerifSC-Regular.ttf')"), true);
+  assert.equal(rewritten.includes("$rawfile('InterVariable.ttf')"), true);
 });

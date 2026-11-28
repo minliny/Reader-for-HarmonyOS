@@ -9,7 +9,7 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CORE_ROOT = resolve(REPO_ROOT, process.env.READER_CORE_ROOT || '../Reader-Core');
 
 function usage() {
-  console.log(`Usage: node scripts/dev-harmony-smoke.mjs [--abi arm64-v8a|x86_64] [--skip-core] [--skip-hap] [--timings] [--dry-run]
+  console.log(`Usage: node scripts/dev-harmony-smoke.mjs [--abi arm64-v8a|x86_64] [--lean-fonts] [--skip-core] [--skip-hap] [--timings] [--dry-run]
 Daily iteration helper using Core smoke profile (no ThinLTO) + incremental HAP build.
 Release/acceptance builds still require scripts/hap-pipeline.mjs directly.`);
 }
@@ -17,6 +17,7 @@ Release/acceptance builds still require scripts/hap-pipeline.mjs directly.`);
 function parseArgs(argv) {
   let abi = process.env.READER_HARMONY_ABI || 'arm64-v8a';
   let abiSeen = false;
+  let leanFonts = false;
   let skipCore = false;
   let skipHap = false;
   let timings = false;
@@ -25,6 +26,7 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--help' || arg === '-h') help = true;
+    else if (arg === '--lean-fonts' && !leanFonts) leanFonts = true;
     else if (arg === '--skip-core' && !skipCore) skipCore = true;
     else if (arg === '--skip-hap' && !skipHap) skipHap = true;
     else if (arg === '--timings' && !timings) timings = true;
@@ -38,7 +40,7 @@ function parseArgs(argv) {
       throw Object.assign(new Error(`unknown argument: ${arg}`), { exitCode: 2 });
     }
   }
-  return { abi: resolveHarmonyAbi(abi), skipCore, skipHap, timings, dryRun, help };
+  return { abi: resolveHarmonyAbi(abi), leanFonts, skipCore, skipHap, timings, dryRun, help };
 }
 
 try {
@@ -70,7 +72,8 @@ try {
       name: 'hap-iteration-incremental',
       cwd: REPO_ROOT,
       command: nodeBin,
-      args: [pipeline, 'build', '--class', 'iteration', '--incremental', '--abi', options.abi, '--core-profile', 'smoke'],
+      args: [pipeline, 'build', '--class', 'iteration', '--incremental', '--abi', options.abi, '--core-profile', 'smoke',
+        ...(options.leanFonts ? ['--lean-fonts'] : [])],
       ...(options.timings ? { env: { READER_HAP_TIMINGS: '1' } } : {}),
     });
   }
