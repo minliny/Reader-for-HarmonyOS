@@ -1,6 +1,5 @@
 import type { ReaderTtsPlaybackCoordinator } from './ReaderTtsPlaybackOwner';
 import type { ReaderTtsHost, ReaderTtsHostEvent, ReaderTtsNativeSpeakPoint } from './ReaderTtsHostContract.ts';
-import { diagnosticCodeOf } from '../../../app/LogPrivacy.ts';
 import { ReaderStartupTrace, type ReaderTtsCapsuleTiming } from '../../../app/ReaderStartupTrace.ts';
 import { errorMessageOf } from '../../../app/ErrorMessage.ts';
 import {
@@ -17,196 +16,64 @@ import {
 } from './ReaderTtsState.ts';
 import {
   type ReaderTtsChapterRef,
-  type ReaderTtsChapterTransition,
-  type ReaderTtsCallbackResult,
   type ReaderTtsConfig,
   type ReaderTtsGateway,
   type ReaderTtsQueueSnapshot,
   type ReaderTtsSlicePlan,
 } from './ReaderTtsGateway.ts';
+import {
+  DEFAULT_START_CALLBACK_TIMEOUT_MS,
+  TTS_RATE_MAX,
+  TTS_RATE_MIN,
+  createHostTtsTransportState,
+  type ActiveSession,
+  type CorrelatedUtterance,
+  type HostTtsTransportState,
+  type ReaderTtsAuditionCode,
+  type ReaderTtsAuditionInput,
+  type ReaderTtsAuditionOutcome,
+  type ReaderTtsAuditionPhase,
+  type ReaderTtsAuditionReceipt,
+  type ReaderTtsAuditionSession,
+  type ReaderTtsChapterAdvanceInput,
+  type ReaderTtsChapterAdvanceRange,
+  type ReaderTtsCoordinatorGateway,
+  type ReaderTtsCoordinatorOptions,
+  type ReaderTtsHostResumeOrigin,
+  type ReaderTtsNativeStopReceipt,
+  type ReaderTtsProgressCommit,
+  type ReaderTtsStartInput,
+  type ReaderTtsUserPauseAttempt,
+  type StartWaiter,
+} from './ReaderTtsSessionTypes.ts';
+import {
+  TtsUtteranceCorrelationWindow,
+  assertTtsStartInput,
+  firstTtsSliceIndex,
+  isValidTtsAuditionInput,
+  logTtsCoordinatorEvent,
+  nextTtsAuditionOperationId,
+  nextTtsCoordinatorOwnerToken,
+  nextTtsGeneration,
+  reportCorrelatedTtsCallback,
+  reportTtsAudition,
+  resolveTtsPublishedPlaybackState,
+  resolveTtsSnapshotStatus,
+  traceTtsAudition,
+} from './ReaderTtsSessionHelpers.ts';
 
-const TTS_RATE_MIN = 0.5;
-const TTS_RATE_MAX = 2;
-const DEFAULT_START_CALLBACK_TIMEOUT_MS = 15000;
-// Host engines may deliver a duplicate completion after the coordinator has
-// already advanced the Core queue.  Keep a small, bounded correlation window
-// for those late callbacks; retaining every completed slice would make a
-// long-running book a process-lifetime memory leak.
-const MAX_RETAINED_COMPLETED_UTTERANCES = 128;
-
-let READER_TTS_COORDINATOR_SEQ = 0;
-let READER_TTS_AUDITION_OPERATION_SEQ = 0;
-
-export type ReaderTtsHostResumeOrigin = 'mediaPlay' | 'interruptionResume';
-
-export type ReaderTtsCoordinatorOptions = {
-  /** Max delay between host.speak() acceptance and the real onStart callback. */
-  startCallbackTimeoutMs?: number;
-  /** Admit a native resume while the current reading session owns a resumable queue. */
-  admitHostResume?: (origin: ReaderTtsHostResumeOrigin) => boolean;
-  /** Reuse the current reading owner's rate and preference transaction. */
-  onMediaRate?: (rate: number) => void;
-  /** Defer native speech setup while the capsule launch animation owns frames. */
-  waitForLaunchMotion?: () => Promise<void>;
+export type {
+  HostTtsTransportState,
+  ReaderTtsAuditionPhase,
+  ReaderTtsAuditionReceipt,
+  ReaderTtsChapterAdvanceInput,
+  ReaderTtsChapterAdvanceRange,
+  ReaderTtsCoordinatorGateway,
+  ReaderTtsCoordinatorOptions,
+  ReaderTtsHostResumeOrigin,
+  ReaderTtsProgressCommit,
+  ReaderTtsStartInput,
 };
-
-type StartWaiter = { generation: number; resolve: (started: boolean) => void };
-type ReaderTtsUserPauseAttempt = {
-  sessionGeneration: number;
-  controlGeneration: number;
-  task?: Promise<void>;
-};
-type ReaderTtsNativeStopReceipt = {
-  sessionGeneration: number;
-  result: Promise<Error | undefined>;
-};
-
-export type ReaderTtsStartInput = {
-  chapter: ReaderTtsChapterRef;
-  content: string;
-  contentVersion: ReaderTtsContentVersion;
-  scalarPosition: number;
-  rate?: number;
-  pitch?: number;
-  language?: string;
-  person?: number;
-  pauseOnInterruption?: boolean;
-  allowMixing?: boolean;
-  backgroundPlayback?: boolean;
-  failurePolicy?: 'skip' | 'stop';
-  timerDurationMs?: number;
-};
-
-export type ReaderTtsProgressCommit = {
-  chapter: ReaderTtsChapterRef;
-  charEnd: number;
-};
-
-export type ReaderTtsChapterAdvanceInput = {
-  chapter: ReaderTtsChapterRef;
-  content: string;
-  contentVersion: ReaderTtsContentVersion;
-  onAdmitted?: (firstRange?: ReaderTtsChapterAdvanceRange) => boolean;
-};
-
-export interface ReaderTtsChapterAdvanceRange {
-  charStart: number;
-  charEnd: number;
-}
-
-export interface ReaderTtsCoordinatorGateway {
-  getConfig(): Promise<ReaderTtsConfig | undefined>;
-  slice(chapter: ReaderTtsChapterRef, content: string, strategy?: 'paragraph-then-sentence'): Promise<ReaderTtsSlicePlan>;
-  play(plan: ReaderTtsSlicePlan, startSliceIndex: number): Promise<ReaderTtsQueueSnapshot>;
-  pause(chapter: ReaderTtsChapterRef): Promise<ReaderTtsQueueSnapshot>;
-  resume(chapter: ReaderTtsChapterRef): Promise<ReaderTtsQueueSnapshot>;
-  stop(chapter: ReaderTtsChapterRef): Promise<ReaderTtsQueueSnapshot>;
-  next(chapter: ReaderTtsChapterRef): Promise<ReaderTtsQueueSnapshot>;
-  previous(chapter: ReaderTtsChapterRef): Promise<ReaderTtsQueueSnapshot>;
-  seek(chapter: ReaderTtsChapterRef, sliceIndex: number): Promise<ReaderTtsQueueSnapshot>;
-  skip(chapter: ReaderTtsChapterRef): Promise<ReaderTtsQueueSnapshot>;
-  setRate(chapter: ReaderTtsChapterRef, rate: number): Promise<ReaderTtsQueueSnapshot>;
-  chapterPlan(
-    chapter: ReaderTtsChapterRef,
-    nextChapter: ReaderTtsChapterRef | undefined,
-    drainBehavior?: 'stop-on-boundary' | 'advance-to-next',
-  ): Promise<ReaderTtsChapterTransition>;
-  reportStatus(
-    chapter: ReaderTtsChapterRef,
-    sliceIndex: number,
-    status: 'speaking' | 'done' | 'failed',
-  ): Promise<ReaderTtsQueueSnapshot>;
-  reportCallback(
-    chapter: ReaderTtsChapterRef,
-    sliceIndex: number,
-    status: 'speaking' | 'done' | 'failed',
-    callbackId: string,
-    failurePolicy: 'skip' | 'stop',
-    failureLimit?: number,
-  ): Promise<ReaderTtsCallbackResult>;
-}
-
-export interface ReaderTtsAuditionInput {
-  engine?: string;
-  language: string;
-  person: number;
-  rate?: number;
-  pitch?: number;
-  observe?: (receipt: ReaderTtsAuditionReceipt) => void;
-  trace?: (operationId: number, phase: ReaderTtsAuditionPhase) => void;
-}
-type ReaderTtsAuditionState = 'started' | 'completed' | 'failed' | 'unavailable';
-type ReaderTtsAuditionCode = 'system-capability-missing' | 'book-pause' | 'engine-selection' | 'voice-probe' |
-  'audio-session' | 'native-speak' | 'native-error' | 'native-stop' | 'timeout' | 'cleanup' |
-  'audio-session-paused' | 'audio-session-stopped' | 'output-device-stopped';
-export type ReaderTtsAuditionPhase = 'admitted' | 'book-paused' | 'engine-selected' | 'voice-probed' |
-  'audio-activated' | 'speak-dispatched' | 'audio-complete-callback' | 'owner-cancelled' | 'timeout' |
-  'audio-session-resumed' | 'output-device-continue';
-
-export interface ReaderTtsAuditionReceipt {
-  readonly schemaVersion: 1;
-  readonly operationId: number;
-  readonly state: ReaderTtsAuditionState;
-  readonly code?: ReaderTtsAuditionCode;
-}
-
-interface ReaderTtsAuditionOutcome {
-  readonly state: 'completed' | 'failed' | 'unavailable';
-  readonly code?: ReaderTtsAuditionCode;
-}
-
-interface ReaderTtsAuditionSession {
-  requestId: string;
-  operationId: number;
-  started: boolean;
-  observe?: (receipt: ReaderTtsAuditionReceipt) => void;
-  trace?: (operationId: number, phase: ReaderTtsAuditionPhase) => void;
-  restoreEngine: string | undefined;
-  timer: number;
-  resolve: () => void;
-  reject: (error: Error) => void;
-}
-
-type ActiveSession = {
-  identity: ReaderTtsSessionIdentity;
-  traceOperationId?: number;
-  input: ReaderTtsStartInput;
-  plan?: ReaderTtsSlicePlan;
-  config?: ReaderTtsConfig;
-};
-
-type CorrelatedUtterance = {
-  identity: ReaderTtsSessionIdentity;
-  positionGeneration: number;
-  controlGeneration: number;
-  utteranceGeneration: number;
-  requestId: string;
-  chapter: ReaderTtsChapterRef;
-  sliceIndex: number;
-  charEnd: number;
-  failurePolicy: 'skip' | 'stop';
-};
-
-export type HostTtsTransportState = {
-  engine: 'system' | 'http';
-  audioSession: 'inactive' | 'active';
-  focus: 'none' | 'held' | 'interrupted';
-  sessionGeneration: number;
-  utteranceGeneration: number;
-  currentRequestId?: string;
-  interruption?: 'systemInterruption' | 'routeBackground' | 'deviceChange';
-  timerDeadlineMs?: number;
-};
-
-function createHostTtsTransportState(): HostTtsTransportState {
-  return {
-    engine: 'system',
-    audioSession: 'inactive',
-    focus: 'none',
-    sessionGeneration: 0,
-    utteranceGeneration: 0,
-  };
-}
 
 /**
  * Serial bridge between Core's queue and the actual Harmony system engine.
@@ -245,9 +112,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
   private audition: ReaderTtsAuditionSession | undefined = undefined;
   private timerHandle: number = -1;
   private timerGeneration: number = 0;
-  private readonly utterances: Map<string, CorrelatedUtterance> = new Map();
-  private readonly retainedUtteranceOrder: string[] = [];
-  private readonly retainedUtteranceIds: Set<string> = new Set();
+  private readonly utterances: TtsUtteranceCorrelationWindow = new TtsUtteranceCorrelationWindow();
   private readonly ownerToken: string;
   private readonly startCallbackTimeoutMs: number;
   private readonly admitHostResume: ((origin: ReaderTtsHostResumeOrigin) => boolean) | undefined;
@@ -272,7 +137,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     this.progressCommit = progressCommit;
     this.stateListener = stateListener;
     this.chapterAdvance = chapterAdvance;
-    this.ownerToken = `tts-coordinator-${++READER_TTS_COORDINATOR_SEQ}`;
+    this.ownerToken = nextTtsCoordinatorOwnerToken();
     this.startCallbackTimeoutMs = options?.startCallbackTimeoutMs ?? DEFAULT_START_CALLBACK_TIMEOUT_MS;
     this.admitHostResume = options?.admitHostResume;
     this.onMediaRate = options?.onMediaRate;
@@ -297,7 +162,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       if ('requestId' in event && event.requestId === audition.requestId) {
         if (event.type === 'start' && !audition.started) {
           audition.started = true;
-          this.reportAudition(audition, 'started');
+          reportTtsAudition(audition, 'started');
         } else if (event.type === 'error') {
           this.voidLogged(this.finishAudition(audition, { state: 'failed', code: 'native-error' },
             new Error(event.message)), 'audition.error');
@@ -305,7 +170,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
           this.voidLogged(this.finishAudition(audition, { state: 'failed', code: 'native-stop' },
             new Error('试听已停止，请重试')), 'audition.stop');
         } else if (event.type === 'complete' && event.completion === 'audio') {
-          this.traceAudition(audition, 'audio-complete-callback');
+          traceTtsAudition(audition, 'audio-complete-callback');
           this.voidLogged(this.finishAudition(audition, { state: 'completed' }), 'audition.complete');
         }
         return; // Audition callbacks never enter Core's book queue or progress path.
@@ -319,7 +184,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
             { state: 'failed', code: paused ? 'audio-session-paused' : 'audio-session-stopped' },
             new Error(paused ? '系统音频会话已暂停，请重试试听' : '系统音频会话已停止，请重试试听')), 'audition.interruption');
         } else if (event.action === 'resume') {
-          this.traceAudition(audition, 'audio-session-resumed');
+          traceTtsAudition(audition, 'audio-session-resumed');
         }
         return;
       }
@@ -328,7 +193,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
           this.voidLogged(this.finishAudition(audition, { state: 'failed', code: 'output-device-stopped' },
             new Error('音频输出设备已切换，请重试试听')), 'audition.deviceChange');
         } else {
-          this.traceAudition(audition, 'output-device-continue');
+          traceTtsAudition(audition, 'output-device-continue');
         }
         return;
       }
@@ -384,14 +249,12 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
         this.voidLogged(this.resume(), stage);
       }
     } catch (error) {
-      this.logTtsEvent(stage, errorMessageOf(error));
+      logTtsCoordinatorEvent(stage, errorMessageOf(error));
     }
   }
 
   auditionVoice(input: ReaderTtsAuditionInput): Promise<void> {
-    if (this.disposed || !input.language.trim() || !Number.isSafeInteger(input.person) || input.person < 0 ||
-        (input.rate !== undefined && (!Number.isFinite(input.rate) || input.rate < 0.5 || input.rate > 2)) ||
-        (input.pitch !== undefined && (!Number.isFinite(input.pitch) || input.pitch < 0.5 || input.pitch > 2))) {
+    if (this.disposed || !isValidTtsAuditionInput(input)) {
       return Promise.reject(new Error('试听参数无效'));
     }
     const previous = this.stopAudition();
@@ -401,7 +264,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     const completed = new Promise<void>((accept, fail): void => { resolve = accept; reject = fail; });
     // Core Speech Kit accepts alphanumeric request IDs. One process-wide
     // sequence identifies the native preview and its diagnostic receipt.
-    const operationId = ++READER_TTS_AUDITION_OPERATION_SEQ;
+    const operationId = nextTtsAuditionOperationId();
     const session: ReaderTtsAuditionSession = {
       requestId: `ReaderTtsAudition${operationId}`,
       operationId,
@@ -412,9 +275,9 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       timer: -1, resolve, reject,
     };
     this.audition = session;
-    this.traceAudition(session, 'admitted');
+    traceTtsAudition(session, 'admitted');
     session.timer = globalThis.setTimeout((): void => {
-      this.traceAudition(session, 'timeout');
+      traceTtsAudition(session, 'timeout');
       this.voidLogged(this.finishAudition(session, { state: 'failed', code: 'timeout' },
         new Error('试听超时，请重试')), 'audition.timeout');
     }, 15000) as number;
@@ -425,12 +288,12 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
         await previous;
         await pause;
         if (!current()) return;
-        this.traceAudition(session, 'book-paused');
+        traceTtsAudition(session, 'book-paused');
         stage = 'engine-selection';
         const selected = await this.host.selectEngine(input.engine ?? session.restoreEngine);
         if (!current()) return;
         if (!selected) throw new Error('当前试听引擎不可用');
-        this.traceAudition(session, 'engine-selected');
+        traceTtsAudition(session, 'engine-selected');
         stage = 'voice-probe';
         const probe = await this.host.probe(input.language, input.person, true);
         if (!current()) return;
@@ -440,17 +303,17 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
           return;
         }
         if (!probe.available) throw new Error(probe.reason ?? '当前音色不可用');
-        this.traceAudition(session, 'voice-probed');
+        traceTtsAudition(session, 'voice-probed');
         stage = 'audio-session';
         this.host.setBackgroundPlaybackEnabled?.(false);
         await this.host.activateAudioSession(false);
         if (!current()) return;
-        this.traceAudition(session, 'audio-activated');
+        traceTtsAudition(session, 'audio-activated');
         // Speaking is an owned transport operation. Its completion is delivered by
         // the existing Host listener; a missing acceptance ACK must not hold
         // the config lane and prevent cancellation/engine restoration.
         stage = 'native-speak';
-        this.traceAudition(session, 'speak-dispatched');
+        traceTtsAudition(session, 'speak-dispatched');
         void this.host.speak({ requestId: session.requestId, exactVoice: true,
           text: '这是音色试听。愿你在阅读中，发现更广阔的世界。',
           language: input.language, person: input.person, rate: input.rate ?? 1,
@@ -473,25 +336,8 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
   stopAudition(): Promise<void> {
     const session = this.audition;
     if (session === undefined) return Promise.resolve();
-    this.traceAudition(session, 'owner-cancelled');
+    traceTtsAudition(session, 'owner-cancelled');
     return this.finishAudition(session);
-  }
-
-  private traceAudition(session: ReaderTtsAuditionSession, phase: ReaderTtsAuditionPhase): void {
-    try {
-      session.trace?.(session.operationId, phase);
-    } catch (_) {
-      // A diagnostic callback cannot veto audio or cleanup.
-    }
-  }
-
-  private reportAudition(session: ReaderTtsAuditionSession, state: ReaderTtsAuditionState,
-    code?: ReaderTtsAuditionCode): void {
-    try {
-      session.observe?.({ schemaVersion: 1, operationId: session.operationId, state, code });
-    } catch (_) {
-      // The optional diagnostic sink has no authority over native playback or its promise.
-    }
   }
 
   private finishAudition(session: ReaderTtsAuditionSession, outcome?: ReaderTtsAuditionOutcome,
@@ -509,11 +355,11 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
         await this.host.deactivateAudioSession();
         if (!await this.host.selectEngine(session.restoreEngine)) throw new Error('试听后恢复朗读引擎失败');
       } catch (error) {
-        this.logTtsEvent('audition.cleanup', errorMessageOf(error));
+        logTtsCoordinatorEvent('audition.cleanup', errorMessageOf(error));
         result ??= new Error(errorMessageOf(error));
         terminal = { state: 'failed', code: 'cleanup' };
       }
-      if (terminal !== undefined) this.reportAudition(session, terminal.state, terminal.code);
+      if (terminal !== undefined) reportTtsAudition(session, terminal.state, terminal.code);
       if (result === undefined) session.resolve();
       else session.reject(result);
     });
@@ -635,7 +481,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       return true;
     } catch (error) {
       const detail = errorMessageOf(error);
-      this.logTtsEvent('probe', detail);
+      logTtsCoordinatorEvent('probe', detail);
       if (!publishPlaybackState) throw error;
       if (this.active === undefined && isProbeCurrent()) {
         this.setState({
@@ -651,19 +497,19 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
 
   start(input: ReaderTtsStartInput, desiredPlaying: boolean = true,
     capsuleTiming?: ReaderTtsCapsuleTiming): Promise<void> {
-    this.assertStartInput(input);
+    assertTtsStartInput(input);
     const traceOperationId = ReaderStartupTrace.currentTts()?.beginTtsOperation(capsuleTiming);
     this.lastTraceOperationId = traceOperationId;
     this.voidLogged(this.stopAudition(), 'audition.formal-start');
     this.desiredPlaying = desiredPlaying;
     const chapterKey = this.chapterKey(input.chapter);
     const rate = input.rate ?? 1;
-    this.clearUtteranceCorrelations();
+    this.utterances.clear();
     this.resolveStartWaiters(false);
     this.transport = {
       ...this.transport,
-      sessionGeneration: this.nextGeneration(this.transport.sessionGeneration),
-      utteranceGeneration: this.nextGeneration(this.transport.utteranceGeneration),
+      sessionGeneration: nextTtsGeneration(this.transport.sessionGeneration),
+      utteranceGeneration: nextTtsGeneration(this.transport.utteranceGeneration),
       currentRequestId: undefined,
       interruption: undefined,
     };
@@ -840,7 +686,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     if (active === undefined || active.plan === undefined) return Promise.resolve();
     const wasPaused = this.state.status === 'paused' || this.state.status === 'interrupted';
     const controlGeneration = this.retireControlIntent();
-    const positionGeneration = this.nextGeneration(this.state.positionGeneration ?? 0);
+    const positionGeneration = nextTtsGeneration(this.state.positionGeneration ?? 0);
     this.setState({ ...this.state, positionGeneration,
       charStart: undefined, charEnd: undefined, requestId: undefined });
     const identity = active.identity;
@@ -943,7 +789,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       return this.pendingMixingChoice.result;
     if (this.pendingMixingPreference === undefined && !this.mixingNeedsReconciliation &&
       (active.input.allowMixing ?? false) === allowMixing) return Promise.resolve(true);
-    const request = this.nextGeneration(this.mixingPreferenceGeneration);
+    const request = nextTtsGeneration(this.mixingPreferenceGeneration);
     this.mixingPreferenceGeneration = request;
     this.pendingMixingPreference = request;
     const generation = active.identity.sessionGeneration;
@@ -998,7 +844,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       this.active.input = { ...this.active.input, language: normalizedLanguage, person };
       return;
     }
-    const generation = this.nextGeneration(this.idleVoicePreparationGeneration);
+    const generation = nextTtsGeneration(this.idleVoicePreparationGeneration);
     this.idleVoicePreparationGeneration = generation;
     this.voidLogged(this.enqueue(async (): Promise<void> => {
       if (this.disposed || this.active !== undefined || this.audition !== undefined ||
@@ -1022,7 +868,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       (active.input.language ?? 'zh-CN') === normalizedLanguage && (active.input.person ?? 0) === person)
       return Promise.resolve(true);
     this.voidLogged(this.stopAudition(), 'audition.voice-change');
-    const request = this.nextGeneration(this.voicePreferenceGeneration);
+    const request = nextTtsGeneration(this.voicePreferenceGeneration);
     this.voicePreferenceGeneration = request;
     const priorLanguage = active.input.language;
     const priorPerson = active.input.person;
@@ -1100,8 +946,8 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     this.awaitingStartToken = undefined;
     this.transport = {
       ...this.transport,
-      sessionGeneration: this.nextGeneration(this.transport.sessionGeneration),
-      utteranceGeneration: this.nextGeneration(this.transport.utteranceGeneration),
+      sessionGeneration: nextTtsGeneration(this.transport.sessionGeneration),
+      utteranceGeneration: nextTtsGeneration(this.transport.utteranceGeneration),
       currentRequestId: undefined,
     };
     this.startConfirmedRequestId = undefined;
@@ -1116,7 +962,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       stopReason: reason,
     });
     this.active = undefined;
-    this.clearUtteranceCorrelations();
+    this.utterances.clear();
     const hostStopTask = this.stopHostTransportImmediately();
     const receipt: ReaderTtsNativeStopReceipt = { sessionGeneration: this.transport.sessionGeneration, result: hostStopTask };
     this.nativeStopReceipt = receipt;
@@ -1228,7 +1074,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       active.plan = await slice;
       trace?.markTtsCapsule('tts.core-slice.ready', active.traceOperationId);
       if (!this.isSessionCurrent(identity)) return;
-      const startIndex = this.firstSliceIndex(active.plan, active.input.scalarPosition);
+      const startIndex = firstTtsSliceIndex(active.plan, active.input.scalarPosition);
       trace?.markTtsCapsule('tts.core-play.enter', active.traceOperationId);
       const play = this.gateway.play(active.plan, startIndex);
       trace?.markTtsCapsule('tts.core-play.return', active.traceOperationId);
@@ -1255,7 +1101,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
    */
   private async rollbackFailedStart(identity: ReaderTtsSessionIdentity, error: unknown): Promise<void> {
     const detail = errorMessageOf(error);
-    this.logTtsEvent('start.failed', detail);
+    logTtsCoordinatorEvent('start.failed', detail);
     if (!this.isSessionCurrent(identity)) return;
     await this.terminateToError(`朗读启动失败：${detail}`, 'startFailed');
   }
@@ -1270,7 +1116,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       ReaderStartupTrace.currentTts()?.markTts('tts.session-failure', active.traceOperationId, 'failed');
     }
     this.active = undefined;
-    this.clearUtteranceCorrelations();
+    this.utterances.clear();
     this.startConfirmedRequestId = undefined;
     this.transport = {
       ...this.transport,
@@ -1298,19 +1144,19 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     try {
       await this.host.stop();
     } catch (error) {
-      this.logTtsEvent('error-stop.host', errorMessageOf(error));
+      logTtsCoordinatorEvent('error-stop.host', errorMessageOf(error));
     }
     if (active !== undefined) {
       try {
         await this.gateway.stop(active.input.chapter);
       } catch (error) {
-        this.logTtsEvent('error-stop.queue', errorMessageOf(error));
+        logTtsCoordinatorEvent('error-stop.queue', errorMessageOf(error));
       }
     }
     try {
       await this.host.deactivateAudioSession();
     } catch (error) {
-      this.logTtsEvent('error-stop.audio', errorMessageOf(error));
+      logTtsCoordinatorEvent('error-stop.audio', errorMessageOf(error));
     }
     // Waiters unblock only after the transport is fully released, so a
     // `whenStarted(false)` consumer observes the settled error state.
@@ -1327,7 +1173,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     this.clearStartWatchdog();
     this.awaitingStartToken = undefined;
     this.active = undefined;
-    this.clearUtteranceCorrelations();
+    this.utterances.clear();
     this.startConfirmedRequestId = undefined;
     this.transport = {
       ...this.transport,
@@ -1381,7 +1227,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     const slice = plan.slices[index];
     if (slice === undefined) throw new Error('Reader TTS Core cursor is outside the slice plan');
     if (!this.isSessionCurrent(active.identity)) return false;
-    const utteranceGeneration = this.nextGeneration(this.transport.utteranceGeneration);
+    const utteranceGeneration = nextTtsGeneration(this.transport.utteranceGeneration);
     const requestId = `${this.ownerToken}-tts-s${this.transport.sessionGeneration}-u${utteranceGeneration}` +
       `-c${active.input.chapter.chapterIndex}-i${slice.index}`;
     this.transport = {
@@ -1430,7 +1276,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       trace?.markTtsCapsule('tts.host-audio.ready', active.traceOperationId);
     } catch (error) {
       if (voice !== undefined) {
-        this.utterances.delete(token.requestId);
+        this.utterances.remove(token.requestId);
         throw new Error(`音频会话启动失败：${errorMessageOf(error)}`);
       }
       await this.handleSessionUtteranceFailure(active, token,
@@ -1461,7 +1307,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       });
     } catch (error) {
       if (voice !== undefined) {
-        this.utterances.delete(token.requestId);
+        this.utterances.remove(token.requestId);
         throw error;
       }
       await this.handleSessionUtteranceFailure(active, token, errorMessageOf(error));
@@ -1511,17 +1357,17 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
   /** speak() was accepted but the engine never called onStart: hard error. */
   private async onStartCallbackTimeout(token: ReaderTtsUtteranceToken): Promise<void> {
     if (this.awaitingStartToken !== token) return;
-    this.logTtsEvent('startCallbackTimeout', `requestId=${token.requestId}`);
+    logTtsCoordinatorEvent('startCallbackTimeout', `requestId=${token.requestId}`);
     this.awaitingStartToken = undefined;
     const correlated = this.utterances.get(token.requestId);
     const active = this.active;
     if (correlated !== undefined) {
-      this.removeUtteranceCorrelation(token.requestId);
+      this.utterances.remove(token.requestId);
       try {
-        const result = await this.reportCorrelatedCallback(correlated, token.requestId, 'error', 'failed');
+        const result = await reportCorrelatedTtsCallback(this.gateway, correlated, token.requestId, 'error', 'failed');
         if (active !== undefined && result.callbackDisposition === 'applied') this.rememberCoreSnapshot(active, result.snapshot);
       } catch (error) {
-        this.logTtsEvent('startCallbackTimeout.report', errorMessageOf(error));
+        logTtsCoordinatorEvent('startCallbackTimeout.report', errorMessageOf(error));
       }
     }
     if (!this.isUtteranceCurrent(token)) return;
@@ -1545,7 +1391,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     };
     try {
       if (event.type === 'start') {
-        const result = await this.reportCorrelatedCallback(correlated, event.requestId, 'start', 'speaking');
+        const result = await reportCorrelatedTtsCallback(this.gateway, correlated, event.requestId, 'start', 'speaking');
         if (active !== undefined && result.callbackDisposition === 'applied' &&
           this.isUtteranceCurrent(token)) {
           this.clearStartWatchdog();
@@ -1567,7 +1413,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
                 engine: active.config?.engine,
               });
             } catch (error) {
-              this.logTtsEvent('prefetch', errorMessageOf(error));
+              logTtsCoordinatorEvent('prefetch', errorMessageOf(error));
             }
           }
           this.resolveStartWaiters(true);
@@ -1576,13 +1422,13 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       }
       if (event.type === 'complete') {
         if (event.completion !== 'audio') return;
-        const result = await this.reportCorrelatedCallback(correlated, event.requestId, 'done', 'done');
+        const result = await reportCorrelatedTtsCallback(this.gateway, correlated, event.requestId, 'done', 'done');
         if (active === undefined || result.callbackDisposition !== 'applied' ||
           !this.isCorrelatedSessionCurrent(correlated)) return;
         // Keep only a bounded late-callback window.  The first completion is
         // still present while its progress/next-slice work runs, so a
         // duplicate event queued by the Host can reach Core exactly as before.
-        this.retainUtteranceCorrelation(event.requestId);
+        this.utterances.retain(event.requestId);
         this.rememberCoreSnapshot(active, result.snapshot);
         // Core accepted a real, already heard slice. Keep that fact even if
         // pause/rate/seek retired its transport while the ACK was in flight.
@@ -1608,14 +1454,14 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       }
       if (event.type === 'error') {
         if (active === undefined) {
-          await this.reportCorrelatedCallback(correlated, event.requestId, 'error', 'failed');
+          await reportCorrelatedTtsCallback(this.gateway, correlated, event.requestId, 'error', 'failed');
         } else {
           await this.handleSessionUtteranceFailure(active, token, event.message);
         }
       }
     } catch (error) {
       const detail = errorMessageOf(error);
-      this.logTtsEvent(`callback.${event.type}`, detail);
+      logTtsCoordinatorEvent(`callback.${event.type}`, detail);
       if (event.type === 'stop') return;
       // A failed callback must never leave a ghost `playing`/`preparing` state:
       // stop the current utterance and land in a retryable error.
@@ -1638,9 +1484,9 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
   ): Promise<void> {
     const correlated = this.utterances.get(token.requestId);
     if (correlated === undefined) return;
-    const result = await this.reportCorrelatedCallback(correlated, token.requestId, 'error', 'failed');
+    const result = await reportCorrelatedTtsCallback(this.gateway, correlated, token.requestId, 'error', 'failed');
     if (result.callbackDisposition === 'applied') {
-      this.removeUtteranceCorrelation(token.requestId);
+      this.utterances.remove(token.requestId);
       this.rememberCoreSnapshot(active, result.snapshot);
     }
     if (result.callbackDisposition !== 'applied' || !this.isCorrelatedSessionCurrent(correlated) ||
@@ -1733,7 +1579,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       await this.speakSlice(active, this.requireSnapshotIndex(nextSnapshot, 'tts.queue.play'), 'preparing');
     } catch (error) {
       const detail = errorMessageOf(error);
-      this.logTtsEvent('chapter.advance', detail);
+      logTtsCoordinatorEvent('chapter.advance', detail);
       // A new start or stop can replace ownership while the old chapter is
       // still loading. Its failure must not stop the replacement session.
       if (!current()) return;
@@ -1793,7 +1639,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     if (target < 0) return Promise.reject(new Error('Reader TTS previous rejected: already at first slice'));
     const wasPaused = this.state.status === 'paused' || this.state.status === 'interrupted';
     const controlGeneration = this.retireControlIntent();
-    const positionGeneration = this.nextGeneration(this.state.positionGeneration ?? 0);
+    const positionGeneration = nextTtsGeneration(this.state.positionGeneration ?? 0);
     this.setState({ ...this.state, status: 'preparing', requestId: undefined, errorMessage: undefined,
       positionGeneration,
       charStart: undefined, charEnd: undefined });
@@ -1842,56 +1688,6 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     return snapshot.currentSliceIndex;
   }
 
-  /** Drop all callback correlation state when a session/lifecycle ends. */
-  private clearUtteranceCorrelations(): void {
-    this.utterances.clear();
-    this.retainedUtteranceIds.clear();
-    this.retainedUtteranceOrder.splice(0, this.retainedUtteranceOrder.length);
-  }
-
-  /**
-   * Retain one retired request long enough for a late/duplicate Host event to
-   * be reported to Core, while bounding the process-lifetime footprint for
-   * long books.  The oldest retired IDs are evicted first; the current active
-   * request is not retired until an intent invalidates it.
-   */
-  private retainUtteranceCorrelation(requestId: string): void {
-    if (!this.utterances.has(requestId)) return;
-    if (this.retainedUtteranceIds.has(requestId)) return;
-    this.retainedUtteranceIds.add(requestId);
-    this.retainedUtteranceOrder.push(requestId);
-    while (this.retainedUtteranceOrder.length > MAX_RETAINED_COMPLETED_UTTERANCES) {
-      const evicted = this.retainedUtteranceOrder.shift();
-      if (evicted === undefined) return;
-      this.retainedUtteranceIds.delete(evicted);
-      this.utterances.delete(evicted);
-    }
-  }
-
-  /** Remove one correlation and its recency marker, if present. */
-  private removeUtteranceCorrelation(requestId: string): void {
-    this.utterances.delete(requestId);
-    if (!this.retainedUtteranceIds.delete(requestId)) return;
-    const index = this.retainedUtteranceOrder.indexOf(requestId);
-    if (index >= 0) this.retainedUtteranceOrder.splice(index, 1);
-  }
-
-  private reportCorrelatedCallback(
-    correlated: CorrelatedUtterance,
-    requestId: string,
-    phase: 'start' | 'done' | 'error',
-    status: 'speaking' | 'done' | 'failed',
-  ): Promise<ReaderTtsCallbackResult> {
-    return this.gateway.reportCallback(
-      correlated.chapter,
-      correlated.sliceIndex,
-      status,
-      `${requestId}:${phase}`,
-      correlated.failurePolicy,
-      3,
-    );
-  }
-
   /** Core ACKs are facts even when a later control owns publication. */
   private rememberCoreSnapshot(active: ActiveSession, snapshot: ReaderTtsQueueSnapshot): void {
     if (this.active === active && this.isSessionCurrent(active.identity) &&
@@ -1913,7 +1709,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       throw new Error('Reader TTS control has no admitted target slice');
     }
     if (snapshot.state === 'completed' || snapshot.state === 'stopped') {
-      this.clearUtteranceCorrelations();
+      this.utterances.clear();
       snapshot = await this.gateway.play(plan, index);
       this.rememberCoreSnapshot(active, snapshot);
       if (!current()) return undefined;
@@ -1935,7 +1731,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
   }
 
   private retireControlIntent(interruption?: 'systemInterruption' | 'routeBackground' | 'deviceChange'): number {
-    this.controlGeneration = this.nextGeneration(this.controlGeneration);
+    this.controlGeneration = nextTtsGeneration(this.controlGeneration);
     this.invalidateUtterance(interruption);
     return this.controlGeneration;
   }
@@ -1966,12 +1762,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       this.startConfirmedRequestId === this.transport.currentRequestId;
     const currentRequestStillValid = snapshot.currentSliceIndex === this.state.sliceIndex &&
       snapshot.state === 'playing' && this.transport.currentRequestId === this.state.requestId;
-    const status = snapshot.state === 'playing' ?
-      (startConfirmed ? 'playing' : 'preparing') :
-      snapshot.state === 'paused' && pauseReason !== undefined && pauseReason !== 'user' ? 'interrupted' :
-        snapshot.state === 'paused' ? 'paused' :
-        snapshot.state === 'completed' ? 'completed' :
-          snapshot.state === 'stopped' && errorMessage !== undefined ? 'error' : 'idle';
+    const status = resolveTtsSnapshotStatus(snapshot, startConfirmed, pauseReason, errorMessage);
     this.setState({
       ...this.state,
       status,
@@ -1987,10 +1778,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       errorMessage,
       ...confirmedStart,
     });
-    const published = snapshot.state === 'playing' ? (status === 'playing' ? 'playing' : 'preparing') :
-      snapshot.state === 'paused' ? 'paused' :
-        snapshot.state === 'completed' ? 'completed' :
-          snapshot.state === 'stopped' && errorMessage !== undefined ? 'error' : 'stopped';
+    const published = resolveTtsPublishedPlaybackState(snapshot, status, errorMessage);
     this.host.publishPlaybackState(published, this.state.rate);
   }
 
@@ -2020,16 +1808,8 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     // place. Keep the queue usable for later slices even if another caller's
     // progress callback rejects unexpectedly.
     this.progressCommitTail = commit.catch((error: Error): void => {
-      this.logTtsEvent('progress.commit', errorMessageOf(error));
+      logTtsCoordinatorEvent('progress.commit', errorMessageOf(error));
     });
-  }
-
-  private firstSliceIndex(plan: ReaderTtsSlicePlan, scalarPosition: number): number {
-    for (const slice of plan.slices) {
-      if (scalarPosition >= slice.charStart && scalarPosition < slice.charEnd) return slice.index;
-      if (scalarPosition < slice.charStart) return slice.index;
-    }
-    return plan.slices[plan.slices.length - 1].index;
   }
 
   private chapterKey(chapter: ReaderTtsChapterRef): string {
@@ -2049,14 +1829,14 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       // A stop/seek/rate/voice intent retires the current request even when
       // its Host callback never arrives.  Keep it in the same bounded late
       // callback window so repeated interruptions cannot grow the map.
-      this.retainUtteranceCorrelation(currentRequestId);
+      this.utterances.retain(currentRequestId);
     }
     if (currentRequestId === undefined && interruption === undefined) return;
     this.clearStartWatchdog();
     this.awaitingStartToken = undefined;
     this.transport = {
       ...this.transport,
-      utteranceGeneration: this.nextGeneration(this.transport.utteranceGeneration),
+      utteranceGeneration: nextTtsGeneration(this.transport.utteranceGeneration),
       currentRequestId: undefined,
       interruption,
     };
@@ -2102,10 +1882,6 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       this.state.sliceIndex === token.sliceIndex;
   }
 
-  private nextGeneration(generation: number): number {
-    return generation >= Number.MAX_SAFE_INTEGER ? 1 : generation + 1;
-  }
-
   private configureTimer(durationMs: number | undefined): void {
     this.clearTimer();
     if (durationMs === undefined) {
@@ -2149,19 +1925,15 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     this.operationTail = task.catch((error: unknown): void => {
       // The tail only logs: every operation owns its own state transitions, so
       // a rejection here must never silently vanish nor fake a playing state.
-      this.logTtsEvent('operation.rejected', errorMessageOf(error));
+      logTtsCoordinatorEvent('operation.rejected', errorMessageOf(error));
     });
     return task;
   }
 
   private voidLogged(promise: Promise<void>, stage: string): void {
     void promise.catch((error: unknown): void => {
-      this.logTtsEvent(stage, errorMessageOf(error));
+      logTtsCoordinatorEvent(stage, errorMessageOf(error));
     });
-  }
-
-  private logTtsEvent(stage: string, detail: string): void {
-    console.error(`[ReaderTTS] stage=${stage} code=${diagnosticCodeOf(detail)}`);
   }
 
   private resolveStartWaiters(started: boolean): void {
@@ -2178,22 +1950,4 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
     );
   }
 
-  private assertStartInput(input: ReaderTtsStartInput): void {
-    if (input.chapter.sourceId.trim().length === 0 || input.chapter.bookId.trim().length === 0 ||
-      !Number.isSafeInteger(input.chapter.chapterIndex) || input.chapter.chapterIndex < 0) {
-      throw new Error('Reader TTS start requires a valid chapter identity');
-    }
-    if (input.content.trim().length === 0) throw new Error('Reader TTS start requires non-empty content');
-    const contentVersionValid = typeof input.contentVersion === 'string' ?
-      input.contentVersion.trim().length > 0 : Number.isSafeInteger(input.contentVersion) && input.contentVersion >= 0;
-    if (!contentVersionValid || !Number.isSafeInteger(input.scalarPosition) || input.scalarPosition < 0) {
-      throw new Error('Reader TTS start requires safe content version and scalar position');
-    }
-    if (input.language !== undefined && input.language.trim().length === 0) {
-      throw new Error('Reader TTS start requires a non-blank language');
-    }
-    if (input.person !== undefined && (!Number.isSafeInteger(input.person) || input.person < 0)) {
-      throw new Error('Reader TTS start requires a non-negative voice person');
-    }
-  }
 }
